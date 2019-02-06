@@ -109,7 +109,6 @@ namespace PresentScreenings.TableView
 
                 // Write film info.
                 WebUtility.SaveFilmInfoAsXml(ScreeningsPlan.FilmInfos, Path.Combine(directory, "filminfo.xml"));
-                //WebUtility.SaveFilmInfoAsXml(Controller.Plan.FilmInfos, Path.Combine(directory, "filminfo.xml"));
             });
         }
 

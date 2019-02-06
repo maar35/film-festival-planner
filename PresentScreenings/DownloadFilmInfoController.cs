@@ -72,7 +72,6 @@ namespace PresentScreenings.TableView
             var indexes = Presentor.FilmRatingTableView.SelectedRows.ToList();
             _films = new List<Film>(indexes.Select(i => Presentor.GetFilmByIndex(i)));
             _filmsWithoutInfo = _films.Where(f => !ScreeningsPlan.FilmInfos.Select(fi => fi.FilmId).Contains(f.FilmId)).ToList();
-            //_filmsWithoutInfo = _films.Where(f => !App.Controller.Plan.FilmInfos.Select(fi => fi.FilmId).Contains(f.FilmId)).ToList();
 
             // Set generally usable dimensions.
             var frame = View.Frame;

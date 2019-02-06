@@ -16,7 +16,7 @@ namespace PresentScreenings.TableView
         public const string FestivalYear = "2019";
         #endregion
         #region Private members
-        static string directory = @"/Users/maartenroos/Documents/Maarten's documenten/Film/IFFR/IFFR" +
+        static string directory = @"/Users/maarten/Documents/Maarten's documenten/Film/IFFR/IFFR" +
             FestivalYear +"/Screenings Plan";
         static string _screensFile = Path.Combine(directory, "screens.csv");
         static string _filmsFile = Path.Combine(directory, "films.csv");
