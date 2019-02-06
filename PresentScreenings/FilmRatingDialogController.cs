@@ -335,7 +335,8 @@ namespace PresentScreenings.TableView
 
         public FilmInfo GetFilmInfo(int filmId)
         {
-            var info = _presentor.Plan.FilmInfos.Where(f => f.FilmId == filmId).ToList();
+            var info = ScreeningsPlan.FilmInfos.Where(f => f.FilmId == filmId).ToList();
+            //var info = _presentor.Plan.FilmInfos.Where(f => f.FilmId == filmId).ToList();
             if (info.Count > 0)
             {
                 return info.First();
@@ -345,7 +346,8 @@ namespace PresentScreenings.TableView
 
         public void AddFilmInfo(FilmInfo filmInfo)
         {
-            _presentor.Plan.FilmInfos.Add(filmInfo);
+            ScreeningsPlan.FilmInfos.Add(filmInfo);
+            //_presentor.Plan.FilmInfos.Add(filmInfo);
         }
 
         public NSTextField CreateStandardLabel(CGRect frame)

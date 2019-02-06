@@ -4,9 +4,6 @@ using System.Collections.Generic;
 
 namespace PresentScreenings.TableView
 {
-    /// <summary>
-    /// Film rating, provides the possibility to rate films and compare film ratings.
-    /// </summary>
     public class FilmRating : IComparable
     {
         #region Private Variables

@@ -2,6 +2,7 @@
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace PresentScreenings.TableView
 {
@@ -40,7 +41,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        //public static string LowestSuperRating { get; } = 8.ToString();
         public int FilmId => _filmId;
         //public int FilmId { get => _filmId; set => _filmId = value; } //can't be used as long as _film is a property.
         public string FilmTitle => _film.Title;
@@ -109,20 +109,44 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        DateTime DateTimeFromParsedData(DateTime date, string time)
+        private DateTime DateTimeFromParsedData(DateTime date, string time)
         {
             string parseString = string.Format("{0} {1}", date.ToShortDateString(), time);
             return DateTime.Parse(parseString);
         }
 
-        string DurationString()
+        private string DurationString()
         {
             return string.Format("{0}-{1}", StartTime.ToString(_timeFormat), EndTime.ToString(_timeFormat));
         }
 
-        static string TimeString(DateTime time)
+        private static string TimeString(DateTime time)
         {
             return time.ToString(_timeFormat);
+        }
+
+        private static string EntityToUnicode(string html)
+        {
+            var replacements = new Dictionary<string, string>();
+            //var regex = new Regex("(&[a-z]{2,7};)");
+            var regex = new Regex("&([a-z]{2,7});");
+            foreach (Match match in regex.Matches(html))
+            {
+                if (!replacements.ContainsKey(match.Value))
+                {
+                    //var unicode = System.Net.WebUtility.HtmlDecode(match.Value);
+                    //if (unicode.Length == 1)
+                    //{
+                    //    replacements.Add(match.Value, string.Concat("&#", Convert.ToInt32(unicode[0]), ";"));
+                    //}
+                    replacements.Add(match.Value, regex.Replace(match.Value, @"[$1]"));
+                }
+            }
+            foreach (var replacement in replacements)
+            {
+                html = html.Replace(replacement.Key, replacement.Value);
+            }
+            return html;
         }
         #endregion
 
@@ -158,7 +182,7 @@ namespace PresentScreenings.TableView
 
         public static string WriteOverviewHeader()
         {
-            string headerFmt = "weekday;date;maarten;{0};screen;starttime;endtime;title;filmsinshow;extra;qanda";
+            string headerFmt = "weekday;date;maarten;{0};screen;starttime;endtime;title;filmsinshow;extra;qanda;url;mainfilmdescription";
             return string.Format(headerFmt, ScreeningStatus.Friends().Replace(',', ';'));
         }
 
@@ -180,7 +204,19 @@ namespace PresentScreenings.TableView
             fields.Add(screening._filmsInScreening.ToString());
             fields.Add(screening._extra);
             fields.Add(screening._qAndA);
+            var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == screening.FilmId);
+            var filmInfo = filmInfoList.Count() == 1 ? filmInfoList.First() : null;
+            fields.Add(filmInfo != null ? filmInfo.Url : "");
+            //fields.Add(filmInfo != null ? string.Join("  ", filmInfo.ToString().Split(Environment.NewLine)) : "");
+            //fields.Add(filmInfo != null ? System.Net.WebUtility.HtmlDecode(filmInfo.FilmDescription) : "");
+            fields.Add(filmInfo != null ? HtmlDecode(filmInfo.FilmDescription) : "");
             return string.Join(";", fields.ToArray());
+        }
+
+        public static string HtmlDecode(string html)
+        {
+            var htmlRe = new Regex(@"&amp;([a-z]{2,7});", RegexOptions.CultureInvariant);
+            return htmlRe.Replace(html, @":$1:").Replace("&#039;", "'").Replace(";", ".,").Replace(":nbsp:", " ").Replace(":euml:", @"ë").Replace("ldquo", @"'").Replace("lsquo", @"'").Replace("rdquo", @"'").Replace("rsquo", @"'");
         }
 
         public void SetFilm(int filmId, Film film)
