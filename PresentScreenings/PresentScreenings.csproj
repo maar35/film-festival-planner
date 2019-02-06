@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProjectGuid>{135FAC81-2CFF-41B6-AA4F-791D335EEA88}</ProjectGuid>
+    <ProjectTypeGuids>{A3F8F2AB-B479-4A4A-A458-A89E7DC349F1};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>PresentScreenings.TableView</RootNamespace>
+    <AssemblyName>PlanScreenings</AssemblyName>
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <TargetFrameworkIdentifier>Xamarin.Mac</TargetFrameworkIdentifier>
+    <MonoMacResourcePrefix>Resources</MonoMacResourcePrefix>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <EnableCodeSigning>false</EnableCodeSigning>
+    <CodeSigningKey>Mac Developer</CodeSigningKey>
+    <CreatePackage>false</CreatePackage>
+    <EnablePackageSigning>false</EnablePackageSigning>
+    <IncludeMonoRuntime>false</IncludeMonoRuntime>
+    <UseSGen>true</UseSGen>
+    <UseRefCounting>true</UseRefCounting>
+    <Profiling>true</Profiling>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <EnableCodeSigning>false</EnableCodeSigning>
+    <CreatePackage>true</CreatePackage>
+    <EnablePackageSigning>false</EnablePackageSigning>
+    <IncludeMonoRuntime>true</IncludeMonoRuntime>
+    <UseSGen>true</UseSGen>
+    <UseRefCounting>true</UseRefCounting>
+    <LinkMode>SdkOnly</LinkMode>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="Xamarin.Mac" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\Contents.json" />
+    <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\AppIcon-128.png" />
+    <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\AppIcon-128%402x.png" />
+    <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\AppIcon-16.png" />
+    <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\AppIcon-16%402x.png" />
+    <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\AppIcon-256.png" />
+    <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\AppIcon-256%402x.png" />
+    <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\AppIcon-32.png" />
+    <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\AppIcon-32%402x.png" />
+    <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\AppIcon-512.png" />
+    <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\AppIcon-512%402x.png" />
+    <ImageAsset Include="Assets.xcassets\Contents.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Resources\" />
+    <Folder Include="Menu Delegates\" />
+    <Folder Include="Controls\" />
+    <Folder Include="Entities\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Info.plist" />
+    <None Include="Entitlements.plist" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Main.cs" />
+    <Compile Include="AppDelegate.cs" />
+    <Compile Include="ViewController.cs" />
+    <Compile Include="ViewController.designer.cs">
+      <DependentUpon>ViewController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ScreeningsTableDataSource.cs" />
+    <Compile Include="ScreeningsTableDelegate.cs" />
+    <Compile Include="ColorView.cs" />
+    <Compile Include="ScreeningsTableView.cs" />
+    <Compile Include="AppDelegate.designer.cs">
+      <DependentUpon>AppDelegate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ScreeningsView.cs" />
+    <Compile Include="HeadersView.cs" />
+    <Compile Include="ListReader.cs" />
+    <Compile Include="ScreeningDialogController.cs" />
+    <Compile Include="ScreeningDialogController.designer.cs">
+      <DependentUpon>ScreeningDialogController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MyAttendanceTitler.cs" />
+    <Compile Include="ITitled.cs" />
+    <Compile Include="ListWriter.cs" />
+    <Compile Include="FilmRatingDialogController.cs" />
+    <Compile Include="FilmRatingDialogController.designer.cs">
+      <DependentUpon>FilmRatingDialogController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="FilmTableDataSource.cs" />
+    <Compile Include="FilmTableDelegate.cs" />
+    <Compile Include="CombineTitlesSheetControler.cs" />
+    <Compile Include="CombineTitlesSheetControler.designer.cs">
+      <DependentUpon>CombineTitlesSheetControler.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UncombineTitlesSheetController.cs" />
+    <Compile Include="UncombineTitlesSheetController.designer.cs">
+      <DependentUpon>UncombineTitlesSheetController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="CombineTitlesEventArgs.cs" />
+    <Compile Include="UncombineTitlesEventArgs.cs" />
+    <Compile Include="FilmInfoSheetController.cs" />
+    <Compile Include="FilmInfoSheetController.designer.cs">
+      <DependentUpon>FilmInfoSheetController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="IScreeningProvider.cs" />
+    <Compile Include="WebUtility.cs" />
+    <Compile Include="DownloadFilmInfoController.cs" />
+    <Compile Include="DownloadFilmInfoController.designer.cs">
+      <DependentUpon>DownloadFilmInfoController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Menu Delegates\FilmsMenuDelegate.cs" />
+    <Compile Include="Menu Delegates\NavigateMenuDelegate.cs" />
+    <Compile Include="Menu Delegates\ScreeningMenuDelegate.cs" />
+    <Compile Include="Controls\AttendanceCheckbox.cs" />
+    <Compile Include="Controls\FilmScreeningControl.cs" />
+    <Compile Include="Controls\ScreeningButton.cs" />
+    <Compile Include="Controls\ScreeningControl.cs" />
+    <Compile Include="Controls\ScreeningLabel.cs" />
+    <Compile Include="Controls\TitledButton.cs" />
+    <Compile Include="Entities\Film.cs" />
+    <Compile Include="Entities\FilmInfo.cs" />
+    <Compile Include="Entities\FilmRating.cs" />
+    <Compile Include="Entities\FriendFilmRating.cs" />
+    <Compile Include="Entities\Screen.cs" />
+    <Compile Include="Entities\Screening.cs" />
+    <Compile Include="Entities\ScreeningsPlan.cs" />
+    <Compile Include="Entities\ScreeningStatus.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterfaceDefinition Include="Main.storyboard" />
+  </ItemGroup>
+  <ItemGroup>
+    <BundleResource Include="Resources\.DS_Store" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Xamarin\Mac\Xamarin.Mac.CSharp.targets" />
+</Project>

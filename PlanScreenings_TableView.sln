@@ -1,0 +1,29 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PresentScreenings", "PresentScreenings\PresentScreenings.csproj", "{135FAC81-2CFF-41B6-AA4F-791D335EEA88}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{135FAC81-2CFF-41B6-AA4F-791D335EEA88}.Debug|x86.ActiveCfg = Debug|x86
+		{135FAC81-2CFF-41B6-AA4F-791D335EEA88}.Debug|x86.Build.0 = Debug|x86
+		{135FAC81-2CFF-41B6-AA4F-791D335EEA88}.Release|x86.ActiveCfg = Release|x86
+		{135FAC81-2CFF-41B6-AA4F-791D335EEA88}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		Policies = $0
+		$0.TextStylePolicy = $1
+		$1.FileWidth = 80
+		$1.TabsToSpaces = True
+		$1.scope = text/plain
+		$0.TextStylePolicy = $2
+		$2.inheritsSet = null
+		$2.scope = text/x-csharp
+		$0.CSharpFormattingPolicy = $3
+		$3.scope = text/x-csharp
+	EndGlobalSection
+EndGlobal
