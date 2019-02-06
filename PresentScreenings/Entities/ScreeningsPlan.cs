@@ -29,6 +29,7 @@ namespace PresentScreenings.TableView
         List<DateTime> _days;
         Dictionary<DateTime, List<Screen>> _dayScreens;
         Dictionary<DateTime, Dictionary<Screen, List<Screening>>> _screenScreenings;
+        static private List<FilmInfo> _filmInfos;
         int _currDayNumber;
         int _currScreenNumber;
         int _currScreenScreeningNumber;
@@ -45,7 +46,7 @@ namespace PresentScreenings.TableView
         public DateTime CurrDay => _days[_currDayNumber];
         public List<Screening> Screenings => _screenings;
         public List<FriendFilmRating> FriendFilmRatings { get; }
-        public List<FilmInfo> FilmInfos { get; }
+        static public List<FilmInfo> FilmInfos => _filmInfos;
         #endregion
 
         #region Private properties
@@ -59,12 +60,12 @@ namespace PresentScreenings.TableView
             _screens = ScreensReader.ReadListFromFile(line => new Screen(line));
 
             // Initialize film info.
-            FilmInfos = WebUtility.LoadFilmInfoFromXml(_filmInfoFile);
+            _filmInfos = WebUtility.LoadFilmInfoFromXml(_filmInfoFile);
 
             // Read films.
             ListReader<Film> FilmsReader = new ListReader<Film>(_filmsFile, true);
             _films = FilmsReader.ReadListFromFile(line => new Film(line));
-            
+
             // Read friend film ratings.
             ListReader<FriendFilmRating> RatingsReader = new ListReader<FriendFilmRating>(_friendFilmRatingsFile, true);
             FriendFilmRatings = RatingsReader.ReadListFromFile(line => new FriendFilmRating(line));
@@ -78,7 +79,7 @@ namespace PresentScreenings.TableView
             _currScreenNumber = 0;
             _currScreenScreeningNumber = 0;
         }
-		#endregion
+        #endregion
 
         #region Private Methods
         void InitializeDays()
