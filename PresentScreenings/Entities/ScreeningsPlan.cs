@@ -15,14 +15,15 @@ namespace PresentScreenings.TableView
         #region Constants
         public const string FestivalYear = "2019";
         #endregion
+
         #region Private members
-        static string directory = @"/Users/maarten/Documents/Maarten's documenten/Film/IFFR/IFFR" +
-            FestivalYear +"/Screenings Plan";
-        static string _screensFile = Path.Combine(directory, "screens.csv");
-        static string _filmsFile = Path.Combine(directory, "films.csv");
-        static string _screeningsFile = Path.Combine(directory, "screenings.csv");
-        static string _friendFilmRatingsFile = Path.Combine(directory, "friendfilmratings.csv");
-        static string _filmInfoFile = Path.Combine(directory, "filminfo.xml");
+        static string _homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+        static string _directory = HomeFolder + @"/Documents/Film/IFFR/IFFR" + FestivalYear + @"/Screenings Plan";
+        static string _screensFile = Path.Combine(_directory, "screens.csv");
+        static string _filmsFile = Path.Combine(_directory, "films.csv");
+        static string _screeningsFile = Path.Combine(_directory, "screenings.csv");
+        static string _friendFilmRatingsFile = Path.Combine(_directory, "friendfilmratings.csv");
+        static string _filmInfoFile = Path.Combine(_directory, "filminfo.xml");
         List<Film> _films;
         List<Screen> _screens;
         List<Screening> _screenings;
@@ -36,6 +37,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
+        public static string HomeFolder => _homeFolder;
         public Dictionary<DateTime, Dictionary<Screen, List<Screening>>> ScreenScreenings => _screenScreenings;
         public Screen CurrScreen => _dayScreens[CurrDay][_currScreenNumber];
         public Screening CurrScreening => _screenScreenings[CurrDay][CurrScreen][_currScreenScreeningNumber];
@@ -47,9 +49,6 @@ namespace PresentScreenings.TableView
         public List<Screening> Screenings => _screenings;
         public List<FriendFilmRating> FriendFilmRatings { get; }
         static public List<FilmInfo> FilmInfos => _filmInfos;
-        #endregion
-
-        #region Private properties
         #endregion
 
         #region Constructors
