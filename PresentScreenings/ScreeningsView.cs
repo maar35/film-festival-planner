@@ -33,7 +33,6 @@ namespace PresentScreenings.TableView
 		public void DrawScreenings(NSClipView view, ScreeningsPlan plan, DateTime day, Screen screen)
 		{
 			DisposeSubViews(view);
-            _controller.AddScreenToScreeningControls(screen);
             var currScreening = plan.CurrScreening;
 			foreach (var screening in plan.ScreenScreenings[day][screen])
 			{
@@ -45,7 +44,7 @@ namespace PresentScreenings.TableView
                 screeningControl.Selected = screening == currScreening;
                 screeningControl.ScreeningSelected += (s, e) => SegueToScreeningWindow((ScreeningControl)s);
 				view.AddSubview(screeningControl);
-                _controller.AddScreeningControl(screen, screening, screeningControl);
+                _controller.AddScreeningControl(screening, screeningControl);
 			}
 		}
 

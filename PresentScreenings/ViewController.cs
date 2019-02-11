@@ -16,7 +16,7 @@ namespace PresentScreenings.TableView
         #region Private Members
         ScreeningsPlan _plan = null;
         ScreeningsTableView _mainView = null;
-        Dictionary<Screen, Dictionary<Screening, ScreeningControl>> _controlByScreeningByScreen;
+        Dictionary<Screening, ScreeningControl> _controlByScreeningByScreen;
         NSMenuItem _clickableLabelsMenuItem = null;
         #endregion
 
@@ -42,7 +42,7 @@ namespace PresentScreenings.TableView
 
         bool ScreeningSelected
         {
-            set => _controlByScreeningByScreen[_plan.CurrScreening.Screen][_plan.CurrScreening].Selected = value;
+            set => _controlByScreeningByScreen[_plan.CurrScreening].Selected = value;
         }
 
         public override NSObject RepresentedObject
@@ -145,7 +145,7 @@ namespace PresentScreenings.TableView
 
         void InitializeScreeningControls()
         {
-            _controlByScreeningByScreen = new Dictionary<Screen, Dictionary<Screening, ScreeningControl>> { };
+            _controlByScreeningByScreen = new Dictionary<Screening, ScreeningControl> { };
         }
 
         void DisposeColorLabels()
@@ -256,22 +256,13 @@ namespace PresentScreenings.TableView
             TableView.ReloadData();
         }
 
-        public void AddScreenToScreeningControls(Screen screen)
+        public void AddScreeningControl(Screening screening, ScreeningControl control)
         {
-            if (_controlByScreeningByScreen.ContainsKey(screen))
+            if (_controlByScreeningByScreen.ContainsKey(screening))
             {
-                _controlByScreeningByScreen.Remove(screen);
+                _controlByScreeningByScreen.Remove(screening);
             }
-            _controlByScreeningByScreen.Add(screen, new Dictionary<Screening, ScreeningControl> { });
-        }
-
-        public void AddScreeningControl(Screen screen, Screening screening, ScreeningControl control)
-        {
-            if (_controlByScreeningByScreen[screen].ContainsKey(screening))
-            {
-                _controlByScreeningByScreen[screen].Remove(screening);
-            }
-            _controlByScreeningByScreen[screen].Add(screening, control);
+            _controlByScreeningByScreen.Add(screening, control);
         }
 
         public List<Screening> FilmScreenings(int filmId)
@@ -435,14 +426,14 @@ namespace PresentScreenings.TableView
             DisplayScreeningsView();
             TableView.Display();
             TableView.ScrollRowToVisible(_plan.CurrDayScreens.IndexOf(screening.Screen));
-            ScreeningControl control = _controlByScreeningByScreen[screening.Screen][screening];
+            ScreeningControl control = _controlByScreeningByScreen[screening];
             PerformSegue("ModalSegue", control);
         }
 
         public void ShowScreeningInfo()
         {
             Screening screening = _plan.CurrScreening;
-            ScreeningControl control = _controlByScreeningByScreen[screening.Screen][screening];
+            ScreeningControl control = _controlByScreeningByScreen[screening];
             PerformSegue("ModalSegue", control);
         }
 
