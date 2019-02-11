@@ -38,8 +38,19 @@ namespace PresentScreenings.TableView
             get => _selected;
             set
             {
-                // Save value and force a redraw
                 _selected = value;
+                if (value)
+                {
+                    // Make the view scroll as to make tyhe control visible.
+                    var plan = _app.Controller.Plan;
+                    _app.Controller.TableView.ScrollRowToVisible(plan.CurrDayScreens.IndexOf(plan.CurrScreen));
+                    var x = Frame.X;
+                    var y = Frame.Y + plan.CurrDayScreens.IndexOf(plan.CurrScreen) * 40;
+                    var frame = new CGRect(x, y, Frame.Width, Frame.Height);
+                    _app.Controller.TableView.ScrollRectToVisible(frame);
+                }
+
+                // Force a redraw.
                 NeedsDisplay = true;
             }
         }
