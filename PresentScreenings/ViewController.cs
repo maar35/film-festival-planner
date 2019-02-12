@@ -16,7 +16,7 @@ namespace PresentScreenings.TableView
         #region Private Members
         ScreeningsPlan _plan = null;
         ScreeningsTableView _mainView = null;
-        Dictionary<Screening, ScreeningControl> _controlByScreeningByScreen;
+        Dictionary<Screening, ScreeningControl> _controlByScreening;
         NSMenuItem _clickableLabelsMenuItem = null;
         #endregion
 
@@ -42,7 +42,7 @@ namespace PresentScreenings.TableView
 
         bool ScreeningSelected
         {
-            set => _controlByScreeningByScreen[_plan.CurrScreening].Selected = value;
+            set => _controlByScreening[_plan.CurrScreening].Selected = value;
         }
 
         public override NSObject RepresentedObject
@@ -145,7 +145,7 @@ namespace PresentScreenings.TableView
 
         void InitializeScreeningControls()
         {
-            _controlByScreeningByScreen = new Dictionary<Screening, ScreeningControl> { };
+            _controlByScreening = new Dictionary<Screening, ScreeningControl> { };
         }
 
         void DisposeColorLabels()
@@ -258,11 +258,11 @@ namespace PresentScreenings.TableView
 
         public void AddScreeningControl(Screening screening, ScreeningControl control)
         {
-            if (_controlByScreeningByScreen.ContainsKey(screening))
+            if (_controlByScreening.ContainsKey(screening))
             {
-                _controlByScreeningByScreen.Remove(screening);
+                _controlByScreening.Remove(screening);
             }
-            _controlByScreeningByScreen.Add(screening, control);
+            _controlByScreening.Add(screening, control);
         }
 
         public List<Screening> FilmScreenings(int filmId)
@@ -426,14 +426,14 @@ namespace PresentScreenings.TableView
             DisplayScreeningsView();
             TableView.Display();
             TableView.ScrollRowToVisible(_plan.CurrDayScreens.IndexOf(screening.Screen));
-            ScreeningControl control = _controlByScreeningByScreen[screening];
+            ScreeningControl control = _controlByScreening[screening];
             PerformSegue("ModalSegue", control);
         }
 
         public void ShowScreeningInfo()
         {
             Screening screening = _plan.CurrScreening;
-            ScreeningControl control = _controlByScreeningByScreen[screening];
+            ScreeningControl control = _controlByScreening[screening];
             PerformSegue("ModalSegue", control);
         }
 
