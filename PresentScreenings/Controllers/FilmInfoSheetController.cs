@@ -11,7 +11,7 @@ using System.Net;
 namespace PresentScreenings.TableView
 {
     /// <summary>
-    /// Go to screening Popover, present a list of screenings of one film, with
+    /// Film info sheet controller, present a list of screenings of one film, with
     /// a button to display a Screening Info Modal in the day view of the
     /// screening.
     /// </summary>
