@@ -41,11 +41,12 @@ namespace PresentScreenings.TableView
                 _selected = value;
                 if (value)
                 {
-                    // Make the view scroll as to make tyhe control visible.
+                    // Make the view scroll as to make the control visible.
                     var plan = _app.Controller.Plan;
+                    var table = _app.Controller.TableView;
                     _app.Controller.TableView.ScrollRowToVisible(plan.CurrDayScreens.IndexOf(plan.CurrScreen));
                     var x = Frame.X;
-                    var y = Frame.Y + plan.CurrDayScreens.IndexOf(plan.CurrScreen) * 40;
+                    var y = Frame.Y + plan.CurrDayScreens.IndexOf(plan.CurrScreen) *(table.RowHeight + table.IntercellSpacing.Height);
                     var frame = new CGRect(x, y, Frame.Width, Frame.Height);
                     _app.Controller.TableView.ScrollRectToVisible(frame);
                 }
@@ -123,7 +124,6 @@ namespace PresentScreenings.TableView
                 }
 
                 // Draw the rating of the film
-                //FilmRating rating = _screening.Rating;
                 var film = _app.Controller.GetFilmById(_screening.FilmId);
                 var ratings = ScreeningStatus.FilmFans.Select(f => _app.Controller.GetFilmFanRating(film, f));
                 var rating = ratings.Max();
