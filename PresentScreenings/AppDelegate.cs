@@ -95,7 +95,7 @@ namespace PresentScreenings.TableView
                 // Write screenings.
                 string screeningsPath = Path.Combine(directory, "screenings.csv");
                 var screeningsWriter = new ListWriter<Screening>(screeningsPath, Screening.WriteHeader);
-                screeningsWriter.WriteListToFile(Controller.Plan.Screenings, Screening.Serialize);
+                screeningsWriter.WriteListToFile(ScreeningsPlan.Screenings, Screening.Serialize);
 
                 // Write screenings overview.
                 string overviewPath = Path.Combine(directory, "Screenings Summary.csv");

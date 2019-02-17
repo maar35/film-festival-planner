@@ -9,7 +9,7 @@ using CoreGraphics;
 
 namespace PresentScreenings.TableView
 {
-    public partial class FilmRatingDialogController : NSViewController, IScreeningProvider
+    public partial class FilmRatingDialogController : SelfDestructableDialog, IScreeningProvider
     {
         #region Constants
         const string _escapeKey = "\x1b";
@@ -330,21 +330,21 @@ namespace PresentScreenings.TableView
 
         public List<Screening> GetScreeningsByFilmId(int filmId)
         {
-            return _presentor.FilmScreenings(filmId);
+            return ViewController.FilmScreenings(filmId);
         }
 
-        public FilmInfo GetFilmInfo(int filmId)
+        public static FilmInfo GetFilmInfo(int filmId)
         {
             var info = ScreeningsPlan.FilmInfos.Where(f => f.FilmId == filmId).ToList();
             return info.Count > 0 ? info.First() : null;
         }
 
-        public void AddFilmInfo(FilmInfo filmInfo)
+        public static void AddFilmInfo(FilmInfo filmInfo)
         {
             ScreeningsPlan.FilmInfos.Add(filmInfo);
         }
 
-        public NSTextField CreateStandardLabel(CGRect frame)
+        public static NSTextField CreateStandardLabel(CGRect frame)
         {
             var label = new NSTextField(frame)
             {
@@ -356,7 +356,7 @@ namespace PresentScreenings.TableView
             return label;
         }
 
-        public NSButton CreateStandardButton(CGRect frame)
+        public static NSButton CreateStandardButton(CGRect frame)
         {
             var button = new NSButton(frame)
             {
@@ -367,7 +367,7 @@ namespace PresentScreenings.TableView
             return button;
         }
 
-        public NSButton CreateCancelButton(CGRect frame)
+        public static NSButton CreateCancelButton(CGRect frame)
         {
             var cancelButton = CreateStandardButton(frame);
             cancelButton.Title = "Cancel";
@@ -375,7 +375,7 @@ namespace PresentScreenings.TableView
             return cancelButton;
         }
 
-        public NSScrollView CreateStandardScrollView(CGRect frame, NSView documentView)
+        public static NSScrollView CreateStandardScrollView(CGRect frame, NSView documentView)
         {
             var scrollView = new NSScrollView(frame);
             scrollView.BackgroundColor = NSColor.WindowBackground;
@@ -391,6 +391,12 @@ namespace PresentScreenings.TableView
             }
             scrollView.ContentView.ScrollToPoint(new CGPoint(0, documentView.Frame.Height));
             return scrollView;
+        }
+
+        public override void GoToScreening(Screening screening)
+        {
+            _app.Controller.GoToScreening(screening);
+            CloseDialog();
         }
 
         public void CloseDialog()

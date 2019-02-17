@@ -26,7 +26,6 @@ namespace PresentScreenings.TableView
         static string _filmInfoFile = Path.Combine(_directory, "filminfo.xml");
         List<Film> _films;
         List<Screen> _screens;
-        List<Screening> _screenings;
         List<DateTime> _days;
         Dictionary<DateTime, List<Screen>> _dayScreens;
         Dictionary<DateTime, Dictionary<Screen, List<Screening>>> _screenScreenings;
@@ -46,7 +45,7 @@ namespace PresentScreenings.TableView
         public List<Screen> Screens => _screens;
         public List<Film> Films => _films;
         public DateTime CurrDay => _days[_currDayNumber];
-        public List<Screening> Screenings => _screenings;
+        static public List<Screening> Screenings { get; private set; }
         public List<FriendFilmRating> FriendFilmRatings { get; }
         static public List<FilmInfo> FilmInfos => _filmInfos;
         #endregion
@@ -71,7 +70,7 @@ namespace PresentScreenings.TableView
 
             // Read screenings.
             ListReader<Screening> ScreeningsReader = new ListReader<Screening>(_screeningsFile, true);
-            _screenings = ScreeningsReader.ReadListFromFile(line => new Screening(line, _screens, _films, FriendFilmRatings));
+            Screenings = ScreeningsReader.ReadListFromFile(line => new Screening(line, _screens, _films, FriendFilmRatings));
 
             InitializeDays();
             _currDayNumber = 0;
@@ -87,7 +86,7 @@ namespace PresentScreenings.TableView
             _dayScreens = new Dictionary<DateTime, List<Screen>> { };
             _screenScreenings = new Dictionary<DateTime, Dictionary<Screen, List<Screening>>> { };
 
-            foreach (Screening screening in _screenings)
+            foreach (Screening screening in Screenings)
             {
                 DateTime day = screening.StartDate;
                 if (!_days.Contains(day))
@@ -206,7 +205,7 @@ namespace PresentScreenings.TableView
         public List<Screening> AttendedScreenings()
         {
             var attendedScreenings = (
-                from Screening s in _screenings
+                from Screening s in Screenings
                 where s.IAttend || s.AttendingFriends.Count > 0
                 orderby s.StartDate
                 select s

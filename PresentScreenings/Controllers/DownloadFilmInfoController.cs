@@ -114,21 +114,21 @@ namespace PresentScreenings.TableView
             // Create the selected films count label.
             yCurr -= _labelHeight;
             var selectedCountRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            var selectedCountLabel = Presentor.CreateStandardLabel(selectedCountRect);
+            var selectedCountLabel = FilmRatingDialogController.CreateStandardLabel(selectedCountRect);
             selectedCountLabel.StringValue = $"Selected films: {_films.Count}";
             View.AddSubview(selectedCountLabel);
 
             // Create the films without info count label.
             yCurr -= _yBetweenLabels + _labelHeight;
             var withoutInfoRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            var withoutInfoLabel = Presentor.CreateStandardLabel(withoutInfoRect);
+            var withoutInfoLabel = FilmRatingDialogController.CreateStandardLabel(withoutInfoRect);
             withoutInfoLabel.StringValue = $"Without info: {_filmsWithoutInfo.Count}";
             View.AddSubview(withoutInfoLabel);
 
             //Create the progress label.
             yCurr -= _yBetweenLabels + _labelHeight;
             var progressRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            _progressLabel = Presentor.CreateStandardLabel(progressRect);
+            _progressLabel = FilmRatingDialogController.CreateStandardLabel(progressRect);
             SetProgressLabelStringValue();
             View.AddSubview(_progressLabel);
         }
@@ -154,7 +154,7 @@ namespace PresentScreenings.TableView
             _activityField.SetFrameSize(fit);
 
             var rect = new CGRect(_xMargin, yCurr, _contentWidth, height);
-            _activityScrollView = Presentor.CreateStandardScrollView(rect, _activityField);
+            _activityScrollView = FilmRatingDialogController.CreateStandardScrollView(rect, _activityField);
             View.AddSubview(_activityScrollView);
         }
 
@@ -176,7 +176,7 @@ namespace PresentScreenings.TableView
 
             // Create the Start button.
             var startButtonRect = new CGRect(xCurr, yCurr, _buttonWidth + 10, _buttonHeight);
-            _startButton = Presentor.CreateStandardButton(startButtonRect);
+            _startButton = FilmRatingDialogController.CreateStandardButton(startButtonRect);
             _startButton.Title = $"Visit {visitCount} sites";
             _startButton.LineBreakMode = NSLineBreakMode.ByWordWrapping;
             _startButton.KeyEquivalent = _enterKey;
@@ -187,7 +187,7 @@ namespace PresentScreenings.TableView
 
             // Create the All Films button.
             var allFilmsButtonRect = new CGRect(xCurr, yCurr, _buttonWidth, _buttonHeight);
-            _allFilmsButton = Presentor.CreateStandardButton(allFilmsButtonRect);
+            _allFilmsButton = FilmRatingDialogController.CreateStandardButton(allFilmsButtonRect);
             _allFilmsButton.Title = "All films";
             _allFilmsButton.Enabled = false;
             _allFilmsButton.Action = new ObjCRuntime.Selector("VisitAllFilms:");
@@ -196,7 +196,7 @@ namespace PresentScreenings.TableView
 
             // Create the Cancel button.
             var cancelButtonRect = new CGRect(xCurr, yCurr, _buttonWidth, _buttonHeight);
-            _cancelButton = Presentor.CreateCancelButton(cancelButtonRect);
+            _cancelButton = FilmRatingDialogController.CreateCancelButton(cancelButtonRect);
             _cancelButton.Title = "Close";
             _cancelButton.Action = new ObjCRuntime.Selector("CancelDownloadFilmInfo:");
             View.AddSubview(_cancelButton);
@@ -213,7 +213,7 @@ namespace PresentScreenings.TableView
                     var filminfo = WebUtility.TryParseUrlSummary(request, url, catagory, film.FilmId);
                     if (filminfo != null)
                     {
-                        Presentor.AddFilmInfo(filminfo);
+                        FilmRatingDialogController.AddFilmInfo(filminfo);
                         film.InfoStatus = Film.FilmInfoStatus.Complete;
                     }
                     break;
@@ -268,7 +268,7 @@ namespace PresentScreenings.TableView
             );
         }
 
-        private void AsyncDownloadFilmInfo( StringBuilder builder)
+        private void AsyncDownloadFilmInfo(StringBuilder builder)
         {
             foreach (var film in _filmsWithoutInfo)
             {

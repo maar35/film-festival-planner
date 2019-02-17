@@ -72,7 +72,7 @@ namespace PresentScreenings.TableView
             // Populate the screenings list.
             nuint filmIndex = (nuint)Presentor.FilmRatingTableView.SelectedRow;
             Film film = Presentor.GetFilmByIndex(filmIndex);
-            _screenings = Presentor.GetScreeningsByFilmId(film.FilmId);
+            _screenings = ViewController.FilmScreenings(film.FilmId);
 
             // Populate the distinct titles list.
             _distinctTitles = _screenings.Select(s => s.ScreeningTitle).Distinct().ToList();
@@ -85,10 +85,10 @@ namespace PresentScreenings.TableView
 
             // Create a scroll view to dispay the screenings.
             CreateScrollView();
-            
+
             // Display the screenings of the selected film.
             DisplayScreenings();
-            
+
             // Create the cancel button.
             CreateCancelButton();
 
@@ -110,11 +110,11 @@ namespace PresentScreenings.TableView
         {
             _sheetFrame = View.Frame;
             _yCurr = _sheetFrame.Height - _yMargin;
-            
+
             nfloat scrollViewX = _xMargin + _xScrollerMargin;
             nfloat scrollViewY = _separateHeight + _buttonHeight + _separateHeight;
             nfloat scrollViewWidth = _sheetFrame.Width - 2 * (_xMargin + _xScrollerMargin);
-            nfloat scrollViewHeight = _sheetFrame.Height - 2 *_yMargin - 2 * _labelHeight - _yControlsDistance - 2 * _separateHeight - _buttonHeight;
+            nfloat scrollViewHeight = _sheetFrame.Height - 2 * _yMargin - 2 * _labelHeight - _yControlsDistance - 2 * _separateHeight - _buttonHeight;
             _scrollerFrame = new CGRect(scrollViewX, scrollViewY, scrollViewWidth, scrollViewHeight);
 
             nfloat docViewWidth = _sheetFrame.Width - 2 * _xScrollerMargin;
@@ -195,7 +195,7 @@ namespace PresentScreenings.TableView
         void CreateCancelButton()
         {
             CGRect cancelButtonRect = new CGRect(_xMargin, _yMargin, _cancelButtonWidth, _buttonHeight);
-            NSButton cancelButton = Presentor.CreateCancelButton(cancelButtonRect);
+            NSButton cancelButton = FilmRatingDialogController.CreateCancelButton(cancelButtonRect);
             cancelButton.Action = new ObjCRuntime.Selector("CancelUncombine:");
             View.AddSubview(cancelButton);
         }

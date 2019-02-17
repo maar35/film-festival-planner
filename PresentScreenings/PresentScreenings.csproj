@@ -147,6 +147,7 @@
     <Compile Include="Views\HeadersView.cs" />
     <Compile Include="Views\ScreeningsTableView.cs" />
     <Compile Include="Views\ScreeningsView.cs" />
+    <Compile Include="SelfDestructableDialog.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />
