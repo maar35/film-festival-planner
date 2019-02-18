@@ -71,6 +71,9 @@
     <Folder Include="Menu Delegates\" />
     <Folder Include="Controls\" />
     <Folder Include="Entities\" />
+    <Folder Include="Controllers\" />
+    <Folder Include="Interfaces\" />
+    <Folder Include="Views\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Info.plist" />
@@ -80,53 +83,19 @@
   <ItemGroup>
     <Compile Include="Main.cs" />
     <Compile Include="AppDelegate.cs" />
-    <Compile Include="ViewController.cs" />
-    <Compile Include="ViewController.designer.cs">
-      <DependentUpon>ViewController.cs</DependentUpon>
-    </Compile>
     <Compile Include="ScreeningsTableDataSource.cs" />
     <Compile Include="ScreeningsTableDelegate.cs" />
-    <Compile Include="ColorView.cs" />
-    <Compile Include="ScreeningsTableView.cs" />
     <Compile Include="AppDelegate.designer.cs">
       <DependentUpon>AppDelegate.cs</DependentUpon>
     </Compile>
-    <Compile Include="ScreeningsView.cs" />
-    <Compile Include="HeadersView.cs" />
     <Compile Include="ListReader.cs" />
-    <Compile Include="ScreeningDialogController.cs" />
-    <Compile Include="ScreeningDialogController.designer.cs">
-      <DependentUpon>ScreeningDialogController.cs</DependentUpon>
-    </Compile>
     <Compile Include="MyAttendanceTitler.cs" />
-    <Compile Include="ITitled.cs" />
     <Compile Include="ListWriter.cs" />
-    <Compile Include="FilmRatingDialogController.cs" />
-    <Compile Include="FilmRatingDialogController.designer.cs">
-      <DependentUpon>FilmRatingDialogController.cs</DependentUpon>
-    </Compile>
     <Compile Include="FilmTableDataSource.cs" />
     <Compile Include="FilmTableDelegate.cs" />
-    <Compile Include="CombineTitlesSheetControler.cs" />
-    <Compile Include="CombineTitlesSheetControler.designer.cs">
-      <DependentUpon>CombineTitlesSheetControler.cs</DependentUpon>
-    </Compile>
-    <Compile Include="UncombineTitlesSheetController.cs" />
-    <Compile Include="UncombineTitlesSheetController.designer.cs">
-      <DependentUpon>UncombineTitlesSheetController.cs</DependentUpon>
-    </Compile>
     <Compile Include="CombineTitlesEventArgs.cs" />
     <Compile Include="UncombineTitlesEventArgs.cs" />
-    <Compile Include="FilmInfoSheetController.cs" />
-    <Compile Include="FilmInfoSheetController.designer.cs">
-      <DependentUpon>FilmInfoSheetController.cs</DependentUpon>
-    </Compile>
-    <Compile Include="IScreeningProvider.cs" />
     <Compile Include="WebUtility.cs" />
-    <Compile Include="DownloadFilmInfoController.cs" />
-    <Compile Include="DownloadFilmInfoController.designer.cs">
-      <DependentUpon>DownloadFilmInfoController.cs</DependentUpon>
-    </Compile>
     <Compile Include="Menu Delegates\FilmsMenuDelegate.cs" />
     <Compile Include="Menu Delegates\NavigateMenuDelegate.cs" />
     <Compile Include="Menu Delegates\ScreeningMenuDelegate.cs" />
@@ -144,6 +113,40 @@
     <Compile Include="Entities\Screening.cs" />
     <Compile Include="Entities\ScreeningsPlan.cs" />
     <Compile Include="Entities\ScreeningStatus.cs" />
+    <Compile Include="Controllers\CombineTitlesSheetControler.cs" />
+    <Compile Include="Controllers\CombineTitlesSheetControler.designer.cs">
+      <DependentUpon>CombineTitlesSheetControler.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Controllers\DownloadFilmInfoController.cs" />
+    <Compile Include="Controllers\DownloadFilmInfoController.designer.cs">
+      <DependentUpon>DownloadFilmInfoController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Controllers\FilmInfoSheetController.cs" />
+    <Compile Include="Controllers\FilmInfoSheetController.designer.cs">
+      <DependentUpon>FilmInfoSheetController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Controllers\FilmRatingDialogController.cs" />
+    <Compile Include="Controllers\FilmRatingDialogController.designer.cs">
+      <DependentUpon>FilmRatingDialogController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Controllers\ScreeningDialogController.cs" />
+    <Compile Include="Controllers\ScreeningDialogController.designer.cs">
+      <DependentUpon>ScreeningDialogController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Controllers\UncombineTitlesSheetController.cs" />
+    <Compile Include="Controllers\UncombineTitlesSheetController.designer.cs">
+      <DependentUpon>UncombineTitlesSheetController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Controllers\ViewController.cs" />
+    <Compile Include="Controllers\ViewController.designer.cs">
+      <DependentUpon>ViewController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Interfaces\IScreeningProvider.cs" />
+    <Compile Include="Interfaces\ITitled.cs" />
+    <Compile Include="Views\ColorView.cs" />
+    <Compile Include="Views\HeadersView.cs" />
+    <Compile Include="Views\ScreeningsTableView.cs" />
+    <Compile Include="Views\ScreeningsView.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />
