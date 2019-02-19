@@ -11,17 +11,25 @@ namespace PresentScreenings.TableView
 
 	public class ScreeningsView
 	{
-		#region Private Variables
-		nfloat _labelLeft;
-        //nfloat _labelTop = ScreeningsTableView.VertPixelsPerLine;
-        nfloat _labelTop = ScreeningsTableView.YMargin;
+        #region Private Constants
+        const float _labelTop = 2;
+        const float _yLine = 17;
+        const int _linesPerScreening = 2;
+        const float _labelHeight = _yLine * _linesPerScreening;
+        #endregion
+
+        #region Private Variables
+        nfloat _labelLeft;
         nfloat _labelWidth;
-		nfloat _labelHeight = ScreeningsTableView.VertPixelsPerScreening;
 		ViewController _controller;
         ScreeningsTableView _superView;
-		#endregion
+        #endregion
 
-		#region Constructors
+        #region Properties
+        public const float HorizontalScreeningControlExtensionPixels = _labelHeight;
+        #endregion
+
+        #region Constructors
         public ScreeningsView(ViewController controller, ScreeningsTableView superView)
 		{
 			_controller = controller;

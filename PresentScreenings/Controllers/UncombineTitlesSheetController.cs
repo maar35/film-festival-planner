@@ -18,19 +18,17 @@ namespace PresentScreenings.TableView
     public partial class UncombineTitlesSheetController : NSViewController
     {
         #region Private Constants
-        const float _xMargin = 20;
+        const float _xMargin = ControlsFactory.HorizontalMargin;
         const float _xScrollerMargin = 5;
-        const float _cancelButtonWidth = 94;
-        const float _xControlsDistance = 8;
-        const float _yMargin = 8;
-        const float _labelHeight = 19;
+        const float _cancelButtonWidth = ControlsFactory.StandardButtonWidth;
+        const float _xControlsDistance = ControlsFactory.HorizontalPixelsBetweenControls;
+        const float _yMargin = ControlsFactory.SmallVerticalMargin;
+        const float _labelHeight = ControlsFactory.StandardLabelHeight;
         const float _screeningHeight = 46;
-        const float _buttonHeight = 32;
-        const float _yControlsDistance = 2;
+        const float _buttonHeight = ControlsFactory.StandardButtonHeight;
+        const float _yLabelsDistance = ControlsFactory.VerticalPixelsBetweenLabels;
         const float _separateHeight = 8;
-        const float _yScreeningSpace = _screeningHeight + _yControlsDistance;
-        const string _enterKey = "\r";
-        const string _escapeKey = "\x1b";
+        const float _yScreeningSpace = _screeningHeight + _yLabelsDistance;
         #endregion
 
         #region Private Variables
@@ -114,7 +112,7 @@ namespace PresentScreenings.TableView
             nfloat scrollViewX = _xMargin + _xScrollerMargin;
             nfloat scrollViewY = _separateHeight + _buttonHeight + _separateHeight;
             nfloat scrollViewWidth = _sheetFrame.Width - 2 * (_xMargin + _xScrollerMargin);
-            nfloat scrollViewHeight = _sheetFrame.Height - 2 * _yMargin - 2 * _labelHeight - _yControlsDistance - 2 * _separateHeight - _buttonHeight;
+            nfloat scrollViewHeight = _sheetFrame.Height - 2 * _yMargin - 2 * _labelHeight - _yLabelsDistance - 2 * _separateHeight - _buttonHeight;
             _scrollerFrame = new CGRect(scrollViewX, scrollViewY, scrollViewWidth, scrollViewHeight);
 
             nfloat docViewWidth = _sheetFrame.Width - 2 * _xScrollerMargin;
@@ -137,7 +135,7 @@ namespace PresentScreenings.TableView
             titleLabel.StringValue = "Uncombine film";
             View.AddSubview(titleLabel);
 
-            _yCurr -= _labelHeight + _yControlsDistance;
+            _yCurr -= _labelHeight + _yLabelsDistance;
 
             NSTextField instructionLabel = new NSTextField(new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight));
             instructionLabel.Editable = false;
@@ -171,11 +169,7 @@ namespace PresentScreenings.TableView
 
             _screeningsView = new NSView(_screeningsFrame);
 
-            NSScrollView scrollView = new NSScrollView(_scrollerFrame);
-            scrollView.BackgroundColor = NSColor.WindowBackground;
-            scrollView.BorderType = NSBorderType.BezelBorder;
-            scrollView.DocumentView = _screeningsView;
-            scrollView.ContentView.ScrollToPoint(new CGPoint(0, _screeningsFrame.Height));
+            var scrollView = ControlsFactory.CreateStandardScrollView(_scrollerFrame, _screeningsView);
             View.AddSubview(scrollView);
         }
 
@@ -195,7 +189,7 @@ namespace PresentScreenings.TableView
         void CreateCancelButton()
         {
             CGRect cancelButtonRect = new CGRect(_xMargin, _yMargin, _cancelButtonWidth, _buttonHeight);
-            NSButton cancelButton = FilmRatingDialogController.CreateCancelButton(cancelButtonRect);
+            NSButton cancelButton = ControlsFactory.CreateCancelButton(cancelButtonRect);
             cancelButton.Action = new ObjCRuntime.Selector("CancelUncombine:");
             View.AddSubview(cancelButton);
         }
@@ -213,7 +207,7 @@ namespace PresentScreenings.TableView
             bool enable = filmCount > 1;
             splitButton.Title = string.Format(_enabledToLabelTitle[enable], filmCount);
             splitButton.Enabled = enable;
-            splitButton.KeyEquivalent = _enterKey;
+            splitButton.KeyEquivalent = ControlsFactory.EnterKey;
             View.AddSubview(splitButton);
         }
 

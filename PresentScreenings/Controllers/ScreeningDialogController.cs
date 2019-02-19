@@ -17,7 +17,7 @@ namespace PresentScreenings.TableView
     public partial class ScreeningDialogController : SelfDestructableDialog, IScreeningProvider
     {
         #region Private Members
-        const float _xMargin = 20;
+        const float _xMargin = ControlsFactory.HorizontalMargin;
         const float _comboboxWidth = 38;
         const float _comboboxHeight = 22;
         const float _yControlsDistance = 1;

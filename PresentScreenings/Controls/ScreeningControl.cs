@@ -9,8 +9,8 @@ namespace PresentScreenings.TableView
     /// <summary>
     /// Screening control, when clicked opens a dialog to view and edit editable
     /// screening data.
-    /// The control displays a summary of its screening. Unfortunately the display
-    /// area is not clickable (yet?).
+    /// The control displays a summary of its screening. The display area is
+    /// only clickable in Use Core Graphics mode.
     /// </summary>
 
     [Register("NSScreeningControl")]
@@ -112,7 +112,6 @@ namespace PresentScreenings.TableView
                 }
 
                 // Draw the rating of the film
-                //FilmRating rating = _screening.Rating;
                 var film = _app.Controller.GetFilmById(_screening.FilmId);
                 var ratings = ScreeningStatus.FilmFans.Select(f => _app.Controller.GetFilmFanRating(film, f));
                 var rating = ratings.Max();

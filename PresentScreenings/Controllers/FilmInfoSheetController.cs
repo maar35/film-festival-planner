@@ -19,12 +19,13 @@ namespace PresentScreenings.TableView
     public partial class FilmInfoSheetController : NSViewController
     {
         #region Constants
-        const float _xMargin = 20;
-        const float _yMargin = 12;
-        const float _yBetweenViews = 12;
-        const float _yBetweenLabels = 2;
-        const float _labelHeight = 19;
-        const float _buttonHeight = 32;
+        const float _xMargin = ControlsFactory.HorizontalMargin;
+        const float _yMargin = ControlsFactory.BigVerticalMargin;
+        const float _yBetweenViews = ControlsFactory.VerticalPixelsBetweenViews;
+        const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
+        const float _labelHeight = ControlsFactory.StandardLabelHeight;
+        const float _buttonWidth = ControlsFactory.StandardButtonWidth;
+        const float _buttonHeight = ControlsFactory.StandardButtonHeight;
         const float _summaryBoxHeight = 300;
         #endregion
 
@@ -113,7 +114,7 @@ namespace PresentScreenings.TableView
         {
             yCurr -= _labelHeight;
             var rect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            var filmTitleLabel = FilmRatingDialogController.CreateStandardLabel(rect);
+            var filmTitleLabel = ControlsFactory.CreateStandardLabel(rect);
             filmTitleLabel.StringValue = _film.Title;
             filmTitleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
             View.AddSubview(filmTitleLabel);
@@ -133,7 +134,7 @@ namespace PresentScreenings.TableView
             var scrollViewHeight = yCurr - _yBetweenViews - _buttonHeight - _yMargin;
             yCurr -= (float)scrollViewHeight;
             var scrollViewFrame = new CGRect(_xMargin, yCurr, _contentWidth, scrollViewHeight);
-            var scrollView = FilmRatingDialogController.CreateStandardScrollView(scrollViewFrame, screeningsView);
+            var scrollView = ControlsFactory.CreateStandardScrollView(scrollViewFrame, screeningsView);
             View.AddSubview(scrollView);
 
             // Display the screenings.
@@ -157,7 +158,7 @@ namespace PresentScreenings.TableView
 
                 // Create the screening label.
                 var labelRect = new CGRect(xScreening, yScreening, _contentWidth - xScreening, _labelHeight);
-                var screeningLabel = FilmRatingDialogController.CreateStandardLabel(labelRect);
+                var screeningLabel = ControlsFactory.CreateStandardLabel(labelRect);
                 screeningLabel.StringValue = screening.ToFilmScreeningLabelString();
                 ColorView.SetScreeningColor(screening, screeningLabel);
                 screeningsView.AddSubview(screeningLabel);
@@ -219,7 +220,7 @@ namespace PresentScreenings.TableView
 
             yCurr -= summaryBoxHeight;
             var rect = new CGRect(_xMargin, yCurr, _contentWidth, summaryBoxHeight);
-            _summaryScrollView = FilmRatingDialogController.CreateStandardScrollView(rect, _summaryField);
+            _summaryScrollView = ControlsFactory.CreateStandardScrollView(rect, _summaryField);
             _summaryScrollView.ContentView.ScrollToPoint(new CGPoint(0, 0));
             View.AddSubview(_summaryScrollView);
         }
@@ -227,8 +228,8 @@ namespace PresentScreenings.TableView
         void CreateCancelButton(ref float yCurr)
         {
             yCurr -= _buttonHeight;
-            var cancelButtonRect = new CGRect(_xMargin, yCurr, 94, _buttonHeight);
-            _cancelButton = FilmRatingDialogController.CreateCancelButton(cancelButtonRect);
+            var cancelButtonRect = new CGRect(_xMargin, yCurr, _buttonWidth, _buttonHeight);
+            _cancelButton = ControlsFactory.CreateCancelButton(cancelButtonRect);
             _cancelButton.Action = new ObjCRuntime.Selector("CancelGotoScreening:");
             View.AddSubview(_cancelButton);
         }

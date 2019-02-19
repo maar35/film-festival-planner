@@ -19,12 +19,12 @@ namespace PresentScreenings.TableView
     public partial class CombineTitlesSheetController : NSViewController
 	{
         #region Private Constants
-        const float _xMargin = 20;
-        const float _xDistance = 8;
+        const float _xMargin = ControlsFactory.HorizontalMargin;
+        const float _xDistance = ControlsFactory.HorizontalPixelsBetweenControls;
         const float _labelWidth = 25;
-        const float _yMargin = 8;
+        const float _yMargin = ControlsFactory.SmallVerticalMargin;
         const float _yControlsDistance = 1;
-        const float _controlsHeight = 19;
+        const float _controlsHeight = ControlsFactory.StandardLabelHeight;
         const float _magicTwenty = 20;
         #endregion
 
