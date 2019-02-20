@@ -11,12 +11,13 @@ using System.Net;
 namespace PresentScreenings.TableView
 {
     /// <summary>
-    /// Film info sheet controller, present a list of screenings of one film, with
-    /// a button to display a Screening Info Modal in the day view of the
-    /// screening.
+    /// Film info dialog controller, present film information from the web site
+    /// if available. Otherwise allow to search the web sitr.
+    /// Optionally displays a list of the screenings of the current film, with
+    /// buttons to navigate to the screening.
     /// </summary>
 
-    public partial class FilmInfoSheetController : NSViewController
+    public partial class FilmInfoDialogController : NSViewController
     {
         #region Constants
         const float _xMargin = ControlsFactory.HorizontalMargin;
@@ -36,6 +37,9 @@ namespace PresentScreenings.TableView
         FilmInfo _filmInfo;
         CGRect _dialogFrame;
         NSTextField _summaryField;
+        NSFont _originalSummaryFieldFont;
+        NSColor _originalSummaryFieldColor;
+        bool _summaryFieldFormatIsOriginal;
         NSScrollView _summaryScrollView;
         NSButton _linkButton;
         NSButton _cancelButton;
@@ -46,12 +50,12 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public SelfDestructableDialog Presentor;
+        public GoToScreeningDialog Presentor;
         public bool ShowScreenings = true;
         #endregion
 
         #region Constructors
-        public FilmInfoSheetController(IntPtr handle) : base(handle)
+        public FilmInfoDialogController(IntPtr handle) : base(handle)
         {
         }
         #endregion
@@ -213,8 +217,7 @@ namespace PresentScreenings.TableView
             float summaryBoxHeight = ShowScreenings ? _summaryBoxHeight : yCurr - _yBetweenViews - _buttonHeight - _yMargin;
             var docRect = new CGRect(0, 0, _contentWidth, _summaryBoxHeight);
             _summaryField = new NSTextField(docRect);
-            _summaryField.Editable = true;
-            _summaryField.StringValue = _filmInfo != null ? _filmInfo.ToString() : SampleText();
+            InitiateSummaryFieldText();
             var fit = _summaryField.SizeThatFits(_summaryField.Frame.Size);
             _summaryField.SetFrameSize(fit);
 
@@ -230,29 +233,55 @@ namespace PresentScreenings.TableView
             yCurr -= _buttonHeight;
             var cancelButtonRect = new CGRect(_xMargin, yCurr, _buttonWidth, _buttonHeight);
             _cancelButton = ControlsFactory.CreateCancelButton(cancelButtonRect);
+            _cancelButton.Title = "Done";
             _cancelButton.Action = new ObjCRuntime.Selector("CancelGotoScreening:");
             View.AddSubview(_cancelButton);
         }
 
-        string SampleText()
+        void InitiateSummaryFieldText()
         {
-            var builder = new StringBuilder();
-            foreach (Film film in App.Controller.Plan.Films)
+            _summaryFieldFormatIsOriginal = true;
+            _originalSummaryFieldFont = _summaryField.Font;
+            _originalSummaryFieldColor = _summaryField.TextColor;
+            _summaryField.Editable = false;
+            _summaryField.Selectable = true;
+            if (_filmInfo != null)
             {
-                builder.AppendLine(film.ToString());
+                SetSummaryFieldText(_filmInfo.ToString());
             }
-            return builder.ToString();
+            else
+            {
+                SetSummaryFieldText(@"Please, hit the URL button to get film information from the web site.", true);
+            }
+        }
+
+        void SetSummaryFieldText(string text, bool alternativeFormat = false)
+        {
+            if (alternativeFormat && _summaryFieldFormatIsOriginal)
+            {
+                _summaryField.Selectable = false;
+                _summaryField.Font = NSFont.LabelFontOfSize(24);
+                _summaryField.TextColor = NSColor.LightGray;
+                _summaryFieldFormatIsOriginal = false;
+            }
+            else if (! alternativeFormat && ! _summaryFieldFormatIsOriginal)
+            {
+                _summaryField.Selectable = true;
+                _summaryField.Font = _originalSummaryFieldFont;
+                _summaryField.TextColor = _originalSummaryFieldColor;
+                _summaryFieldFormatIsOriginal = true;
+            }
+            _summaryField.StringValue = text;
         }
 
         void VisitUrl()
         {
             string summary = "";
             var title = _film.Title;
-            FilmInfo filmInfo;
+            FilmInfo filmInfo; ;
             foreach (var catagory in WebUtility.FolderByCatagory.Keys)
             {
                 var url = WebUtility.UrlString(title, catagory);
-                _summaryField.StringValue = url;
                 _summaryScrollView.BackgroundColor = NSColor.WindowBackground;
                 var request = WebRequest.Create(url) as HttpWebRequest;
                 try
@@ -265,7 +294,6 @@ namespace PresentScreenings.TableView
                         summary = filmInfo.ToString();
                         FilmRatingDialogController.AddFilmInfo(filmInfo);
                         _linkButton.Title = url;
-                        _cancelButton.Title = "Done";
                     }
                     break;
                 }
@@ -284,7 +312,7 @@ namespace PresentScreenings.TableView
                 }
                 finally
                 {
-                    _summaryField.StringValue = summary;
+                    SetSummaryFieldText(summary);
                     var fit = _summaryField.SizeThatFits(_summaryField.Frame.Size);
                     _summaryField.SetFrameSize(fit);
                 }

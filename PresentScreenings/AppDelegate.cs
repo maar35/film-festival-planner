@@ -23,7 +23,7 @@ namespace PresentScreenings.TableView
         public FilmRatingDialogController FilmsDialogController { get; set; }
         public CombineTitlesSheetController CombineTitleController { get; set; }
         public UncombineTitlesSheetController UncombineTitleController;
-        public FilmInfoSheetController filmInfoController;
+        public FilmInfoDialogController filmInfoController;
         public DownloadFilmInfoController DownloadFilmInfoController;
         public ScreeningMenuDelegate ScreeningMenuDelegate => (ScreeningMenuDelegate)_screeningMenu.Delegate;
         public NSMenuItem ToggleTypeMatchMenuItem { get => _toggleTypeMatchMethod; }

@@ -9,7 +9,7 @@ using CoreGraphics;
 
 namespace PresentScreenings.TableView
 {
-    public partial class FilmRatingDialogController : SelfDestructableDialog, IScreeningProvider
+    public partial class FilmRatingDialogController : GoToScreeningDialog, IScreeningProvider
     {
         #region Private Variables
         ViewController _presentor;
@@ -116,7 +116,7 @@ namespace PresentScreenings.TableView
                     uncombineSheet.Presentor = this;
                     break;
                 case "GoToScreeningSegue":
-                    var goToScreeningPopOver = segue.DestinationController as FilmInfoSheetController;
+                    var goToScreeningPopOver = segue.DestinationController as FilmInfoDialogController;
                     goToScreeningPopOver.Presentor = this;
                     break;
                 case "DownloadFilmInfoSegue":

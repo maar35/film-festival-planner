@@ -10,7 +10,7 @@ using System.CodeDom.Compiler;
 namespace PresentScreenings.TableView
 {
 	[Register ("FilmInfoSheetController")]
-	partial class FilmInfoSheetController
+	partial class FilmInfoDialogController
 	{
 		
 		void ReleaseDesignerOutlets ()

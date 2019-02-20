@@ -14,7 +14,7 @@ namespace PresentScreenings.TableView
     /// of a screening and in which editable screening properties can be changed.
     /// </summary>
 
-    public partial class ScreeningDialogController : SelfDestructableDialog, IScreeningProvider
+    public partial class ScreeningDialogController : GoToScreeningDialog, IScreeningProvider
     {
         #region Private Members
         const float _xMargin = ControlsFactory.HorizontalMargin;
@@ -96,7 +96,7 @@ namespace PresentScreenings.TableView
             switch (segue.Identifier)
             {
                 case "ScreeningToFilmInfo":
-                    var filmInfoModal = segue.DestinationController as FilmInfoSheetController;
+                    var filmInfoModal = segue.DestinationController as FilmInfoDialogController;
                     filmInfoModal.Presentor = this;
                     filmInfoModal.ShowScreenings = false;
                     break;
