@@ -11,15 +11,12 @@ namespace PresentScreenings.TableView
     /// with the its screen.
     /// </summary>
 
-	public class ScreeningsTableView
+    public class ScreeningsTableView
     {
         #region Private Members
         static nfloat _xHourDefault = 120;
         nfloat _xHour;
-        static nfloat _yMargin = 2;
-        static nfloat _yLine = 17;
-        static int _linesPerScreening = 2;
-        static nfloat _xHourStart = _yLine *_linesPerScreening;
+        static nfloat _xHourStart = ScreeningsView.HorizontalScreeningControlExtensionPixels;
         static int _firstDisplayedHour = 9;
         static int _lastDisplayedHour = 24;
         ScreeningsView _screeningsView;
@@ -30,13 +27,9 @@ namespace PresentScreenings.TableView
         public nfloat HorzPixelsPerHour => _xHour;
         public static int FirstDisplayedHour => _firstDisplayedHour;
         public static int LastDisplayedHour => _lastDisplayedHour;
-        public static nfloat VertPixelsPerLine => _yLine;
         public static nfloat XHourStart => _xHourStart;
-        public static nfloat VertPixelsPerScreening => VertPixelsPerLine * _linesPerScreening;
-        public static nfloat VertPixelsPerRow = VertPixelsPerScreening + _yMargin;
         public ScreeningsView ScreeningsView => _screeningsView;
         public HeadersView HeadersView => _headersView;
-        public static nfloat YMargin { get => _yMargin; set => _yMargin = value; }
         #endregion
 
         #region Contructors

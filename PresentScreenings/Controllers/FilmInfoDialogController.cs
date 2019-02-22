@@ -11,20 +11,22 @@ using System.Net;
 namespace PresentScreenings.TableView
 {
     /// <summary>
-    /// Film info sheet controller, present a list of screenings of one film, with
-    /// a button to display a Screening Info Modal in the day view of the
-    /// screening.
+    /// Film info dialog controller, present film information from the web site
+    /// if available. Otherwise allow to search the web sitr.
+    /// Optionally displays a list of the screenings of the current film, with
+    /// buttons to navigate to the screening.
     /// </summary>
 
-    public partial class FilmInfoSheetController : NSViewController
+    public partial class FilmInfoDialogController : NSViewController
     {
         #region Constants
-        const float _xMargin = 20;
-        const float _yMargin = 12;
-        const float _yBetweenViews = 12;
-        const float _yBetweenLabels = 2;
-        const float _labelHeight = 19;
-        const float _buttonHeight = 32;
+        const float _xMargin = ControlsFactory.HorizontalMargin;
+        const float _yMargin = ControlsFactory.BigVerticalMargin;
+        const float _yBetweenViews = ControlsFactory.VerticalPixelsBetweenViews;
+        const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
+        const float _labelHeight = ControlsFactory.StandardLabelHeight;
+        const float _buttonWidth = ControlsFactory.StandardButtonWidth;
+        const float _buttonHeight = ControlsFactory.StandardButtonHeight;
         const float _summaryBoxHeight = 300;
         #endregion
 
@@ -35,6 +37,9 @@ namespace PresentScreenings.TableView
         FilmInfo _filmInfo;
         CGRect _dialogFrame;
         NSTextField _summaryField;
+        NSFont _originalSummaryFieldFont;
+        NSColor _originalSummaryFieldColor;
+        bool _summaryFieldFormatIsOriginal;
         NSScrollView _summaryScrollView;
         NSButton _linkButton;
         NSButton _cancelButton;
@@ -45,11 +50,12 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public FilmRatingDialogController Presentor;
+        public GoToScreeningDialog Presentor;
+        public bool ShowScreenings = true;
         #endregion
 
         #region Constructors
-        public FilmInfoSheetController (IntPtr handle) : base (handle)
+        public FilmInfoDialogController(IntPtr handle) : base(handle)
         {
         }
         #endregion
@@ -63,11 +69,10 @@ namespace PresentScreenings.TableView
             App.filmInfoController = this;
 
             // Get the selected film.
-            var index = Presentor.FilmRatingTableView.SelectedRow;
-            _film = Presentor.GetFilmByIndex((nuint)index);
+            _film = ((IScreeningProvider)Presentor).CurrentFilm;
 
             // Get the downloaded film info if present.
-            _filmInfo = Presentor.GetFilmInfo(_film.FilmId);
+            _filmInfo = FilmRatingDialogController.GetFilmInfo(_film.FilmId);
 
             // Get the dialog frame.
             _dialogFrame = View.Frame;
@@ -87,8 +92,11 @@ namespace PresentScreenings.TableView
             CreateFilmSummaryBox(ref _yCurr);
 
             // Create the screenings scroll view.
-            _yCurr -= _yBetweenViews;
-            CreateScreeningsScrollView(ref _yCurr);
+            if (ShowScreenings)
+            {
+                _yCurr -= _yBetweenViews;
+                CreateScreeningsScrollView(ref _yCurr);
+            }
 
             // Create the cancel button.
             _yCurr = _yMargin + _buttonHeight + _yBetweenViews;   // temp
@@ -110,16 +118,16 @@ namespace PresentScreenings.TableView
         {
             yCurr -= _labelHeight;
             var rect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            var filmTitleLabel = Presentor.CreateStandardLabel(rect);
+            var filmTitleLabel = ControlsFactory.CreateStandardLabel(rect);
             filmTitleLabel.StringValue = _film.Title;
             filmTitleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
             View.AddSubview(filmTitleLabel);
         }
-        
+
         void CreateScreeningsScrollView(ref float yCurr)
         {
             // Get the screenings of the selected film.
-            var screenings = Presentor.GetScreeningsByFilmId(_film.FilmId);
+            var screenings = ViewController.FilmScreenings(_film.FilmId);
 
             // Create the screenings view.
             var xScreenings = screenings.Count * (_labelHeight + _yBetweenLabels);
@@ -130,7 +138,7 @@ namespace PresentScreenings.TableView
             var scrollViewHeight = yCurr - _yBetweenViews - _buttonHeight - _yMargin;
             yCurr -= (float)scrollViewHeight;
             var scrollViewFrame = new CGRect(_xMargin, yCurr, _contentWidth, scrollViewHeight);
-            var scrollView = Presentor.CreateStandardScrollView(scrollViewFrame, screeningsView);
+            var scrollView = ControlsFactory.CreateStandardScrollView(scrollViewFrame, screeningsView);
             View.AddSubview(scrollView);
 
             // Display the screenings.
@@ -153,8 +161,8 @@ namespace PresentScreenings.TableView
                 xScreening += 22;
 
                 // Create the screening label.
-                var labelRect = new CGRect(xScreening, yScreening, _contentWidth-xScreening, _labelHeight);
-                var screeningLabel = Presentor.CreateStandardLabel(labelRect);
+                var labelRect = new CGRect(xScreening, yScreening, _contentWidth - xScreening, _labelHeight);
+                var screeningLabel = ControlsFactory.CreateStandardLabel(labelRect);
                 screeningLabel.StringValue = screening.ToFilmScreeningLabelString();
                 ColorView.SetScreeningColor(screening, screeningLabel);
                 screeningsView.AddSubview(screeningLabel);
@@ -206,16 +214,16 @@ namespace PresentScreenings.TableView
 
         void CreateFilmSummaryBox(ref float yCurr)
         {
-            yCurr -= _summaryBoxHeight;
+            float summaryBoxHeight = ShowScreenings ? _summaryBoxHeight : yCurr - _yBetweenViews - _buttonHeight - _yMargin;
             var docRect = new CGRect(0, 0, _contentWidth, _summaryBoxHeight);
             _summaryField = new NSTextField(docRect);
-            _summaryField.Editable = true;
-            _summaryField.StringValue = _filmInfo != null ? _filmInfo.ToString() : SampleText();
+            InitiateSummaryFieldText();
             var fit = _summaryField.SizeThatFits(_summaryField.Frame.Size);
             _summaryField.SetFrameSize(fit);
 
-            var rect = new CGRect(_xMargin, yCurr, _contentWidth, _summaryBoxHeight);
-            _summaryScrollView = Presentor.CreateStandardScrollView(rect, _summaryField);
+            yCurr -= summaryBoxHeight;
+            var rect = new CGRect(_xMargin, yCurr, _contentWidth, summaryBoxHeight);
+            _summaryScrollView = ControlsFactory.CreateStandardScrollView(rect, _summaryField);
             _summaryScrollView.ContentView.ScrollToPoint(new CGPoint(0, 0));
             View.AddSubview(_summaryScrollView);
         }
@@ -223,20 +231,47 @@ namespace PresentScreenings.TableView
         void CreateCancelButton(ref float yCurr)
         {
             yCurr -= _buttonHeight;
-            var cancelButtonRect = new CGRect(_xMargin, yCurr, 94, _buttonHeight);
-            _cancelButton = Presentor.CreateCancelButton(cancelButtonRect);
+            var cancelButtonRect = new CGRect(_xMargin, yCurr, _buttonWidth, _buttonHeight);
+            _cancelButton = ControlsFactory.CreateCancelButton(cancelButtonRect);
+            _cancelButton.Title = "Done";
             _cancelButton.Action = new ObjCRuntime.Selector("CancelGotoScreening:");
             View.AddSubview(_cancelButton);
         }
 
-        string SampleText()
+        void InitiateSummaryFieldText()
         {
-            var builder = new StringBuilder();
-            foreach(Film film in App.Controller.Plan.Films)
+            _summaryFieldFormatIsOriginal = true;
+            _originalSummaryFieldFont = _summaryField.Font;
+            _originalSummaryFieldColor = _summaryField.TextColor;
+            _summaryField.Editable = false;
+            _summaryField.Selectable = true;
+            if (_filmInfo != null)
             {
-                builder.AppendLine(film.ToString());
+                SetSummaryFieldText(_filmInfo.ToString());
             }
-            return builder.ToString();
+            else
+            {
+                SetSummaryFieldText(@"Please, hit the URL button to get film information from the web site.", true);
+            }
+        }
+
+        void SetSummaryFieldText(string text, bool alternativeFormat = false)
+        {
+            if (alternativeFormat && _summaryFieldFormatIsOriginal)
+            {
+                _summaryField.Selectable = false;
+                _summaryField.Font = NSFont.LabelFontOfSize(24);
+                _summaryField.TextColor = NSColor.LightGray;
+                _summaryFieldFormatIsOriginal = false;
+            }
+            else if (! alternativeFormat && ! _summaryFieldFormatIsOriginal)
+            {
+                _summaryField.Selectable = true;
+                _summaryField.Font = _originalSummaryFieldFont;
+                _summaryField.TextColor = _originalSummaryFieldColor;
+                _summaryFieldFormatIsOriginal = true;
+            }
+            _summaryField.StringValue = text;
         }
 
         void VisitUrl()
@@ -247,7 +282,6 @@ namespace PresentScreenings.TableView
             foreach (var catagory in WebUtility.FolderByCatagory.Keys)
             {
                 var url = WebUtility.UrlString(title, catagory);
-                _summaryField.StringValue = url;
                 _summaryScrollView.BackgroundColor = NSColor.WindowBackground;
                 var request = WebRequest.Create(url) as HttpWebRequest;
                 try
@@ -258,9 +292,8 @@ namespace PresentScreenings.TableView
                         _filmInfo = filmInfo;
                         _film.InfoStatus = Film.FilmInfoStatus.Complete;
                         summary = filmInfo.ToString();
-                        Presentor.AddFilmInfo(filmInfo);
+                        FilmRatingDialogController.AddFilmInfo(filmInfo);
                         _linkButton.Title = url;
-                        _cancelButton.Title = "Done";
                     }
                     break;
                 }
@@ -279,7 +312,7 @@ namespace PresentScreenings.TableView
                 }
                 finally
                 {
-                    _summaryField.StringValue = summary;
+                    SetSummaryFieldText(summary);
                     var fit = _summaryField.SizeThatFits(_summaryField.Frame.Size);
                     _summaryField.SetFrameSize(fit);
                 }
@@ -288,9 +321,7 @@ namespace PresentScreenings.TableView
 
         void GoToScreening(Screening screening)
         {
-            App.Controller.GoToScreening(screening);
-            ClosePopOver();
-            Presentor.CloseDialog();
+            Presentor.GoToScreening(screening);
         }
 
         void ClosePopOver()

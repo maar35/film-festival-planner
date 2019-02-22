@@ -9,12 +9,8 @@ using CoreGraphics;
 
 namespace PresentScreenings.TableView
 {
-    public partial class FilmRatingDialogController : NSViewController, IScreeningProvider
+    public partial class FilmRatingDialogController : GoToScreeningDialog, IScreeningProvider
     {
-        #region Constants
-        const string _escapeKey = "\x1b";
-        #endregion
-        
         #region Private Variables
         ViewController _presentor;
         FilmTableDataSource _filmTableDataSource;
@@ -62,7 +58,7 @@ namespace PresentScreenings.TableView
             _uncombineTitleButton.Action = new ObjCRuntime.Selector("ShowTitlesToUncombine:");
             _goToScreeningButton.Action = new ObjCRuntime.Selector("ShowScreenings:");
             _downloadFilmInfoButton.Action = new ObjCRuntime.Selector("DownLoadInfoForOneFilm:");
-            _doneButton.KeyEquivalent = _escapeKey;
+            _doneButton.KeyEquivalent = ControlsFactory.EscapeKey;
             SetTypeMatchMethodControlerStates();
         }
 
@@ -120,7 +116,7 @@ namespace PresentScreenings.TableView
                     uncombineSheet.Presentor = this;
                     break;
                 case "GoToScreeningSegue":
-                    var goToScreeningPopOver = segue.DestinationController as FilmInfoSheetController;
+                    var goToScreeningPopOver = segue.DestinationController as FilmInfoDialogController;
                     goToScreeningPopOver.Presentor = this;
                     break;
                 case "DownloadFilmInfoSegue":
@@ -330,67 +326,24 @@ namespace PresentScreenings.TableView
 
         public List<Screening> GetScreeningsByFilmId(int filmId)
         {
-            return _presentor.FilmScreenings(filmId);
+            return ViewController.FilmScreenings(filmId);
         }
 
-        public FilmInfo GetFilmInfo(int filmId)
+        public static FilmInfo GetFilmInfo(int filmId)
         {
             var info = ScreeningsPlan.FilmInfos.Where(f => f.FilmId == filmId).ToList();
             return info.Count > 0 ? info.First() : null;
         }
 
-        public void AddFilmInfo(FilmInfo filmInfo)
+        public static void AddFilmInfo(FilmInfo filmInfo)
         {
             ScreeningsPlan.FilmInfos.Add(filmInfo);
         }
 
-        public NSTextField CreateStandardLabel(CGRect frame)
+        public override void GoToScreening(Screening screening)
         {
-            var label = new NSTextField(frame)
-            {
-                Editable = false,
-                BackgroundColor = NSColor.WindowBackground,
-                Bordered = false,
-                LineBreakMode = NSLineBreakMode.TruncatingMiddle
-            };
-            return label;
-        }
-
-        public NSButton CreateStandardButton(CGRect frame)
-        {
-            var button = new NSButton(frame)
-            {
-                BezelStyle = NSBezelStyle.Rounded,
-                Enabled = true
-            };
-            button.SetButtonType(NSButtonType.MomentaryPushIn);
-            return button;
-        }
-
-        public NSButton CreateCancelButton(CGRect frame)
-        {
-            var cancelButton = CreateStandardButton(frame);
-            cancelButton.Title = "Cancel";
-            cancelButton.KeyEquivalent = _escapeKey;
-            return cancelButton;
-        }
-
-        public NSScrollView CreateStandardScrollView(CGRect frame, NSView documentView)
-        {
-            var scrollView = new NSScrollView(frame);
-            scrollView.BackgroundColor = NSColor.WindowBackground;
-            scrollView.BorderType = NSBorderType.BezelBorder;
-            scrollView.DocumentView = documentView;
-            if (frame.Width > documentView.Frame.Width)
-            {
-                documentView.SetFrameSize(new CGSize(frame.Width, documentView.Frame.Height));
-            }
-            if (frame.Height > documentView.Frame.Height)
-            {
-                documentView.SetFrameSize(new CGSize(documentView.Frame.Width, frame.Height));
-            }
-            scrollView.ContentView.ScrollToPoint(new CGPoint(0, documentView.Frame.Height));
-            return scrollView;
+            _app.Controller.GoToScreening(screening);
+            CloseDialog();
         }
 
         public void CloseDialog()

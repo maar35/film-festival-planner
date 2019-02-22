@@ -198,7 +198,7 @@ namespace PresentScreenings.TableView
         int TimesIAttendFilm(Screening screening)
         {
             var timesIAttendFilm = (
-                from Screening s in _plan.Screenings
+                from Screening s in ScreeningsPlan.Screenings
                 where s.FilmId == screening.FilmId && s.IAttend
                 select s
             ).Count();
@@ -208,7 +208,7 @@ namespace PresentScreenings.TableView
         List<Screening> OverlappingAttendedScreenings(Screening screening)
         {
             var overlappingAttendedScreenings = (
-                from Screening s in _plan.Screenings
+                from Screening s in ScreeningsPlan.Screenings
                 where s.IAttend
                     && s.StartTime <= screening.EndTime
                     && s.EndTime >= screening.StartTime
@@ -220,7 +220,7 @@ namespace PresentScreenings.TableView
         List<Screening> OverlappingScreenings(Screening screening)
         {
             var overlappingScreenings = (
-                from Screening s in _plan.Screenings
+                from Screening s in ScreeningsPlan.Screenings
                 where s.StartTime <= screening.EndTime
                     && s.EndTime >= screening.StartTime
                     && s.FilmId != screening.FilmId
@@ -232,7 +232,7 @@ namespace PresentScreenings.TableView
         List<Screening> ScreeningsWithSameFilm(Screening screening)
         {
             var screeningsWithSameFilm = (
-                from Screening s in _plan.Screenings
+                from Screening s in ScreeningsPlan.Screenings
                 where s.FilmId == screening.FilmId
                 select s
             ).ToList();
@@ -265,10 +265,10 @@ namespace PresentScreenings.TableView
             _controlByScreening.Add(screening, control);
         }
 
-        public List<Screening> FilmScreenings(int filmId)
+        public static List<Screening> FilmScreenings(int filmId)
         {
             var filmScreenings = (
-                from Screening screening in _plan.Screenings
+                from Screening screening in ScreeningsPlan.Screenings
                 where screening.FilmId == filmId
                 orderby screening.StartTime
                 select screening
@@ -279,7 +279,7 @@ namespace PresentScreenings.TableView
         public List<Screening> FilmScreenings(Screening screening)
         {
             var filmScreenings = (
-                from Screening s in _plan.Screenings
+                from Screening s in ScreeningsPlan.Screenings
                 where s.FilmId == screening.FilmId
                 orderby s.StartTime
                 select s

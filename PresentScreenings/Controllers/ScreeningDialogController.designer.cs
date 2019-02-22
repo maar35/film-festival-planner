@@ -28,6 +28,9 @@ namespace PresentScreenings.TableView
 		AppKit.NSComboBox _comboboxRating { get; set; }
 
 		[Outlet]
+		AppKit.NSButton _filmInfoButton { get; set; }
+
+		[Outlet]
 		AppKit.NSTextField _labelPresent { get; set; }
 
 		[Outlet]
@@ -105,6 +108,11 @@ namespace PresentScreenings.TableView
 			if (_labelTitle != null) {
 				_labelTitle.Dispose ();
 				_labelTitle = null;
+			}
+
+			if (_filmInfoButton != null) {
+				_filmInfoButton.Dispose ();
+				_filmInfoButton = null;
 			}
 		}
 	}

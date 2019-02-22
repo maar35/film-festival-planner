@@ -14,10 +14,10 @@ namespace PresentScreenings.TableView
     /// of a screening and in which editable screening properties can be changed.
     /// </summary>
 
-    public partial class ScreeningDialogController : NSViewController
+    public partial class ScreeningDialogController : GoToScreeningDialog, IScreeningProvider
     {
         #region Private Members
-        const float _xMargin = 20;
+        const float _xMargin = ControlsFactory.HorizontalMargin;
         const float _comboboxWidth = 38;
         const float _comboboxHeight = 22;
         const float _yControlsDistance = 1;
@@ -33,11 +33,17 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Computed Properties
-        public NSViewController Presentor
+        public ViewController Presentor
         {
             get => _presentor;
             set => _presentor = (ViewController)value;
         }
+        #endregion
+
+        #region Interface Implementation Properties
+        public Screening CurrentScreening => Presentor.Plan.CurrScreening;
+        public List<Screening> Screenings => ViewController.FilmScreenings(Presentor.Plan.CurrScreening.FilmId);
+        public Film CurrentFilm => Presentor.GetFilmById(CurrentScreening.FilmId);
         #endregion
 
         #region Constructors
@@ -56,7 +62,11 @@ namespace PresentScreenings.TableView
         }
         public override void ViewDidLoad()
         {
+            // Tell the presentor we're alive.
             _presentor.RunningPopupsCount += 1;
+
+            // Populate controls.
+            _filmInfoButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
         }
 
         public override void ViewWillAppear()
@@ -76,6 +86,21 @@ namespace PresentScreenings.TableView
         public override void ViewWillDisappear()
         {
             _presentor.RunningPopupsCount--;
+        }
+
+        public override void PrepareForSegue(NSStoryboardSegue segue, NSObject sender)
+        {
+            base.PrepareForSegue(segue, sender);
+
+            // Take action based on the segue name
+            switch (segue.Identifier)
+            {
+                case "ScreeningToFilmInfo":
+                    var filmInfoModal = segue.DestinationController as FilmInfoDialogController;
+                    filmInfoModal.Presentor = this;
+                    filmInfoModal.ShowScreenings = false;
+                    break;
+            }
         }
         #endregion
 
@@ -173,7 +198,7 @@ namespace PresentScreenings.TableView
             _screeningInfoControl.ReDraw();
         }
 
-        void GoToScreening(Screening screening)
+        public override void GoToScreening(Screening screening)
         {
             _presentor.GoToScreening(screening);
             CloseDialog();
@@ -351,6 +376,12 @@ namespace PresentScreenings.TableView
         {
             var screening = ScreeningMenuDelegate.FilmScreening(((NSMenuItem)sender).Title);
             GoToScreening(screening);
+        }
+
+        [Action("ShowFilmInfo:")]
+        private void ShowFilmInfo(NSObject sender)
+        {
+            PerformSegue("ScreeningToFilmInfo", sender);
         }
         #endregion
 

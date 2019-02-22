@@ -9,8 +9,8 @@ namespace PresentScreenings.TableView
     /// <summary>
     /// Screening control, when clicked opens a dialog to view and edit editable
     /// screening data.
-    /// The control displays a summary of its screening. Unfortunately the display
-    /// area is not clickable (yet?).
+    /// The control displays a summary of its screening. The display area is
+    /// only clickable in Use Core Graphics mode.
     /// </summary>
 
     [Register("NSScreeningControl")]

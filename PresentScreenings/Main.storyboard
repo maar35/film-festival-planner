@@ -911,6 +911,14 @@ Gw
                                     <action selector="SetRating:" target="vU8-og-eGU" id="u67-9L-chn"/>
                                 </connections>
                             </comboBox>
+                            <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="0fB-1r-jAn">
+                                <rect key="frame" x="14" y="478" width="48" height="32"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <buttonCell key="cell" type="push" title="Info" bezelStyle="rounded" image="NSInfo" imagePosition="only" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Fy9-GM-W0w">
+                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                </buttonCell>
+                            </button>
                         </subviews>
                         <constraints>
                             <constraint firstAttribute="trailing" secondItem="6dc-lf-7ip" secondAttribute="trailing" constant="20" id="22K-1v-yIJ"/>
@@ -959,15 +967,17 @@ Gw
                         <outlet property="_checkboxTicketsBought" destination="JRb-Dc-A6F" id="Psc-JB-bQ4"/>
                         <outlet property="_checkboxTicketsNeeded" destination="6dc-lf-7ip" id="EVE-7S-tsI"/>
                         <outlet property="_comboboxRating" destination="LTo-dB-IYk" id="Hj8-Dd-H63"/>
+                        <outlet property="_filmInfoButton" destination="0fB-1r-jAn" id="EuS-Zq-2sv"/>
                         <outlet property="_labelPresent" destination="hCw-vZ-7Dv" id="iuo-kY-WJh"/>
                         <outlet property="_labelScreen" destination="VI4-Vt-R12" id="b35-gb-2KI"/>
                         <outlet property="_labelTime" destination="Gm5-B4-fbz" id="jVw-DO-2Xw"/>
                         <outlet property="_labelTitle" destination="SM5-CE-qT9" id="ogl-7A-9pv"/>
+                        <segue destination="heZ-Uf-iae" kind="popover" identifier="ScreeningToFilmInfo" popoverAnchorView="0fB-1r-jAn" popoverBehavior="t" preferredEdge="minX" id="GdS-O0-lhM"/>
                     </connections>
                 </viewController>
                 <customObject id="Mif-Sj-hiq" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="-458" y="1498"/>
+            <point key="canvasLocation" x="-458" y="1489"/>
         </scene>
         <!--Film Ratings-->
         <scene sceneID="dwS-JR-0kj">
@@ -1352,6 +1362,7 @@ Gw
         <sound name="Glass"/>
     </resources>
     <inferredMetricsTieBreakers>
+        <segue reference="Aco-xL-TKu"/>
         <segue reference="MQZ-rL-cxz"/>
     </inferredMetricsTieBreakers>
 </document>

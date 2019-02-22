@@ -23,7 +23,7 @@ namespace PresentScreenings.TableView
         public FilmRatingDialogController FilmsDialogController { get; set; }
         public CombineTitlesSheetController CombineTitleController { get; set; }
         public UncombineTitlesSheetController UncombineTitleController;
-        public FilmInfoSheetController filmInfoController;
+        public FilmInfoDialogController filmInfoController;
         public DownloadFilmInfoController DownloadFilmInfoController;
         public ScreeningMenuDelegate ScreeningMenuDelegate => (ScreeningMenuDelegate)_screeningMenu.Delegate;
         public NSMenuItem ToggleTypeMatchMenuItem { get => _toggleTypeMatchMethod; }
@@ -95,7 +95,7 @@ namespace PresentScreenings.TableView
                 // Write screenings.
                 string screeningsPath = Path.Combine(directory, "screenings.csv");
                 var screeningsWriter = new ListWriter<Screening>(screeningsPath, Screening.WriteHeader);
-                screeningsWriter.WriteListToFile(Controller.Plan.Screenings, Screening.Serialize);
+                screeningsWriter.WriteListToFile(ScreeningsPlan.Screenings, Screening.Serialize);
 
                 // Write screenings overview.
                 string overviewPath = Path.Combine(directory, "Screenings Summary.csv");
