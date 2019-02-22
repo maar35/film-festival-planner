@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using System;
-using System.Linq;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace PresentScreenings.TableView
 {
@@ -16,38 +16,35 @@ namespace PresentScreenings.TableView
         public const string FestivalYear = "2019";
         #endregion
 
-        #region Private members
-        static string _homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-        static string _directory = HomeFolder + @"/Documents/Film/IFFR/IFFR" + FestivalYear + @"/Screenings Plan";
-        static string _screensFile = Path.Combine(_directory, "screens.csv");
-        static string _filmsFile = Path.Combine(_directory, "films.csv");
-        static string _screeningsFile = Path.Combine(_directory, "screenings.csv");
-        static string _friendFilmRatingsFile = Path.Combine(_directory, "friendfilmratings.csv");
-        static string _filmInfoFile = Path.Combine(_directory, "filminfo.xml");
-        List<Film> _films;
-        List<Screen> _screens;
-        List<DateTime> _days;
-        Dictionary<DateTime, List<Screen>> _dayScreens;
-        Dictionary<DateTime, Dictionary<Screen, List<Screening>>> _screenScreenings;
-        static private List<FilmInfo> _filmInfos;
-        int _currDayNumber;
-        int _currScreenNumber;
-        int _currScreenScreeningNumber;
+        #region Read Only Members
+        private static readonly string HomeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+        #endregion
+
+        #region Private Members
+        private static string _directory = HomeFolder + @"/Documents/Film/IFFR/IFFR" + FestivalYear + @"/Screenings Plan";
+        private static string _screensFile = Path.Combine(_directory, "screens.csv");
+        private static string _filmsFile = Path.Combine(_directory, "films.csv");
+        private static string _screeningsFile = Path.Combine(_directory, "screenings.csv");
+        private static string _friendFilmRatingsFile = Path.Combine(_directory, "friendfilmratings.csv");
+        private static string _filmInfoFile = Path.Combine(_directory, "filminfo.xml");
+        private Dictionary<DateTime, List<Screen>> _dayScreens;
+        private int _currDayNumber;
+        private int _currScreenNumber;
+        private int _currScreenScreeningNumber;
         #endregion
 
         #region Properties
-        public static string HomeFolder => _homeFolder;
-        public Dictionary<DateTime, Dictionary<Screen, List<Screening>>> ScreenScreenings => _screenScreenings;
+        public Dictionary<DateTime, Dictionary<Screen, List<Screening>>> ScreenScreenings { get; private set; }
         public Screen CurrScreen => _dayScreens[CurrDay][_currScreenNumber];
-        public Screening CurrScreening => _screenScreenings[CurrDay][CurrScreen][_currScreenScreeningNumber];
-        public List<DateTime> FestivalDays => _days;
+        public Screening CurrScreening => ScreenScreenings[CurrDay][CurrScreen][_currScreenScreeningNumber];
+        public List<DateTime> FestivalDays { get; private set; }
         public List<Screen> CurrDayScreens => _dayScreens[CurrDay];
-        public List<Screen> Screens => _screens;
-        public List<Film> Films => _films;
-        public DateTime CurrDay => _days[_currDayNumber];
-        static public List<Screening> Screenings { get; private set; }
+        public List<Screen> Screens { get; }
+        public List<Film> Films { get; }
+        public DateTime CurrDay => FestivalDays[_currDayNumber];
+        public static List<Screening> Screenings { get; private set; }
         public List<FriendFilmRating> FriendFilmRatings { get; }
-        static public List<FilmInfo> FilmInfos => _filmInfos;
+        public static List<FilmInfo> FilmInfos { get; private set; }
         #endregion
 
         #region Constructors
@@ -55,14 +52,14 @@ namespace PresentScreenings.TableView
         {
             // Read screens.
             ListReader<Screen> ScreensReader = new ListReader<Screen>(_screensFile);
-            _screens = ScreensReader.ReadListFromFile(line => new Screen(line));
+            Screens = ScreensReader.ReadListFromFile(line => new Screen(line));
 
             // Initialize film info.
-            _filmInfos = WebUtility.LoadFilmInfoFromXml(_filmInfoFile);
+            FilmInfos = WebUtility.LoadFilmInfoFromXml(_filmInfoFile);
 
             // Read films.
             ListReader<Film> FilmsReader = new ListReader<Film>(_filmsFile, true);
-            _films = FilmsReader.ReadListFromFile(line => new Film(line));
+            Films = FilmsReader.ReadListFromFile(line => new Film(line));
 
             // Read friend film ratings.
             ListReader<FriendFilmRating> RatingsReader = new ListReader<FriendFilmRating>(_friendFilmRatingsFile, true);
@@ -70,7 +67,7 @@ namespace PresentScreenings.TableView
 
             // Read screenings.
             ListReader<Screening> ScreeningsReader = new ListReader<Screening>(_screeningsFile, true);
-            Screenings = ScreeningsReader.ReadListFromFile(line => new Screening(line, _screens, _films, FriendFilmRatings));
+            Screenings = ScreeningsReader.ReadListFromFile(line => new Screening(line, Screens, Films, FriendFilmRatings));
 
             InitializeDays();
             _currDayNumber = 0;
@@ -80,37 +77,37 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        void InitializeDays()
+        private void InitializeDays()
         {
-            _days = new List<DateTime> { };
+            FestivalDays = new List<DateTime> { };
             _dayScreens = new Dictionary<DateTime, List<Screen>> { };
-            _screenScreenings = new Dictionary<DateTime, Dictionary<Screen, List<Screening>>> { };
+            ScreenScreenings = new Dictionary<DateTime, Dictionary<Screen, List<Screening>>> { };
 
             foreach (Screening screening in Screenings)
             {
                 DateTime day = screening.StartDate;
-                if (!_days.Contains(day))
+                if (!FestivalDays.Contains(day))
                 {
-                    _days.Add(day);
+                    FestivalDays.Add(day);
                     _dayScreens.Add(day, new List<Screen> { });
-                    _screenScreenings.Add(day, new Dictionary<Screen, List<Screening>> { });
+                    ScreenScreenings.Add(day, new Dictionary<Screen, List<Screening>> { });
                 }
 
                 Screen screen = screening.Screen;
                 if (!_dayScreens[day].Contains(screen))
                 {
                     _dayScreens[day].Add(screen);
-                    _screenScreenings[day].Add(screen, new List<Screening> { });
+                    ScreenScreenings[day].Add(screen, new List<Screening> { });
                 }
-                _screenScreenings[day][screen].Add(screening);
+                ScreenScreenings[day][screen].Add(screening);
             }
-            _days.Sort();
-            foreach (var day in _days)
+            FestivalDays.Sort();
+            foreach (var day in FestivalDays)
             {
                 _dayScreens[day].Sort();
                 foreach (var screen in _dayScreens[day])
                 {
-                    _screenScreenings[day][screen].Sort();
+                    ScreenScreenings[day][screen].Sort();
                 }
             }
         }
@@ -157,7 +154,7 @@ namespace PresentScreenings.TableView
             else
             {
                 SetNextScreen(-1);
-                _currScreenScreeningNumber = _screenScreenings[CurrDay][CurrScreen].Count - 1;
+                _currScreenScreeningNumber = ScreenScreenings[CurrDay][CurrScreen].Count - 1;
             }
         }
 
@@ -177,7 +174,7 @@ namespace PresentScreenings.TableView
         public bool NextDayExists(int numberOfDays = 1)
         {
             int nextDayNumber = _currDayNumber + numberOfDays;
-            return nextDayNumber >= 0 && nextDayNumber < _days.Count;
+            return nextDayNumber >= 0 && nextDayNumber < FestivalDays.Count;
         }
 
         public bool NextScreenWithinDayExists(int numberOfScreens = 1)
@@ -199,7 +196,7 @@ namespace PresentScreenings.TableView
         public bool NextScreeningWithinScreenExists(int numberOfScreenings = 1)
         {
             int nextScreeningNumber = _currScreenScreeningNumber + numberOfScreenings;
-            return nextScreeningNumber >= 0 && nextScreeningNumber < _screenScreenings[CurrDay][CurrScreen].Count;
+            return nextScreeningNumber >= 0 && nextScreeningNumber < ScreenScreenings[CurrDay][CurrScreen].Count;
         }
 
         public List<Screening> AttendedScreenings()
@@ -219,7 +216,7 @@ namespace PresentScreenings.TableView
         {
             string dayString = "";
             string separator = "";
-            foreach (var day in _days)
+            foreach (var day in FestivalDays)
             {
                 dayString = dayString + separator + day.ToShortDateString();
                 if (separator.Length == 0)
