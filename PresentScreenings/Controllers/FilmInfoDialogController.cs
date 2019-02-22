@@ -278,7 +278,7 @@ namespace PresentScreenings.TableView
         {
             string summary = "";
             var title = _film.Title;
-            FilmInfo filmInfo; ;
+            FilmInfo filmInfo;
             foreach (var catagory in WebUtility.FolderByCatagory.Keys)
             {
                 var url = WebUtility.UrlString(title, catagory);
