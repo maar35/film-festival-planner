@@ -117,7 +117,7 @@ namespace PresentScreenings.TableView
                     break;
                 case "GoToScreeningSegue":
                     var goToScreeningPopOver = segue.DestinationController as FilmInfoDialogController;
-                    goToScreeningPopOver.Presentor = this;
+                    FilmInfoDialogController.Presentor = this;
                     break;
                 case "DownloadFilmInfoSegue":
                     var downloadFilmInfoOpen = segue.DestinationController as DownloadFilmInfoController;

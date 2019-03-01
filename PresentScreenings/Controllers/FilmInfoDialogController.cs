@@ -43,6 +43,7 @@ namespace PresentScreenings.TableView
         NSScrollView _summaryScrollView;
         NSButton _linkButton;
         NSButton _cancelButton;
+        FilmScreeningControl _currentScreeningControl;
         #endregion
 
         #region Application Access
@@ -50,7 +51,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public GoToScreeningDialog Presentor;
+        public static GoToScreeningDialog Presentor;
         public bool ShowScreenings = true;
         #endregion
 
@@ -142,33 +143,7 @@ namespace PresentScreenings.TableView
             View.AddSubview(scrollView);
 
             // Display the screenings.
-            DisplayScreeningControls(screenings, screeningsView);
-        }
-
-        void DisplayScreeningControls(List<Screening> screenings, NSView screeningsView)
-        {
-            var yScreening = screeningsView.Frame.Height;
-            foreach (var screening in screenings)
-            {
-                float xScreening = 0;
-                yScreening -= _labelHeight;
-
-                // Create the screening info button.
-                var buttonRect = new CGRect(xScreening, yScreening, 20, _labelHeight);
-                var infoButton = new FilmScreeningControl(buttonRect, screening);
-                infoButton.ScreeningInfoAsked += (sender, e) => GoToScreening(screening);
-                screeningsView.AddSubview(infoButton);
-                xScreening += 22;
-
-                // Create the screening label.
-                var labelRect = new CGRect(xScreening, yScreening, _contentWidth - xScreening, _labelHeight);
-                var screeningLabel = ControlsFactory.CreateStandardLabel(labelRect);
-                screeningLabel.StringValue = screening.ToFilmScreeningLabelString();
-                ColorView.SetScreeningColor(screening, screeningLabel);
-                screeningsView.AddSubview(screeningLabel);
-
-                yScreening -= _yBetweenLabels;
-            }
+            GoToScreeningDialog.DisplayScreeningControls(screenings, screeningsView, GoToScreening, ref _currentScreeningControl);
         }
 
         void CreateFilmArticleLink(ref float yCurr)
@@ -319,7 +294,7 @@ namespace PresentScreenings.TableView
             }
         }
 
-        void GoToScreening(Screening screening)
+        private static void GoToScreening(Screening screening)
         {
             Presentor.GoToScreening(screening);
         }

@@ -1,5 +1,8 @@
-﻿using AppKit;
+﻿using System;
+using System.Linq;
+using AppKit;
 using CoreGraphics;
+using Foundation;
 
 namespace PresentScreenings.TableView
 {
@@ -10,6 +13,7 @@ namespace PresentScreenings.TableView
         public const float SmallVerticalMargin = 8;
         public const float BigVerticalMargin = 12;
         public const float HorizontalPixelsBetweenControls = 12;
+        public const float VerticalPixelsBetweenControls = 4;
         public const float VerticalPixelsBetweenLabels = 2;
         public const float VerticalPixelsBetweenViews = 12;
         public const float StandardButtonWidth = 94;
@@ -55,6 +59,16 @@ namespace PresentScreenings.TableView
             cancelButton.Title = "Cancel";
             cancelButton.KeyEquivalent = EscapeKey;
             return cancelButton;
+        }
+
+        public static NSComboBox NewRatingComboBox(CGRect frame, NSFont font)
+        {
+            var comboBox = new NSComboBox(frame);
+            comboBox.Add(FilmRating.Values.Select(str => new NSString(str)).ToArray());
+            comboBox.Alignment = NSTextAlignment.Right;
+            comboBox.Font = font;
+            comboBox.AutoresizesSubviews = true;
+            return comboBox;
         }
 
         public static NSScrollView CreateStandardScrollView(CGRect frame, NSView documentView)

@@ -16,19 +16,24 @@ namespace PresentScreenings.TableView
 
     public partial class ScreeningDialogController : GoToScreeningDialog, IScreeningProvider
     {
-        #region Private Members
+        #region Constants
         const float _xMargin = ControlsFactory.HorizontalMargin;
-        const float _comboboxWidth = 38;
-        const float _comboboxHeight = 22;
-        const float _yControlsDistance = 1;
-        const float _yCheckboxSpace = _comboboxHeight + _yControlsDistance;
-        const float _yScreeningLabelSpace = 20;
+        const float _yMargin = ControlsFactory.BigVerticalMargin;
+        const float _yBetweenViews = ControlsFactory.VerticalPixelsBetweenViews;
+        const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
+        const float _labelHeight = ControlsFactory.StandardLabelHeight;
+        const float _buttonWidth = ControlsFactory.StandardButtonWidth;
+        const float _buttonHeight = ControlsFactory.StandardButtonHeight;
+        const float _yControlsDistance = ControlsFactory.VerticalPixelsBetweenControls;
+        #endregion
+
+        #region Private Members
+        nfloat _yCurr;
         Screening _screening;
         ScreeningControl _control;
         ViewController _presentor;
         List<Screening> _filmScreenings;
         FilmScreeningControl _screeningInfoControl;
-        Dictionary<Screening, NSTextField> _labelByfilmScreening;
         Dictionary<string, AttendanceCheckbox> _attendanceCheckboxByFriend;
         #endregion
 
@@ -50,7 +55,6 @@ namespace PresentScreenings.TableView
         public ScreeningDialogController(IntPtr handle) : base(handle)
         {
             _filmScreenings = new List<Screening> { };
-            _labelByfilmScreening = new Dictionary<Screening, NSTextField> { };
             _attendanceCheckboxByFriend = new Dictionary<string, AttendanceCheckbox> { };
         }
         #endregion
@@ -77,10 +81,9 @@ namespace PresentScreenings.TableView
             _checkboxTicketsBought.Activated += (s, e) => ToggleTicketsBought();
             _checkboxSoldOut.Activated += (s, e) => ToggleSoldOut();
             _checkboxIAttend.Activated += (s, e) => ToggleMyAttandance();
-            _comboboxRating.EditingEnded += (s, e) => HandleRatingEditingEnded();
             SetControlValues();
             CreateFriendControls();
-            CreateFilmScreeningControls();
+            CreateScreeningsScrollView();
         }
 
         public override void ViewWillDisappear()
@@ -97,7 +100,7 @@ namespace PresentScreenings.TableView
             {
                 case "ScreeningToFilmInfo":
                     var filmInfoModal = segue.DestinationController as FilmInfoDialogController;
-                    filmInfoModal.Presentor = this;
+                    FilmInfoDialogController.Presentor = this;
                     filmInfoModal.ShowScreenings = false;
                     break;
             }
@@ -107,7 +110,6 @@ namespace PresentScreenings.TableView
         #region Private Methods
         void SetControlValues()
         {
-            _comboboxRating.StringValue = _screening.Rating.ToString();
             _labelTitle.StringValue = _screening.FilmTitle;
             _labelScreen.StringValue = _screening.Screen.ParseName;
             _labelTime.StringValue = _screening.ToLongTimeString();
@@ -121,28 +123,40 @@ namespace PresentScreenings.TableView
 
         void CreateFriendControls()
         {
+            // Clone the Rating combo box.
+            var comboBoxFrame = _comboboxRating.Frame;
+            var comboBoxFont = _comboboxRating.Font;
+            var myRatingComboBox = ControlsFactory.NewRatingComboBox(comboBoxFrame, comboBoxFont);
+            myRatingComboBox.EditingEnded += (s, e) => HandleMyRatingEditingEnded(myRatingComboBox);
+            myRatingComboBox.StringValue = _screening.Rating.ToString();
+            View.AddSubview(myRatingComboBox);
+
+            // Dispose the original Rating combo box.
+            _comboboxRating.RemoveFromSuperview();
+            _comboboxRating.Dispose();
+
+            // Initialize the vertical postion of run-time created controls.
+            _yCurr = comboBoxFrame.Y;
+
+            // Initialze values to construct the Friend Attendance checkboxes.
+            var checkBoxFrame = _checkboxIAttend.Frame;
+            var checkBoxShift = comboBoxFrame.Y - checkBoxFrame.Y;
+
             foreach (var friend in ScreeningStatus.MyFriends)
             {
-                // Create the friend rating combobox.
-                int controlsBelowIAttendBoxCount = ScreeningStatus.MyFriends.IndexOf(friend);
-                var comboboxFrame = RectLikeAt(_comboboxRating.Frame, controlsBelowIAttendBoxCount);
-                var labelFrame = new CGRect(
-                    _xMargin,
-                    comboboxFrame.Y - _yControlsDistance,
-                    comboboxFrame.Width,
-                    _yCheckboxSpace - _yControlsDistance
-                );
-                var friendRatingCombobox = new NSComboBox(labelFrame);
-                friendRatingCombobox.Add(FilmRating.Values.Select(str => new NSString(str)).ToArray());
-                friendRatingCombobox.EditingEnded += (s, e) => HandleFriendRatingEditingEnded(friendRatingCombobox, friend);
-                friendRatingCombobox.StringValue = _presentor.GetFriendFilmRating(_screening.FilmId, friend).ToString();
-                friendRatingCombobox.Alignment = NSTextAlignment.Right;
-                friendRatingCombobox.AutoresizesSubviews = true;
-                View.AddSubview(friendRatingCombobox);
+                // Update the vertical position.
+                _yCurr -= myRatingComboBox.Frame.Height + _yControlsDistance;
 
-                // Create the checkbox.
-                var checkboxFrame = RectLikeAt(_checkboxIAttend.Frame, controlsBelowIAttendBoxCount);
-                var friendCheckbox = new AttendanceCheckbox(checkboxFrame);
+                // Create the Rriend Rating combobox.
+                comboBoxFrame.Y = _yCurr;
+                var friendRatingComboBox = ControlsFactory.NewRatingComboBox(comboBoxFrame, comboBoxFont);
+                friendRatingComboBox.EditingEnded += (s, e) => HandleFriendRatingEditingEnded(friendRatingComboBox, friend);
+                friendRatingComboBox.StringValue = _presentor.GetFriendFilmRating(_screening.FilmId, friend).ToString();
+                View.AddSubview(friendRatingComboBox);
+
+                // Create the Friend Attendance checkbox.
+                checkBoxFrame.Y = _yCurr - checkBoxShift;
+                var friendCheckbox = new AttendanceCheckbox(checkBoxFrame);
                 friendCheckbox.Title = friend;
                 friendCheckbox.State = AttendanceCheckbox.SetAttendanceState(_screening.FriendAttends(friend));
                 friendCheckbox.Activated += (s, e) => ToggleFriendAttendance(friend);
@@ -153,36 +167,27 @@ namespace PresentScreenings.TableView
             }
         }
 
-        void CreateFilmScreeningControls()
+        void CreateScreeningsScrollView()
         {
-            foreach (var screening in _filmScreenings)
-            {
-                // Create the screening label.
-                float yRef = _yCheckboxSpace * (ScreeningStatus.MyFriends.Count);
-                int numberOfControlsBelowIAttendBox = _filmScreenings.IndexOf(screening) + 1;
-                CGRect rect = RectLikeAt(_checkboxIAttend.Frame, numberOfControlsBelowIAttendBox, _yScreeningLabelSpace, yRef);
-                var screeningLabel = new NSTextField(rect);
-                screeningLabel.Editable = false;
-                screeningLabel.Bordered = screening == _screening;
-                screeningLabel.LineBreakMode = NSLineBreakMode.TruncatingMiddle;
-                screeningLabel.StringValue = screening.ToFilmScreeningLabelString();
-                ColorView.SetScreeningColor(screening, screeningLabel);
-                screeningLabel.Tag = _filmScreenings.IndexOf(screening);
-                base.View.AddSubview(screeningLabel);
-                _labelByfilmScreening.Add(screening, screeningLabel);
+            // Get the screenings of the selected film.
+            var screenings = _filmScreenings;
 
-                // Create the screening info button.
-                var infoButtonRect = new CGRect(rect.X - 22, rect.Y, 20, _yCheckboxSpace - 2);
-                var infoBotton = new FilmScreeningControl(infoButtonRect, screening);
-                infoBotton.ReDraw();
-                infoBotton.ScreeningInfoAsked += (sender, e) => GoToScreening(screening);
-                if (screening == _screening)
-                {
-                    _screeningInfoControl = infoBotton;
-                    _screeningInfoControl.Selected = true;
-                }
-                base.View.AddSubview(infoBotton);
-            }
+            // Create the screenings view.
+            var xScreenings = screenings.Count * (_labelHeight + _yBetweenLabels);
+            var contentWidth = this.View.Frame.Width - 2 * _xMargin;
+            var screeningsViewFrame = new CGRect(0, 0, contentWidth, xScreenings);
+            var screeningsView = new NSView(screeningsViewFrame);
+
+            // Create the scroll view.
+            _yCurr -= _yBetweenViews;
+            var scrollViewHeight = _yCurr - _yBetweenViews - _buttonHeight - _yMargin;
+            _yCurr -= scrollViewHeight;
+            var scrollViewFrame = new CGRect(_xMargin, _yCurr, contentWidth, scrollViewHeight);
+            var scrollView = ControlsFactory.CreateStandardScrollView(scrollViewFrame, screeningsView);
+            View.AddSubview(scrollView);
+
+            // Display the screenings.
+            GoToScreeningDialog.DisplayScreeningControls(screenings, screeningsView, GoToScreening, ref _screeningInfoControl);
         }
 
         void UpdateAttendances()
@@ -190,11 +195,7 @@ namespace PresentScreenings.TableView
             _labelPresent.StringValue = _screening.AttendeesString();
             _presentor.UpdateAttendanceStatus(_screening);
             _presentor.ReloadScreeningsView();
-            foreach (var screening in _labelByfilmScreening.Keys)
-            {
-                ColorView.SetScreeningColor(screening, _labelByfilmScreening[screening]);
-                _labelByfilmScreening[screening].StringValue = screening.ToFilmScreeningLabelString();
-            }
+            GoToScreeningDialog.UpdateScreeningControls();
             _screeningInfoControl.ReDraw();
         }
 
@@ -204,28 +205,17 @@ namespace PresentScreenings.TableView
             CloseDialog();
         }
 
-        CGRect RectLikeAt(CGRect sampleRect, float rectsBelowSampleRect, float ySpace = _yCheckboxSpace, float yRef = 0)
-        {
-            var rect = new CGRect(
-                sampleRect.X,
-                sampleRect.Y - yRef - ySpace * (rectsBelowSampleRect + 1),
-                sampleRect.Width,
-                sampleRect.Height
-            );
-            return rect;
-        }
-
         void CloseDialog()
         {
             _presentor.DismissViewController(this);
         }
 
-        void HandleRatingEditingEnded()
+        void HandleMyRatingEditingEnded(NSComboBox comboBox)
         {
             FilmRating rating = _screening.Rating;
             string oldRatingString = rating.Value;
             string newRatingString = rating.Value;
-            if (SetNewValueFromComboBox(_comboboxRating, ref newRatingString))
+            if (SetNewValueFromComboBox(comboBox, ref newRatingString))
             {
                 if (_screening.Rating.SetRating(newRatingString))
                 {
@@ -233,7 +223,7 @@ namespace PresentScreenings.TableView
                 }
                 else
                 {
-                    _comboboxRating.StringValue = oldRatingString;
+                    comboBox.StringValue = oldRatingString;
                 }
             }
         }
