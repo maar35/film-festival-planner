@@ -113,21 +113,21 @@ namespace PresentScreenings.TableView
             // Create the selected films count label.
             yCurr -= _labelHeight;
             var selectedCountRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            var selectedCountLabel = ControlsFactory.CreateStandardLabel(selectedCountRect);
+            var selectedCountLabel = ControlsFactory.NewStandardLabel(selectedCountRect);
             selectedCountLabel.StringValue = $"Selected films: {_films.Count}";
             View.AddSubview(selectedCountLabel);
 
             // Create the films without info count label.
             yCurr -= _yBetweenLabels + _labelHeight;
             var withoutInfoRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            var withoutInfoLabel = ControlsFactory.CreateStandardLabel(withoutInfoRect);
+            var withoutInfoLabel = ControlsFactory.NewStandardLabel(withoutInfoRect);
             withoutInfoLabel.StringValue = $"Without info: {_filmsWithoutInfo.Count}";
             View.AddSubview(withoutInfoLabel);
 
             //Create the progress label.
             yCurr -= _yBetweenLabels + _labelHeight;
             var progressRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            _progressLabel = ControlsFactory.CreateStandardLabel(progressRect);
+            _progressLabel = ControlsFactory.NewStandardLabel(progressRect);
             SetProgressLabelStringValue();
             View.AddSubview(_progressLabel);
         }
@@ -153,7 +153,7 @@ namespace PresentScreenings.TableView
             _activityField.SetFrameSize(fit);
 
             var rect = new CGRect(_xMargin, yCurr, _contentWidth, height);
-            _activityScrollView = ControlsFactory.CreateStandardScrollView(rect, _activityField);
+            _activityScrollView = ControlsFactory.NewStandardScrollView(rect, _activityField);
             View.AddSubview(_activityScrollView);
         }
 
@@ -175,7 +175,7 @@ namespace PresentScreenings.TableView
 
             // Create the Start button.
             var startButtonRect = new CGRect(xCurr, yCurr, _buttonWidth + 10, _buttonHeight);
-            _startButton = ControlsFactory.CreateStandardButton(startButtonRect);
+            _startButton = ControlsFactory.NewStandardButton(startButtonRect);
             _startButton.Title = $"Visit {visitCount} sites";
             _startButton.LineBreakMode = NSLineBreakMode.ByWordWrapping;
             _startButton.KeyEquivalent = ControlsFactory.EnterKey;
@@ -186,7 +186,7 @@ namespace PresentScreenings.TableView
 
             // Create the All Films button.
             var allFilmsButtonRect = new CGRect(xCurr, yCurr, _buttonWidth, _buttonHeight);
-            _allFilmsButton = ControlsFactory.CreateStandardButton(allFilmsButtonRect);
+            _allFilmsButton = ControlsFactory.NewStandardButton(allFilmsButtonRect);
             _allFilmsButton.Title = "All films";
             _allFilmsButton.Enabled = false;
             _allFilmsButton.Action = new ObjCRuntime.Selector("VisitAllFilms:");
@@ -195,7 +195,7 @@ namespace PresentScreenings.TableView
 
             // Create the Cancel button.
             var cancelButtonRect = new CGRect(xCurr, yCurr, _buttonWidth, _buttonHeight);
-            _cancelButton = ControlsFactory.CreateCancelButton(cancelButtonRect);
+            _cancelButton = ControlsFactory.NewCancelButton(cancelButtonRect);
             _cancelButton.Title = "Close";
             _cancelButton.Action = new ObjCRuntime.Selector("CancelDownloadFilmInfo:");
             View.AddSubview(_cancelButton);

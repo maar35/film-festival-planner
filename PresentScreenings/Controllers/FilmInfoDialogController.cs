@@ -43,6 +43,7 @@ namespace PresentScreenings.TableView
         NSScrollView _summaryScrollView;
         NSButton _linkButton;
         NSButton _cancelButton;
+        FilmScreeningControl _currentScreeningControl;
         #endregion
 
         #region Application Access
@@ -50,7 +51,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public GoToScreeningDialog Presentor;
+        public static GoToScreeningDialog Presentor;
         public bool ShowScreenings = true;
         #endregion
 
@@ -118,7 +119,7 @@ namespace PresentScreenings.TableView
         {
             yCurr -= _labelHeight;
             var rect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            var filmTitleLabel = ControlsFactory.CreateStandardLabel(rect);
+            var filmTitleLabel = ControlsFactory.NewStandardLabel(rect);
             filmTitleLabel.StringValue = _film.Title;
             filmTitleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
             View.AddSubview(filmTitleLabel);
@@ -138,37 +139,11 @@ namespace PresentScreenings.TableView
             var scrollViewHeight = yCurr - _yBetweenViews - _buttonHeight - _yMargin;
             yCurr -= (float)scrollViewHeight;
             var scrollViewFrame = new CGRect(_xMargin, yCurr, _contentWidth, scrollViewHeight);
-            var scrollView = ControlsFactory.CreateStandardScrollView(scrollViewFrame, screeningsView);
+            var scrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, screeningsView);
             View.AddSubview(scrollView);
 
             // Display the screenings.
-            DisplayScreeningControls(screenings, screeningsView);
-        }
-
-        void DisplayScreeningControls(List<Screening> screenings, NSView screeningsView)
-        {
-            var yScreening = screeningsView.Frame.Height;
-            foreach (var screening in screenings)
-            {
-                float xScreening = 0;
-                yScreening -= _labelHeight;
-
-                // Create the screening info button.
-                var buttonRect = new CGRect(xScreening, yScreening, 20, _labelHeight);
-                var infoButton = new FilmScreeningControl(buttonRect, screening);
-                infoButton.ScreeningInfoAsked += (sender, e) => GoToScreening(screening);
-                screeningsView.AddSubview(infoButton);
-                xScreening += 22;
-
-                // Create the screening label.
-                var labelRect = new CGRect(xScreening, yScreening, _contentWidth - xScreening, _labelHeight);
-                var screeningLabel = ControlsFactory.CreateStandardLabel(labelRect);
-                screeningLabel.StringValue = screening.ToFilmScreeningLabelString();
-                ColorView.SetScreeningColor(screening, screeningLabel);
-                screeningsView.AddSubview(screeningLabel);
-
-                yScreening -= _yBetweenLabels;
-            }
+            GoToScreeningDialog.DisplayScreeningControls(screenings, screeningsView, GoToScreening, ref _currentScreeningControl);
         }
 
         void CreateFilmArticleLink(ref float yCurr)
@@ -223,7 +198,7 @@ namespace PresentScreenings.TableView
 
             yCurr -= summaryBoxHeight;
             var rect = new CGRect(_xMargin, yCurr, _contentWidth, summaryBoxHeight);
-            _summaryScrollView = ControlsFactory.CreateStandardScrollView(rect, _summaryField);
+            _summaryScrollView = ControlsFactory.NewStandardScrollView(rect, _summaryField);
             _summaryScrollView.ContentView.ScrollToPoint(new CGPoint(0, 0));
             View.AddSubview(_summaryScrollView);
         }
@@ -232,8 +207,8 @@ namespace PresentScreenings.TableView
         {
             yCurr -= _buttonHeight;
             var cancelButtonRect = new CGRect(_xMargin, yCurr, _buttonWidth, _buttonHeight);
-            _cancelButton = ControlsFactory.CreateCancelButton(cancelButtonRect);
-            _cancelButton.Title = "Done";
+            _cancelButton = ControlsFactory.NewCancelButton(cancelButtonRect);
+            _cancelButton.Title = "Close";
             _cancelButton.Action = new ObjCRuntime.Selector("CancelGotoScreening:");
             View.AddSubview(_cancelButton);
         }
@@ -319,7 +294,7 @@ namespace PresentScreenings.TableView
             }
         }
 
-        void GoToScreening(Screening screening)
+        private static void GoToScreening(Screening screening)
         {
             Presentor.GoToScreening(screening);
         }

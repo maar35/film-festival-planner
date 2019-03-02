@@ -169,7 +169,7 @@ namespace PresentScreenings.TableView
 
             _screeningsView = new NSView(_screeningsFrame);
 
-            var scrollView = ControlsFactory.CreateStandardScrollView(_scrollerFrame, _screeningsView);
+            var scrollView = ControlsFactory.NewStandardScrollView(_scrollerFrame, _screeningsView);
             View.AddSubview(scrollView);
         }
 
@@ -189,7 +189,7 @@ namespace PresentScreenings.TableView
         void CreateCancelButton()
         {
             CGRect cancelButtonRect = new CGRect(_xMargin, _yMargin, _cancelButtonWidth, _buttonHeight);
-            NSButton cancelButton = ControlsFactory.CreateCancelButton(cancelButtonRect);
+            NSButton cancelButton = ControlsFactory.NewCancelButton(cancelButtonRect);
             cancelButton.Action = new ObjCRuntime.Selector("CancelUncombine:");
             View.AddSubview(cancelButton);
         }
