@@ -30,7 +30,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public static NSTextField CreateStandardLabel(CGRect frame)
+        public static NSTextField NewStandardLabel(CGRect frame)
         {
             var label = new NSTextField(frame)
             {
@@ -42,7 +42,7 @@ namespace PresentScreenings.TableView
             return label;
         }
 
-        public static NSButton CreateStandardButton(CGRect frame)
+        public static NSButton NewStandardButton(CGRect frame)
         {
             var button = new NSButton(frame)
             {
@@ -53,9 +53,9 @@ namespace PresentScreenings.TableView
             return button;
         }
 
-        public static NSButton CreateCancelButton(CGRect frame)
+        public static NSButton NewCancelButton(CGRect frame)
         {
-            var cancelButton = ControlsFactory.CreateStandardButton(frame);
+            var cancelButton = ControlsFactory.NewStandardButton(frame);
             cancelButton.Title = "Cancel";
             cancelButton.KeyEquivalent = EscapeKey;
             return cancelButton;
@@ -71,7 +71,7 @@ namespace PresentScreenings.TableView
             return comboBox;
         }
 
-        public static NSScrollView CreateStandardScrollView(CGRect frame, NSView documentView)
+        public static NSScrollView NewStandardScrollView(CGRect frame, NSView documentView)
         {
             var scrollView = new NSScrollView(frame);
             scrollView.BackgroundColor = NSColor.WindowBackground;

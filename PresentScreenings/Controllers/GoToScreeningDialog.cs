@@ -37,16 +37,23 @@ namespace PresentScreenings.TableView
         public static void DisplayScreeningControls(List<Screening> screenings, NSView screeningsView,
             GoToScreeningDelegate goToScreening, ref FilmScreeningControl currentScreeningControl)
         {
+            // Initialize the dictionary to find labels by screening.
             _labelByfilmScreening = new Dictionary<Screening, NSTextField> { };
+
+            // Initialize dimensions.
+            var xLabel = _buttonWidth + _xBetweenLabels;
             var yScreening = screeningsView.Frame.Height;
             var contentWidth = screeningsView.Frame.Width;
+            var buttonRect = new CGRect(0, yScreening, _buttonWidth, _labelHeight);
+            var labelRect = new CGRect(xLabel, yScreening, contentWidth - xLabel, _labelHeight);
+
             foreach (var screening in screenings)
             {
-                float xScreening = 0;
+                // Update the vertical position.
                 yScreening -= _labelHeight;
 
                 // Create the screening info button.
-                var buttonRect = new CGRect(xScreening, yScreening, _buttonWidth, _labelHeight);
+                buttonRect.Y = yScreening;
                 var infoButton = new FilmScreeningControl(buttonRect, screening);
                 infoButton.ReDraw();
                 infoButton.ScreeningInfoAsked += (sender, e) => goToScreening(screening);
@@ -56,17 +63,26 @@ namespace PresentScreenings.TableView
                     currentScreeningControl.Selected = true;
                 }
                 screeningsView.AddSubview(infoButton);
-                xScreening += _buttonWidth + _xBetweenLabels;
 
                 // Create the screening label.
-                var labelRect = new CGRect(xScreening, yScreening, contentWidth - xScreening, _labelHeight);
-                var screeningLabel = ControlsFactory.CreateStandardLabel(labelRect);
+                labelRect.Y = yScreening;
+                var screeningLabel = ControlsFactory.NewStandardLabel(labelRect);
                 screeningLabel.StringValue = screening.ToFilmScreeningLabelString();
                 ColorView.SetScreeningColor(screening, screeningLabel);
                 screeningsView.AddSubview(screeningLabel);
+
+                // Link the label to the screening.
                 _labelByfilmScreening.Add(screening, screeningLabel);
 
                 yScreening -= _yBetweenLabels;
+            }
+        }
+
+        static public void ScrollScreeningToVisible(Screening screening, NSScrollView scrollView)
+        {
+            if (_labelByfilmScreening.ContainsKey(screening))
+            {
+                scrollView.ContentView.ScrollRectToVisible(_labelByfilmScreening[screening].Frame);
             }
         }
 

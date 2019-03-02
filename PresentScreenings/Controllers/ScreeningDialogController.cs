@@ -183,11 +183,15 @@ namespace PresentScreenings.TableView
             var scrollViewHeight = _yCurr - _yBetweenViews - _buttonHeight - _yMargin;
             _yCurr -= scrollViewHeight;
             var scrollViewFrame = new CGRect(_xMargin, _yCurr, contentWidth, scrollViewHeight);
-            var scrollView = ControlsFactory.CreateStandardScrollView(scrollViewFrame, screeningsView);
+            var scrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, screeningsView);
             View.AddSubview(scrollView);
 
             // Display the screenings.
             GoToScreeningDialog.DisplayScreeningControls(screenings, screeningsView, GoToScreening, ref _screeningInfoControl);
+
+            // Scroll to the selected screening.
+            GoToScreeningDialog.ScrollScreeningToVisible(CurrentScreening, scrollView);
+
         }
 
         void UpdateAttendances()
