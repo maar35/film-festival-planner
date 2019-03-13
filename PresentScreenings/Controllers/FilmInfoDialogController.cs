@@ -73,14 +73,14 @@ namespace PresentScreenings.TableView
             _film = ((IScreeningProvider)Presentor).CurrentFilm;
 
             // Get the downloaded film info if present.
-            _filmInfo = FilmRatingDialogController.GetFilmInfo(_film.FilmId);
+            _filmInfo = ViewController.GetFilmInfo(_film.FilmId);
 
-            // Get the dialog frame.
+            // Set basis dimensions.
             _dialogFrame = View.Frame;
             _yCurr = (float)_dialogFrame.Height;
             _contentWidth = (float)_dialogFrame.Width - 2 * _xMargin;
 
-            // Cretae the film title label.
+            // Create the film title label.
             _yCurr -= _yMargin;
             CreateFilmTitleLabel(ref _yCurr);
 
@@ -154,13 +154,13 @@ namespace PresentScreenings.TableView
             _linkButton.BezelStyle = NSBezelStyle.Rounded;
             _linkButton.SetButtonType(NSButtonType.MomentaryPushIn);
             _linkButton.LineBreakMode = NSLineBreakMode.TruncatingMiddle;
-            if (_filmInfo == null)
+            if (!FilmInfoIsAvailable())
             {
-                _linkButton.Title = WebUtility.UrlString(_film.Title, WebUtility.MediumCatagory.Films);
+                _linkButton.Title = WebUtility.UrlString(_film.Title, _film.Catagory);
             }
             else
             {
-                _linkButton.Title = _filmInfo.Url;
+                _linkButton.Title = _film.Url;
                 _linkButton.Enabled = false;
             }
             _linkButton.Tag = _film.FilmId;
@@ -220,7 +220,7 @@ namespace PresentScreenings.TableView
             _originalSummaryFieldColor = _summaryField.TextColor;
             _summaryField.Editable = false;
             _summaryField.Selectable = true;
-            if (_filmInfo != null)
+            if (FilmInfoIsAvailable())
             {
                 SetSummaryFieldText(_filmInfo.ToString());
             }
@@ -249,14 +249,21 @@ namespace PresentScreenings.TableView
             _summaryField.StringValue = text;
         }
 
+        bool FilmInfoIsAvailable()
+        {
+            return _filmInfo != null && _filmInfo.InfoStatus == Film.FilmInfoStatus.Complete;
+        }
+
         void VisitUrl()
         {
             string summary = "";
             var title = _film.Title;
+            var catagory = _film.Catagory;
             FilmInfo filmInfo;
-            foreach (var catagory in WebUtility.FolderByCatagory.Keys)
-            {
-                var url = WebUtility.UrlString(title, catagory);
+            //foreach (var catagory in WebUtility.FolderByCatagory.Keys)
+            //{
+                //var url = WebUtility.UrlString(title, catagory);
+                var url = _film.Url;
                 _summaryScrollView.BackgroundColor = NSColor.WindowBackground;
                 var request = WebRequest.Create(url) as HttpWebRequest;
                 try
@@ -265,23 +272,23 @@ namespace PresentScreenings.TableView
                     if (filmInfo != null)
                     {
                         _filmInfo = filmInfo;
-                        _film.InfoStatus = Film.FilmInfoStatus.Complete;
+                        _filmInfo.SetFilmInfoValue(Film.FilmInfoStatus.Complete);
                         summary = filmInfo.ToString();
-                        FilmRatingDialogController.AddFilmInfo(filmInfo);
+                        //ViewController.AddFilmInfo(filmInfo);
                         _linkButton.Title = url;
                     }
-                    break;
+                    //break;
                 }
                 catch (UnparseblePageException ex)
                 {
-                    _film.InfoStatus = Film.FilmInfoStatus.ParseError;
+                    var info = new FilmInfo(_film.FilmId, Film.FilmInfoStatus.ParseError);
                     _summaryScrollView.BackgroundColor = NSColor.SystemYellowColor;
                     summary = ex.Message;
-                    break;
+                    //break;
                 }
                 catch (WebException ex)
                 {
-                    _film.InfoStatus = Film.FilmInfoStatus.UrlError;
+                    var info = new FilmInfo(_film.FilmId, Film.FilmInfoStatus.UrlError);
                     _summaryScrollView.BackgroundColor = NSColor.SystemPinkColor;
                     summary = $"Web exception in {url}\n\n" + ex.ToString();
                 }
@@ -291,7 +298,7 @@ namespace PresentScreenings.TableView
                     var fit = _summaryField.SizeThatFits(_summaryField.Frame.Size);
                     _summaryField.SetFrameSize(fit);
                 }
-            }
+            //}
         }
 
         private static void GoToScreening(Screening screening)

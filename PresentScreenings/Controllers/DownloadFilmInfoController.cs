@@ -60,7 +60,6 @@ namespace PresentScreenings.TableView
         public override void AwakeFromNib()
         {
             base.AwakeFromNib();
-            //Presentor = App.Controller;
         }
 
         public override void ViewDidLoad()
@@ -69,8 +68,17 @@ namespace PresentScreenings.TableView
 
             // Get the selected films.
             var indexes = Presentor.FilmRatingTableView.SelectedRows.ToList();
-            _films = new List<Film>(indexes.Select(i => Presentor.GetFilmByIndex(i)));
-            _filmsWithoutInfo = _films.Where(f => !ScreeningsPlan.FilmInfos.Select(fi => fi.FilmId).Contains(f.FilmId)).ToList();
+            _films = new List<Film>(indexes.Select(Presentor.GetFilmByIndex));
+            //_filmsWithoutInfo = _films.Where(f => !ScreeningsPlan.FilmInfos.Select(fi => fi.FilmId).Contains(f.FilmId)).ToList();
+            _filmsWithoutInfo = (
+                    from Film film in _films
+                    where film.InfoStatus != Film.FilmInfoStatus.Complete
+                    select ViewController.GetFilmById(film.FilmId)
+            ).ToList();
+            //from Film film in _films
+            //join Film incomplteFilm in query
+            //on
+            //on info.InfoStatus != Film.FilmInfoStatus.Complete
 
             // Set generally usable dimensions.
             var frame = View.Frame;
@@ -134,11 +142,20 @@ namespace PresentScreenings.TableView
 
         private void SetProgressLabelStringValue()
         {
-            var processedCount = _filmsWithoutInfo.Count(f => f.InfoStatus != Film.FilmInfoStatus.Absent);
-            var completeCount = _filmsWithoutInfo.Count(f => f.InfoStatus == Film.FilmInfoStatus.Complete);
-            var urlErrorCount = _filmsWithoutInfo.Count(f => f.InfoStatus == Film.FilmInfoStatus.UrlError);
-            var parseErrorCount = _filmsWithoutInfo.Count(f => f.InfoStatus == Film.FilmInfoStatus.ParseError);
-            _progressLabel.StringValue = $"{processedCount} Processed, {completeCount} Success, {urlErrorCount} URL error, {parseErrorCount} Parse error";
+            var states = new List<string> { };
+            foreach (Film.FilmInfoStatus filmInfoStatus in Enum.GetValues(typeof(Film.FilmInfoStatus)))
+            {
+                //var statusCount = _filmsWithoutInfo.Count(f => f.InfoStatus == filmInfoStatus);
+                var statusCount = _films.Count(f => f.InfoStatus == filmInfoStatus);
+                var statusName = Enum.GetName(typeof(Film.FilmInfoStatus), filmInfoStatus);
+                states.Add($"{statusCount} {statusName}");
+            }
+            _progressLabel.StringValue = string.Join(", ", states);
+            //var processedCount = _filmsWithoutInfo.Count(f => f.InfoStatus != Film.FilmInfoStatus.Absent);
+            //var completeCount = _filmsWithoutInfo.Count(f => f.InfoStatus == Film.FilmInfoStatus.Complete);
+            //var urlErrorCount = _filmsWithoutInfo.Count(f => f.InfoStatus == Film.FilmInfoStatus.UrlError);
+            //var parseErrorCount = _filmsWithoutInfo.Count(f => f.InfoStatus == Film.FilmInfoStatus.ParseError);
+            //_progressLabel.StringValue = $"{processedCount} Processed, {completeCount} Success, {urlErrorCount} URL error, {parseErrorCount} Parse error";
         }
 
         private void CreateActivityScrollView(ref float yCurr, float height)
@@ -212,19 +229,20 @@ namespace PresentScreenings.TableView
                     var filminfo = WebUtility.TryParseUrlSummary(request, url, catagory, film.FilmId);
                     if (filminfo != null)
                     {
-                        FilmRatingDialogController.AddFilmInfo(filminfo);
-                        film.InfoStatus = Film.FilmInfoStatus.Complete;
+                        //ViewController.AddFilmInfo(filminfo);
+                        filminfo.SetFilmInfoValue(Film.FilmInfoStatus.Complete);
                     }
                     break;
                 }
                 catch (UnparseblePageException)
                 {
-                    film.InfoStatus = Film.FilmInfoStatus.ParseError;
+                    var info = new FilmInfo(film.FilmId, Film.FilmInfoStatus.ParseError);
                     break;
                 }
                 catch (WebException)
                 {
-                    film.InfoStatus = Film.FilmInfoStatus.UrlError;
+                    var info = new FilmInfo(film.FilmId, Film.FilmInfoStatus.UrlError);
+                    break;
                 }
             }
         }

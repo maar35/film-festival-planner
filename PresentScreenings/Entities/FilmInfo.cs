@@ -9,27 +9,44 @@ namespace PresentScreenings.TableView
     {
         #region Properties
         public int FilmId { get; }
-        public WebUtility.MediumCatagory MediumCatagory { get; }
-        public string Url { get; }
-        public string FilmDescription { get; }
-        public string FilmArticle { get; }
+        public Film.FilmInfoStatus InfoStatus { get; set; }
+        public WebUtility.MediumCatagory MediumCatagory { get => ViewController.GetFilmById(FilmId).Catagory; }
+        public string Url { get => ViewController.GetFilmById(FilmId).Url; }
+        public string FilmDescription { get; private set; }
+        public string FilmArticle { get; private set; }
         public struct ScreenedFilm
         {
             public string Title;
             public string Description;
         }
-        public List<ScreenedFilm> ScreenedFilms { get; }
+        public List<ScreenedFilm> ScreenedFilms { get; private set; }
         #endregion
 
         #region Constructors
-        public FilmInfo(int filmId, WebUtility.MediumCatagory catagory, string url, string description, string article)
+        public FilmInfo(int filmId, Film.FilmInfoStatus infoStatus, WebUtility.MediumCatagory catagory, string url, string description, string article)
         {
             FilmId = filmId;
-            MediumCatagory = catagory;
-            Url = url;
+            InfoStatus = InfoStatus;
+            //MediumCatagory = catagory;
+            //Url = url;
             FilmDescription = description;
             FilmArticle = article;
             ScreenedFilms = new List<ScreenedFilm> { };
+        }
+
+        public FilmInfo(int filmId, Film.FilmInfoStatus infoStatus)
+        {
+            FilmId = filmId;
+            InfoStatus = infoStatus;
+            FilmDescription = string.Empty;
+            FilmArticle = string.Empty;
+            ScreenedFilms = new List<ScreenedFilm> { };
+            CheckAddToFilmInfos();
+
+            //// Temporary while moving InfoStatus from class Film to FilmInfo.
+            //var film = ViewController.GetFilmById(FilmId);
+            //MediumCatagory = film.Catagory;
+            //Url = film.Url;
         }
         #endregion
 
@@ -67,6 +84,50 @@ namespace PresentScreenings.TableView
             screenedFilm.Title = title;
             screenedFilm.Description = description;
             ScreenedFilms.Add(screenedFilm);
+        }
+
+        public void CheckAddToFilmInfos()
+        {
+            var filmInfos = ScreeningsPlan.FilmInfos;
+            var count = filmInfos.Count(i => i.FilmId == FilmId);
+            if (count > 0)
+            {
+                filmInfos.Remove(filmInfos.First(i => i.FilmId == FilmId));
+                //filmInfos.Add(this);
+
+                //var index = filmInfos.IndexOf(filmInfos.First(i => i.FilmId == FilmId));
+                //filmInfos.ElementAt(index).InfoStatus = this.InfoStatus;
+                //filmInfos.ElementAt(index).FilmDescription = this.FilmDescription;
+                //filmInfos.ElementAt(index).FilmArticle = this.FilmArticle;
+                //filmInfos.ElementAt(index).ScreenedFilms = this.ScreenedFilms;
+            }
+            filmInfos.Add(this);
+        }
+
+        public void SetFilmInfoValue(Film.FilmInfoStatus status)
+        {
+            InfoStatus = status;
+            CheckAddToFilmInfos();
+            //{
+            //get => _filmInfoStatus;
+            //set
+            //{
+            //    var filmInfo = ViewController.GetFilmInfo(FilmId);
+            //    if (filmInfo != null)
+            //    {
+            //        filmInfo.InfoStatus = value;
+            //    }
+            //    else
+            //    {
+            //        filmInfo = new FilmInfo(FilmId, InfoStatus, Catagory, Url, string.Empty, string.Empty)
+            //        {
+            //            InfoStatus = value
+            //        };
+            //        ScreeningsPlan.FilmInfos.Add(filmInfo);
+            //        //ViewController.AddFilmInfo(filmInfo);
+            //    }
+            //    _filmInfoStatus = filmInfo.InfoStatus;
+            //}
         }
         #endregion
     }

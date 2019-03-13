@@ -90,7 +90,7 @@ namespace PresentScreenings.TableView
                 // Write films.
                 string filmsPath = Path.Combine(directory, "films.csv");
                 var filmsWriter = new ListWriter<Film>(filmsPath, Film.WriteHeader);
-                filmsWriter.WriteListToFile(Controller.Plan.Films, Film.Serialize);
+                filmsWriter.WriteListToFile(ScreeningsPlan.Films, Film.Serialize);
 
                 // Write screenings.
                 string screeningsPath = Path.Combine(directory, "screenings.csv");

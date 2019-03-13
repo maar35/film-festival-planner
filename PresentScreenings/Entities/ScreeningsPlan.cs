@@ -40,7 +40,7 @@ namespace PresentScreenings.TableView
         public List<DateTime> FestivalDays { get; private set; }
         public List<Screen> CurrDayScreens => _dayScreens[CurrDay];
         public List<Screen> Screens { get; }
-        public List<Film> Films { get; }
+        public static List<Film> Films { get; private set; }
         public DateTime CurrDay => FestivalDays[_currDayNumber];
         public static List<Screening> Screenings { get; private set; }
         public List<FriendFilmRating> FriendFilmRatings { get; }
@@ -60,6 +60,14 @@ namespace PresentScreenings.TableView
             // Read films.
             ListReader<Film> FilmsReader = new ListReader<Film>(_filmsFile, true);
             Films = FilmsReader.ReadListFromFile(line => new Film(line));
+
+            //// Temporary while moving InfoStatus from class Film to FilmInfo.
+            //foreach (var filmInfo in ScreeningsPlan.FilmInfos)
+            //{
+            //    //filmInfo.InfoStatus = ViewController.GetFilmById(filmInfo.FilmId).InfoStatus;
+            //    var film = ViewController.GetFilmById(filmInfo.FilmId);
+            //    film.InfoStatus = Film.FilmInfoStatus.Complete;
+            //}
 
             // Read friend film ratings.
             ListReader<FriendFilmRating> RatingsReader = new ListReader<FriendFilmRating>(_friendFilmRatingsFile, true);

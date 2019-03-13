@@ -187,7 +187,7 @@ namespace PresentScreenings.TableView
                 builder.Append(text);
                 throw new UnparseblePageException(builder.ToString());
             }
-            var info = new FilmInfo(filmId, catagory, url, filmDescription, article);
+            var info = new FilmInfo(filmId, Film.FilmInfoStatus.Complete, catagory, url, filmDescription, article);
             foreach (string title in ScreenedFileDescriptionByTitle.Keys)
             {
                 info.AddScreenedFilm(title, ScreenedFileDescriptionByTitle[title]);
@@ -205,6 +205,7 @@ namespace PresentScreenings.TableView
                 (
                     "FilmInfo",
                     new XAttribute("FilmId", filmInfo.FilmId),
+                    new XAttribute("InfoStatus", filmInfo.InfoStatus),
                     new XAttribute("MediumCatagory", filmInfo.MediumCatagory),
                     new XAttribute("Url", filmInfo.Url),
                     new XAttribute("FilmDescription", filmInfo.FilmDescription),
@@ -246,6 +247,7 @@ namespace PresentScreenings.TableView
                 select
                 (
                     (int)el.Attribute("FilmId"),
+                    //(string)el.Attribute("FilmInfoStatus),"
                     (string)el.Attribute("MediumCatagory"),
                     (string)el.Attribute("Url"),
                     (string)el.Attribute("FilmDescription"),
@@ -262,11 +264,16 @@ namespace PresentScreenings.TableView
                 var filmInfo = new FilmInfo
                 (
                     filmInfoElement.Item1,
+                    Film.FilmInfoStatus.Complete,
                     StringToMediumCatagory(filmInfoElement.Item2),
                     filmInfoElement.Item3,
                     filmInfoElement.Item4,
                     filmInfoElement.Item5
                 );
+                if (filmInfo.InfoStatus != Film.FilmInfoStatus.Complete)
+                {
+                    filmInfo.InfoStatus = Film.FilmInfoStatus.Complete;
+                }
                 foreach (var screenedFilmAttribute in filmInfoElement.Item6)
                 {
                     var title = screenedFilmAttribute.Item1;
