@@ -191,7 +191,6 @@ namespace PresentScreenings.TableView
 
             // Scroll to the selected screening.
             GoToScreeningDialog.ScrollScreeningToVisible(CurrentScreening, scrollView);
-
         }
 
         void UpdateAttendances()

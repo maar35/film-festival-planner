@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 
 namespace PresentScreenings.TableView
 {
@@ -9,7 +11,7 @@ namespace PresentScreenings.TableView
     {
         #region Properties
         public int FilmId { get; }
-        public Film.FilmInfoStatus InfoStatus { get; set; }
+        public Film.FilmInfoStatus InfoStatus { get; private set; }
         public WebUtility.MediumCatagory MediumCatagory { get => ViewController.GetFilmById(FilmId).Catagory; }
         public string Url { get => ViewController.GetFilmById(FilmId).Url; }
         public string FilmDescription { get; private set; }
@@ -23,31 +25,17 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
-        public FilmInfo(int filmId, Film.FilmInfoStatus infoStatus, WebUtility.MediumCatagory catagory, string url, string description, string article)
+        public FilmInfo(int filmId, Film.FilmInfoStatus infoStatus, string description, string article)
         {
             FilmId = filmId;
-            InfoStatus = InfoStatus;
-            //MediumCatagory = catagory;
-            //Url = url;
+            InfoStatus = infoStatus;
             FilmDescription = description;
             FilmArticle = article;
             ScreenedFilms = new List<ScreenedFilm> { };
         }
 
         public FilmInfo(int filmId, Film.FilmInfoStatus infoStatus)
-        {
-            FilmId = filmId;
-            InfoStatus = infoStatus;
-            FilmDescription = string.Empty;
-            FilmArticle = string.Empty;
-            ScreenedFilms = new List<ScreenedFilm> { };
-            CheckAddToFilmInfos();
-
-            //// Temporary while moving InfoStatus from class Film to FilmInfo.
-            //var film = ViewController.GetFilmById(FilmId);
-            //MediumCatagory = film.Catagory;
-            //Url = film.Url;
-        }
+            : this(filmId, infoStatus, string.Empty, string.Empty) { }
         #endregion
 
         #region Override Methods
@@ -86,49 +74,128 @@ namespace PresentScreenings.TableView
             ScreenedFilms.Add(screenedFilm);
         }
 
-        public void CheckAddToFilmInfos()
+        public static void AddNewFilmInfo(int filmId, Film.FilmInfoStatus infoStatus)
         {
-            var filmInfos = ScreeningsPlan.FilmInfos;
-            var count = filmInfos.Count(i => i.FilmId == FilmId);
-            if (count > 0)
-            {
-                filmInfos.Remove(filmInfos.First(i => i.FilmId == FilmId));
-                //filmInfos.Add(this);
-
-                //var index = filmInfos.IndexOf(filmInfos.First(i => i.FilmId == FilmId));
-                //filmInfos.ElementAt(index).InfoStatus = this.InfoStatus;
-                //filmInfos.ElementAt(index).FilmDescription = this.FilmDescription;
-                //filmInfos.ElementAt(index).FilmArticle = this.FilmArticle;
-                //filmInfos.ElementAt(index).ScreenedFilms = this.ScreenedFilms;
-            }
-            filmInfos.Add(this);
+            CheckAddToFilmInfos(new FilmInfo(filmId, infoStatus));
         }
 
-        public void SetFilmInfoValue(Film.FilmInfoStatus status)
+        public static void CheckAddToFilmInfos(FilmInfo filmInfo)
+        {
+            var filmInfos = ScreeningsPlan.FilmInfos;
+            var count = filmInfos.Count(i => i.FilmId == filmInfo.FilmId);
+            if (count > 0)
+            {
+                filmInfos.Remove(filmInfos.First(i => i.FilmId == filmInfo.FilmId));
+            }
+            filmInfos.Add(filmInfo);
+        }
+
+        public void SetFilmInfoStatus(Film.FilmInfoStatus status)
         {
             InfoStatus = status;
-            CheckAddToFilmInfos();
-            //{
-            //get => _filmInfoStatus;
-            //set
-            //{
-            //    var filmInfo = ViewController.GetFilmInfo(FilmId);
-            //    if (filmInfo != null)
-            //    {
-            //        filmInfo.InfoStatus = value;
-            //    }
-            //    else
-            //    {
-            //        filmInfo = new FilmInfo(FilmId, InfoStatus, Catagory, Url, string.Empty, string.Empty)
-            //        {
-            //            InfoStatus = value
-            //        };
-            //        ScreeningsPlan.FilmInfos.Add(filmInfo);
-            //        //ViewController.AddFilmInfo(filmInfo);
-            //    }
-            //    _filmInfoStatus = filmInfo.InfoStatus;
-            //}
+            CheckAddToFilmInfos(this);
+        }
+
+        public static List<FilmInfo> LoadFilmInfoFromXml(string path)
+        {
+            var filmInfos = new List<FilmInfo> { };
+            XElement root;
+            try
+            {
+                root = XElement.Load(path);
+            }
+            catch (FileNotFoundException)
+            {
+                return filmInfos;
+            }
+            catch (System.Exception)
+            {
+                return filmInfos;
+            }
+            var filmInfoElements =
+                from el in root.Elements("FilmInfo")
+                select
+                (
+                    (int)el.Attribute("FilmId"),
+                    (string)el.Attribute("InfoStatus"),
+                    (string)el.Attribute("FilmDescription"),
+                    (string)el.Attribute("FilmArticle"),
+                    from s in el.Element("ScreenedFilms").Elements("ScreenedFilm")
+                    select
+                    (
+                        (string)s.Attribute("Title"),
+                        (string)s.Attribute("Description")
+                    )
+                );
+            foreach (var filmInfoElement in filmInfoElements)
+            {
+                var filmInfo = new FilmInfo
+                (
+                    filmInfoElement.Item1,
+                    StringToFilmInfoStatus(filmInfoElement.Item2),
+                    filmInfoElement.Item3,
+                    filmInfoElement.Item4
+                );
+                foreach (var screenedFilmAttribute in filmInfoElement.Item5)
+                {
+                    var title = screenedFilmAttribute.Item1;
+                    var description = screenedFilmAttribute.Item2;
+                    filmInfo.AddScreenedFilm(title, description);
+                }
+                filmInfos.Add(filmInfo);
+            }
+            return filmInfos;
+        }
+
+        public static void SaveFilmInfoAsXml(List<FilmInfo> filmInfos, string path)
+        {
+            var xml = new XElement
+            (
+                "FilmInfos",
+                from filmInfo in filmInfos
+                select new XElement
+                (
+                    "FilmInfo",
+                    new XAttribute("FilmId", filmInfo.FilmId),
+                    new XAttribute("InfoStatus", filmInfo.InfoStatus),
+                    new XAttribute("FilmDescription", filmInfo.FilmDescription),
+                    new XAttribute("FilmArticle", filmInfo.FilmArticle),
+                    new XElement
+                    (
+                        "ScreenedFilms",
+                        from screenedFilm in filmInfo.ScreenedFilms
+                        select new XElement
+                        (
+                            "ScreenedFilm",
+                            new XAttribute("Title", screenedFilm.Title),
+                            new XAttribute("Description", screenedFilm.Description)
+                        )
+                    )
+                )
+            );
+            xml.Save(path);
+        }
+
+        private static Film.FilmInfoStatus StringToFilmInfoStatus(string name)
+        {
+            try
+            {
+                return (Film.FilmInfoStatus)Enum.Parse(typeof(Film.FilmInfoStatus), name);
+            }
+            catch
+            {
+                throw new IllegalFilmInfoCatagoryException($"'{name}' is not a valid FilmInfoCatagory");
+            }
         }
         #endregion
     }
+
+    #region Exceptions
+    public sealed class IllegalFilmInfoCatagoryException : Exception
+    {
+        public IllegalFilmInfoCatagoryException(string message) : base(message)
+        {
+        }
+    }
+    #endregion
 }

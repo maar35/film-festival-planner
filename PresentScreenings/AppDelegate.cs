@@ -108,7 +108,7 @@ namespace PresentScreenings.TableView
                 friendsRatingsWriter.WriteListToFile(Controller.Plan.FriendFilmRatings, FriendFilmRating.Serialize);
 
                 // Write film info.
-                WebUtility.SaveFilmInfoAsXml(ScreeningsPlan.FilmInfos, Path.Combine(directory, "filminfo.xml"));
+                FilmInfo.SaveFilmInfoAsXml(ScreeningsPlan.FilmInfos, Path.Combine(directory, "filminfo.xml"));
             });
         }
 

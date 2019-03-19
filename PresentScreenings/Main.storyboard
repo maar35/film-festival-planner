@@ -1303,6 +1303,7 @@ Gw
                         <outlet property="_screeningsClipView" destination="13q-pB-Tzl" id="xxU-24-Weg"/>
                         <outlet property="_screeningsScrollView" destination="JMa-1t-XcC" id="NdV-Oe-PD6"/>
                         <outlet property="_titleLabel" destination="vQB-Q1-0Hr" id="VG2-Vc-MOd"/>
+                        <outlet property="_titlesScrollView" destination="JMa-1t-XcC" id="CH8-SG-Itd"/>
                     </connections>
                 </viewController>
                 <customObject id="mEf-WH-xhQ" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>

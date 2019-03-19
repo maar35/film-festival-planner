@@ -329,17 +329,6 @@ namespace PresentScreenings.TableView
             return ViewController.FilmScreenings(filmId);
         }
 
-        //public static FilmInfo GetFilmInfo(int filmId)
-        //{
-        //    var info = ScreeningsPlan.FilmInfos.Where(f => f.FilmId == filmId).ToList();
-        //    return info.Count > 0 ? info.First() : null;
-        //}
-
-        //public static void AddFilmInfo(FilmInfo filmInfo)
-        //{
-        //    ScreeningsPlan.FilmInfos.Add(filmInfo);
-        //}
-
         public override void GoToScreening(Screening screening)
         {
             _app.Controller.GoToScreening(screening);

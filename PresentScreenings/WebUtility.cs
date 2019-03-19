@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 
 namespace PresentScreenings.TableView
 {
@@ -187,130 +185,22 @@ namespace PresentScreenings.TableView
                 builder.Append(text);
                 throw new UnparseblePageException(builder.ToString());
             }
-            var info = new FilmInfo(filmId, Film.FilmInfoStatus.Complete, catagory, url, filmDescription, article);
+            var info = new FilmInfo(filmId, Film.FilmInfoStatus.Complete, filmDescription, article);
             foreach (string title in ScreenedFileDescriptionByTitle.Keys)
             {
                 info.AddScreenedFilm(title, ScreenedFileDescriptionByTitle[title]);
             }
             return info;
         }
-
-        public static void SaveFilmInfoAsXml(List<FilmInfo> filmInfos, string path)
-        {
-            var xml = new XElement
-            (
-                "FilmInfos",
-                from filmInfo in filmInfos
-                select new XElement
-                (
-                    "FilmInfo",
-                    new XAttribute("FilmId", filmInfo.FilmId),
-                    new XAttribute("InfoStatus", filmInfo.InfoStatus),
-                    new XAttribute("MediumCatagory", filmInfo.MediumCatagory),
-                    new XAttribute("Url", filmInfo.Url),
-                    new XAttribute("FilmDescription", filmInfo.FilmDescription),
-                    new XAttribute("FilmArticle", filmInfo.FilmArticle),
-                    new XElement
-                    (
-                        "ScreenedFilms",
-                        from screenedFilm in filmInfo.ScreenedFilms
-                        select new XElement
-                        (
-                            "ScreenedFilm",
-                            new XAttribute("Title", screenedFilm.Title),
-                            new XAttribute("Description", screenedFilm.Description)
-                        )
-                    )
-                )
-            );
-            xml.Save(path);
-        }
-
-        public static List<FilmInfo> LoadFilmInfoFromXml(string path)
-        {
-            var filmInfos = new List<FilmInfo> { };
-            XElement root;
-            try
-            {
-                root = XElement.Load(path);
-            }
-            catch (FileNotFoundException)
-            {
-                return filmInfos;
-            }
-            catch(System.Exception)
-            {
-                return filmInfos;
-            }
-            var filmInfoElements =
-                from el in root.Elements("FilmInfo")
-                select
-                (
-                    (int)el.Attribute("FilmId"),
-                    //(string)el.Attribute("FilmInfoStatus),"
-                    (string)el.Attribute("MediumCatagory"),
-                    (string)el.Attribute("Url"),
-                    (string)el.Attribute("FilmDescription"),
-                    (string)el.Attribute("FilmArticle"),
-                    from s in el.Element("ScreenedFilms").Elements("ScreenedFilm")
-                    select
-                    (
-                        (string)s.Attribute("Title"),
-                        (string)s.Attribute("Description")
-                    )
-                );
-            foreach (var filmInfoElement in filmInfoElements)
-            {
-                var filmInfo = new FilmInfo
-                (
-                    filmInfoElement.Item1,
-                    Film.FilmInfoStatus.Complete,
-                    StringToMediumCatagory(filmInfoElement.Item2),
-                    filmInfoElement.Item3,
-                    filmInfoElement.Item4,
-                    filmInfoElement.Item5
-                );
-                if (filmInfo.InfoStatus != Film.FilmInfoStatus.Complete)
-                {
-                    filmInfo.InfoStatus = Film.FilmInfoStatus.Complete;
-                }
-                foreach (var screenedFilmAttribute in filmInfoElement.Item6)
-                {
-                    var title = screenedFilmAttribute.Item1;
-                    var description = screenedFilmAttribute.Item2;
-                    filmInfo.AddScreenedFilm(title, description);
-                }
-                filmInfos.Add(filmInfo);
-            }
-            return filmInfos;
-        }
-
-        private static MediumCatagory StringToMediumCatagory(string name)
-        {
-            try
-            {
-                return (MediumCatagory)Enum.Parse(typeof(MediumCatagory), name);
-            }
-            catch
-            {
-                throw new IllegalMediumCatagoryException($"'{name}' is not a valid WebUtitlity.MediumCatagory");
-            }
-        }
         #endregion
     }
 
+    #region Exceptions
     public sealed class UnparseblePageException : Exception
     {
         public UnparseblePageException(string message) : base(message)
         {
         }
     }
-
-    public sealed class IllegalMediumCatagoryException : Exception
-    {
-        public IllegalMediumCatagoryException(string message) : base(message)
-        {
-        }
-    }
+    #endregion
 }
-

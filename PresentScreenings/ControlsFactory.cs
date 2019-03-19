@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using AppKit;
+using CoreAnimation;
 using CoreGraphics;
 using Foundation;
 
@@ -71,7 +72,7 @@ namespace PresentScreenings.TableView
             return comboBox;
         }
 
-        public static NSScrollView NewStandardScrollView(CGRect frame, NSView documentView)
+        public static NSScrollView NewStandardScrollView(CGRect frame, NSView documentView, bool debug = false)
         {
             var scrollView = new NSScrollView(frame);
             scrollView.BackgroundColor = NSColor.WindowBackground;
@@ -86,6 +87,19 @@ namespace PresentScreenings.TableView
                 documentView.SetFrameSize(new CGSize(documentView.Frame.Width, frame.Height));
             }
             scrollView.ContentView.ScrollToPoint(new CGPoint(0, documentView.Frame.Height));
+
+            // Set some coloring to ease debugging.
+            if (debug)
+            {
+                CAGradientLayer gradient = new CAGradientLayer();
+                CGColor[] colors = { NSColor.Blue.ColorWithAlphaComponent((nfloat)0.2).CGColor,
+                                     NSColor.Blue.ColorWithAlphaComponent((nfloat)0.4).CGColor };
+                gradient.Colors = colors;
+                gradient.Frame = documentView.Frame;
+                scrollView.WantsLayer = true;
+                scrollView.Layer?.AddSublayer(gradient);
+            }
+
             return scrollView;
         }
         #endregion
