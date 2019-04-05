@@ -36,6 +36,7 @@ namespace PresentScreenings.TableView
         nuint[] _filmIndexes;
         List<int> _filmIds;
         int _mainFilmId;
+        NSScrollView _titlesScrollView;
         NSView _titlesDocumentView;
         #endregion
 
@@ -96,8 +97,6 @@ namespace PresentScreenings.TableView
             // Create the scroll view to display the title radio buttons.
             nfloat yScrollView = 2 * _yXcodeControlsMargin + _bottomControlsHeight;
             nfloat scrollViewHeight = View.Frame.Height - _yXcodeControlsMargin - 2 * (_topLabelsHeigh + _yToplabelsDistance) - yScrollView;
-            _titlesScrollView.RemoveFromSuperview();
-            _titlesScrollView.Dispose();
             CGRect scrollViewFrame = new CGRect(_xMargin, yScrollView, _scrollViewWidth, scrollViewHeight);
             _titlesScrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, _titlesDocumentView);
             View.AddSubview(_titlesScrollView);
