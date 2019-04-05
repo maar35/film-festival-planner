@@ -9,13 +9,17 @@ namespace PresentScreenings.TableView
 {
     public class FilmInfo
     {
+        #region Private Members
+        private Film.FilmInfoStatus _infoStatus;
+        #endregion
+
         #region Properties
         public int FilmId { get; }
-        public Film.FilmInfoStatus InfoStatus { get; private set; }
         public WebUtility.MediumCatagory MediumCatagory { get => ViewController.GetFilmById(FilmId).Catagory; }
         public string Url { get => ViewController.GetFilmById(FilmId).Url; }
         public string FilmDescription { get; private set; }
         public string FilmArticle { get; private set; }
+        public Film.FilmInfoStatus InfoStatus { get => _infoStatus; set => SetFilmInfoStatus(value); }
         public struct ScreenedFilm
         {
             public string Title;
@@ -28,7 +32,7 @@ namespace PresentScreenings.TableView
         public FilmInfo(int filmId, Film.FilmInfoStatus infoStatus, string description, string article)
         {
             FilmId = filmId;
-            InfoStatus = infoStatus;
+            _infoStatus = infoStatus;
             FilmDescription = description;
             FilmArticle = article;
             ScreenedFilms = new List<ScreenedFilm> { };
@@ -63,6 +67,11 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
+        private void SetFilmInfoStatus(Film.FilmInfoStatus status)
+        {
+            _infoStatus = status;
+            CheckAddToFilmInfos(this);
+        }
         #endregion
 
         #region Public Methods
@@ -88,12 +97,6 @@ namespace PresentScreenings.TableView
                 filmInfos.Remove(filmInfos.First(i => i.FilmId == filmInfo.FilmId));
             }
             filmInfos.Add(filmInfo);
-        }
-
-        public void SetFilmInfoStatus(Film.FilmInfoStatus status)
-        {
-            InfoStatus = status;
-            CheckAddToFilmInfos(this);
         }
 
         public static List<FilmInfo> LoadFilmInfoFromXml(string path)

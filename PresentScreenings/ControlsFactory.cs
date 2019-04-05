@@ -96,8 +96,8 @@ namespace PresentScreenings.TableView
                                      NSColor.Blue.ColorWithAlphaComponent((nfloat)0.4).CGColor };
                 gradient.Colors = colors;
                 gradient.Frame = documentView.Frame;
-                scrollView.WantsLayer = true;
-                scrollView.Layer?.AddSublayer(gradient);
+                documentView.WantsLayer = true;
+                documentView.Layer?.AddSublayer(gradient);
             }
 
             return scrollView;

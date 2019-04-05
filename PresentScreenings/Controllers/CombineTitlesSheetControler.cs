@@ -68,7 +68,7 @@ namespace PresentScreenings.TableView
             _filmIds = new List<int>();
             _scrollViewWidth = (float)(View.Frame.Width - 2 * _xMargin);
 
-            // Create the ducument view displaying the film title radio bottons.
+            // Create the ducument view displaying the film title radio buttons.
             nfloat titlesViewWidth = _scrollViewWidth - 2 * _xMargin;
             nfloat titlesViewHeight = filmList.Count * _controlsHeight + (filmList.Count - 1) *_yControlsDistance;
             CGRect titlesViewFrame = new CGRect(0, 0, titlesViewWidth, titlesViewHeight);
@@ -77,25 +77,8 @@ namespace PresentScreenings.TableView
             // Create the scroll view.
             CreateTitlesScrollView();
 
-            // Make the sheet unresizable (sorry, couln't find an other way).
-#warning Make this working
-            // Consider implementing live resizing.
-
-            // Prepare setting constraints.
-            var views = new NSMutableDictionary();
-
-            // Get views being constrained
-            views.Add(new NSString("title"), _titleLabel);
-            
-            // Define format and assemble constraints
-            var horzFormat = "|-[title]-|";
-            var horzConstraints = NSLayoutConstraint.FromVisualFormat(horzFormat, NSLayoutFormatOptions.None, null, views);
-            var vertFormat = "V:|-[title]";
-            var vertConstraints = NSLayoutConstraint.FromVisualFormat(vertFormat, NSLayoutFormatOptions.None, null, views);
-            
-            // Apply constraints
-            NSLayoutConstraint.ActivateConstraints(horzConstraints);
-            NSLayoutConstraint.ActivateConstraints(vertConstraints);
+            // Set constraints of the in-code generated UI elements.
+            SetConstraints();
         }
 
         public override void ViewWillDisappear()
@@ -116,7 +99,7 @@ namespace PresentScreenings.TableView
             _titlesScrollView.RemoveFromSuperview();
             _titlesScrollView.Dispose();
             CGRect scrollViewFrame = new CGRect(_xMargin, yScrollView, _scrollViewWidth, scrollViewHeight);
-            _titlesScrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, _titlesDocumentView, false);
+            _titlesScrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, _titlesDocumentView);
             View.AddSubview(_titlesScrollView);
 
             // Create labels with the film titles.
@@ -165,7 +148,31 @@ namespace PresentScreenings.TableView
             }
         }
 
-        void CloseSheet()
+        /// <summary>
+        /// Sets the constraints as to make the sheet unresizable.
+        /// </summary>
+        private void SetConstraints()
+        {
+            // Prepare setting constraints.
+            var views = new NSMutableDictionary();
+
+            // Get views being constrained.
+            views.Add(new NSString("scroller"), _titlesScrollView);
+
+            // Define format and assemble constraints.
+            nfloat yFromBottom = 2 * _yXcodeControlsMargin + _bottomControlsHeight;
+            nfloat yFromTop = _yXcodeControlsMargin + 2 * (_topLabelsHeigh + _yToplabelsDistance);
+            var horzFormat = "|-[scroller]-|";
+            var horzConstraints = NSLayoutConstraint.FromVisualFormat(horzFormat, NSLayoutFormatOptions.None, null, views);
+            var vertFormat = $"V:|-{yFromTop}-[scroller]-{yFromBottom}-|";
+            var vertConstraints = NSLayoutConstraint.FromVisualFormat(vertFormat, NSLayoutFormatOptions.None, null, views);
+
+            // Apply constraints.
+            NSLayoutConstraint.ActivateConstraints(horzConstraints);
+            NSLayoutConstraint.ActivateConstraints(vertConstraints);
+        }
+
+        private void CloseSheet()
         {
             Presentor.DismissViewController(this);
         }

@@ -31,6 +31,7 @@ namespace PresentScreenings.TableView
         #region Private Variables
         private float _contentWidth;
         private float _yCurr;
+        private NSTextField _withoutInfoLabel;
         private NSTextField _progressLabel;
         private NSTextField _activityField;
         private NSScrollView _activityScrollView;
@@ -57,11 +58,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Override Methods
-        public override void AwakeFromNib()
-        {
-            base.AwakeFromNib();
-        }
-
         public override void ViewDidLoad()
         {
             base.ViewDidLoad();
@@ -69,16 +65,7 @@ namespace PresentScreenings.TableView
             // Get the selected films.
             var indexes = Presentor.FilmRatingTableView.SelectedRows.ToList();
             _films = new List<Film>(indexes.Select(Presentor.GetFilmByIndex));
-            //_filmsWithoutInfo = _films.Where(f => !ScreeningsPlan.FilmInfos.Select(fi => fi.FilmId).Contains(f.FilmId)).ToList();
-            _filmsWithoutInfo = (
-                    from Film film in _films
-                    where film.InfoStatus != Film.FilmInfoStatus.Complete
-                    select ViewController.GetFilmById(film.FilmId)
-            ).ToList();
-            //from Film film in _films
-            //join Film incomplteFilm in query
-            //on
-            //on info.InfoStatus != Film.FilmInfoStatus.Complete
+            _filmsWithoutInfo = GetFilmsWithoutInfo(_films);
 
             // Set generally usable dimensions.
             var frame = View.Frame;
@@ -116,6 +103,16 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
+        private List<Film> GetFilmsWithoutInfo(List<Film> films)
+        {
+            var filmsWithoutInfo = (
+                from Film film in _films
+                where film.InfoStatus != Film.FilmInfoStatus.Complete
+                select ViewController.GetFilmById(film.FilmId)
+            ).ToList();
+            return filmsWithoutInfo;
+        }
+
         private void CreateInfoLabels(ref float yCurr)
         {
             // Create the selected films count label.
@@ -128,9 +125,9 @@ namespace PresentScreenings.TableView
             // Create the films without info count label.
             yCurr -= _yBetweenLabels + _labelHeight;
             var withoutInfoRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            var withoutInfoLabel = ControlsFactory.NewStandardLabel(withoutInfoRect);
-            withoutInfoLabel.StringValue = $"Without info: {_filmsWithoutInfo.Count}";
-            View.AddSubview(withoutInfoLabel);
+            _withoutInfoLabel = ControlsFactory.NewStandardLabel(withoutInfoRect);
+            _withoutInfoLabel.StringValue = $"Without info: {_filmsWithoutInfo.Count}";
+            View.AddSubview(_withoutInfoLabel);
 
             //Create the progress label.
             yCurr -= _yBetweenLabels + _labelHeight;
@@ -145,25 +142,26 @@ namespace PresentScreenings.TableView
             var states = new List<string> { };
             foreach (Film.FilmInfoStatus filmInfoStatus in Enum.GetValues(typeof(Film.FilmInfoStatus)))
             {
-                //var statusCount = _filmsWithoutInfo.Count(f => f.InfoStatus == filmInfoStatus);
                 var statusCount = _films.Count(f => f.InfoStatus == filmInfoStatus);
                 var statusName = Enum.GetName(typeof(Film.FilmInfoStatus), filmInfoStatus);
                 states.Add($"{statusCount} {statusName}");
             }
             _progressLabel.StringValue = string.Join(", ", states);
-            //var processedCount = _filmsWithoutInfo.Count(f => f.InfoStatus != Film.FilmInfoStatus.Absent);
-            //var completeCount = _filmsWithoutInfo.Count(f => f.InfoStatus == Film.FilmInfoStatus.Complete);
-            //var urlErrorCount = _filmsWithoutInfo.Count(f => f.InfoStatus == Film.FilmInfoStatus.UrlError);
-            //var parseErrorCount = _filmsWithoutInfo.Count(f => f.InfoStatus == Film.FilmInfoStatus.ParseError);
-            //_progressLabel.StringValue = $"{processedCount} Processed, {completeCount} Success, {urlErrorCount} URL error, {parseErrorCount} Parse error";
+        }
+
+        private void UpdateWithoutInfoLableStringValue()
+        {
+            var oldCount = _filmsWithoutInfo.Count;
+            _filmsWithoutInfo = GetFilmsWithoutInfo(_films);
+            var completedCount = oldCount - _filmsWithoutInfo.Count;
+            _withoutInfoLabel.StringValue = $"Processed: {oldCount}, completed: {completedCount}";
         }
 
         private void CreateActivityScrollView(ref float yCurr, float height)
         {
             _yCurr -= height;
             var docRect = new CGRect(0, 0, _contentWidth, height);
-            _activityField = new NSTextField(docRect);
-            _activityField.Editable = false;
+            _activityField = ControlsFactory.NewStandardLabel(docRect);
             _activityField.StringValue = ToDoFilmsString();
             _activityField.CanDrawConcurrently = true;
             var fit = _activityField.SizeThatFits(_activityField.Frame.Size);
@@ -228,7 +226,7 @@ namespace PresentScreenings.TableView
                 var filminfo = WebUtility.TryParseUrlSummary(request, url, catagory, film.FilmId);
                 if (filminfo != null)
                 {
-                    filminfo.SetFilmInfoStatus(Film.FilmInfoStatus.Complete);
+                    filminfo.InfoStatus = Film.FilmInfoStatus.Complete;
                 }
             }
             catch (UnparseblePageException)
@@ -265,6 +263,7 @@ namespace PresentScreenings.TableView
                     var endTime = DateTime.Now;
                     var duration = endTime - startTime;
                     SetProgressLabelStringValue();
+                    UpdateWithoutInfoLableStringValue();
                     builder.AppendLine($"{LogTimeString()} Done analyzing, duration {duration.ToString("hh\\:mm\\:ss")}.");
                     _activityField.StringValue = builder.ToString();
                     var fit = _activityField.SizeThatFits(_activityField.Frame.Size);
@@ -287,24 +286,6 @@ namespace PresentScreenings.TableView
                 builder.AppendLine($"{LogTimeString()} - {film.ToString()} - {film.InfoStatus.ToString()}");
             }
         }
-
-        //private void UpdateUI(ref StringBuilder builder, Film prevFilm, Film currFilm)
-        //{
-        //    SetProgressLabelStringValue();
-        //    // Display result of previous film.
-        //    if(prevFilm != null)
-        //    {
-        //        builder.AppendLine($" - {prevFilm.InfoStatus.ToString()}");
-        //        _activityField.StringValue = builder.ToString();
-        //    }
-
-        //    // Announce current film stat.
-        //    if(currFilm != null)
-        //    {
-        //        builder.AppendFormat($"{LogTimeString()} - {currFilm.ToString()}");
-        //        _activityField.StringValue = builder.ToString();
-        //    }
-        //}
 
         private string LogTimeString()
         {

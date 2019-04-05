@@ -262,7 +262,7 @@ namespace PresentScreenings.TableView
                 if (filmInfo != null)
                 {
                     _filmInfo = filmInfo;
-                    _filmInfo.SetFilmInfoStatus(Film.FilmInfoStatus.Complete);
+                    _filmInfo.InfoStatus = Film.FilmInfoStatus.Complete;
                     summary = filmInfo.ToString();
                     _linkButton.Title = url;
                 }
