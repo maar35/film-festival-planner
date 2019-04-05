@@ -15,9 +15,6 @@ namespace PresentScreenings.TableView
 		[Outlet]
 		AppKit.NSTextField _titleLabel { get; set; }
 
-		[Outlet]
-		AppKit.NSScrollView _titlesScrollView { get; set; }
-
 		[Action ("AcceptSheet:")]
 		partial void AcceptSheet (Foundation.NSObject sender);
 
@@ -26,11 +23,6 @@ namespace PresentScreenings.TableView
 		
 		void ReleaseDesignerOutlets ()
 		{
-			if (_titlesScrollView != null) {
-				_titlesScrollView.Dispose ();
-				_titlesScrollView = null;
-			}
-
 			if (_titleLabel != null) {
 				_titleLabel.Dispose ();
 				_titleLabel = null;
