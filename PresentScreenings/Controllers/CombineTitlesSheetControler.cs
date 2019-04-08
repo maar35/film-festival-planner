@@ -119,7 +119,7 @@ namespace PresentScreenings.TableView
                 Film film = Presentor.GetFilmByIndex(filmIndex);
                 _filmIds.Add(film.FilmId);
 
-                // Adjust the vertical position.
+                // Adjust the vertical position with control height.
                 yCurr -= _controlsHeight;
 
                 // Create a radio button for the film title.
@@ -134,15 +134,12 @@ namespace PresentScreenings.TableView
 
                 // Create a label for the rating.
                 CGRect labelRect = new CGRect(xLabel, yCurr, _labelWidth, _controlsHeight);
-                NSTextField ratingLabel = new NSTextField(labelRect);
+                NSTextField ratingLabel = ControlsFactory.NewStandardLabel(labelRect);
                 ratingLabel.Alignment = NSTextAlignment.Right;
-                ratingLabel.BackgroundColor = NSColor.WindowBackground;
-                ratingLabel.Bordered = false;
-                ratingLabel.Editable = false;
                 ratingLabel.StringValue = Presentor.GetFilmByIndex(filmIndex).Rating.ToString();
                 _titlesDocumentView.AddSubview(ratingLabel);
 
-                // Increase the vertical position.
+                // Ajust the vertical position with the distance between two controls.
                 yCurr -= _yControlsDistance;
             }
         }
