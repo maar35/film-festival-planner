@@ -199,14 +199,12 @@ namespace PresentScreenings.TableView
             nfloat spliButtonX = _xMargin + _cancelButtonWidth + _xControlsDistance;
             nfloat splitButtonWidth = _sheetFrame.Width - spliButtonX - _xMargin;
             CGRect splitButtonRect = new CGRect(spliButtonX, _yMargin, splitButtonWidth, _buttonHeight);
-            NSButton splitButton = new NSButton(splitButtonRect);
-            splitButton.BezelStyle = NSBezelStyle.Rounded;
-            splitButton.SetButtonType(NSButtonType.MomentaryPushIn);
+            NSButton splitButton = ControlsFactory.NewStandardButton(splitButtonRect);
             splitButton.Action = new ObjCRuntime.Selector("UncombineFilms:");
             int filmCount = _distinctTitles.Count();
             bool enable = filmCount > 1;
-            splitButton.Title = string.Format(_enabledToLabelTitle[enable], filmCount);
             splitButton.Enabled = enable;
+            splitButton.Title = string.Format(_enabledToLabelTitle[enable], filmCount);
             splitButton.KeyEquivalent = ControlsFactory.EnterKey;
             View.AddSubview(splitButton);
         }

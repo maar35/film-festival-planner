@@ -40,7 +40,7 @@ namespace PresentScreenings.TableView
         public List<DateTime> FestivalDays { get; private set; }
         public List<Screen> CurrDayScreens => _dayScreens[CurrDay];
         public List<Screen> Screens { get; }
-        public List<Film> Films { get; }
+        public static List<Film> Films { get; private set; }
         public DateTime CurrDay => FestivalDays[_currDayNumber];
         public static List<Screening> Screenings { get; private set; }
         public List<FriendFilmRating> FriendFilmRatings { get; }
@@ -54,8 +54,8 @@ namespace PresentScreenings.TableView
             ListReader<Screen> ScreensReader = new ListReader<Screen>(_screensFile);
             Screens = ScreensReader.ReadListFromFile(line => new Screen(line));
 
-            // Initialize film info.
-            FilmInfos = WebUtility.LoadFilmInfoFromXml(_filmInfoFile);
+            // Read film info.
+            FilmInfos = FilmInfo.LoadFilmInfoFromXml(_filmInfoFile);
 
             // Read films.
             ListReader<Film> FilmsReader = new ListReader<Film>(_filmsFile, true);

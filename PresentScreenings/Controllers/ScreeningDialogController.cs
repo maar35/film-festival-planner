@@ -48,7 +48,7 @@ namespace PresentScreenings.TableView
         #region Interface Implementation Properties
         public Screening CurrentScreening => Presentor.Plan.CurrScreening;
         public List<Screening> Screenings => ViewController.FilmScreenings(Presentor.Plan.CurrScreening.FilmId);
-        public Film CurrentFilm => Presentor.GetFilmById(CurrentScreening.FilmId);
+        public Film CurrentFilm => ViewController.GetFilmById(CurrentScreening.FilmId);
         #endregion
 
         #region Constructors
@@ -191,7 +191,6 @@ namespace PresentScreenings.TableView
 
             // Scroll to the selected screening.
             GoToScreeningDialog.ScrollScreeningToVisible(CurrentScreening, scrollView);
-
         }
 
         void UpdateAttendances()

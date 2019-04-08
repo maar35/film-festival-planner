@@ -55,7 +55,7 @@ namespace PresentScreenings.TableView
         #region Interface Implementation Properties
         public Screening CurrentScreening => _plan.CurrScreening;
         public List<Screening> Screenings => FilmScreenings(_plan.CurrScreening.FilmId);
-        public Film CurrentFilm => this.GetFilmById(CurrentScreening.FilmId);
+        public Film CurrentFilm => GetFilmById(CurrentScreening.FilmId);
         #endregion
 
         #region Contructors
@@ -265,6 +265,14 @@ namespace PresentScreenings.TableView
             _controlByScreening.Add(screening, control);
         }
 
+        static public NSCellStateValue GetNSCellStateValue(bool shouldBeOn)
+        {
+            return shouldBeOn ? NSCellStateValue.On : NSCellStateValue.Off;
+        }
+        #endregion
+
+        #region Public Methods working with ScreeningsPlan lists
+
         public static List<Screening> FilmScreenings(int filmId)
         {
             var filmScreenings = (
@@ -287,11 +295,19 @@ namespace PresentScreenings.TableView
             return filmScreenings;
         }
 
-        public Film GetFilmById(int filmId)
+        public static Film GetFilmById(int filmId)
         {
-            return _plan.Films.First(f => f.FilmId == filmId);
+            return ScreeningsPlan.Films.First(f => f.FilmId == filmId);
         }
 
+        public static FilmInfo GetFilmInfo(int filmId)
+        {
+            var info = ScreeningsPlan.FilmInfos.Where(f => f.FilmId == filmId).ToList();
+            return info.Count > 0 ? info.First() : null;
+        }
+        #endregion
+
+        #region Public Methods working with Film Ratings
         public FilmRating GetFriendFilmRating(int filmId, string friend)
         {
             var ratings = _plan.FriendFilmRatings.Where(r => r.FilmId == filmId).Where(r => r.Friend == friend);
@@ -339,7 +355,9 @@ namespace PresentScreenings.TableView
             }
             return rating;
         }
+        #endregion
 
+        #region Public Methods working with Screening Attendance
         public void UpdateAttendanceStatus(Screening screening)
         {
             UpdateOneAttendanceStatus(screening);
@@ -371,11 +389,6 @@ namespace PresentScreenings.TableView
             {
                 screening.Warning = ScreeningStatus.Warning.NoWarning;
             }
-        }
-
-        static public NSCellStateValue GetNSCellStateValue(bool shouldBeOn)
-        {
-            return shouldBeOn ? NSCellStateValue.On : NSCellStateValue.Off;
         }
         #endregion
 

@@ -108,6 +108,13 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
+        #region Override Methods
+        public override string ToString()
+        {
+            return string.Format("{0}\n{1} {2} {3} {4} {5}", ScreeningTitle, DayString(StartTime), DurationString(), _screen, Duration.ToString(_durationFormat), Rating);
+        }
+        #endregion
+
         #region Private Methods
         private DateTime DateTimeFromParsedData(DateTime date, string time)
         {
@@ -249,11 +256,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Display Methods
-        public override string ToString()
-        {
-            return string.Format("{0}\n{1} {2} {3} {4} {5}", ScreeningTitle, DayString(StartTime), DurationString(), _screen, Duration.ToString(_durationFormat), Rating);
-        }
-
         public static string DayString(DateTime date)
         {
             return string.Format("{0}{1}", date.DayOfWeek.ToString().Remove(3), date.Day.ToString());

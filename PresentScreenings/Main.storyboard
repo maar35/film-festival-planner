@@ -1259,38 +1259,12 @@ Gw
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                             </textField>
-                            <scrollView horizontalLineScroll="10" horizontalPageScroll="10" verticalLineScroll="10" verticalPageScroll="10" usesPredominantAxisScrolling="NO" scrollerKnobStyle="dark" translatesAutoresizingMaskIntoConstraints="NO" id="JMa-1t-XcC">
-                                <rect key="frame" x="20" y="61" width="444" height="118"/>
-                                <clipView key="contentView" id="13q-pB-Tzl">
-                                    <rect key="frame" x="1" y="1" width="442" height="116"/>
-                                    <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                                    <subviews>
-                                        <view fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="TXs-hL-SG9">
-                                            <rect key="frame" x="0.0" y="0.0" width="427" height="101"/>
-                                            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                                        </view>
-                                    </subviews>
-                                    <color key="backgroundColor" name="controlColor" catalog="System" colorSpace="catalog"/>
-                                </clipView>
-                                <scroller key="horizontalScroller" verticalHuggingPriority="750" horizontal="YES" id="ZTS-pg-D15">
-                                    <rect key="frame" x="1" y="101" width="442" height="16"/>
-                                    <autoresizingMask key="autoresizingMask"/>
-                                </scroller>
-                                <scroller key="verticalScroller" verticalHuggingPriority="750" doubleValue="1" horizontal="NO" id="3zv-0a-hdU">
-                                    <rect key="frame" x="427" y="1" width="16" height="116"/>
-                                    <autoresizingMask key="autoresizingMask"/>
-                                </scroller>
-                            </scrollView>
                         </subviews>
                         <constraints>
-                            <constraint firstItem="JMa-1t-XcC" firstAttribute="leading" secondItem="QwR-HM-5ft" secondAttribute="leading" constant="20" id="0JL-av-Xr1"/>
                             <constraint firstAttribute="trailing" secondItem="vQB-Q1-0Hr" secondAttribute="trailing" constant="20" id="2UI-Gg-bQs"/>
-                            <constraint firstItem="FTn-ag-1L5" firstAttribute="top" secondItem="JMa-1t-XcC" secondAttribute="bottom" constant="20" id="CH6-7w-FDz"/>
                             <constraint firstAttribute="trailing" secondItem="1Ul-mw-M44" secondAttribute="trailing" constant="22" id="Ifd-17-BgW"/>
-                            <constraint firstItem="JMa-1t-XcC" firstAttribute="top" secondItem="1Ul-mw-M44" secondAttribute="bottom" constant="8" id="KDF-pt-wIv"/>
                             <constraint firstItem="vQB-Q1-0Hr" firstAttribute="leading" secondItem="QwR-HM-5ft" secondAttribute="leading" constant="20" id="KJv-JY-VbB"/>
                             <constraint firstAttribute="bottom" secondItem="FTn-ag-1L5" secondAttribute="bottom" constant="20" id="QId-e3-yX8"/>
-                            <constraint firstAttribute="trailing" secondItem="JMa-1t-XcC" secondAttribute="trailing" constant="20" id="Vrf-JG-x8K"/>
                             <constraint firstItem="1Ul-mw-M44" firstAttribute="top" secondItem="vQB-Q1-0Hr" secondAttribute="bottom" constant="8" id="cdM-5e-dMk"/>
                             <constraint firstItem="1Ul-mw-M44" firstAttribute="leading" secondItem="QwR-HM-5ft" secondAttribute="leading" constant="20" id="gS6-Hz-3fP"/>
                             <constraint firstAttribute="trailing" secondItem="FTn-ag-1L5" secondAttribute="trailing" constant="21" id="hmx-sK-YUS"/>
@@ -1300,8 +1274,6 @@ Gw
                         </constraints>
                     </view>
                     <connections>
-                        <outlet property="_screeningsClipView" destination="13q-pB-Tzl" id="xxU-24-Weg"/>
-                        <outlet property="_screeningsScrollView" destination="JMa-1t-XcC" id="NdV-Oe-PD6"/>
                         <outlet property="_titleLabel" destination="vQB-Q1-0Hr" id="VG2-Vc-MOd"/>
                     </connections>
                 </viewController>

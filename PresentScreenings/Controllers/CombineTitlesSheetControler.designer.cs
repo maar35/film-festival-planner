@@ -13,9 +13,6 @@ namespace PresentScreenings.TableView
 	partial class CombineTitlesSheetController
 	{
 		[Outlet]
-		AppKit.NSScrollView _screeningsScrollView { get; set; }
-
-		[Outlet]
 		AppKit.NSTextField _titleLabel { get; set; }
 
 		[Action ("AcceptSheet:")]
@@ -26,11 +23,6 @@ namespace PresentScreenings.TableView
 		
 		void ReleaseDesignerOutlets ()
 		{
-			if (_screeningsScrollView != null) {
-				_screeningsScrollView.Dispose ();
-				_screeningsScrollView = null;
-			}
-
 			if (_titleLabel != null) {
 				_titleLabel.Dispose ();
 				_titleLabel = null;

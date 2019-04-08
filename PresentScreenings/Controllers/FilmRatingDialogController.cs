@@ -116,12 +116,11 @@ namespace PresentScreenings.TableView
                     uncombineSheet.Presentor = this;
                     break;
                 case "GoToScreeningSegue":
-                    var goToScreeningPopOver = segue.DestinationController as FilmInfoDialogController;
                     FilmInfoDialogController.Presentor = this;
                     break;
                 case "DownloadFilmInfoSegue":
-                    var downloadFilmInfoOpen = segue.DestinationController as DownloadFilmInfoController;
-                    downloadFilmInfoOpen.Presentor = this;
+                    var downloadFilmInfoController = segue.DestinationController as DownloadFilmInfoController;
+                    downloadFilmInfoController.Presentor = this;
                     break;
             }
         }
@@ -163,7 +162,7 @@ namespace PresentScreenings.TableView
 
         void SetFilmsWithScreenings()
         {
-            List<Film> films = _presentor.Plan.Films;
+            List<Film> films = ScreeningsPlan.Films;
             _filmTableDataSource.Films = films.Where(f => GetScreeningsByFilmId(f.FilmId).Count > 0).ToList();
         }
 
@@ -321,23 +320,12 @@ namespace PresentScreenings.TableView
 
         public Film GetFilmByTitle(string title)
         {
-            return _presentor.Plan.Films.First(f => f.Title == title);
+            return ScreeningsPlan.Films.First(f => f.Title == title);
         }
 
         public List<Screening> GetScreeningsByFilmId(int filmId)
         {
             return ViewController.FilmScreenings(filmId);
-        }
-
-        public static FilmInfo GetFilmInfo(int filmId)
-        {
-            var info = ScreeningsPlan.FilmInfos.Where(f => f.FilmId == filmId).ToList();
-            return info.Count > 0 ? info.First() : null;
-        }
-
-        public static void AddFilmInfo(FilmInfo filmInfo)
-        {
-            ScreeningsPlan.FilmInfos.Add(filmInfo);
         }
 
         public override void GoToScreening(Screening screening)
