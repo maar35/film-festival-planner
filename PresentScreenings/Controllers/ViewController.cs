@@ -307,7 +307,7 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Public Methods workong with Film Ratings
+        #region Public Methods working with Film Ratings
         public FilmRating GetFriendFilmRating(int filmId, string friend)
         {
             var ratings = _plan.FriendFilmRatings.Where(r => r.FilmId == filmId).Where(r => r.Friend == friend);
