@@ -37,7 +37,7 @@ namespace PresentScreenings.TableView
         bool _soldOut;
         ScreeningStatus.Status _status;
         ScreeningStatus.Warning _warning = ScreeningStatus.Warning.NoWarning;
-        readonly List<FriendFilmRating> _friendFilmRatings;
+        readonly List<FilmFanFilmRating> _friendFilmRatings;
         #endregion
 
         #region Properties
@@ -53,7 +53,7 @@ namespace PresentScreenings.TableView
         public int FilmsInScreening => _filmsInScreening;
         public string Extra => _extra;
         public string QAndA => _qAndA;
-        public FilmRating Rating { get => _film.Rating; set => _film.Rating = value; }
+        public FilmRating Rating { get => _film.Rating; }
         public List<string> AttendingFriends => _attendingFriends;
         public bool IAttend => _iAttend;
         public bool SoldOut { get => _soldOut; set => _soldOut = value; }
@@ -64,7 +64,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
-        public Screening(string screeningText, List<Screen> screens, List<Film> films, List<FriendFilmRating> ratings)
+        public Screening(string screeningText, List<Screen> screens, List<Film> films, List<FilmFanFilmRating> ratings)
         {
             string[] fields = screeningText.Split(';');
 
@@ -135,7 +135,6 @@ namespace PresentScreenings.TableView
         private static string EntityToUnicode(string html)
         {
             var replacements = new Dictionary<string, string>();
-            //var regex = new Regex("(&[a-z]{2,7};)");
             var regex = new Regex("&([a-z]{2,7});");
             foreach (Match match in regex.Matches(html))
             {
@@ -214,8 +213,6 @@ namespace PresentScreenings.TableView
             var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == screening.FilmId);
             var filmInfo = filmInfoList.Count() == 1 ? filmInfoList.First() : null;
             fields.Add(filmInfo != null ? filmInfo.Url : "");
-            //fields.Add(filmInfo != null ? string.Join("  ", filmInfo.ToString().Split(Environment.NewLine)) : "");
-            //fields.Add(filmInfo != null ? System.Net.WebUtility.HtmlDecode(filmInfo.FilmDescription) : "");
             fields.Add(filmInfo != null ? HtmlDecode(filmInfo.FilmDescription) : "");
             return string.Join(";", fields.ToArray());
         }
@@ -318,7 +315,7 @@ namespace PresentScreenings.TableView
             StringBuilder builder = new StringBuilder();
             foreach (string friend in ScreeningStatus.MyFriends)
             {
-                var friendRatings = screeningFriendFilmRatings.Where(f => f.Friend == friend);
+                var friendRatings = screeningFriendFilmRatings.Where(f => f.FilmFan == friend);
                 bool friendHasRated = friendRatings.Any();
                 bool friendAttends = AttendingFriends.Contains(friend);
                 if (AttendingFriends.Contains(friend))

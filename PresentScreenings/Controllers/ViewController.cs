@@ -272,7 +272,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods working with ScreeningsPlan lists
-
         public static List<Screening> FilmScreenings(int filmId)
         {
             var filmScreenings = (
@@ -308,9 +307,9 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods working with Film Ratings
-        public FilmRating GetFriendFilmRating(int filmId, string friend)
+        public static FilmRating GetFilmFanFilmRating(int filmId, string friend)
         {
-            var ratings = _plan.FriendFilmRatings.Where(r => r.FilmId == filmId).Where(r => r.Friend == friend);
+            var ratings = ScreeningsPlan.FilmFanFilmRatings.Where(r => r.FilmId == filmId).Where(r => r.FilmFan == friend);
             if (ratings.ToList().Count == 0)
             {
                 return FilmRating.Unrated;
@@ -318,42 +317,35 @@ namespace PresentScreenings.TableView
             return ratings.First().Rating;
         }
 
-        public void SetFriendFilmRating(int filmId, string friend, FilmRating rating)
+        public static FilmRating GetFilmFanFilmRating(Film film, string filmFan)
         {
-            var friendRatings = _plan.FriendFilmRatings.Where(r => r.FilmId == filmId).Where(r => r.Friend == friend);
-            if (friendRatings.ToList().Count == 0)
+            FilmRating rating;
+            rating = GetFilmFanFilmRating(film.FilmId, filmFan);
+            return rating;
+        }
+
+        public void SetFilmFanFilmRating(int filmId, string filmFan, FilmRating rating)
+        {
+            var fanRatings = ScreeningsPlan.FilmFanFilmRatings.Where(r => r.FilmId == filmId).Where(r => r.FilmFan == filmFan);
+            if (fanRatings.ToList().Count == 0)
             {
                 if(!rating.IsUnrated)
                 {
-                    _plan.FriendFilmRatings.Add(new FriendFilmRating(filmId, friend, rating));
+                    ScreeningsPlan.FilmFanFilmRatings.Add(new FilmFanFilmRating(filmId, filmFan, rating));
                 }
             }
             else
             {
-                FriendFilmRating friendFilmRating = friendRatings.First();
+                FilmFanFilmRating friendFilmRating = fanRatings.First();
                 if (rating.IsUnrated)
                 {
-                    _plan.FriendFilmRatings.Remove(friendFilmRating);
+                    ScreeningsPlan.FilmFanFilmRatings.Remove(friendFilmRating);
                 }
                 else
                 {
                     friendFilmRating.Rating = rating;
                 }
             }
-        }
-
-        public FilmRating GetFilmFanRating(Film film, string filmFan)
-        {
-            FilmRating rating;
-            if (filmFan == ScreeningStatus.Me)
-            {
-                rating = film.Rating;
-            }
-            else
-            {
-                rating = GetFriendFilmRating(film.FilmId, filmFan);
-            }
-            return rating;
         }
         #endregion
 

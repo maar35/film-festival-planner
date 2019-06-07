@@ -140,7 +140,7 @@ namespace PresentScreenings.TableView
                 _filmRatingTableView.AddColumn(friendColumn);
                 CGRect frame = _filmRatingTableView.Frame;
                 nfloat newRight = frame.X;
-                _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + width, frame.X + 60);
+                _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + width, frame.X + width);
                 friendColumn.SetIdentifier(friend);
                 var sortDescriptor = new NSSortDescriptor(friend, true, new ObjCRuntime.Selector("compare:"));
                 _filmRatingTableView.SortDescriptors.Append(sortDescriptor);

@@ -103,9 +103,9 @@ namespace PresentScreenings.TableView
                 overviewWriter.WriteListToFile(Controller.Plan.AttendedScreenings(), Screening.WriteOverviewRecord);
 
                 // Write friend film ratings.
-                string friendsRatingsPath = Path.Combine(directory, "friendfilmratings.csv");
-                var friendsRatingsWriter = new ListWriter<FriendFilmRating>(friendsRatingsPath, FriendFilmRating.WriteHeader);
-                friendsRatingsWriter.WriteListToFile(Controller.Plan.FriendFilmRatings, FriendFilmRating.Serialize);
+                string filmFanRatingsPath = Path.Combine(directory, "filmfanfilmratings.csv");
+                var filmFanRatingsWriter = new ListWriter<FilmFanFilmRating>(filmFanRatingsPath, FilmFanFilmRating.WriteHeader);
+                filmFanRatingsWriter.WriteListToFile(ScreeningsPlan.FilmFanFilmRatings, FilmFanFilmRating.Serialize);
 
                 // Write film info.
                 FilmInfo.SaveFilmInfoAsXml(ScreeningsPlan.FilmInfos, Path.Combine(directory, "filminfo.xml"));

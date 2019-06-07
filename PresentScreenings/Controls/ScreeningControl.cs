@@ -125,7 +125,7 @@ namespace PresentScreenings.TableView
 
                 // Draw the rating of the film
                 var film = ViewController.GetFilmById(_screening.FilmId);
-                var ratings = ScreeningStatus.FilmFans.Select(f => _app.Controller.GetFilmFanRating(film, f));
+                var ratings = ScreeningStatus.FilmFans.Select(f => ViewController.GetFilmFanFilmRating(film, f));
                 var rating = ratings.Max();
                 if (rating.IsGreaterOrEqual(FilmRating.LowestSuperRating) || rating.Equals(FilmRating.Unrated))
                 {

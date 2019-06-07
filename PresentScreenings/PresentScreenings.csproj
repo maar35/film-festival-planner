@@ -108,7 +108,7 @@
     <Compile Include="Entities\Film.cs" />
     <Compile Include="Entities\FilmInfo.cs" />
     <Compile Include="Entities\FilmRating.cs" />
-    <Compile Include="Entities\FriendFilmRating.cs" />
+    <Compile Include="Entities\FilmFanFilmRating.cs" />
     <Compile Include="Entities\Screen.cs" />
     <Compile Include="Entities\Screening.cs" />
     <Compile Include="Entities\ScreeningsPlan.cs" />

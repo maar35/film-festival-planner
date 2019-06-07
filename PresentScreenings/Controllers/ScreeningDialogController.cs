@@ -105,10 +105,16 @@ namespace PresentScreenings.TableView
                     break;
             }
         }
+
+        public override void GoToScreening(Screening screening)
+        {
+            _presentor.GoToScreening(screening);
+            CloseDialog();
+        }
         #endregion
 
         #region Private Methods
-        void SetControlValues()
+        private void SetControlValues()
         {
             _labelTitle.StringValue = _screening.FilmTitle;
             _labelScreen.StringValue = _screening.Screen.ParseName;
@@ -121,13 +127,13 @@ namespace PresentScreenings.TableView
             _checkboxIAttend.State = AttendanceCheckbox.SetAttendanceState(_screening.IAttend);
         }
 
-        void CreateFriendControls()
+        private void CreateFriendControls()
         {
             // Clone the Rating combo box.
             var comboBoxFrame = _comboboxRating.Frame;
             var comboBoxFont = _comboboxRating.Font;
             var myRatingComboBox = ControlsFactory.NewRatingComboBox(comboBoxFrame, comboBoxFont);
-            myRatingComboBox.EditingEnded += (s, e) => HandleMyRatingEditingEnded(myRatingComboBox);
+            myRatingComboBox.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(myRatingComboBox, ScreeningStatus.Me);
             myRatingComboBox.StringValue = _screening.Rating.ToString();
             View.AddSubview(myRatingComboBox);
 
@@ -150,8 +156,8 @@ namespace PresentScreenings.TableView
                 // Create the Rriend Rating combobox.
                 comboBoxFrame.Y = _yCurr;
                 var friendRatingComboBox = ControlsFactory.NewRatingComboBox(comboBoxFrame, comboBoxFont);
-                friendRatingComboBox.EditingEnded += (s, e) => HandleFriendRatingEditingEnded(friendRatingComboBox, friend);
-                friendRatingComboBox.StringValue = _presentor.GetFriendFilmRating(_screening.FilmId, friend).ToString();
+                friendRatingComboBox.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(friendRatingComboBox, friend);
+                friendRatingComboBox.StringValue = ViewController.GetFilmFanFilmRating(_screening.FilmId, friend).ToString();
                 View.AddSubview(friendRatingComboBox);
 
                 // Create the Friend Attendance checkbox.
@@ -167,7 +173,7 @@ namespace PresentScreenings.TableView
             }
         }
 
-        void CreateScreeningsScrollView()
+        private void CreateScreeningsScrollView()
         {
             // Get the screenings of the selected film.
             var screenings = _filmScreenings;
@@ -193,7 +199,7 @@ namespace PresentScreenings.TableView
             GoToScreeningDialog.ScrollScreeningToVisible(CurrentScreening, scrollView);
         }
 
-        void UpdateAttendances()
+        private void UpdateAttendances()
         {
             _labelPresent.StringValue = _screening.AttendeesString();
             _presentor.UpdateAttendanceStatus(_screening);
@@ -202,46 +208,22 @@ namespace PresentScreenings.TableView
             _screeningInfoControl.ReDraw();
         }
 
-        public override void GoToScreening(Screening screening)
-        {
-            _presentor.GoToScreening(screening);
-            CloseDialog();
-        }
-
-        void CloseDialog()
+        private void CloseDialog()
         {
             _presentor.DismissViewController(this);
         }
 
-        void HandleMyRatingEditingEnded(NSComboBox comboBox)
-        {
-            FilmRating rating = _screening.Rating;
-            string oldRatingString = rating.Value;
-            string newRatingString = rating.Value;
-            if (SetNewValueFromComboBox(comboBox, ref newRatingString))
-            {
-                if (_screening.Rating.SetRating(newRatingString))
-                {
-                    _presentor.ReloadScreeningsView();
-                }
-                else
-                {
-                    comboBox.StringValue = oldRatingString;
-                }
-            }
-        }
-
-        void HandleFriendRatingEditingEnded(NSComboBox comboBox, string friend)
+        private void HandleFilmFanRatingEditingEnded(NSComboBox comboBox, string friend)
         {
             int filmId = _screening.FilmId;
-            FilmRating rating = _presentor.GetFriendFilmRating(filmId, friend);
+            FilmRating rating = ViewController.GetFilmFanFilmRating(filmId, friend);
             string oldRatingString = rating.Value;
             string newRatingString = rating.Value;
             if (SetNewValueFromComboBox(comboBox, ref newRatingString))
             {
                 if (rating.SetRating(newRatingString))
                 {
-                    _presentor.SetFriendFilmRating(filmId, friend, rating);
+                    _presentor.SetFilmFanFilmRating(filmId, friend, rating);
                     _presentor.ReloadScreeningsView();
                 }
                 else
@@ -251,7 +233,7 @@ namespace PresentScreenings.TableView
             }
         }
 
-        bool SetNewValueFromComboBox(NSComboBox comboBox, ref string refString)
+        private bool SetNewValueFromComboBox(NSComboBox comboBox, ref string refString)
         {
             string comboBoxString = comboBox.StringValue;
             if (comboBox.SelectedValue == null)
