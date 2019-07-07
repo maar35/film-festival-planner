@@ -90,12 +90,16 @@ namespace PresentScreenings.TableView
                 case "Rating":
                     NSTextField myRatingField = (NSTextField)view;
                     PopulateFilmFanFilmRating(ref myRatingField, film, ScreeningStatus.Me, row);
+                    myRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, ScreeningStatus.Me).ToString();
+                    myRatingField.Tag = row;
                     return myRatingField;
                 default:
                     if (ScreeningStatus.MyFriends.Contains(tableColumn.Title))
                     {
                         NSTextField friendRatingField = (NSTextField)view;
                         PopulateFilmFanFilmRating(ref friendRatingField, film, tableColumn.Title, row);
+                        friendRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, tableColumn.Title).ToString();
+                        friendRatingField.Tag = row;
                         return friendRatingField;
                     }
                     break;
@@ -136,14 +140,11 @@ namespace PresentScreenings.TableView
                     Bordered = false,
                     Selectable = false,
                     Editable = true,
-                    Alignment = NSTextAlignment.Right,
-                    StringValue = ViewController.GetFilmFanFilmRating(film, filmFan).ToString(),
-                    Tag = row
+                    Alignment = NSTextAlignment.Right
                 };
-                var ratingField = box;
-                box.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(ratingField, filmFan);
-
             }
+            var ratingField = box;
+            box.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(ratingField, filmFan);
         }
         #endregion
 
@@ -151,55 +152,8 @@ namespace PresentScreenings.TableView
         private void HandleFilmFanRatingEditingEnded(NSTextField field, string filmFan)
         {
             int filmId = _dataSource.Films[(int)field.Tag].FilmId;
-            FilmRating rating = ViewController.GetFilmFanFilmRating(filmId, filmFan);
-            string oldRatingValue = rating.Value;
-            if(TrySetRating(field, ref rating))
-            {
-                _controller.ReloadScreeningsView();
-            }
-            if (rating.Value != oldRatingValue)
-            {
-                _controller.SetFilmFanFilmRating(filmId, filmFan, rating);
-                _controller.ReloadScreeningsView();
-            }
-        }
-
-        private bool TrySetRating(NSTextField field, ref FilmRating rating)
-        {
-            if (!rating.SetRating(field.StringValue))
-            {
-                field.StringValue = rating.ToString();
-                return false;
-            }
-            return true;
+            _controller.SetRatingIfValid(field, r => field.StringValue, filmId, filmFan);
         }
         #endregion
-
-        //private void HandleFilmFanRatingEditingEnded(NSTextField field, string filmFan)
-        //{
-        //    int filmId = _dataSource.Films[(int)field.Tag].FilmId;
-        //    FilmRating rating = ViewController.GetFilmFanFilmRating(filmId, filmFan);
-        //    string oldRatingValue = rating.Value;
-        //    if (TrySetRating(field, ref rating))
-        //    {
-        //        _controller.ReloadScreeningsView();
-        //    }
-        //    if (rating.Value != oldRatingValue)
-        //    {
-        //        _controller.SetFilmFanFilmRating(filmId, filmFan, rating);
-        //        _controller.ReloadScreeningsView();
-        //    }
-        //}
-
-        //private bool TrySetRating(NSTextField field, ref FilmRating rating)
-        //{
-        //    if (!rating.SetRating(field.StringValue))
-        //    {
-        //        field.StringValue = rating.ToString();
-        //        return false;
-        //    }
-        //    return true;
-        //}
-
     }
 }

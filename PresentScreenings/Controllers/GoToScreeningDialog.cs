@@ -100,7 +100,7 @@ namespace PresentScreenings.TableView
         public abstract void GoToScreening(Screening screening);
         #endregion
 
-        #region Delagates
+        #region Delegates
         public delegate void GoToScreeningDelegate(Screening screening);
         #endregion
     }

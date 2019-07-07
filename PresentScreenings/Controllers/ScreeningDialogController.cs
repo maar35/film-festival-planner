@@ -213,57 +213,29 @@ namespace PresentScreenings.TableView
             _presentor.DismissViewController(this);
         }
 
-        private void HandleFilmFanRatingEditingEnded(NSComboBox comboBox, string friend)
+        private void HandleFilmFanRatingEditingEnded(NSComboBox comboBox, string filmFan)
         {
             int filmId = _screening.FilmId;
-            FilmRating rating = ViewController.GetFilmFanFilmRating(filmId, friend);
-            string oldRatingString = rating.Value;
-            string newRatingString = rating.Value;
-            if (SetNewValueFromComboBox(comboBox, ref newRatingString))
-            {
-                if (rating.SetRating(newRatingString))
-                {
-                    _presentor.SetFilmFanFilmRating(filmId, friend, rating);
-                    _presentor.ReloadScreeningsView();
-                }
-                else
-                {
-                    comboBox.StringValue = oldRatingString;
-                }
-            }
+            Func<string, string> getControlValue = r => GetNewValueFromComboBox(comboBox, r);
+            _presentor.SetRatingIfValid(comboBox, getControlValue, filmId, filmFan);
         }
 
-        private bool SetNewValueFromComboBox(NSComboBox comboBox, ref string refString)
+        private string GetNewValueFromComboBox(NSComboBox comboBox, string oldString)
         {
             string comboBoxString = comboBox.StringValue;
             if (comboBox.SelectedValue == null)
             {
-                bool found = false;
-                var max = comboBox.Count;
-                for (int i = 0; i < max; i++)
+                if (!comboBox.Values.Any(v => v.ToString() == comboBoxString))
                 {
-                    if (comboBoxString == comboBox.Values[i].ToString())
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                {
-                    comboBox.StringValue = refString;
-                    return false;
+                    comboBox.StringValue = oldString;
+                    return oldString;
                 }
             }
             else
             {
                 comboBoxString = comboBox.SelectedValue.ToString();
             }
-            if (comboBoxString == refString)
-            {
-                return false;
-            }
-            refString = comboBoxString;
-            return true;
+            return comboBoxString;
         }
         #endregion
 

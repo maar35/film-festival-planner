@@ -13,16 +13,15 @@ namespace PresentScreenings.TableView
         #region Private Variables
         const int _unratedIndex = 0;
         const int _lowestSuperRatingIndex = 8;
-        string _value;
         #endregion
 
         #region Properties
         public static List<string> Values => new List<string> { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" };
-        static string _valueUnrated => Values[_unratedIndex];
+        private static string _valueUnrated => Values[_unratedIndex];
         public static FilmRating Unrated => new FilmRating(_valueUnrated);
         public static FilmRating LowestSuperRating => new FilmRating(Values[_lowestSuperRatingIndex]);
-        public string Value => _value;
-        public bool IsUnrated => _value == _valueUnrated;
+        public string Value { get; private set; }
+        public bool IsUnrated => Value == _valueUnrated;
         #endregion
 
         #region Constructors
@@ -30,7 +29,7 @@ namespace PresentScreenings.TableView
         {
             if (!SetRating(rating))
             {
-                _value = _valueUnrated;
+                Value = _valueUnrated;
             }
         }
         #endregion
@@ -38,7 +37,7 @@ namespace PresentScreenings.TableView
         #region override methods
         public override string ToString()
         {
-            return _value;
+            return Value;
         }
         #endregion
         
@@ -57,7 +56,7 @@ namespace PresentScreenings.TableView
         {
             if (Values.Contains(newRating))
             {
-                _value = newRating;
+                Value = newRating;
                 return true;
             }
             return false;
@@ -67,8 +66,8 @@ namespace PresentScreenings.TableView
         #region Interface Implementation
         public int CompareTo(object obj)
         {
-            double index = Values.IndexOf(_value);
-            double otherIndex = Values.IndexOf(((FilmRating)obj)._value);
+            double index = Values.IndexOf(Value);
+            double otherIndex = Values.IndexOf(((FilmRating)obj).Value);
             return index.CompareTo(otherIndex);
         }
         #endregion

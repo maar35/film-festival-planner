@@ -29,7 +29,7 @@ namespace PresentScreenings.TableView
         public NSTableView TableView => ScreeningsTable;
         internal int RunningPopupsCount { get; set; } = 0;
         #endregion
-        
+
         #region Computed Properties
         internal NSMenuItem ClickableLabelsMenuItem
         {
@@ -168,7 +168,7 @@ namespace PresentScreenings.TableView
             {
                 if (screening.TicketsBought)
                 {
-					screening.Status = ScreeningStatus.Status.Attending;
+                    screening.Status = ScreeningStatus.Status.Attending;
                 }
                 else
                 {
@@ -237,7 +237,7 @@ namespace PresentScreenings.TableView
                 select s
             ).ToList();
             return screeningsWithSameFilm;
-		}
+        }
 
         bool HasTimeOverlap(Screening screening)
         {
@@ -329,7 +329,7 @@ namespace PresentScreenings.TableView
             var fanRatings = ScreeningsPlan.FilmFanFilmRatings.Where(r => r.FilmId == filmId).Where(r => r.FilmFan == filmFan);
             if (fanRatings.ToList().Count == 0)
             {
-                if(!rating.IsUnrated)
+                if (!rating.IsUnrated)
                 {
                     ScreeningsPlan.FilmFanFilmRatings.Add(new FilmFanFilmRating(filmId, filmFan, rating));
                 }
@@ -347,6 +347,26 @@ namespace PresentScreenings.TableView
                 }
             }
         }
+
+        public void SetRatingIfValid(NSTextField control, Func<string, string> GetControlValue, int filmId, string filmFan)
+        {
+            FilmRating rating = GetFilmFanFilmRating(filmId, filmFan);
+            string oldRatingString = rating.Value;
+            string newRatingString = GetControlValue(oldRatingString);
+            if (newRatingString != oldRatingString)
+            {
+                if (rating.SetRating(newRatingString))
+                {
+                    SetFilmFanFilmRating(filmId, filmFan, rating);
+                    ReloadScreeningsView();
+                }
+                else
+                {
+                    control.StringValue = rating.Value;
+                }
+            }
+        }
+
         #endregion
 
         #region Public Methods working with Screening Attendance
@@ -400,13 +420,13 @@ namespace PresentScreenings.TableView
 
         public void SetNextDay(int days)
         {
-			_plan.SetNextDay(days);
+            _plan.SetNextDay(days);
             DisplayScreeningsView();
         }
 
         public void SetNextScreen(int numberOfScreens)
         {
-			ScreeningSelected = false;
+            ScreeningSelected = false;
             _plan.SetNextScreen(numberOfScreens);
             ScreeningSelected = true;
         }
@@ -422,7 +442,7 @@ namespace PresentScreenings.TableView
         {
             ScreeningSelected = false;
             _plan.SetPrevScreening();
-			ScreeningSelected = true;
+            ScreeningSelected = true;
         }
 
         public void GoToScreening(Screening screening)
@@ -453,7 +473,7 @@ namespace PresentScreenings.TableView
         public void ToggleSoldOut()
         {
             Screening screening = _plan.CurrScreening;
-			screening.SoldOut = !screening.SoldOut;
+            screening.SoldOut = !screening.SoldOut;
             UpdateAttendanceStatus(screening);
             ReloadScreeningsView();
         }
