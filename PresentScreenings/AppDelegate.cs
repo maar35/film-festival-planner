@@ -102,7 +102,7 @@ namespace PresentScreenings.TableView
                 var overviewWriter = new ListWriter<Screening>(overviewPath, Screening.WriteOverviewHeader);
                 overviewWriter.WriteListToFile(Controller.Plan.AttendedScreenings(), Screening.WriteOverviewRecord);
 
-                // Write friend film ratings.
+                // Write film ratings.
                 string filmFanRatingsPath = Path.Combine(directory, "filmfanfilmratings.csv");
                 var filmFanRatingsWriter = new ListWriter<FilmFanFilmRating>(filmFanRatingsPath, FilmFanFilmRating.WriteHeader);
                 filmFanRatingsWriter.WriteListToFile(ScreeningsPlan.FilmFanFilmRatings, FilmFanFilmRating.Serialize);

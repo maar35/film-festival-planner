@@ -307,9 +307,9 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods working with Film Ratings
-        public static FilmRating GetFilmFanFilmRating(int filmId, string friend)
+        public static FilmRating GetFilmFanFilmRating(int filmId, string filmFan)
         {
-            var ratings = ScreeningsPlan.FilmFanFilmRatings.Where(r => r.FilmId == filmId).Where(r => r.FilmFan == friend);
+            var ratings = ScreeningsPlan.FilmFanFilmRatings.Where(r => r.FilmId == filmId).Where(r => r.FilmFan == filmFan);
             if (ratings.ToList().Count == 0)
             {
                 return FilmRating.Unrated;
@@ -336,14 +336,14 @@ namespace PresentScreenings.TableView
             }
             else
             {
-                FilmFanFilmRating friendFilmRating = fanRatings.First();
+                FilmFanFilmRating filmFanFilmRating = fanRatings.First();
                 if (rating.IsUnrated)
                 {
-                    ScreeningsPlan.FilmFanFilmRatings.Remove(friendFilmRating);
+                    ScreeningsPlan.FilmFanFilmRatings.Remove(filmFanFilmRating);
                 }
                 else
                 {
-                    friendFilmRating.Rating = rating;
+                    filmFanFilmRating.Rating = rating;
                 }
             }
         }

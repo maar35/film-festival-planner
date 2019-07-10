@@ -34,7 +34,7 @@ namespace PresentScreenings.TableView
 
         public static string WriteHeader()
         {
-            return "filmid;friend;rating";
+            return "filmid;filmfan;rating";
         }
 
         public static string Serialize(FilmFanFilmRating friendFilmRating)

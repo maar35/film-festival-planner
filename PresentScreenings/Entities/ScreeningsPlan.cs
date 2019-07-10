@@ -61,7 +61,7 @@ namespace PresentScreenings.TableView
             ListReader<Film> FilmsReader = new ListReader<Film>(_filmsFile, true);
             Films = FilmsReader.ReadListFromFile(line => new Film(line));
 
-            // Read friend film ratings.
+            // Read film ratings.
             ListReader<FilmFanFilmRating> RatingsReader = new ListReader<FilmFanFilmRating>(_friendFilmRatingsFile, true);
             FilmFanFilmRatings = RatingsReader.ReadListFromFile(line => new FilmFanFilmRating(line));
 
