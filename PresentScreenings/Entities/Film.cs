@@ -19,10 +19,6 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Private Members
-        FilmRating _rating;
-        #endregion
-
         #region Properties
         public int FilmId { get; private set; }
         public string SortedTitle { get; private set; }
@@ -30,7 +26,7 @@ namespace PresentScreenings.TableView
         public string TitleLanguage { get; private set; }
         public string Section { get; private set; }
         public string Url { get; private set; }
-        public FilmRating Rating { get => _rating; set => _rating = value; }
+        public FilmRating Rating => ViewController.GetFilmFanFilmRating(this, ScreeningStatus.Me);
         public WebUtility.MediumCatagory Catagory { get; private set; }
         public FilmInfoStatus InfoStatus { get => ViewController.GetFilmInfo(FilmId).InfoStatus; }
         #endregion
@@ -47,11 +43,9 @@ namespace PresentScreenings.TableView
             Section = fields[4];
             string catagory = fields[5];
             Url = fields[6];
-            string rating = fields[7];
 
             // Assign properties that need calculating.
             FilmId = Int32.Parse(filmId);
-            _rating = new FilmRating(rating);
             Catagory = (WebUtility.MediumCatagory)Enum.Parse(typeof(WebUtility.MediumCatagory), catagory);
         }
         #endregion
@@ -59,13 +53,13 @@ namespace PresentScreenings.TableView
         #region Public Methods
         public static string WriteHeader()
         {
-            return "filmid;sort;title;titlelanguage;section;mediacatagory;url;rating";
+            return "filmid;sort;title;titlelanguage;section;mediacatagory;url";
         }
 
         public static string Serialize(Film film)
         {
             string line = string.Join(";",
-                film.FilmId, film.SortedTitle, film.Title, film.TitleLanguage, film.Section, film.Catagory, film.Url, film._rating
+                film.FilmId, film.SortedTitle, film.Title, film.TitleLanguage, film.Section, film.Catagory, film.Url
             );
             return line;
         }

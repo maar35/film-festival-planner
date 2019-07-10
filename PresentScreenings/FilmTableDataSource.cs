@@ -1,10 +1,8 @@
 ﻿using System;
-using AppKit;
-using CoreGraphics;
-using Foundation;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using AppKit;
+using Foundation;
 
 namespace PresentScreenings.TableView
 {
@@ -142,19 +140,7 @@ namespace PresentScreenings.TableView
 
         private static int GetFilmFanFilmRatingToInt(Film film, string fan = ScreeningStatus.Me)
         {
-            return int.Parse(_app.Controller.GetFilmFanRating(film, fan).ToString());
-
-            //FilmRating rating;
-            //if (fan == ScreeningStatus.Me)
-            //{
-            //    rating = film.Rating;
-            //}
-            //else
-            //{
-            //    rating = ViewController.GetFriendFilmRating(film.FilmId, fan);
-            //    //rating = _app.Controller.GetFriendFilmRating(film.FilmId, fan);
-            //}
-            //return int.Parse(rating.ToString());
+            return int.Parse(ViewController.GetFilmFanFilmRating(film, fan).ToString());
         }
         #endregion
     }

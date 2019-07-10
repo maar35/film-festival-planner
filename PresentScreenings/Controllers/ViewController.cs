@@ -29,7 +29,7 @@ namespace PresentScreenings.TableView
         public NSTableView TableView => ScreeningsTable;
         internal int RunningPopupsCount { get; set; } = 0;
         #endregion
-        
+
         #region Computed Properties
         internal NSMenuItem ClickableLabelsMenuItem
         {
@@ -168,7 +168,7 @@ namespace PresentScreenings.TableView
             {
                 if (screening.TicketsBought)
                 {
-					screening.Status = ScreeningStatus.Status.Attending;
+                    screening.Status = ScreeningStatus.Status.Attending;
                 }
                 else
                 {
@@ -237,7 +237,7 @@ namespace PresentScreenings.TableView
                 select s
             ).ToList();
             return screeningsWithSameFilm;
-		}
+        }
 
         bool HasTimeOverlap(Screening screening)
         {
@@ -272,7 +272,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods working with ScreeningsPlan lists
-
         public static List<Screening> FilmScreenings(int filmId)
         {
             var filmScreenings = (
@@ -308,9 +307,9 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods working with Film Ratings
-        public FilmRating GetFriendFilmRating(int filmId, string friend)
+        public static FilmRating GetFilmFanFilmRating(int filmId, string filmFan)
         {
-            var ratings = _plan.FriendFilmRatings.Where(r => r.FilmId == filmId).Where(r => r.Friend == friend);
+            var ratings = ScreeningsPlan.FilmFanFilmRatings.Where(r => r.FilmId == filmId).Where(r => r.FilmFan == filmFan);
             if (ratings.ToList().Count == 0)
             {
                 return FilmRating.Unrated;
@@ -318,43 +317,56 @@ namespace PresentScreenings.TableView
             return ratings.First().Rating;
         }
 
-        public void SetFriendFilmRating(int filmId, string friend, FilmRating rating)
+        public static FilmRating GetFilmFanFilmRating(Film film, string filmFan)
         {
-            var friendRatings = _plan.FriendFilmRatings.Where(r => r.FilmId == filmId).Where(r => r.Friend == friend);
-            if (friendRatings.ToList().Count == 0)
+            FilmRating rating;
+            rating = GetFilmFanFilmRating(film.FilmId, filmFan);
+            return rating;
+        }
+
+        public void SetFilmFanFilmRating(int filmId, string filmFan, FilmRating rating)
+        {
+            var fanRatings = ScreeningsPlan.FilmFanFilmRatings.Where(r => r.FilmId == filmId).Where(r => r.FilmFan == filmFan);
+            if (fanRatings.ToList().Count == 0)
             {
-                if(!rating.IsUnrated)
+                if (!rating.IsUnrated)
                 {
-                    _plan.FriendFilmRatings.Add(new FriendFilmRating(filmId, friend, rating));
+                    ScreeningsPlan.FilmFanFilmRatings.Add(new FilmFanFilmRating(filmId, filmFan, rating));
                 }
             }
             else
             {
-                FriendFilmRating friendFilmRating = friendRatings.First();
+                FilmFanFilmRating filmFanFilmRating = fanRatings.First();
                 if (rating.IsUnrated)
                 {
-                    _plan.FriendFilmRatings.Remove(friendFilmRating);
+                    ScreeningsPlan.FilmFanFilmRatings.Remove(filmFanFilmRating);
                 }
                 else
                 {
-                    friendFilmRating.Rating = rating;
+                    filmFanFilmRating.Rating = rating;
                 }
             }
         }
 
-        public FilmRating GetFilmFanRating(Film film, string filmFan)
+        public void SetRatingIfValid(NSTextField control, Func<string, string> GetControlValue, int filmId, string filmFan)
         {
-            FilmRating rating;
-            if (filmFan == ScreeningStatus.Me)
+            FilmRating rating = GetFilmFanFilmRating(filmId, filmFan);
+            string oldRatingString = rating.Value;
+            string newRatingString = GetControlValue(oldRatingString);
+            if (newRatingString != oldRatingString)
             {
-                rating = film.Rating;
+                if (rating.SetRating(newRatingString))
+                {
+                    SetFilmFanFilmRating(filmId, filmFan, rating);
+                    ReloadScreeningsView();
+                }
+                else
+                {
+                    control.StringValue = rating.Value;
+                }
             }
-            else
-            {
-                rating = GetFriendFilmRating(film.FilmId, filmFan);
-            }
-            return rating;
         }
+
         #endregion
 
         #region Public Methods working with Screening Attendance
@@ -408,13 +420,13 @@ namespace PresentScreenings.TableView
 
         public void SetNextDay(int days)
         {
-			_plan.SetNextDay(days);
+            _plan.SetNextDay(days);
             DisplayScreeningsView();
         }
 
         public void SetNextScreen(int numberOfScreens)
         {
-			ScreeningSelected = false;
+            ScreeningSelected = false;
             _plan.SetNextScreen(numberOfScreens);
             ScreeningSelected = true;
         }
@@ -430,7 +442,7 @@ namespace PresentScreenings.TableView
         {
             ScreeningSelected = false;
             _plan.SetPrevScreening();
-			ScreeningSelected = true;
+            ScreeningSelected = true;
         }
 
         public void GoToScreening(Screening screening)
@@ -461,7 +473,7 @@ namespace PresentScreenings.TableView
         public void ToggleSoldOut()
         {
             Screening screening = _plan.CurrScreening;
-			screening.SoldOut = !screening.SoldOut;
+            screening.SoldOut = !screening.SoldOut;
             UpdateAttendanceStatus(screening);
             ReloadScreeningsView();
         }
