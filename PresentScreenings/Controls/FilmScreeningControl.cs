@@ -60,7 +60,7 @@ namespace PresentScreenings.TableView
                 FillControlRect(g);
 
                 // Draw a frame if something's wrong with the tickets
-                if (ScreeningStatus.TicketStatusNeedsAttention(_screening))
+                if (ScreeningInfo.TicketStatusNeedsAttention(_screening))
                 {
 					ColorView.DrawTicketAvalabilityFrame(g, _screening, Frame);
                 }

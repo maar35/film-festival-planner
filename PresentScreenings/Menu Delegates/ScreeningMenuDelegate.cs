@@ -22,19 +22,18 @@ namespace PresentScreenings.TableView
 
         #region Private Members
         NSMenu _screeningMenu;
-		NSMenuItem _myAttendanceMenuItem;
+        NSMenuItem _myAttendanceMenuItem;
         AppDelegate _app;
         ViewController _controller;
         IScreeningProvider _screeningProvider;
         Film _film;
-        Screening _screening;
         Dictionary<nint, string> _friendByTag;
         static Dictionary<nint, bool> _FilmScreeningEnabledByTag;
         static Dictionary<string, Screening> _filmScreeningByMenuItemTitle;
         #endregion
 
         #region Properties
-        public Screening Screening => _screening;
+        public Screening Screening { get; private set; }
         public static int FilmMenuHeaderItemTag => _filmMenuHeaderItemTag;
         public static FilmRatingDialogController FilmRatingController => ViewController.App.FilmsDialogController;
         #endregion
@@ -67,7 +66,7 @@ namespace PresentScreenings.TableView
 
             //Get the current film.
             var currFilm = _screeningProvider.CurrentFilm;
-            if(currFilm != _film)
+            if (currFilm != _film)
             {
                 _film = currFilm;
                 PopulateFilmMenuItems(menu);
@@ -75,9 +74,9 @@ namespace PresentScreenings.TableView
 
             // Get the current screening.
             var currScreening = _screeningProvider.CurrentScreening;
-            if (currScreening != _screening)
+            if (currScreening != Screening)
             {
-                _screening = currScreening;
+                Screening = currScreening;
                 PopulateFilmMenuItems(menu);
             }
 
@@ -130,7 +129,7 @@ namespace PresentScreenings.TableView
         {
             if (_friendByTag.ContainsKey(item.Tag))
             {
-				var friend = _friendByTag[item.Tag];
+                var friend = _friendByTag[item.Tag];
                 if (FilmRatingViewRunning())
                 {
                     item.State = NSCellStateValue.Off;
@@ -138,10 +137,10 @@ namespace PresentScreenings.TableView
                 }
                 else
                 {
-                    item.State = _screening.FriendAttends(friend) ? NSCellStateValue.On : NSCellStateValue.Off;
+                    item.State = Screening.FriendAttends(friend) ? NSCellStateValue.On : NSCellStateValue.Off;
                     item.Enabled = true;
                 }
-				return true;
+                return true;
             }
             return false;
         }
@@ -155,17 +154,17 @@ namespace PresentScreenings.TableView
                     item.Enabled = _controller.ViewIsActive();
                     break;
                 case _soldOutMenuItemTag:
-                    item.Enabled = _screening != null;
-                    item.State = (_screening != null && _screening.SoldOut) ? NSCellStateValue.On : NSCellStateValue.Off;
+                    item.Enabled = Screening != null;
+                    item.State = (Screening != null && Screening.SoldOut) ? NSCellStateValue.On : NSCellStateValue.Off;
                     break;
                 case _ticketsBoughtMenuItemTag:
-                    item.Enabled = _screening != null;
-                    item.State = (_screening != null && _screening.TicketsBought) ? NSCellStateValue.On : NSCellStateValue.Off;
+                    item.Enabled = Screening != null;
+                    item.State = (Screening != null && Screening.TicketsBought) ? NSCellStateValue.On : NSCellStateValue.Off;
                     break;
                 case _myAttendanceMenuItemTag:
-					item.Title = ScreeningStatus.Me;
-                    item.Enabled = _screening != null;
-                    item.State = (_screening != null && _screening.IAttend) ? NSCellStateValue.On : NSCellStateValue.Off;
+                    item.Title = ScreeningInfo.Me;
+                    item.Enabled = Screening != null;
+                    item.State = (Screening != null && Screening.IAttend) ? NSCellStateValue.On : NSCellStateValue.Off;
                     break;
                 case _filmMenuHeaderItemTag:
                     item.Title = _film != null ? _film.Title : "No screening selected";
@@ -180,12 +179,12 @@ namespace PresentScreenings.TableView
 
         void PopulateAttandanceMenuItems()
         {
-			_myAttendanceMenuItem.Title = ScreeningStatus.Me;
+            _myAttendanceMenuItem.Title = ScreeningInfo.Me;
             var menu = _myAttendanceMenuItem.Menu;
             var anchorIndex = menu.IndexOf(_myAttendanceMenuItem);
-            foreach (var friend in ScreeningStatus.MyFriends)
+            foreach (var friend in ScreeningInfo.MyFriends)
             {
-                var friendNumber = ScreeningStatus.MyFriends.IndexOf(friend) + 1;
+                var friendNumber = ScreeningInfo.MyFriends.IndexOf(friend) + 1;
                 var item = new NSMenuItem(friend)
                 {
                     Action = new Selector("ToggleFriendAttendance:"),
@@ -239,8 +238,8 @@ namespace PresentScreenings.TableView
                     KeyEquivalentModifierMask = NSEventModifierMask.AlternateKeyMask | NSEventModifierMask.CommandKeyMask
                 };
                 //item.Activated += _screeningProvider.GoToScreening;
-				menu.AddItem(item);
-                _FilmScreeningEnabledByTag.Add(item.Tag, screening != _screening);
+                menu.AddItem(item);
+                _FilmScreeningEnabledByTag.Add(item.Tag, screening != Screening);
                 _filmScreeningByMenuItemTitle.Add(itemTitle, screening);
             }
         }
@@ -260,7 +259,7 @@ namespace PresentScreenings.TableView
         public void ForceRepopulateFilmMenuItems()
         {
             _film = null;
-            _screening = null;
+            Screening = null;
         }
         #endregion
     }

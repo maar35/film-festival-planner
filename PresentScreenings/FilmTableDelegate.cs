@@ -89,12 +89,12 @@ namespace PresentScreenings.TableView
                     return filmLabel;
                 case "Rating":
                     NSTextField myRatingField = (NSTextField)view;
-                    PopulateFilmFanFilmRating(ref myRatingField, film, ScreeningStatus.Me, row);
-                    myRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, ScreeningStatus.Me).ToString();
+                    PopulateFilmFanFilmRating(ref myRatingField, film, ScreeningInfo.Me, row);
+                    myRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, ScreeningInfo.Me).ToString();
                     myRatingField.Tag = row;
                     return myRatingField;
                 default:
-                    if (ScreeningStatus.MyFriends.Contains(tableColumn.Title))
+                    if (ScreeningInfo.MyFriends.Contains(tableColumn.Title))
                     {
                         NSTextField friendRatingField = (NSTextField)view;
                         PopulateFilmFanFilmRating(ref friendRatingField, film, tableColumn.Title, row);

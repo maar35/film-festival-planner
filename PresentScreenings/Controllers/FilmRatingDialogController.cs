@@ -130,13 +130,13 @@ namespace PresentScreenings.TableView
         void CreateFriendRatingColumns()
         {
             const float width = 60;
-            foreach (string friend in ScreeningStatus.MyFriends)
+            foreach (string friend in ScreeningInfo.MyFriends)
             {
                 var friendColumn = new NSTableColumn();
                 friendColumn.Title = friend;
                 friendColumn.Width = width;
                 friendColumn.MaxWidth = width;
-                nint tag = ScreeningStatus.MyFriends.IndexOf(friend);
+                nint tag = ScreeningInfo.MyFriends.IndexOf(friend);
                 _filmRatingTableView.AddColumn(friendColumn);
                 CGRect frame = _filmRatingTableView.Frame;
                 nfloat newRight = frame.X;
@@ -185,11 +185,10 @@ namespace PresentScreenings.TableView
                 }
             }
 
-            // Update the screenings' film ID. And film.
-            Film mainFilm = GetFilmById(mainFilmId);
+            // Update the screenings' film ID.
             foreach (var screening in screeningsToGetNewFilmId)
             {
-                screening.SetFilm(mainFilmId, mainFilm);
+                screening.FilmId = mainFilmId;
             }
 
             // Update the world outside.
@@ -225,7 +224,7 @@ namespace PresentScreenings.TableView
                 Film originalFilm = titleToFilm[screening.ScreeningTitle];
                 if (screening.FilmId != originalFilm.FilmId)
                 {
-                    screening.SetFilm(originalFilm.FilmId, originalFilm);
+                    screening.FilmId = originalFilm.FilmId;
                 }
             }
 

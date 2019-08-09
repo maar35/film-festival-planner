@@ -112,7 +112,7 @@
     <Compile Include="Entities\Screen.cs" />
     <Compile Include="Entities\Screening.cs" />
     <Compile Include="Entities\ScreeningsPlan.cs" />
-    <Compile Include="Entities\ScreeningStatus.cs" />
+    <Compile Include="Entities\ScreeningInfo.cs" />
     <Compile Include="Controllers\CombineTitlesSheetControler.cs" />
     <Compile Include="Controllers\CombineTitlesSheetControler.designer.cs">
       <DependentUpon>CombineTitlesSheetControler.cs</DependentUpon>

@@ -26,9 +26,9 @@ namespace PresentScreenings.TableView
         static NSColor screeningBGColorPurple;
         static NSColor screeningTextColorAqua;
         static NSColor screeningBGColorAqua;
-        static readonly Dictionary<ScreeningStatus.Status, NSColor> screeningTextColor;
-        static readonly Dictionary<ScreeningStatus.Status, NSColor> screeningBGColor;
-        static readonly Dictionary<ScreeningStatus.TicketsStatus, NSColor> ticketsStatusColor;
+        static readonly Dictionary<ScreeningInfo.ScreeningStatus, NSColor> screeningTextColor;
+        static readonly Dictionary<ScreeningInfo.ScreeningStatus, NSColor> screeningBGColor;
+        static readonly Dictionary<ScreeningInfo.TicketsStatus, NSColor> ticketsStatusColor;
         static NSColor ClickPadColorBlue = NSColor.FromRgba(0, 0, 255, 207);
         static NSColor ClickPadColorGrey = NSColor.FromRgba(127, 127, 127, 119);
         static NSColor ClickPadTextColorSelected = NSColor.White;
@@ -56,27 +56,27 @@ namespace PresentScreenings.TableView
             screeningBGColorAqua = NSColor.FromRgb(38, 255, 176);
             screeningTextColorAqua = NSColor.Black;
 
-            screeningTextColor = new Dictionary<ScreeningStatus.Status, NSColor> { };
-            screeningTextColor.Add(ScreeningStatus.Status.Free, screeningTextColorBlack);
-            screeningTextColor.Add(ScreeningStatus.Status.NeedingTickets, screeningTextColorPurple);
-            screeningTextColor.Add(ScreeningStatus.Status.Attending, screeningTextColorRed);
-            screeningTextColor.Add(ScreeningStatus.Status.AttendedByFriend, screeningTextColorBlue);
-            screeningTextColor.Add(ScreeningStatus.Status.AttendingFilm, screeningTextColorGrey);
-            screeningTextColor.Add(ScreeningStatus.Status.TimeOverlap, screeningTextColorGrey);
+            screeningTextColor = new Dictionary<ScreeningInfo.ScreeningStatus, NSColor> { };
+            screeningTextColor.Add(ScreeningInfo.ScreeningStatus.Free, screeningTextColorBlack);
+            screeningTextColor.Add(ScreeningInfo.ScreeningStatus.NeedingTickets, screeningTextColorPurple);
+            screeningTextColor.Add(ScreeningInfo.ScreeningStatus.Attending, screeningTextColorRed);
+            screeningTextColor.Add(ScreeningInfo.ScreeningStatus.AttendedByFriend, screeningTextColorBlue);
+            screeningTextColor.Add(ScreeningInfo.ScreeningStatus.AttendingFilm, screeningTextColorGrey);
+            screeningTextColor.Add(ScreeningInfo.ScreeningStatus.TimeOverlap, screeningTextColorGrey);
 
-            screeningBGColor = new Dictionary<ScreeningStatus.Status, NSColor> { };
-            screeningBGColor.Add(ScreeningStatus.Status.Free, screeningBGColorBlack);
-            screeningBGColor.Add(ScreeningStatus.Status.NeedingTickets, screeningBGColorPurple);
-            screeningBGColor.Add(ScreeningStatus.Status.Attending, screeningBGColorRed);
-            screeningBGColor.Add(ScreeningStatus.Status.AttendedByFriend, screeningBGColorBlue);
-            screeningBGColor.Add(ScreeningStatus.Status.AttendingFilm, NSColor.Yellow);
-            screeningBGColor.Add(ScreeningStatus.Status.TimeOverlap, screeningBGColorGrey);
+            screeningBGColor = new Dictionary<ScreeningInfo.ScreeningStatus, NSColor> { };
+            screeningBGColor.Add(ScreeningInfo.ScreeningStatus.Free, screeningBGColorBlack);
+            screeningBGColor.Add(ScreeningInfo.ScreeningStatus.NeedingTickets, screeningBGColorPurple);
+            screeningBGColor.Add(ScreeningInfo.ScreeningStatus.Attending, screeningBGColorRed);
+            screeningBGColor.Add(ScreeningInfo.ScreeningStatus.AttendedByFriend, screeningBGColorBlue);
+            screeningBGColor.Add(ScreeningInfo.ScreeningStatus.AttendingFilm, NSColor.Yellow);
+            screeningBGColor.Add(ScreeningInfo.ScreeningStatus.TimeOverlap, screeningBGColorGrey);
 
-            ticketsStatusColor = new Dictionary<ScreeningStatus.TicketsStatus, NSColor> { };
-            ticketsStatusColor.Add(ScreeningStatus.TicketsStatus.TicketsArranged, screeningBGColorRed);
-            ticketsStatusColor.Add(ScreeningStatus.TicketsStatus.NoTicketsNeeded, screeningBGColorBlack);
-            ticketsStatusColor.Add(ScreeningStatus.TicketsStatus.MustBuyTickets, screeningBGColorPurple);
-            ticketsStatusColor.Add(ScreeningStatus.TicketsStatus.MustSellTickets, screeningBGColorAqua);
+            ticketsStatusColor = new Dictionary<ScreeningInfo.TicketsStatus, NSColor> { };
+            ticketsStatusColor.Add(ScreeningInfo.TicketsStatus.TicketsArranged, screeningBGColorRed);
+            ticketsStatusColor.Add(ScreeningInfo.TicketsStatus.NoTicketsNeeded, screeningBGColorBlack);
+            ticketsStatusColor.Add(ScreeningInfo.TicketsStatus.MustBuyTickets, screeningBGColorPurple);
+            ticketsStatusColor.Add(ScreeningInfo.TicketsStatus.MustSellTickets, screeningBGColorAqua);
         }
         #endregion
 

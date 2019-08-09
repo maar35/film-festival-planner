@@ -123,7 +123,7 @@ namespace PresentScreenings.TableView
             MyAttendanceTitler.SetTitle((TitledButton)_buttonIAttend, _screening.IAttend);
             _checkboxTicketsBought.State = ViewController.GetNSCellStateValue(_screening.TicketsBought);
             _checkboxSoldOut.State = ViewController.GetNSCellStateValue(_screening.SoldOut);
-            _checkboxIAttend.Title = ScreeningStatus.Me;
+            _checkboxIAttend.Title = ScreeningInfo.Me;
             _checkboxIAttend.State = AttendanceCheckbox.SetAttendanceState(_screening.IAttend);
         }
 
@@ -133,7 +133,7 @@ namespace PresentScreenings.TableView
             var comboBoxFrame = _comboboxRating.Frame;
             var comboBoxFont = _comboboxRating.Font;
             var myRatingComboBox = ControlsFactory.NewRatingComboBox(comboBoxFrame, comboBoxFont);
-            myRatingComboBox.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(myRatingComboBox, ScreeningStatus.Me);
+            myRatingComboBox.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(myRatingComboBox, ScreeningInfo.Me);
             myRatingComboBox.StringValue = _screening.Rating.ToString();
             View.AddSubview(myRatingComboBox);
 
@@ -148,7 +148,7 @@ namespace PresentScreenings.TableView
             var checkBoxFrame = _checkboxIAttend.Frame;
             var checkBoxShift = comboBoxFrame.Y - checkBoxFrame.Y;
 
-            foreach (var friend in ScreeningStatus.MyFriends)
+            foreach (var friend in ScreeningInfo.MyFriends)
             {
                 // Update the vertical position.
                 _yCurr -= myRatingComboBox.Frame.Height + _yControlsDistance;
@@ -193,10 +193,10 @@ namespace PresentScreenings.TableView
             View.AddSubview(scrollView);
 
             // Display the screenings.
-            GoToScreeningDialog.DisplayScreeningControls(screenings, screeningsView, GoToScreening, ref _screeningInfoControl);
+            DisplayScreeningControls(screenings, screeningsView, GoToScreening, ref _screeningInfoControl);
 
             // Scroll to the selected screening.
-            GoToScreeningDialog.ScrollScreeningToVisible(CurrentScreening, scrollView);
+            ScrollScreeningToVisible(CurrentScreening, scrollView);
         }
 
         private void UpdateAttendances()
@@ -204,7 +204,7 @@ namespace PresentScreenings.TableView
             _labelPresent.StringValue = _screening.AttendeesString();
             _presentor.UpdateAttendanceStatus(_screening);
             _presentor.ReloadScreeningsView();
-            GoToScreeningDialog.UpdateScreeningControls();
+            UpdateScreeningControls();
             _screeningInfoControl.ReDraw();
         }
 

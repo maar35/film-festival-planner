@@ -80,7 +80,7 @@ namespace PresentScreenings.TableView
                     Films.Sort((x, y) => CombinedRating(x, ascending).CompareTo(CombinedRating(y, ascending)));
                     break;
                 default:
-                    foreach (var friend in ScreeningStatus.MyFriends)
+                    foreach (var friend in ScreeningInfo.MyFriends)
                     {
                         if(key == friend)
                         {
@@ -111,14 +111,14 @@ namespace PresentScreenings.TableView
             var weightFactor = FilmRating.Values.Count;
             var weightedRating = 0;
             var weight = 1;
-            var filmFans = new List<string>(ScreeningStatus.MyFriends);
+            var filmFans = new List<string>(ScreeningInfo.MyFriends);
             if (ascending)
             {
-                filmFans.Insert(1, ScreeningStatus.Me);
+                filmFans.Insert(1, ScreeningInfo.Me);
             }
             else
             {
-                filmFans.Insert(0, ScreeningStatus.Me);
+                filmFans.Insert(0, ScreeningInfo.Me);
             }
             filmFans.Reverse();
             var filmRatings = filmFans.Select(f => new ratingInfo(f, GetFilmFanFilmRatingToInt(film, f)));
@@ -138,7 +138,7 @@ namespace PresentScreenings.TableView
             return -weightedRating;
         }
 
-        private static int GetFilmFanFilmRatingToInt(Film film, string fan = ScreeningStatus.Me)
+        private static int GetFilmFanFilmRatingToInt(Film film, string fan = ScreeningInfo.Me)
         {
             return int.Parse(ViewController.GetFilmFanFilmRating(film, fan).ToString());
         }

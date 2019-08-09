@@ -168,28 +168,28 @@ namespace PresentScreenings.TableView
             {
                 if (screening.TicketsBought)
                 {
-                    screening.Status = ScreeningStatus.Status.Attending;
+                    screening.Status = ScreeningInfo.ScreeningStatus.Attending;
                 }
                 else
                 {
-                    screening.Status = ScreeningStatus.Status.NeedingTickets;
+                    screening.Status = ScreeningInfo.ScreeningStatus.NeedingTickets;
                 }
             }
             else if (screening.AttendingFriends.Count() > 0)
             {
-                screening.Status = ScreeningStatus.Status.AttendedByFriend;
+                screening.Status = ScreeningInfo.ScreeningStatus.AttendedByFriend;
             }
             else if (TimesIAttendFilm(screening) > 0)
             {
-                screening.Status = ScreeningStatus.Status.AttendingFilm;
+                screening.Status = ScreeningInfo.ScreeningStatus.AttendingFilm;
             }
             else if (HasTimeOverlap(screening))
             {
-                screening.Status = ScreeningStatus.Status.TimeOverlap;
+                screening.Status = ScreeningInfo.ScreeningStatus.TimeOverlap;
             }
             else
             {
-                screening.Status = ScreeningStatus.Status.Free;
+                screening.Status = ScreeningInfo.ScreeningStatus.Free;
             }
 
             UpdateWarning(screening);
@@ -366,7 +366,6 @@ namespace PresentScreenings.TableView
                 }
             }
         }
-
         #endregion
 
         #region Public Methods working with Screening Attendance
@@ -391,15 +390,15 @@ namespace PresentScreenings.TableView
         {
             if (TimesIAttendFilm(screening) > 1)
             {
-                screening.Warning = ScreeningStatus.Warning.SameMovie;
+                screening.Warning = ScreeningInfo.Warning.SameMovie;
             }
             else if (screening.IAttend && OverlappingAttendedScreenings(screening).Count() > 1)
             {
-                screening.Warning = ScreeningStatus.Warning.TimeOverlap;
+                screening.Warning = ScreeningInfo.Warning.TimeOverlap;
             }
             else
             {
-                screening.Warning = ScreeningStatus.Warning.NoWarning;
+                screening.Warning = ScreeningInfo.Warning.NoWarning;
             }
         }
         #endregion

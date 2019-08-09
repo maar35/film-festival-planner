@@ -26,7 +26,7 @@ namespace PresentScreenings.TableView
         public string TitleLanguage { get; private set; }
         public string Section { get; private set; }
         public string Url { get; private set; }
-        public FilmRating Rating => ViewController.GetFilmFanFilmRating(this, ScreeningStatus.Me);
+        public FilmRating Rating => ViewController.GetFilmFanFilmRating(this, ScreeningInfo.Me);
         public WebUtility.MediumCatagory Catagory { get; private set; }
         public FilmInfoStatus InfoStatus { get => ViewController.GetFilmInfo(FilmId).InfoStatus; }
         #endregion

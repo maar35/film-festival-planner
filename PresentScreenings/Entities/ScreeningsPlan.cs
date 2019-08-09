@@ -25,6 +25,7 @@ namespace PresentScreenings.TableView
         private static string _screensFile = Path.Combine(_directory, "screens.csv");
         private static string _filmsFile = Path.Combine(_directory, "films.csv");
         private static string _screeningsFile = Path.Combine(_directory, "screenings.csv");
+        private static string _screeningInfoFile = Path.Combine(_directory, "screeninginfo.csv");
         private static string _friendFilmRatingsFile = Path.Combine(_directory, "filmfanfilmratings.csv");
         private static string _filmInfoFile = Path.Combine(_directory, "filminfo.xml");
         private Dictionary<DateTime, List<Screen>> _dayScreens;
@@ -43,6 +44,7 @@ namespace PresentScreenings.TableView
         public static List<Film> Films { get; private set; }
         public DateTime CurrDay => FestivalDays[_currDayNumber];
         public static List<Screening> Screenings { get; private set; }
+        public static List<ScreeningInfo> ScreeningInfos { get; private set; }
         public static List<FilmFanFilmRating> FilmFanFilmRatings { get; private set; }
         public static List<FilmInfo> FilmInfos { get; private set; }
         #endregion
@@ -65,9 +67,12 @@ namespace PresentScreenings.TableView
             ListReader<FilmFanFilmRating> RatingsReader = new ListReader<FilmFanFilmRating>(_friendFilmRatingsFile, true);
             FilmFanFilmRatings = RatingsReader.ReadListFromFile(line => new FilmFanFilmRating(line));
 
+            // TEMP create empty screening statuses list.
+            ScreeningInfos = new List<ScreeningInfo> { };
+
             // Read screenings.
             ListReader<Screening> ScreeningsReader = new ListReader<Screening>(_screeningsFile, true);
-            Screenings = ScreeningsReader.ReadListFromFile(line => new Screening(line, Screens, Films, FilmFanFilmRatings));
+            Screenings = ScreeningsReader.ReadListFromFile(line => new Screening(line, Screens, Films));
 
             InitializeDays();
             _currDayNumber = 0;
