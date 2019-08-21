@@ -304,6 +304,12 @@ namespace PresentScreenings.TableView
             var info = ScreeningsPlan.FilmInfos.Where(f => f.FilmId == filmId).ToList();
             return info.Count > 0 ? info.First() : null;
         }
+
+        public static ScreeningInfo GetScreeningInfo(int filmId, Screen screen, DateTime startTime)
+        {
+            var info = ScreeningsPlan.ScreeningInfos.Where(s => s.FilmId == filmId && s.Screen == screen && s.StartTime == startTime).ToList();
+            return info.Count > 0 ? info.First() : null;
+        }
         #endregion
 
         #region Public Methods working with Film Ratings

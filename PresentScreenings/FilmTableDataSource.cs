@@ -82,7 +82,7 @@ namespace PresentScreenings.TableView
                 default:
                     foreach (var friend in ScreeningInfo.MyFriends)
                     {
-                        if(key == friend)
+                        if (key == friend)
                         {
                             //Films.Sort((x, y) => sign * x.Rating.CompareTo(y.Rating));
                             break;

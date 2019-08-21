@@ -9,7 +9,7 @@ namespace PresentScreenings.TableView
     /// attendabilty, hiding how these are represented in the screenings file.
     /// </summary>
 
-    public class ScreeningInfo
+    public class ScreeningInfo : ICanWriteList
     {
         #region Public Members
         public enum ScreeningStatus
@@ -36,8 +36,13 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Static Private Members
+        #region Constant Private Members
+        private const string _dateTimeFormat = "yyyy-MM-dd HH:mm";
+        private const string _timeFormat = "HH:mm";
         private const string _me = "Maarten";
+        #endregion
+
+        #region Static Private Members
         private static readonly Dictionary<string, ScreeningStatus> _screeningStatusByString;
         private static readonly Dictionary<ScreeningStatus, string> _stringByScreeningStatus;
         private static readonly Dictionary<Tuple<bool, bool>, TicketsStatus> _ticketStatusByAttendBought;
@@ -57,7 +62,10 @@ namespace PresentScreenings.TableView
         }
         public static Dictionary<string, bool> StringToBool { get; private set; }
         public static Dictionary<bool, string> BoolToString { get; private set; }
-        public Screening Screening { get; private set; }
+        public int FilmId { get; private set; }
+        public Screen Screen { get; private set; }
+        public DateTime StartTime { get; private set; }
+        public string ScreeningTitle { get; set; }
         public bool IAttend { get; set; }
         public List<string> AttendingFriends { get; set; }
         public bool TicketsBought { get; set; }
@@ -87,18 +95,22 @@ namespace PresentScreenings.TableView
             BoolToString = StringToBool.ToDictionary(x => x.Value, x => x.Key);
         }
 
-        public ScreeningInfo(Screening screening, string ScreeningInfoText)
+        public ScreeningInfo(string ScreeningInfoText)
         {
             // Parse the fields of the input string.
             string[] fields = ScreeningInfoText.Split(';');
-            string screeningStatus = fields[0];
-            string myAttendance = fields[1];
-            var myFriendsAttendances = new List<string>(fields[2].Split(','));
-            string ticketsBought = fields[3];
-            string soldOut = fields[4];
+            FilmId = int.Parse(fields[0]);
+            string screen = fields[1];
+            StartTime = DateTime.Parse(fields[2]);
+            ScreeningTitle = fields[3];
+            string screeningStatus = fields[4];
+            string myAttendance = fields[5];
+            var myFriendsAttendances = new List<string>(fields[6].Split(','));
+            string ticketsBought = fields[7];
+            string soldOut = fields[8];
 
             // Assign members.
-            Screening = screening;
+            Screen = (from Screen s in ScreeningsPlan.Screens where s.ToString() == screen select s).ElementAt(0);
             IAttend = StringToBool[myAttendance];
             AttendingFriends = GetAttendingFriends(myFriendsAttendances);
             TicketsBought = StringToBool[ticketsBought];
@@ -107,7 +119,32 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
+        #region Interface Implemantations
+        string ICanWriteList.Serialize()
+        {
+            string line = string.Join(
+                ';',
+                FilmId,
+                Screen,
+                StartTime.ToString(_dateTimeFormat),
+                ScreeningTitle,
+                GetScreeningStatusString(Status),
+                BoolToString[IAttend],
+                AttendingFriendsString(AttendingFriends),
+                BoolToString[TicketsBought],
+                BoolToString[SoldOut]
+            );
+            return line;
+        }
+        #endregion
+
         #region Public Methods
+        public static string WriteHeader()
+        {
+            string headerFmt = "filmid;screen;starttime;screeningtitle;blocked;maarten;{0};ticketsbought;soldout";
+            return string.Format(headerFmt, ScreeningInfo.Friends());
+        }
+
         static public ScreeningStatus GetScreeningStatus(string statusString, List<string> friendAttendances)
         {
             ScreeningStatus status = _screeningStatusByString[statusString];
@@ -184,6 +221,6 @@ namespace PresentScreenings.TableView
             }
             return attendeeStrings;
         }
-		#endregion
-	}
+        #endregion
+    }
 }

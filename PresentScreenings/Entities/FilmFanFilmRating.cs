@@ -2,7 +2,7 @@
 
 namespace PresentScreenings.TableView
 {
-    public class FilmFanFilmRating
+    public class FilmFanFilmRating : ICanWriteList
     {
         #region Properties
         public int FilmId { get; }
@@ -30,24 +30,17 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Public Methods
+        #region Interface Implementations
+        string ICanWriteList.Serialize()
+        {
+            return string.Join(";", FilmId.ToString(), FilmFan, Rating.ToString());
+        }
+        #endregion
 
+        #region Public Methods
         public static string WriteHeader()
         {
             return "filmid;filmfan;rating";
         }
-
-        public static string Serialize(FilmFanFilmRating friendFilmRating)
-        {
-            string line = string.Join
-                (
-                    ";",
-                    friendFilmRating.FilmId.ToString(),
-                    friendFilmRating.FilmFan,
-                    friendFilmRating.Rating.ToString()
-                );
-            return line;
-        }
-        #endregion
     }
 }

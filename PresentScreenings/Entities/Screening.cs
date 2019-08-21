@@ -12,7 +12,7 @@ namespace PresentScreenings.TableView
     /// screening is attended at the same time or the film is already planned.
     /// </summary>
 
-    public class Screening : IComparable
+    public class Screening : IComparable, ICanWriteList
     {
         #region Constant Private Members
         private const string _dateFormat = "yyyy-MM-dd";
@@ -29,7 +29,6 @@ namespace PresentScreenings.TableView
         public int FilmId { get; set; }
         public Film Film { get => ViewController.GetFilmById(FilmId); set => FilmId = value.FilmId; }
         public string FilmTitle => Film.Title;
-        public string ScreeningTitle { get; }
         public Screen Screen { get; }
         public DateTime StartDate => DateTime.Parse(string.Format("{0}", StartTime.ToShortDateString()));
         public DateTime StartTime { get; }
@@ -39,6 +38,7 @@ namespace PresentScreenings.TableView
         public string Extra { get; }
         public string QAndA { get; }
         public FilmRating Rating => Film.Rating;
+        public string ScreeningTitle { get => _screeningInfo.ScreeningTitle; set => _screeningInfo.ScreeningTitle = value; }
         public bool IAttend { get => _screeningInfo.IAttend; set => _screeningInfo.IAttend = value; }
         public List<string> AttendingFriends => _screeningInfo.AttendingFriends;
         public bool SoldOut { get => _screeningInfo.SoldOut; set => _screeningInfo.SoldOut = value; }
@@ -53,21 +53,14 @@ namespace PresentScreenings.TableView
         {
             // Assign the fields of the input string.
             string[] fields = screeningText.Split(';');
-            string screeningStatus = fields[0];
-            string myAttendance = fields[1];
-            var myFriendsAttendances = new List<string>(fields[2].Split(','));
-            string weekdayMonthday = fields[3]; // report-only:
-            string screen = fields[4];
-            string startTime = fields[5];
-            string endTime = fields[6];
-            string title = fields[7];
-            int filmsInScreening = int.Parse(fields[8]);
-            string extra = fields[9];
-            string qAndA = fields[10];
-            string ticketsBought = fields[11];
-            string soldOut = fields[12];
-            DateTime date = DateTime.Parse(fields[13]);
-            int filmId = int.Parse(fields[14]);
+            int filmId = int.Parse(fields[0]);
+            DateTime date = DateTime.Parse(fields[1]);
+            string screen = fields[2];
+            string startTime = fields[3];
+            string endTime = fields[4];
+            int filmsInScreening = int.Parse(fields[5]);
+            string extra = fields[6];
+            string qAndA = fields[7];            //string screeningStatus = fields[0];
 
             // Assign properties that need calculation.
             DateTime startDate = DateTimeFromParsedData(date, startTime);
@@ -76,20 +69,20 @@ namespace PresentScreenings.TableView
             {
                 endDate = endDate.AddDays(1);
             }
-            ScreeningTitle = title;
             FilmId = filmId;
-            Film = (from Film film in films where film.FilmId == filmId select film).ElementAt(0);
-            Screen = (from Screen s in screens where s.ToString() == screen select s).ElementAt(0);
+            Film = (from Film film in films where film.FilmId == filmId select film).First();
+            Screen = (from Screen s in screens where s.ToString() == screen select s).First();
             StartTime = startDate;
             EndTime = endDate;
             FilmsInScreening = filmsInScreening;
             Extra = extra;
             QAndA = qAndA;
-
-            //TEMPORARILY create a new ScreeningInfo object.
-            string ScreeningInfoText = string.Join(';', new string[] { screeningStatus, myAttendance, fields[2], ticketsBought, soldOut });
-            _screeningInfo = new ScreeningInfo(this, ScreeningInfoText);
-            ScreeningsPlan.ScreeningInfos.Add(_screeningInfo);
+            _screeningInfo =
+                (
+                    from ScreeningInfo s in ScreeningsPlan.ScreeningInfos
+                    where s.FilmId == FilmId && s.Screen == Screen && s.StartTime == StartTime
+                    select s
+                ).First();
         }
         #endregion
 
@@ -100,8 +93,30 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Private Methods
+        #region Interface Implementations
+        public int CompareTo(object obj)
+        {
+            return StartTime.CompareTo(((Screening)obj).StartTime);
+        }
 
+        string ICanWriteList.Serialize()
+        {
+            string line = string.Join(
+                ';',
+                FilmId,
+                StartTime.ToString(_dateFormat),
+                Screen,
+                StartTime.ToString(_timeFormat),
+                EndTime.ToString(_timeFormat),
+                FilmsInScreening,
+                Extra,
+                QAndA
+            );
+            return line;
+        }
+        #endregion
+
+        #region Private Methods
         private DateTime DateTimeFromParsedData(DateTime date, string time)
         {
             string parseString = string.Format("{0} {1}", date.ToShortDateString(), time);
@@ -145,36 +160,13 @@ namespace PresentScreenings.TableView
         #region Public Methods
         public static string WriteHeader()
         {
-            string headerFmt = "blocked;maarten;{0};startdm;theatre;starttime;endtime;title;filmsinshow;extra;qanda;ticketsbought;soldout;date;filmid";
+            string headerFmt = "filmid;date;screen;starttime;endtime;filmsinscreening;extra;qanda";
             return string.Format(headerFmt, ScreeningInfo.Friends());
-        }
-
-        public static string Serialize(Screening screening)
-        {
-            string line = string.Join(
-                ";",
-                ScreeningInfo.GetScreeningStatusString(screening.Status),
-                ScreeningInfo.BoolToString[screening.IAttend],
-                ScreeningInfo.AttendingFriendsString(screening.AttendingFriends),
-                DayString(screening.StartTime),
-                screening.Screen,
-                screening.StartTime.ToString(_timeFormat),
-                screening.EndTime.ToString(_timeFormat),
-                screening.ScreeningTitle,
-                screening.FilmsInScreening,
-                screening.Extra,
-                screening.QAndA,
-                ScreeningInfo.BoolToString[screening.TicketsBought],
-                ScreeningInfo.BoolToString[screening.SoldOut],
-                screening.StartTime.ToString(_dateFormat),
-                screening.FilmId
-            );
-            return line;
         }
 
         public static string WriteOverviewHeader()
         {
-            string headerFmt = "weekday;date;maarten;{0};screen;starttime;endtime;title;filmsinshow;extra;qanda;url;mainfilmdescription";
+            string headerFmt = "weekday;date;maarten;{0};screen;starttime;endtime;title;filmsinscreening;extra;qanda;url;mainfilmdescription";
             return string.Format(headerFmt, ScreeningInfo.Friends().Replace(',', ';'));
         }
 
@@ -322,13 +314,6 @@ namespace PresentScreenings.TableView
                 return string.Empty;
             }
             return string.Format($" - {ScreeningTitle}");
-        }
-        #endregion
-
-        #region Interface Implementation
-        public int CompareTo(object obj)
-        {
-            return StartTime.CompareTo(((Screening)obj).StartTime);
         }
         #endregion
     }

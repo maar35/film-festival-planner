@@ -40,7 +40,7 @@ namespace PresentScreenings.TableView
         public Screening CurrScreening => ScreenScreenings[CurrDay][CurrScreen][_currScreenScreeningNumber];
         public List<DateTime> FestivalDays { get; private set; }
         public List<Screen> CurrDayScreens => _dayScreens[CurrDay];
-        public List<Screen> Screens { get; }
+        public static List<Screen> Screens { get; private set; }
         public static List<Film> Films { get; private set; }
         public DateTime CurrDay => FestivalDays[_currDayNumber];
         public static List<Screening> Screenings { get; private set; }
@@ -53,22 +53,19 @@ namespace PresentScreenings.TableView
         public ScreeningsPlan()
         {
             // Read screens.
-            ListReader<Screen> ScreensReader = new ListReader<Screen>(_screensFile);
-            Screens = ScreensReader.ReadListFromFile(line => new Screen(line));
+            Screens = new ListReader<Screen>(_screensFile).ReadListFromFile(line => new Screen(line));
 
             // Read film info.
             FilmInfos = FilmInfo.LoadFilmInfoFromXml(_filmInfoFile);
 
             // Read films.
-            ListReader<Film> FilmsReader = new ListReader<Film>(_filmsFile, true);
-            Films = FilmsReader.ReadListFromFile(line => new Film(line));
+            Films = new ListReader<Film>(_filmsFile, true).ReadListFromFile(line => new Film(line));
 
             // Read film ratings.
-            ListReader<FilmFanFilmRating> RatingsReader = new ListReader<FilmFanFilmRating>(_friendFilmRatingsFile, true);
-            FilmFanFilmRatings = RatingsReader.ReadListFromFile(line => new FilmFanFilmRating(line));
+            FilmFanFilmRatings = new ListReader<FilmFanFilmRating>(_friendFilmRatingsFile, true).ReadListFromFile(line => new FilmFanFilmRating(line));
 
-            // TEMP create empty screening statuses list.
-            ScreeningInfos = new List<ScreeningInfo> { };
+            // Read screening info.
+            ScreeningInfos = new ListReader<ScreeningInfo>(_screeningInfoFile, true).ReadListFromFile(line => new ScreeningInfo(line));
 
             // Read screenings.
             ListReader<Screening> ScreeningsReader = new ListReader<Screening>(_screeningsFile, true);

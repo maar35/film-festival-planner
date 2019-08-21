@@ -84,31 +84,31 @@ namespace PresentScreenings.TableView
 
                 // Write screens.
                 string screensPath = Path.Combine(directory, "screens.csv");
-                var screensWriter = new ListWriter<Screen>(screensPath);
-                screensWriter.WriteListToFile(Controller.Plan.Screens, Screen.Serialize);
+                new ListWriter<Screen>(screensPath).WriteListToFile(ScreeningsPlan.Screens);
 
                 // Write films.
                 string filmsPath = Path.Combine(directory, "films.csv");
-                var filmsWriter = new ListWriter<Film>(filmsPath, Film.WriteHeader);
-                filmsWriter.WriteListToFile(ScreeningsPlan.Films, Film.Serialize);
+                new ListWriter<Film>(filmsPath, Film.WriteHeader).WriteListToFile(ScreeningsPlan.Films);
+
+                // Write film info.
+                FilmInfo.SaveFilmInfoAsXml(ScreeningsPlan.FilmInfos, Path.Combine(directory, "filminfo.xml"));
+
+                // Write film ratings.
+                string filmFanRatingsPath = Path.Combine(directory, "filmfanfilmratings.csv");
+                new ListWriter<FilmFanFilmRating>(filmFanRatingsPath, FilmFanFilmRating.WriteHeader).WriteListToFile(ScreeningsPlan.FilmFanFilmRatings);
 
                 // Write screenings.
                 string screeningsPath = Path.Combine(directory, "screenings.csv");
-                var screeningsWriter = new ListWriter<Screening>(screeningsPath, Screening.WriteHeader);
-                screeningsWriter.WriteListToFile(ScreeningsPlan.Screenings, Screening.Serialize);
+                new ListWriter<Screening>(screeningsPath, Screening.WriteHeader).WriteListToFile(ScreeningsPlan.Screenings);
+
+                // Write screening info.
+                string screeningInfosPath = Path.Combine(directory, "screeninginfo.csv");
+                new ListWriter<ScreeningInfo>(screeningInfosPath, ScreeningInfo.WriteHeader).WriteListToFile(ScreeningsPlan.ScreeningInfos);
 
                 // Write screenings overview.
                 string overviewPath = Path.Combine(directory, "Screenings Summary.csv");
                 var overviewWriter = new ListWriter<Screening>(overviewPath, Screening.WriteOverviewHeader);
                 overviewWriter.WriteListToFile(Controller.Plan.AttendedScreenings(), Screening.WriteOverviewRecord);
-
-                // Write film ratings.
-                string filmFanRatingsPath = Path.Combine(directory, "filmfanfilmratings.csv");
-                var filmFanRatingsWriter = new ListWriter<FilmFanFilmRating>(filmFanRatingsPath, FilmFanFilmRating.WriteHeader);
-                filmFanRatingsWriter.WriteListToFile(ScreeningsPlan.FilmFanFilmRatings, FilmFanFilmRating.Serialize);
-
-                // Write film info.
-                FilmInfo.SaveFilmInfoAsXml(ScreeningsPlan.FilmInfos, Path.Combine(directory, "filminfo.xml"));
             });
         }
 

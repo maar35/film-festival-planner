@@ -149,6 +149,7 @@
     <Compile Include="Views\ScreeningsView.cs" />
     <Compile Include="ControlsFactory.cs" />
     <Compile Include="Controllers\GoToScreeningDialog.cs" />
+    <Compile Include="Interfaces\ICanWriteList.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />
