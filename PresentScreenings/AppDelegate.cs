@@ -42,7 +42,7 @@ namespace PresentScreenings.TableView
 			_navigateMenu.AutoEnablesItems = false;
             _navigateMenu.Delegate = new NavigateMenuDelegate(_navigateMenu, Controller);
             _screeningMenu.AutoEnablesItems = false;
-            _screeningMenu.Delegate = new ScreeningMenuDelegate(this, _myAttendanceMenuItem);
+            _screeningMenu.Delegate = new ScreeningMenuDelegate(this, _screeningMenu);
             _filmsMenu.AutoEnablesItems = false;
             _filmsMenu.Delegate = new FilmsMenuDelegate(this);
             ToggleTypeMatchMenuItem.Action = new Selector("ToggleTypeMatchMethod:");
@@ -142,11 +142,6 @@ namespace PresentScreenings.TableView
             Controller.ToggleSoldOut();
         }
 
-        partial void ToggleMyAttandance(Foundation.NSObject sender)
-        {
-            Controller.ToggleMyAttendance();
-        }
-
 		partial void navigatePreviousDay(NSObject sender)
 		{
 			Controller.SetNextDay(-1);
@@ -188,11 +183,11 @@ namespace PresentScreenings.TableView
             Controller.GoToScreening(screening);
         }
 
-        [Action("ToggleFriendAttendance:")]
-        internal void ToggleFriendAttendance(NSObject sender)
+        [Action("ToggleAttendance:")]
+        internal void ToggleAttendance(NSObject sender)
         {
-            string friend = ((NSMenuItem)sender).Title;
-            Controller.ToggleFriendAttendance(friend);
+            string filmFan = ((NSMenuItem)sender).Title;
+            Controller.ToggleAttendance(filmFan);
         }
         #endregion
 	}

@@ -107,7 +107,6 @@ namespace PresentScreenings.TableView
                 case "ModalSegue":
                     var dialog = segue.DestinationController as ScreeningDialogController;
                     dialog.PopulateDialog((ScreeningControl)sender);
-                    dialog.AttendanceChanged += (s, e) => dialog.ToggleMyAttandance();
                     dialog.DialogAccepted += (s, e) => TableView.DeselectRow(TableView.SelectedRow);
                     dialog.DialogCanceled += (s, e) => TableView.DeselectRow(TableView.SelectedRow);
                     dialog.Presentor = this;
@@ -175,7 +174,7 @@ namespace PresentScreenings.TableView
                     screening.Status = ScreeningInfo.ScreeningStatus.NeedingTickets;
                 }
             }
-            else if (screening.AttendingFriends.Count() > 0)
+            else if (screening.AttendingFriends.Any())
             {
                 screening.Status = ScreeningInfo.ScreeningStatus.AttendedByFriend;
             }
@@ -483,34 +482,16 @@ namespace PresentScreenings.TableView
             ReloadScreeningsView();
         }
 
-        public void ToggleMyAttendance()
+        public void ToggleAttendance(string filmfan)
         {
             Screening screening = _plan.CurrScreening;
-            screening.ToggleMyAttendance();
-            UpdateAttendanceStatus(screening);
-            ReloadScreeningsView();
-        }
-
-        public void ToggleFriendAttendance(string friend)
-        {
-            Screening screening = _plan.CurrScreening;
-            screening.ToggleFriendAttendance(friend);
+            screening.ToggleFilmFanAttendance(filmfan);
             UpdateAttendanceStatus(screening);
             ReloadScreeningsView();
         }
 
         public void DownloadFilmInfo(NSObject sender)
         {
-            //// Create new window
-            //var storyboard = NSStoryboard.FromName("Main", null);
-            //var controller = storyboard.InstantiateControllerWithIdentifier("MainWindow") as NSWindowController;
-
-            //// Display
-            //controller.ShowWindow(this);
-
-            //// Set the title
-            //controller.Window.Title = "Download Film Info";
-
             App.FilmsDialogController?.PerformSegue("DownloadFilmInfoSegue", sender);
         }
 
@@ -519,12 +500,6 @@ namespace PresentScreenings.TableView
         {
             PerformSegue("FilmRatingSegue", sender);
         }
-
-        //[Action("DownloadFilmInfo:")]
-        //internal void DownloadFilmInfo(NSObject sender)
-        //{
-        //    PerformSegue("DownloadFilmInfoSegue", sender);
-        //}
         #endregion
     }
 }

@@ -39,7 +39,8 @@ namespace PresentScreenings.TableView
         public string QAndA { get; }
         public FilmRating Rating => Film.Rating;
         public string ScreeningTitle { get => _screeningInfo.ScreeningTitle; set => _screeningInfo.ScreeningTitle = value; }
-        public bool IAttend { get => _screeningInfo.IAttend; set => _screeningInfo.IAttend = value; }
+        public List<string> AttendingFilmFans { get => _screeningInfo.AttendingFilmFans; set => _screeningInfo.AttendingFilmFans = value; }
+        public bool IAttend { get => _screeningInfo.IAttend; }
         public List<string> AttendingFriends => _screeningInfo.AttendingFriends;
         public bool SoldOut { get => _screeningInfo.SoldOut; set => _screeningInfo.SoldOut = value; }
         public bool TicketsBought { get => _screeningInfo.TicketsBought; set => _screeningInfo.TicketsBought = value; }
@@ -128,11 +129,6 @@ namespace PresentScreenings.TableView
             return string.Format("{0}-{1}", StartTime.ToString(_timeFormat), EndTime.ToString(_timeFormat));
         }
 
-        private static string TimeString(DateTime time)
-        {
-            return time.ToString(_timeFormat);
-        }
-
         private static string EntityToUnicode(string html)
         {
             var replacements = new Dictionary<string, string>();
@@ -160,14 +156,13 @@ namespace PresentScreenings.TableView
         #region Public Methods
         public static string WriteHeader()
         {
-            string headerFmt = "filmid;date;screen;starttime;endtime;filmsinscreening;extra;qanda";
-            return string.Format(headerFmt, ScreeningInfo.Friends());
+            return "filmid;date;screen;starttime;endtime;filmsinscreening;extra;qanda";
         }
 
         public static string WriteOverviewHeader()
         {
             string headerFmt = "weekday;date;maarten;{0};screen;starttime;endtime;title;filmsinscreening;extra;qanda;url;mainfilmdescription";
-            return string.Format(headerFmt, ScreeningInfo.Friends().Replace(',', ';'));
+            return string.Format(headerFmt, ScreeningInfo.FriendsString().Replace(',', ';'));
         }
 
         public static string WriteOverviewRecord(Screening screening)
@@ -176,10 +171,9 @@ namespace PresentScreenings.TableView
             List<string> fields = new List<string> { };
             fields.Add(screening.StartTime.DayOfWeek.ToString().Remove(3));
             fields.Add(screening.StartTime.ToString(_dateFormat));
-            fields.Add(ScreeningInfo.BoolToString[screening.IAttend]);
-            foreach (var friend in ScreeningInfo.MyFriends)
+            foreach (var filmFan in ScreeningInfo.FilmFans)
             {
-                fields.Add(ScreeningInfo.BoolToString[screening.FriendAttends(friend)]);
+                fields.Add(ScreeningInfo.BoolToString[screening.FilmFanAttends(filmFan)]);
             }
             fields.Add(screening.Screen.ToString());
             fields.Add(screening.StartTime.ToString(_timeFormat));
@@ -201,25 +195,22 @@ namespace PresentScreenings.TableView
             return htmlRe.Replace(html, @":$1:").Replace("&#039;", "'").Replace(";", ".,").Replace(":nbsp:", " ").Replace(":euml:", @"ë").Replace("ldquo", @"'").Replace("lsquo", @"'").Replace("rdquo", @"'").Replace("rsquo", @"'");
         }
 
-        public bool FriendAttends(string friend)
+        public bool FilmFanAttends(string filmFan)
         {
-            return AttendingFriends.Contains(friend);
+            return AttendingFilmFans.Contains(filmFan);
         }
 
-        public void ToggleMyAttendance()
+        public void ToggleFilmFanAttendance(string filmFan)
         {
-            IAttend = !IAttend;
-        }
-
-        public void ToggleFriendAttendance(string friend)
-        {
-            if (AttendingFriends.Contains(friend))
+            if (AttendingFilmFans.Contains(filmFan))
             {
-                AttendingFriends.Remove(friend);
+                AttendingFilmFans.Remove(filmFan);
             }
             else
             {
-                AttendingFriends.Add(friend);
+                AttendingFilmFans.Add(filmFan);
+                int Key(string fan) => ScreeningInfo.FilmFans.IndexOf(fan);
+                AttendingFilmFans.Sort((fan1, fan2) => Key(fan1).CompareTo(Key(fan2)));
             }
         }
         #endregion
@@ -255,14 +246,9 @@ namespace PresentScreenings.TableView
             return string.Format("{0}\n{1}", ScreeningTitle, ScreeningStringForLabel(withDay));
         }
 
-        public string AttendeesString(bool inlcludeMe = true)
+        public string AttendeesString()
         {
-            var attendingFilmFans = new List<string>(AttendingFriends);
-            if (inlcludeMe && IAttend)
-            {
-                attendingFilmFans.Insert(0, ScreeningInfo.Me);
-            }
-            return string.Join(", ", attendingFilmFans);
+            return string.Join(", ", AttendingFilmFans);
         }
 
         public string ScreeningStringForLabel(bool withDay = false)
@@ -271,6 +257,13 @@ namespace PresentScreenings.TableView
             return string.Format("{0}{1} {2} {3} {4}", dayString, Screen, DurationString(), Rating, ShortFriendsString());
         }
 
+        /// <summary>
+        /// Returns a string consisting of the initials of attending friends to
+        /// be displayd on labels of screenings of the same film.
+        /// Does not display all film fans becuase 'my attendance' follows from
+        /// the label color.
+        /// </summary>
+        /// <returns></returns>
         public string ShortAttendingFriendsString()
         {
             StringBuilder abbreviationBuilder = new StringBuilder();
@@ -281,6 +274,16 @@ namespace PresentScreenings.TableView
             return abbreviationBuilder.ToString();
         }
 
+        /// <summary>
+        /// Returns a string consisting of the initials of friends who attend
+        /// the screening or have rated the screening's film.
+        /// Ratings appear directly after the initial of the friend who rated.
+        /// Attending friends' initials are in upper case, initials of friends
+        /// who rated the film but do not attend the screening in lower case.
+        /// Does not display all film fans becuase 'my attendance' follows from
+        /// the label color.
+        /// </summary>
+        /// <returns></returns>
         public string ShortFriendsString()
         {
             var screeningFilmRatings = ScreeningsPlan.FilmFanFilmRatings.Where(f => f.FilmId == FilmId);
@@ -289,7 +292,6 @@ namespace PresentScreenings.TableView
             {
                 var friendRatings = screeningFilmRatings.Where(f => f.FilmFan == friend);
                 bool friendHasRated = friendRatings.Any();
-                bool friendAttends = AttendingFriends.Contains(friend);
                 if (AttendingFriends.Contains(friend))
                 {
                     builder.Append(friend.Remove(1).ToUpper());

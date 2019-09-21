@@ -69,14 +69,13 @@ namespace PresentScreenings.TableView
         {
             var sign = _signByAscending[ascending];
 
-            // Take action bases on key.
+            // Take action based on key.
             switch (key)
             {
                 case "Title":
                     Films.Sort((x, y) => sign * string.Compare(x.SortedTitle, y.SortedTitle, StringComparison.CurrentCulture));
                     break;
                 case "Rating":
-                    //Films.Sort((x, y) => sign * x.Rating.CompareTo(y.Rating));
                     Films.Sort((x, y) => CombinedRating(x, ascending).CompareTo(CombinedRating(y, ascending)));
                     break;
                 default:
@@ -112,33 +111,18 @@ namespace PresentScreenings.TableView
             var weightedRating = 0;
             var weight = 1;
             var filmFans = new List<string>(ScreeningInfo.MyFriends);
-            if (ascending)
-            {
-                filmFans.Insert(1, ScreeningInfo.Me);
-            }
-            else
-            {
-                filmFans.Insert(0, ScreeningInfo.Me);
-            }
+            filmFans.Insert(ascending ? 1 : 0, ScreeningInfo.Me);
             filmFans.Reverse();
             var filmRatings = filmFans.Select(f => new ratingInfo(f, GetFilmFanFilmRatingToInt(film, f)));
-            //if (! ascending)
-            //{
-            //    filmRatings.OrderByDescending(r => r.Rating);
-            //}
             foreach (var rating in filmRatings.Select(r => r.Rating))
             {
                 weightedRating += weight * rating;
-                //}
-                //foreach (var fan in filmFans)
-                //{
-                //weightedRating += weight * GetFilmFanFilmRatingToInt(film, fan);
                 weight *= weightFactor;
             }
             return -weightedRating;
         }
 
-        private static int GetFilmFanFilmRatingToInt(Film film, string fan = ScreeningInfo.Me)
+        private static int GetFilmFanFilmRatingToInt(Film film, string fan)
         {
             return int.Parse(ViewController.GetFilmFanFilmRating(film, fan).ToString());
         }

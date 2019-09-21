@@ -13,9 +13,6 @@ namespace PresentScreenings.TableView
 	partial class ScreeningDialogController
 	{
 		[Outlet]
-		Foundation.NSObject _buttonIAttend { get; set; }
-
-		[Outlet]
 		AppKit.NSButton _checkboxIAttend { get; set; }
 
 		[Outlet]
@@ -51,9 +48,6 @@ namespace PresentScreenings.TableView
 		[Action ("DisplayScreeningInfo:")]
 		partial void DisplayScreeningInfo (Foundation.NSObject sender);
 
-		[Action ("IAttendScreening:")]
-		partial void IAttendScreening (Foundation.NSObject sender);
-
 		[Action ("SetRating:")]
 		partial void SetRating (Foundation.NSObject sender);
 
@@ -65,11 +59,6 @@ namespace PresentScreenings.TableView
 		
 		void ReleaseDesignerOutlets ()
 		{
-			if (_buttonIAttend != null) {
-				_buttonIAttend.Dispose ();
-				_buttonIAttend = null;
-			}
-
 			if (_checkboxIAttend != null) {
 				_checkboxIAttend.Dispose ();
 				_checkboxIAttend = null;
@@ -90,6 +79,11 @@ namespace PresentScreenings.TableView
 				_comboboxRating = null;
 			}
 
+			if (_filmInfoButton != null) {
+				_filmInfoButton.Dispose ();
+				_filmInfoButton = null;
+			}
+
 			if (_labelPresent != null) {
 				_labelPresent.Dispose ();
 				_labelPresent = null;
@@ -108,11 +102,6 @@ namespace PresentScreenings.TableView
 			if (_labelTitle != null) {
 				_labelTitle.Dispose ();
 				_labelTitle = null;
-			}
-
-			if (_filmInfoButton != null) {
-				_filmInfoButton.Dispose ();
-				_filmInfoButton = null;
 			}
 		}
 	}

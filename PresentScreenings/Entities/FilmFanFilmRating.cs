@@ -42,5 +42,6 @@ namespace PresentScreenings.TableView
         {
             return "filmid;filmfan;rating";
         }
+        #endregion
     }
 }
