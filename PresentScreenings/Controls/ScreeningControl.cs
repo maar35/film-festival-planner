@@ -106,7 +106,7 @@ namespace PresentScreenings.TableView
                 DrawClickRect(g, clickableRect);
 
                 // Draw a frame if something's wrong with tickets
-                if (ScreeningStatus.TicketStatusNeedsAttention(_screening))
+                if (ScreeningInfo.TicketStatusNeedsAttention(_screening))
                 {
                     ColorView.DrawTicketAvalabilityFrame(g, _screening, side);
                 }
@@ -118,14 +118,14 @@ namespace PresentScreenings.TableView
                 }
 
                 // Draw a warningsymbol
-                if (_screening.Warning != ScreeningStatus.Warning.NoWarning)
+                if (_screening.Warning != ScreeningInfo.Warning.NoWarning)
                 {
                     DrawWarningMiniature(g, side);
                 }
 
                 // Draw the rating of the film
                 var film = ViewController.GetFilmById(_screening.FilmId);
-                var ratings = ScreeningStatus.FilmFans.Select(f => ViewController.GetFilmFanFilmRating(film, f));
+                var ratings = ScreeningInfo.FilmFans.Select(f => ViewController.GetFilmFanFilmRating(film, f));
                 var rating = ratings.Max();
                 if (rating.IsGreaterOrEqual(FilmRating.LowestSuperRating) || rating.Equals(FilmRating.Unrated))
                 {

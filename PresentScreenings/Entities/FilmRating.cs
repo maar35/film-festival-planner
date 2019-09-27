@@ -34,13 +34,22 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region override methods
+        #region Override Methods
         public override string ToString()
         {
             return Value;
         }
         #endregion
-        
+
+        #region Interface Implementation
+        public int CompareTo(object obj)
+        {
+            double index = Values.IndexOf(Value);
+            double otherIndex = Values.IndexOf(((FilmRating)obj).Value);
+            return index.CompareTo(otherIndex);
+        }
+        #endregion
+
         #region Public Methods
         public bool Equals(FilmRating otherRating)
         {
@@ -62,15 +71,5 @@ namespace PresentScreenings.TableView
             return false;
         }
         #endregion
-
-        #region Interface Implementation
-        public int CompareTo(object obj)
-        {
-            double index = Values.IndexOf(Value);
-            double otherIndex = Values.IndexOf(((FilmRating)obj).Value);
-            return index.CompareTo(otherIndex);
-        }
-        #endregion
-
     }
 }

@@ -89,7 +89,6 @@
       <DependentUpon>AppDelegate.cs</DependentUpon>
     </Compile>
     <Compile Include="ListReader.cs" />
-    <Compile Include="MyAttendanceTitler.cs" />
     <Compile Include="ListWriter.cs" />
     <Compile Include="FilmTableDataSource.cs" />
     <Compile Include="FilmTableDelegate.cs" />
@@ -104,7 +103,6 @@
     <Compile Include="Controls\ScreeningButton.cs" />
     <Compile Include="Controls\ScreeningControl.cs" />
     <Compile Include="Controls\ScreeningLabel.cs" />
-    <Compile Include="Controls\TitledButton.cs" />
     <Compile Include="Entities\Film.cs" />
     <Compile Include="Entities\FilmInfo.cs" />
     <Compile Include="Entities\FilmRating.cs" />
@@ -112,7 +110,7 @@
     <Compile Include="Entities\Screen.cs" />
     <Compile Include="Entities\Screening.cs" />
     <Compile Include="Entities\ScreeningsPlan.cs" />
-    <Compile Include="Entities\ScreeningStatus.cs" />
+    <Compile Include="Entities\ScreeningInfo.cs" />
     <Compile Include="Controllers\CombineTitlesSheetControler.cs" />
     <Compile Include="Controllers\CombineTitlesSheetControler.designer.cs">
       <DependentUpon>CombineTitlesSheetControler.cs</DependentUpon>
@@ -142,13 +140,13 @@
       <DependentUpon>ViewController.cs</DependentUpon>
     </Compile>
     <Compile Include="Interfaces\IScreeningProvider.cs" />
-    <Compile Include="Interfaces\ITitled.cs" />
     <Compile Include="Views\ColorView.cs" />
     <Compile Include="Views\HeadersView.cs" />
     <Compile Include="Views\ScreeningsTableView.cs" />
     <Compile Include="Views\ScreeningsView.cs" />
     <Compile Include="ControlsFactory.cs" />
     <Compile Include="Controllers\GoToScreeningDialog.cs" />
+    <Compile Include="Interfaces\ICanWriteList.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

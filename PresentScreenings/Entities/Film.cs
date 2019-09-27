@@ -6,7 +6,7 @@ namespace PresentScreenings.TableView
     /// Keeps information about a film and supports international sorting and personal rating.
     /// </summary>
 
-    public class Film
+    public class Film : ICanWriteList
     {
         #region Public Members
         public enum FilmInfoStatus
@@ -26,7 +26,7 @@ namespace PresentScreenings.TableView
         public string TitleLanguage { get; private set; }
         public string Section { get; private set; }
         public string Url { get; private set; }
-        public FilmRating Rating => ViewController.GetFilmFanFilmRating(this, ScreeningStatus.Me);
+        public FilmRating Rating => ViewController.GetFilmFanFilmRating(this, ScreeningInfo.Me);
         public WebUtility.MediumCatagory Catagory { get; private set; }
         public FilmInfoStatus InfoStatus { get => ViewController.GetFilmInfo(FilmId).InfoStatus; }
         #endregion
@@ -50,23 +50,24 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
+        #region Interface Implementations
+        string ICanWriteList.Serialize()
+        {
+            return string.Join(";", FilmId, SortedTitle, Title, TitleLanguage, Section, Catagory, Url);
+        }
+        #endregion
+
+        #region Override Methods
+        public override string ToString()
+        {
+            return Title;
+        }
+        #endregion
+
         #region Public Methods
         public static string WriteHeader()
         {
             return "filmid;sort;title;titlelanguage;section;mediacatagory;url";
-        }
-
-        public static string Serialize(Film film)
-        {
-            string line = string.Join(";",
-                film.FilmId, film.SortedTitle, film.Title, film.TitleLanguage, film.Section, film.Catagory, film.Url
-            );
-            return line;
-        }
-
-        public override string ToString()
-        {
-            return Title;
         }
         #endregion
     }

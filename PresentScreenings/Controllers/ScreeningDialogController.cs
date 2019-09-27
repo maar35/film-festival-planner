@@ -22,7 +22,6 @@ namespace PresentScreenings.TableView
         const float _yBetweenViews = ControlsFactory.VerticalPixelsBetweenViews;
         const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
         const float _labelHeight = ControlsFactory.StandardLabelHeight;
-        const float _buttonWidth = ControlsFactory.StandardButtonWidth;
         const float _buttonHeight = ControlsFactory.StandardButtonHeight;
         const float _yControlsDistance = ControlsFactory.VerticalPixelsBetweenControls;
         #endregion
@@ -34,7 +33,7 @@ namespace PresentScreenings.TableView
         ViewController _presentor;
         List<Screening> _filmScreenings;
         FilmScreeningControl _screeningInfoControl;
-        Dictionary<string, AttendanceCheckbox> _attendanceCheckboxByFriend;
+        Dictionary<string, AttendanceCheckbox> _attendanceCheckboxByFilmFan;
         #endregion
 
         #region Computed Properties
@@ -55,15 +54,11 @@ namespace PresentScreenings.TableView
         public ScreeningDialogController(IntPtr handle) : base(handle)
         {
             _filmScreenings = new List<Screening> { };
-            _attendanceCheckboxByFriend = new Dictionary<string, AttendanceCheckbox> { };
+            _attendanceCheckboxByFilmFan = new Dictionary<string, AttendanceCheckbox> { };
         }
         #endregion
 
         #region Override Methods
-        public override void AwakeFromNib()
-        {
-            base.AwakeFromNib();
-        }
         public override void ViewDidLoad()
         {
             // Tell the presentor we're alive.
@@ -80,9 +75,8 @@ namespace PresentScreenings.TableView
             _filmScreenings = _presentor.FilmScreenings(_screening);
             _checkboxTicketsBought.Activated += (s, e) => ToggleTicketsBought();
             _checkboxSoldOut.Activated += (s, e) => ToggleSoldOut();
-            _checkboxIAttend.Activated += (s, e) => ToggleMyAttandance();
             SetControlValues();
-            CreateFriendControls();
+            CreateFilmFanControls();
             CreateScreeningsScrollView();
         }
 
@@ -120,22 +114,15 @@ namespace PresentScreenings.TableView
             _labelScreen.StringValue = _screening.Screen.ParseName;
             _labelTime.StringValue = _screening.ToLongTimeString();
             _labelPresent.StringValue = _screening.AttendeesString();
-            MyAttendanceTitler.SetTitle((TitledButton)_buttonIAttend, _screening.IAttend);
             _checkboxTicketsBought.State = ViewController.GetNSCellStateValue(_screening.TicketsBought);
             _checkboxSoldOut.State = ViewController.GetNSCellStateValue(_screening.SoldOut);
-            _checkboxIAttend.Title = ScreeningStatus.Me;
-            _checkboxIAttend.State = AttendanceCheckbox.SetAttendanceState(_screening.IAttend);
         }
 
-        private void CreateFriendControls()
+        private void CreateFilmFanControls()
         {
             // Clone the Rating combo box.
             var comboBoxFrame = _comboboxRating.Frame;
             var comboBoxFont = _comboboxRating.Font;
-            var myRatingComboBox = ControlsFactory.NewRatingComboBox(comboBoxFrame, comboBoxFont);
-            myRatingComboBox.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(myRatingComboBox, ScreeningStatus.Me);
-            myRatingComboBox.StringValue = _screening.Rating.ToString();
-            View.AddSubview(myRatingComboBox);
 
             // Dispose the original Rating combo box.
             _comboboxRating.RemoveFromSuperview();
@@ -144,32 +131,41 @@ namespace PresentScreenings.TableView
             // Initialize the vertical postion of run-time created controls.
             _yCurr = comboBoxFrame.Y;
 
-            // Initialze values to construct the Friend Attendance checkboxes.
+            // Initialze values to construct the Attendance checkboxes.
             var checkBoxFrame = _checkboxIAttend.Frame;
             var checkBoxShift = comboBoxFrame.Y - checkBoxFrame.Y;
 
-            foreach (var friend in ScreeningStatus.MyFriends)
+            // Dispose the original Attendance check box.
+            _checkboxIAttend.RemoveFromSuperview();
+            _checkboxIAttend.Dispose();
+
+            nfloat yDelta = 0;
+            foreach (var filmfan in ScreeningInfo.FilmFans)
             {
                 // Update the vertical position.
-                _yCurr -= myRatingComboBox.Frame.Height + _yControlsDistance;
+                _yCurr -= yDelta;
+                if (yDelta == 0)
+                {
+                    yDelta = comboBoxFrame.Height + _yControlsDistance;
+                }
 
-                // Create the Rriend Rating combobox.
+                // Create the Rating combobox for this film fan.
                 comboBoxFrame.Y = _yCurr;
-                var friendRatingComboBox = ControlsFactory.NewRatingComboBox(comboBoxFrame, comboBoxFont);
-                friendRatingComboBox.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(friendRatingComboBox, friend);
-                friendRatingComboBox.StringValue = ViewController.GetFilmFanFilmRating(_screening.FilmId, friend).ToString();
-                View.AddSubview(friendRatingComboBox);
+                var fanRatingComboBox = ControlsFactory.NewRatingComboBox(comboBoxFrame, comboBoxFont);
+                fanRatingComboBox.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(fanRatingComboBox, filmfan);
+                fanRatingComboBox.StringValue = ViewController.GetFilmFanFilmRating(_screening.FilmId, filmfan).ToString();
+                View.AddSubview(fanRatingComboBox);
 
-                // Create the Friend Attendance checkbox.
+                // Create the Attendance checkbox for this film fan.
                 checkBoxFrame.Y = _yCurr - checkBoxShift;
-                var friendCheckbox = new AttendanceCheckbox(checkBoxFrame);
-                friendCheckbox.Title = friend;
-                friendCheckbox.State = AttendanceCheckbox.SetAttendanceState(_screening.FriendAttends(friend));
-                friendCheckbox.Activated += (s, e) => ToggleFriendAttendance(friend);
-                View.AddSubview(friendCheckbox);
+                var fanCheckbox = new AttendanceCheckbox(checkBoxFrame);
+                fanCheckbox.Title = filmfan;
+                fanCheckbox.State = AttendanceCheckbox.GetAttendanceState(_screening.FilmFanAttends(filmfan));
+                fanCheckbox.Activated += (s, e) => ToggleAttendance(filmfan);
+                View.AddSubview(fanCheckbox);
 
-                // Link the checkbox to the friend.
-                _attendanceCheckboxByFriend.Add(friend, friendCheckbox);
+                // Link the checkbox to the film fan.
+                _attendanceCheckboxByFilmFan.Add(filmfan, fanCheckbox);
             }
         }
 
@@ -193,10 +189,10 @@ namespace PresentScreenings.TableView
             View.AddSubview(scrollView);
 
             // Display the screenings.
-            GoToScreeningDialog.DisplayScreeningControls(screenings, screeningsView, GoToScreening, ref _screeningInfoControl);
+            DisplayScreeningControls(screenings, screeningsView, GoToScreening, ref _screeningInfoControl);
 
             // Scroll to the selected screening.
-            GoToScreeningDialog.ScrollScreeningToVisible(CurrentScreening, scrollView);
+            ScrollScreeningToVisible(CurrentScreening, scrollView);
         }
 
         private void UpdateAttendances()
@@ -204,7 +200,7 @@ namespace PresentScreenings.TableView
             _labelPresent.StringValue = _screening.AttendeesString();
             _presentor.UpdateAttendanceStatus(_screening);
             _presentor.ReloadScreeningsView();
-            GoToScreeningDialog.UpdateScreeningControls();
+            UpdateScreeningControls();
             _screeningInfoControl.ReDraw();
         }
 
@@ -258,17 +254,12 @@ namespace PresentScreenings.TableView
             UpdateAttendances();
         }
 
-        public void ToggleMyAttandance()
+        public void ToggleAttendance(string filmFan)
         {
-            _screening.ToggleMyAttendance();
-            MyAttendanceTitler.SetTitle((TitledButton)_buttonIAttend, _screening.IAttend);
+            _screening.ToggleFilmFanAttendance(filmFan);
             UpdateAttendances();
-        }
-
-        public void ToggleFriendAttendance(string friend)
-        {
-            _screening.ToggleFriendAttendance(friend);
-            UpdateAttendances();
+            var attendanceState = AttendanceCheckbox.GetAttendanceState(_screening.FilmFanAttends(filmFan));
+            _attendanceCheckboxByFilmFan[filmFan].State = attendanceState;
         }
         #endregion
 
@@ -285,12 +276,6 @@ namespace PresentScreenings.TableView
             CloseDialog();
         }
 
-        partial void IAttendScreening(NSObject sender)
-        {
-            RaiseAttendanceChanged();
-            CloseDialog();
-        }
-
         partial void ToggleTicketsBought(NSObject sender)
         {
             ToggleTicketsBought();
@@ -303,19 +288,11 @@ namespace PresentScreenings.TableView
             _checkboxSoldOut.State = ViewController.GetNSCellStateValue(_screening.SoldOut);
         }
 
-        [Action("ToggleMyAttandance:")]
-        void ToggleMyAttandance(NSObject sender)
+        [Action("ToggleAttendance:")]
+        internal void ToggleAttendance(NSObject sender)
         {
-            ToggleMyAttandance();
-            _checkboxIAttend.State = AttendanceCheckbox.SetAttendanceState(_screening.IAttend);
-        }
-
-        [Action("ToggleFriendAttendance:")]
-        void ToggleFriendAttendance(NSObject sender)
-        {
-            string friend = ((NSMenuItem)sender).Title;
-            ToggleFriendAttendance(friend);
-            _attendanceCheckboxByFriend[friend].State = AttendanceCheckbox.SetAttendanceState(_screening.FriendAttends(friend));
+            string filmFan = ((NSMenuItem)sender).Title;
+            ToggleAttendance(filmFan);
         }
 
         [Action("NavigateFilmScreening:")]
@@ -326,7 +303,7 @@ namespace PresentScreenings.TableView
         }
 
         [Action("ShowFilmInfo:")]
-        private void ShowFilmInfo(NSObject sender)
+        internal void ShowFilmInfo(NSObject sender)
         {
             PerformSegue("ScreeningToFilmInfo", sender);
         }
@@ -345,13 +322,6 @@ namespace PresentScreenings.TableView
         internal void RaiseDialogCanceled()
         {
             DialogCanceled?.Invoke(this, EventArgs.Empty);
-        }
-
-        public EventHandler AttendanceChanged;
-
-        internal void RaiseAttendanceChanged()
-        {
-            AttendanceChanged?.Invoke(this, EventArgs.Empty);
         }
         #endregion
     }

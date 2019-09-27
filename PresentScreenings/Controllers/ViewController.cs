@@ -107,7 +107,6 @@ namespace PresentScreenings.TableView
                 case "ModalSegue":
                     var dialog = segue.DestinationController as ScreeningDialogController;
                     dialog.PopulateDialog((ScreeningControl)sender);
-                    dialog.AttendanceChanged += (s, e) => dialog.ToggleMyAttandance();
                     dialog.DialogAccepted += (s, e) => TableView.DeselectRow(TableView.SelectedRow);
                     dialog.DialogCanceled += (s, e) => TableView.DeselectRow(TableView.SelectedRow);
                     dialog.Presentor = this;
@@ -168,28 +167,28 @@ namespace PresentScreenings.TableView
             {
                 if (screening.TicketsBought)
                 {
-                    screening.Status = ScreeningStatus.Status.Attending;
+                    screening.Status = ScreeningInfo.ScreeningStatus.Attending;
                 }
                 else
                 {
-                    screening.Status = ScreeningStatus.Status.NeedingTickets;
+                    screening.Status = ScreeningInfo.ScreeningStatus.NeedingTickets;
                 }
             }
-            else if (screening.AttendingFriends.Count() > 0)
+            else if (screening.AttendingFriends.Any())
             {
-                screening.Status = ScreeningStatus.Status.AttendedByFriend;
+                screening.Status = ScreeningInfo.ScreeningStatus.AttendedByFriend;
             }
             else if (TimesIAttendFilm(screening) > 0)
             {
-                screening.Status = ScreeningStatus.Status.AttendingFilm;
+                screening.Status = ScreeningInfo.ScreeningStatus.AttendingFilm;
             }
             else if (HasTimeOverlap(screening))
             {
-                screening.Status = ScreeningStatus.Status.TimeOverlap;
+                screening.Status = ScreeningInfo.ScreeningStatus.TimeOverlap;
             }
             else
             {
-                screening.Status = ScreeningStatus.Status.Free;
+                screening.Status = ScreeningInfo.ScreeningStatus.Free;
             }
 
             UpdateWarning(screening);
@@ -304,6 +303,12 @@ namespace PresentScreenings.TableView
             var info = ScreeningsPlan.FilmInfos.Where(f => f.FilmId == filmId).ToList();
             return info.Count > 0 ? info.First() : null;
         }
+
+        public static ScreeningInfo GetScreeningInfo(int filmId, Screen screen, DateTime startTime)
+        {
+            var info = ScreeningsPlan.ScreeningInfos.Where(s => s.FilmId == filmId && s.Screen == screen && s.StartTime == startTime).ToList();
+            return info.Count > 0 ? info.First() : null;
+        }
         #endregion
 
         #region Public Methods working with Film Ratings
@@ -366,7 +371,6 @@ namespace PresentScreenings.TableView
                 }
             }
         }
-
         #endregion
 
         #region Public Methods working with Screening Attendance
@@ -391,15 +395,15 @@ namespace PresentScreenings.TableView
         {
             if (TimesIAttendFilm(screening) > 1)
             {
-                screening.Warning = ScreeningStatus.Warning.SameMovie;
+                screening.Warning = ScreeningInfo.Warning.SameMovie;
             }
             else if (screening.IAttend && OverlappingAttendedScreenings(screening).Count() > 1)
             {
-                screening.Warning = ScreeningStatus.Warning.TimeOverlap;
+                screening.Warning = ScreeningInfo.Warning.TimeOverlap;
             }
             else
             {
-                screening.Warning = ScreeningStatus.Warning.NoWarning;
+                screening.Warning = ScreeningInfo.Warning.NoWarning;
             }
         }
         #endregion
@@ -478,34 +482,16 @@ namespace PresentScreenings.TableView
             ReloadScreeningsView();
         }
 
-        public void ToggleMyAttendance()
+        public void ToggleAttendance(string filmfan)
         {
             Screening screening = _plan.CurrScreening;
-            screening.ToggleMyAttendance();
-            UpdateAttendanceStatus(screening);
-            ReloadScreeningsView();
-        }
-
-        public void ToggleFriendAttendance(string friend)
-        {
-            Screening screening = _plan.CurrScreening;
-            screening.ToggleFriendAttendance(friend);
+            screening.ToggleFilmFanAttendance(filmfan);
             UpdateAttendanceStatus(screening);
             ReloadScreeningsView();
         }
 
         public void DownloadFilmInfo(NSObject sender)
         {
-            //// Create new window
-            //var storyboard = NSStoryboard.FromName("Main", null);
-            //var controller = storyboard.InstantiateControllerWithIdentifier("MainWindow") as NSWindowController;
-
-            //// Display
-            //controller.ShowWindow(this);
-
-            //// Set the title
-            //controller.Window.Title = "Download Film Info";
-
             App.FilmsDialogController?.PerformSegue("DownloadFilmInfoSegue", sender);
         }
 
@@ -514,12 +500,6 @@ namespace PresentScreenings.TableView
         {
             PerformSegue("FilmRatingSegue", sender);
         }
-
-        //[Action("DownloadFilmInfo:")]
-        //internal void DownloadFilmInfo(NSObject sender)
-        //{
-        //    PerformSegue("DownloadFilmInfoSegue", sender);
-        //}
         #endregion
     }
 }

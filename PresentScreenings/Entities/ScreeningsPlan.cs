@@ -25,7 +25,8 @@ namespace PresentScreenings.TableView
         private static string _screensFile = Path.Combine(_directory, "screens.csv");
         private static string _filmsFile = Path.Combine(_directory, "films.csv");
         private static string _screeningsFile = Path.Combine(_directory, "screenings.csv");
-        private static string _friendFilmRatingsFile = Path.Combine(_directory, "filmfanfilmratings.csv");
+        private static string _screeningInfoFile = Path.Combine(_directory, "screeninginfo.csv");
+        private static string _filmFanFilmRatingsFile = Path.Combine(_directory, "filmfanfilmratings.csv");
         private static string _filmInfoFile = Path.Combine(_directory, "filminfo.xml");
         private Dictionary<DateTime, List<Screen>> _dayScreens;
         private int _currDayNumber;
@@ -39,10 +40,11 @@ namespace PresentScreenings.TableView
         public Screening CurrScreening => ScreenScreenings[CurrDay][CurrScreen][_currScreenScreeningNumber];
         public List<DateTime> FestivalDays { get; private set; }
         public List<Screen> CurrDayScreens => _dayScreens[CurrDay];
-        public List<Screen> Screens { get; }
+        public static List<Screen> Screens { get; private set; }
         public static List<Film> Films { get; private set; }
         public DateTime CurrDay => FestivalDays[_currDayNumber];
         public static List<Screening> Screenings { get; private set; }
+        public static List<ScreeningInfo> ScreeningInfos { get; private set; }
         public static List<FilmFanFilmRating> FilmFanFilmRatings { get; private set; }
         public static List<FilmInfo> FilmInfos { get; private set; }
         #endregion
@@ -51,23 +53,23 @@ namespace PresentScreenings.TableView
         public ScreeningsPlan()
         {
             // Read screens.
-            ListReader<Screen> ScreensReader = new ListReader<Screen>(_screensFile);
-            Screens = ScreensReader.ReadListFromFile(line => new Screen(line));
+            Screens = new ListReader<Screen>(_screensFile).ReadListFromFile(line => new Screen(line));
 
             // Read film info.
             FilmInfos = FilmInfo.LoadFilmInfoFromXml(_filmInfoFile);
 
             // Read films.
-            ListReader<Film> FilmsReader = new ListReader<Film>(_filmsFile, true);
-            Films = FilmsReader.ReadListFromFile(line => new Film(line));
+            Films = new ListReader<Film>(_filmsFile, true).ReadListFromFile(line => new Film(line));
 
             // Read film ratings.
-            ListReader<FilmFanFilmRating> RatingsReader = new ListReader<FilmFanFilmRating>(_friendFilmRatingsFile, true);
-            FilmFanFilmRatings = RatingsReader.ReadListFromFile(line => new FilmFanFilmRating(line));
+            FilmFanFilmRatings = new ListReader<FilmFanFilmRating>(_filmFanFilmRatingsFile, true).ReadListFromFile(line => new FilmFanFilmRating(line));
+
+            // Read screening info.
+            ScreeningInfos = new ListReader<ScreeningInfo>(_screeningInfoFile, true).ReadListFromFile(line => new ScreeningInfo(line));
 
             // Read screenings.
             ListReader<Screening> ScreeningsReader = new ListReader<Screening>(_screeningsFile, true);
-            Screenings = ScreeningsReader.ReadListFromFile(line => new Screening(line, Screens, Films, FilmFanFilmRatings));
+            Screenings = ScreeningsReader.ReadListFromFile(line => new Screening(line, Screens, Films));
 
             InitializeDays();
             _currDayNumber = 0;
@@ -203,7 +205,7 @@ namespace PresentScreenings.TableView
         {
             var attendedScreenings = (
                 from Screening s in Screenings
-                where s.IAttend || s.AttendingFriends.Count > 0
+                where s.AttendingFilmFans.Count > 0
                 orderby s.StartDate
                 select s
             ).ToList();

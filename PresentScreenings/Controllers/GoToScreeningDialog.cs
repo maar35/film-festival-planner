@@ -13,18 +13,18 @@ namespace PresentScreenings.TableView
     public abstract class GoToScreeningDialog : NSViewController
     {
         #region Constants
-        const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
-        const float _xBetweenLabels = _yBetweenLabels;
-        const float _labelHeight = ControlsFactory.StandardLabelHeight;
-        const float _buttonWidth = _labelHeight;
+        private const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
+        private const float _xBetweenLabels = _yBetweenLabels;
+        private const float _labelHeight = ControlsFactory.StandardLabelHeight;
+        private const float _buttonWidth = _labelHeight;
         #endregion
 
         #region Application Access
-        static AppDelegate _app => (AppDelegate)NSApplication.SharedApplication.Delegate;
+        private static AppDelegate _app => (AppDelegate)NSApplication.SharedApplication.Delegate;
         #endregion
 
         #region Private Members
-        static Dictionary<Screening, NSTextField> _labelByfilmScreening;
+        private static Dictionary<Screening, NSTextField> _labelByfilmScreening;
         #endregion
 
         #region Constructors
@@ -78,7 +78,7 @@ namespace PresentScreenings.TableView
             }
         }
 
-        static public void ScrollScreeningToVisible(Screening screening, NSScrollView scrollView)
+        public static void ScrollScreeningToVisible(Screening screening, NSScrollView scrollView)
         {
             if (_labelByfilmScreening.ContainsKey(screening))
             {
@@ -86,7 +86,7 @@ namespace PresentScreenings.TableView
             }
         }
 
-        static public void UpdateScreeningControls()
+        public static void UpdateScreeningControls()
         {
             foreach (var screening in _labelByfilmScreening.Keys)
             {

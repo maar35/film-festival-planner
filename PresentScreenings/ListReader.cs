@@ -27,7 +27,6 @@ namespace PresentScreenings.TableView
 		public List<T> ReadListFromFile(Func<string, T> TConstructor)
 		{
 			var resultList = new List<T> { };
-
 			using (var streamReader = OpenStream(_fileName))
 			{
 				string line;
@@ -42,7 +41,6 @@ namespace PresentScreenings.TableView
 					resultList.Add(TConstructor(line));
 				}
 			}
-
 			return resultList;
 		}
 		#endregion
@@ -51,7 +49,6 @@ namespace PresentScreenings.TableView
 		private StreamReader OpenStream(string url)
 		{
 			FileStream fileStream;
-
 			try
 			{
 				fileStream = new FileStream(url, FileMode.Open, FileAccess.Read);
@@ -59,8 +56,7 @@ namespace PresentScreenings.TableView
 			catch (Exception ex)
 			{
 				throw new Exception(string.Format("Read error, couldn't access file {0}", url), ex);
-			}
-
+            }
 			return new StreamReader(fileStream);
 		}
 		#endregion

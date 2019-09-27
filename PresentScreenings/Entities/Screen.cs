@@ -7,40 +7,39 @@ namespace PresentScreenings.TableView
 	/// Holds the information of a theater screen where a movie screening plays.
 	/// </summary>
 
-    public class Screen : IComparable
+    public class Screen : IComparable, ICanWriteList
 	{
-		#region Private Members
-		readonly string _parseName;
-        readonly string _abbreviation;
-        #endregion
-
         #region Properties
-        public string ParseName => _parseName;
+        public string ParseName { get; }
+        public string Abbreviation { get; }
         #endregion
 
         #region Constructors
         public Screen(string screenText)
 		{
 			string[] fields = screenText.Split(';');
-			_parseName = fields[0];
-			_abbreviation = fields[1];
+			ParseName = fields[0];
+			Abbreviation = fields[1];
 		}
         #endregion
 
-        #region Public Methods
-        public static string Serialize(Screen screen)
+        #region Interface Implementations
+        int IComparable.CompareTo(object obj)
         {
-            return string.Join(";", screen._parseName, screen._abbreviation);
+            return string.Compare(Abbreviation, ((Screen)obj).ToString(), StringComparison.CurrentCulture);
         }
+
+        string ICanWriteList.Serialize()
+        {
+            return string.Join(";", ParseName, Abbreviation);
+        }
+        #endregion
+
+        #region Public Methods
 		public override string ToString()
 		{
-			return _abbreviation;
+			return Abbreviation;
 		}
-
-		public int CompareTo(object obj)
-		{
-			return string.Compare(_abbreviation, ((Screen)obj).ToString(), StringComparison.CurrentCulture);
-		}
-		#endregion
-	}
+        #endregion
+    }
 }

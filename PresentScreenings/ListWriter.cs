@@ -5,7 +5,7 @@ using System.IO;
 
 namespace PresentScreenings.TableView
 {
-    public class ListWriter<T> where T : class
+    public class ListWriter<T> where T : ICanWriteList
     {
         #region Privat Members
         string _path;
@@ -43,6 +43,11 @@ namespace PresentScreenings.TableView
             }
             streamWriter.Flush();
             streamWriter.Close();
+        }
+
+        public void WriteListToFile(List<T> list)
+        {
+            WriteListToFile(list, item => item.Serialize());
         }
         #endregion
 

@@ -21,9 +21,6 @@ namespace PresentScreenings.TableView
 		AppKit.NSMenu _filmsMenu { get; set; }
 
 		[Outlet]
-		AppKit.NSMenuItem _myAttendanceMenuItem { get; set; }
-
-		[Outlet]
 		AppKit.NSMenu _navigateMenu { get; set; }
 
 		[Outlet]
@@ -80,9 +77,6 @@ namespace PresentScreenings.TableView
 		[Action ("ToggleClickableLabels:")]
 		partial void ToggleClickableLabels (Foundation.NSObject sender);
 
-		[Action ("ToggleMyAttandance:")]
-		partial void ToggleMyAttandance (Foundation.NSObject sender);
-
 		[Action ("ToggleSoldOut:")]
 		partial void ToggleSoldOut (Foundation.NSObject sender);
 
@@ -104,11 +98,6 @@ namespace PresentScreenings.TableView
 			if (_filmsMenu != null) {
 				_filmsMenu.Dispose ();
 				_filmsMenu = null;
-			}
-
-			if (_myAttendanceMenuItem != null) {
-				_myAttendanceMenuItem.Dispose ();
-				_myAttendanceMenuItem = null;
 			}
 
 			if (_navigateMenu != null) {
