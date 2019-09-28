@@ -80,6 +80,9 @@ namespace PresentScreenings.TableView
         {
             base.AwakeFromNib();
 
+            // Tell the application delegate we're alive.
+            App.Controller = this;
+
             // Set the header text of the columns.
             _plan = new ScreeningsPlan();
             _mainView = new ScreeningsTableView(this, ScreensColumn, ScreeningsColumn);
@@ -117,8 +120,6 @@ namespace PresentScreenings.TableView
         public override void ViewWillAppear()
         {
             base.ViewWillAppear();
-
-            App.Controller = this;
         }
 
         public override void ViewWillDisappear()
