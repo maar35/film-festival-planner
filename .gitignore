@@ -1,1 +1,5 @@
 *.swp
+.vs/
+PresentScreenings/bin/
+PresentScreenings/obj/
+packages/
