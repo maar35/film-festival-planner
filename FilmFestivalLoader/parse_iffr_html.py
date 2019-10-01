@@ -92,6 +92,11 @@ class Screen():
 
 class Film:
 
+    filmCategoryByString = {}
+    filmCategoryByString["films"] = "Films"
+    filmCategoryByString["verzamelprogrammas"] = "CombinedProgrammes"
+    filmCategoryByString["events"] = "Events"
+
     def __init__(self, admin, title, url):
         self.filmId = admin.new_film_id()
         self.sortedTitle = title
@@ -100,14 +105,14 @@ class Film:
         self.titleLanguage = ""
         self.section = ""
         self.rating = "0"
-        self.filmInfoStatus = "Absent"
+        self.filmInfoStatus = "UrlOnly"
         #info = FilmInfo(self.filmId, url, "no-description")
         self.url = url
-        self.medium_catagory = url.split("/")[5]
+        self.medium_category = url.split("/")[5]
         self.combination_url = ""
 
     def __str__(self):
-        return "; ".join([self.title, self.medium_catagory, self.combination_url])
+        return "; ".join([self.title, self.medium_category, self.combination_url])
 
     def film_repr_csv_head(self):
         text = ";".join([
@@ -116,6 +121,8 @@ class Film:
             "title",
             "titlelanguage",
             "section",
+            "mediumcategory",
+            "url",
             "rating",
             "filminfostatus"
         ])
@@ -128,6 +135,8 @@ class Film:
             self.title.replace(";", ".,"),
             self.titleLanguage,
             self.section,
+            self.filmCategoryByString[self.medium_category],
+            self.url,
             self.rating,
             self.filmInfoStatus
         ])
@@ -368,7 +377,7 @@ class FilmPageParser(HTMLParser):
                 #-print "--  IN SCREENINGS SECTION"
             if self.before_screenings:
                 if tag == "a" and attr[0] == "href" and attr[1].startswith("/nl/2019/verzamelprogrammas/"):
-                    if self.film.medium_catagory != "verzamelprogrammas":
+                    if self.film.medium_category != "verzamelprogrammas":
                         self.film.combination_url = attr[1]
                         #-print "--  PART OF COMBINATION {}".format(self.film)
             if self.in_screenings:
@@ -382,7 +391,7 @@ class FilmPageParser(HTMLParser):
                 if tag =="a" and attr[0] == "data-date":
                     self.start_date = attr[1]
                     #-print "--  STARTDATE:  {}".format(self.start_date)
-                    if len(self.audience) > 0 and len(self.film.combination_url) == 0 and self.film.medium_catagory != "events":
+                    if len(self.audience) > 0 and len(self.film.combination_url) == 0 and self.film.medium_category != "events":
                         self.add_screening()
 
     def handle_endtag(self, tag):
@@ -403,7 +412,7 @@ class FilmPageParser(HTMLParser):
         #-print "Data     :", data
         if self.in_location:
             location = data.strip()
-            #-print "--  LOCATION:   {}   CATAGORY: {}".format(location, self.film.medium_catagory)
+            #-print "--  LOCATION:   {}   CATEGORY: {}".format(location, self.film.medium_category)
             try:
                 self.screen = iffr_data.screens[location]
             except KeyError:
