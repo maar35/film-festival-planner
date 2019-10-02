@@ -1,13 +1,12 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-import argparse
 import os
-from operator import attrgetter
-from HTMLParser import HTMLParser
-from htmlentitydefs import name2codepoint
-from urllib2 import Request, urlopen, URLError
+from html.parser import HTMLParser
+from html.entities import name2codepoint
+import urllib.request
+import urllib.error
 
-version_number = "0.1"
+version_number = "0.3"
 
 # Globals.
 
@@ -33,32 +32,32 @@ f.close()
 
 class MyHTMLParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
-        print "Start tag:", tag
+        print("Start tag:", tag)
         for attr in attrs:
-            print "     attr:", attr
+            print("     attr:", attr)
 
     def handle_endtag(self, tag):
-        print "End tag  :", tag
+        print("End tag  :", tag)
 
     def handle_data(self, data):
-        print "Data     :", data
+        print("Data     :", data)
 
     def handle_comment(self, data):
-        print "Comment  :", data
+        print("Comment  :", data)
 
     def handle_entityref(self, name):
-        c = unichr(name2codepoint[name])
-        print "Named ent:", c
+        c = chr(name2codepoint[name])
+        print("Named ent:", c)
 
     def handle_charref(self, name):
         if name.startswith('x'):
-            c = unichr(int(name[1:], 16))
+            c = chr(int(name[1:], 16))
         else:
-            c = unichr(int(name))
-        print "Num ent  :", c
+            c = chr(int(name))
+        print("Num ent  :", c)
 
     def handle_decl(self, data):
-        print "Decl     :", data
+        print("Decl     :", data)
 
 
 # instantiate the parser and fed it some HTML
@@ -76,9 +75,9 @@ def attr_str(attr, index):
 
 class Screen():
 
-    def __init__(self, (name, abbr)):
-        self.name = name
-        self.abbr = abbr
+    def __init__(self, name_abbr_tuple):
+        self.name = name_abbr_tuple[0]
+        self.abbr = name_abbr_tuple[1]
 
     def __repr__(self):
         return self.abbr
@@ -268,7 +267,7 @@ class IffrData:
         for screen in self.screens.values():
             f.write(screen.screen_repr_csv())
         f.close()
-        print "Done writing {} records to {}.".format(len(self.screens), screenfile)
+        print("Done writing {} records to {}.".format(len(self.screens), screenfile))
 
     def write_films(self):
         f = open(filmsfile, "w")
@@ -276,14 +275,14 @@ class IffrData:
         for film in self.films:
             f.write(film.film_repr_csv())
         f.close()
-        print "Done writing {} records to {}.".format(len(self.films), filmsfile)
+        print("Done writing {} records to {}.".format(len(self.films), filmsfile))
 
     def write_filmurls(self):
         f = open(filmurlfile, "w")
         for film in self.films:
             f.write(film.filmurl_repr_txt())
         f.close()
-        print "Done writing {} records to {}.".format(len(self.films), filmurlfile)
+        print("Done writing {} records to {}.".format(len(self.films), filmurlfile))
 
     def write_screenings(self):
         f = open(screeningsfile, "w")
@@ -291,22 +290,22 @@ class IffrData:
         for screening in [s for s in self.screenings if s.audience == "publiek"]:
             f.write(screening.screening_repr_csv())
         f.close()
-        print "Done writing {} records to {}.".format(len(self.screenings), screeningsfile)
+        print("Done writing {} records to {}.".format(len(self.screenings), screeningsfile))
 
 
 class UrlReader:
 
     def read_url(self, url, film):
-        req = Request(url)
+        req = urllib.request.Request(url)
         try:
-            response = urlopen(req)
-        except URLError as e:
+            response = urllib.request.urlopen(req)
+        except urllib.error.URLError as e:
             if hasattr(e, 'reason'):
-                print 'We failed to reach a server.'
-                print 'Reason: ', e.reason
+                print('We failed to reach a server.')
+                print('Reason: ', e.reason)
             elif hasattr(e, 'code'):
-                print 'The server couldn\'t fulfill the request.'
-                print 'Error code: ', e.code
+                print('The server couldn\'t fulfill the request.')
+                print('Error code: ', e.code)
         else:
             html = response.read()
             #film_parser = FilmPageParser()
@@ -330,11 +329,11 @@ class FilmPageParser(HTMLParser):
         self.matching_attr_value = ""
 
     def add_screening(self):
-        #-print "--  {}".format(self.film.title)
-        #-print "--  SCREEN:     {}".format(self.screen)
-        #-print "--  STARTDATE:  {}".format(self.start_date)
-        #-print "--  TIMES:      {}".format(self.times)
-        #-print "--  AUDIENCE:   {}".format(self.audience)
+        #-print("--  {}".format(self.film.title))
+        #-print("--  SCREEN:     {}".format(self.screen))
+        #-print("--  STARTDATE:  {}".format(self.start_date))
+        #-print("--  TIMES:      {}".format(self.times))
+        #-print("--  AUDIENCE:   {}".format(self.audience))
         startDate = self.start_date.split()[0]
         startTime = self.times.split()[0]
         endTime = self.times.split()[2]
@@ -354,32 +353,32 @@ class FilmPageParser(HTMLParser):
 
     def print_dbg(self, str1, str2):
         pass
-        #print str1, unicode(str2, "ascii")
+        #print(str1, unicode(str2, "ascii"))
         #try:
-        #    print str1, str2
-        #    #print str1, (str)(str2)
-        #    #print str1, str2.encode("ascii", "xmlcharrefreplace")
+        #    print(str1, str2)
+        #    #print(str1, (str)(str2))
+        #    #print(str1, str2.encode("ascii", "xmlcharrefreplace"))
         #except UnicodeEncodeError as e:
         #    if hasattr(e, 'object'):
-        #        print "{}XXX{}".format(e.object[0:e.start], e.object[e.end:])
+        #        print("{}XXX{}".format(e.object[0:e.start], e.object[e.end:]))
         #    else:
-        #        print "ENCODE ERROR: {}".format(e)
+        #        print("ENCODE ERROR: {}".format(e))
 
     def handle_starttag(self, tag, attrs):
         #self.print_dbg("Start tag:", tag)
-        #-print "Start tag:", tag
+        #-print("Start tag:", tag)
         for attr in attrs:
             #self.print_dbg("     attr:", attr)
-            #-print "     attr:", attr
+            #-print("     attr:", attr)
             if tag == "section" and attr == ("class", "film-screenings-wrapper"):
                 self.in_screenings = True
                 self.before_screenings = False
-                #-print "--  IN SCREENINGS SECTION"
+                #-print("--  IN SCREENINGS SECTION")
             if self.before_screenings:
                 if tag == "a" and attr[0] == "href" and attr[1].startswith("/nl/2019/verzamelprogrammas/"):
                     if self.film.medium_category != "verzamelprogrammas":
                         self.film.combination_url = attr[1]
-                        #-print "--  PART OF COMBINATION {}".format(self.film)
+                        #-print("--  PART OF COMBINATION {}".format(self.film))
             if self.in_screenings:
                 if tag == "span" and attr == ("class", "location"):
                     self.in_location = True
@@ -387,41 +386,41 @@ class FilmPageParser(HTMLParser):
                 #    self.in_date = True
                 if tag =="a" and attr[0] == "data-audience":
                     self.audience = attr[1]
-                    #-print "--  AUDIENCE:   {}".format(self.audience)
+                    #-print("--  AUDIENCE:   {}".format(self.audience))
                 if tag =="a" and attr[0] == "data-date":
                     self.start_date = attr[1]
-                    #-print "--  STARTDATE:  {}".format(self.start_date)
+                    #-print("--  STARTDATE:  {}".format(self.start_date))
                     if len(self.audience) > 0 and len(self.film.combination_url) == 0 and self.film.medium_category != "events":
                         self.add_screening()
 
     def handle_endtag(self, tag):
         #self.print_dbg("End tag  :", tag)
-        #-print "End tag  :", tag
+        #-print("End tag  :", tag)
         self.in_location = False
         #self.in_date = False
         if self.in_screenings:
             if tag == "section":
                 self.in_screenings = False
-                #-print "--  LEAVING SCREENINGS SECTION"
+                #-print("--  LEAVING SCREENINGS SECTION")
             if tag == "time":
                 self.times = self.some_times
-                #-print "--  TIMES     : {}".format(self.times)
+                #-print("--  TIMES     : {}".format(self.times))
 
     def handle_data(self, data):
         #self.print_dbg("Data     :", data)
-        #-print "Data     :", data
+        #-print("Data     :", data)
         if self.in_location:
             location = data.strip()
-            #-print "--  LOCATION:   {}   CATEGORY: {}".format(location, self.film.medium_category)
+            #-print("--  LOCATION:   {}   CATEGORY: {}".format(location, self.film.medium_category))
             try:
                 self.screen = iffr_data.screens[location]
             except KeyError:
                 abbr = location.replace(" ", "").lower()
-                #-print "NEW LOCATION:  '{}' => {}".format(location, abbr)
+                #-print("NEW LOCATION:  '{}' => {}".format(location, abbr))
                 iffr_data.screens[location] =  Screen((location, abbr))
         #if self.in_date:
         #    self.start_date = data.strip()
-        #    print "    START DATE: {}".format(self.start_date)
+        #    print("    START DATE: {}".format(self.start_date))
         if self.in_screenings:
             self.some_times = data.strip()
 
@@ -429,14 +428,14 @@ class FilmPageParser(HTMLParser):
     #    self.print_dbg("Comment  :", data)
 
     #def handle_entityref(self, name):
-    #    c = unichr(name2codepoint[name])
+    #    c = chr(name2codepoint[name])
     #    self.print_dbg("Named ent:", c)
 
     #def handle_charref(self, name):
     #    if name.startswith('x'):
-    #        c = unichr(int(name[1:], 16))
+    #        c = chr(int(name[1:], 16))
     #    else:
-    #        c = unichr(int(name))
+    #        c = chr(int(name))
     #    self.print_dbg("Num ent  :", c)
 
     #def handle_decl(self, data):
@@ -456,7 +455,7 @@ class AzProgrammeHtmlParser(HTMLParser):
 
     def print_dbg(self, str1, str2):
         pass
-        #print str1, str2
+        #print(str1, str2)
 
     def match_attr(self, curr_tag, test_tag, curr_attr, test_attr):
         self.matching_attr_value = ""
@@ -475,19 +474,19 @@ class AzProgrammeHtmlParser(HTMLParser):
             self.print_dbg("        1:              ", attr[1])
             if attr_str(attr, 1).startswith("block-type-film"):
                 self.in_film_part = True
-                #=print "--  FOUND ONE"
+                #=print("--  FOUND ONE")
             if self.match_attr(tag, "img", attr, "alt"):
                 title = self.matching_attr_value
                 film = Film(iffr_data, title, self.url)
-                #=print "--  TITLE: {}".format(title)
-                #=print "--  URL:   {}".format(self.url)
-                #-print "---------------------- START READING FILM URL {} ---".format(self.url)
+                #=print("--  TITLE: {}".format(title))
+                #=print("--  URL:   {}".format(self.url))
+                #-print("---------------------- START READING FILM URL {} ---".format(self.url))
                 #url_reader = UrlReader()
                 #url_reader.read_url(self.url, film)
                 film_html_parser = FilmPageParser(film)
                 film_html_reader = HtmlReader()
                 film_html_reader.feed_page("filmpage_{:03d}.html".format(film.filmId), film_html_parser)
-                #-print "---------------------- DONE  READING FILM URL {} ---".format(film)
+                #-print("---------------------- DONE  READING FILM URL {} ---".format(film))
                 iffr_data.films.append(film)
             if self.match_attr(tag, "a", attr, "href"):
                 self.url = "https://iffr.com{}".format(self.matching_attr_value)
@@ -504,7 +503,7 @@ class AzProgrammeHtmlParser(HTMLParser):
         self.print_dbg("Encountered some data  :", data)
         #if self.in_title_tag:
         #    iffr_data.films.append(Film(iffr_data, data))
-        #    print "    OLD TITLE: {}".format(data)
+        #    print("    OLD TITLE: {}".format(data))
 
 
 class HtmlReader:
@@ -518,14 +517,14 @@ class HtmlReader:
             parser.feed(text)
             #parser.feed(unicode(text, "utf-8"))
         except UnicodeDecodeError as e:
-            print "DECODE ERROR: {}".format(e)
+            print("DECODE ERROR: {}".format(e))
             if hasattr(e, 'encoding'):
-                print "encoding: {}".format(e.encoding)
+                print("encoding: {}".format(e.encoding))
             if hasattr(e, 'reason'):
-                print "reason: {}".format(e.reason)
+                print("reason: {}".format(e.reason))
             if hasattr(e, 'object'):
-                print "object: {}".format(e.object)
-            print "messed up by '{}'".format(e.object[e.start:e.end])
+                print("object: {}".format(e.object))
+            print("messed up by '{}'".format(e.object[e.start:e.end]))
 
     def feed_pages(self, file_format, page_count, parser):
         text = ""
@@ -547,15 +546,15 @@ iffr_parser = AzProgrammeHtmlParser()
 az_html_reader = HtmlReader()
 az_html_reader.feed_pages("page{}.html", 22, iffr_parser)
 
-print "\n\nDONE FEEDING\n"
+print("\n\nDONE FEEDING\n")
 
 #for film in iffr_data.films:
-#    print film
+#    print(film)
 
-print "\n\nWRITING NOW"
+print("\n\nWRITING NOW")
 iffr_data.write_screens()
 iffr_data.write_films()
 iffr_data.write_filmurls()
 iffr_data.write_screenings()
 
-print "\nDONE"
+print("\nDONE")
