@@ -12,7 +12,7 @@ namespace PresentScreenings.TableView
     /// screening is attended at the same time or the film is already planned.
     /// </summary>
 
-    public class Screening : IComparable, ICanWriteList
+    public class Screening : ListReader<Screening>, IComparable, ICanWriteList
     {
         #region Constant Private Members
         private const string _dateFormat = "yyyy-MM-dd";
@@ -50,7 +50,9 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
-        public Screening(string screeningText, List<Screen> screens, List<Film> films)
+        public Screening() { }
+
+        public Screening(string screeningText)
         {
             // Assign the fields of the input string.
             string[] fields = screeningText.Split(';');
@@ -71,19 +73,23 @@ namespace PresentScreenings.TableView
                 endDate = endDate.AddDays(1);
             }
             FilmId = filmId;
-            Film = (from Film film in films where film.FilmId == filmId select film).First();
-            Screen = (from Screen s in screens where s.ToString() == screen select s).First();
+            Film = (from Film film in ScreeningsPlan.Films where film.FilmId == filmId select film).First();
+            Screen = (from Screen s in ScreeningsPlan.Screens where s.ToString() == screen select s).First();
             StartTime = startDate;
             EndTime = endDate;
             FilmsInScreening = filmsInScreening;
             Extra = extra;
             QAndA = qAndA;
-            _screeningInfo =
-                (
-                    from ScreeningInfo s in ScreeningsPlan.ScreeningInfos
-                    where s.FilmId == FilmId && s.Screen == Screen && s.StartTime == StartTime
-                    select s
-                ).First();
+            var screeningInfos = ScreeningsPlan.ScreeningInfos.Where(s => s.FilmId == FilmId && s.Screen == Screen && s.StartTime == StartTime).ToList();
+            if (screeningInfos.Count == 0)
+            {
+                _screeningInfo = new ScreeningInfo(FilmId, Screen, StartTime);
+                ScreeningsPlan.ScreeningInfos.Add(_screeningInfo);
+            }
+            else
+            {
+                _screeningInfo = screeningInfos.First();
+            }
         }
         #endregion
 
@@ -102,18 +108,27 @@ namespace PresentScreenings.TableView
 
         string ICanWriteList.Serialize()
         {
-            string line = string.Join(
-                ';',
-                FilmId,
-                StartTime.ToString(_dateFormat),
-                Screen,
-                StartTime.ToString(_timeFormat),
-                EndTime.ToString(_timeFormat),
-                FilmsInScreening,
-                Extra,
-                QAndA
-            );
-            return line;
+            string line = string.Empty;
+            List<string> fields = new List<string> { };
+            fields.Add(StartTime.DayOfWeek.ToString().Remove(3));
+            fields.Add(StartTime.ToString(_dateFormat));
+            foreach (var filmFan in ScreeningInfo.FilmFans)
+            {
+                fields.Add(ScreeningInfo.BoolToString[FilmFanAttends(filmFan)]);
+            }
+            fields.Add(Screen.ToString());
+            fields.Add(StartTime.ToString(_timeFormat));
+            fields.Add(EndTime.ToString(_timeFormat));
+            fields.Add(Film.ToString());
+            fields.Add(FilmsInScreening.ToString());
+            fields.Add(Extra);
+            fields.Add(QAndA);
+            var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == FilmId);
+            var filmInfo = filmInfoList.Count() == 1 ? filmInfoList.First() : null;
+            fields.Add(filmInfo != null ? filmInfo.Url : "");
+            fields.Add(filmInfo != null ? HtmlDecode(filmInfo.FilmDescription) : "");
+
+            return string.Join(";", fields);
         }
         #endregion
 
@@ -154,39 +169,10 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public static string WriteHeader()
-        {
-            return "filmid;date;screen;starttime;endtime;filmsinscreening;extra;qanda";
-        }
-
         public static string WriteOverviewHeader()
         {
             string headerFmt = "weekday;date;maarten;{0};screen;starttime;endtime;title;filmsinscreening;extra;qanda;url;mainfilmdescription";
             return string.Format(headerFmt, ScreeningInfo.FriendsString().Replace(',', ';'));
-        }
-
-        public static string WriteOverviewRecord(Screening screening)
-        {
-            string line = string.Empty;
-            List<string> fields = new List<string> { };
-            fields.Add(screening.StartTime.DayOfWeek.ToString().Remove(3));
-            fields.Add(screening.StartTime.ToString(_dateFormat));
-            foreach (var filmFan in ScreeningInfo.FilmFans)
-            {
-                fields.Add(ScreeningInfo.BoolToString[screening.FilmFanAttends(filmFan)]);
-            }
-            fields.Add(screening.Screen.ToString());
-            fields.Add(screening.StartTime.ToString(_timeFormat));
-            fields.Add(screening.EndTime.ToString(_timeFormat));
-            fields.Add(screening.Film.ToString());
-            fields.Add(screening.FilmsInScreening.ToString());
-            fields.Add(screening.Extra);
-            fields.Add(screening.QAndA);
-            var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == screening.FilmId);
-            var filmInfo = filmInfoList.Count() == 1 ? filmInfoList.First() : null;
-            fields.Add(filmInfo != null ? filmInfo.Url : "");
-            fields.Add(filmInfo != null ? HtmlDecode(filmInfo.FilmDescription) : "");
-            return string.Join(";", fields.ToArray());
         }
 
         public static string HtmlDecode(string html)

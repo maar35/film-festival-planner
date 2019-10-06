@@ -67,7 +67,6 @@ namespace PresentScreenings.TableView
         [Export("saveDocumentAs:")]
         void ShowSaveAs(NSObject sender)
         {
-
             var dlg = new NSSavePanel
             {
                 Title = "Save Screenings Plan",
@@ -78,37 +77,25 @@ namespace PresentScreenings.TableView
                 CanCreateDirectories = true,
                 ShowsTagField = false
             };
+
             dlg.BeginSheet(Controller.TableView.Window, (result) =>
             {
                 string directory = dlg.Directory;
-
-                // Write screens.
-                string screensPath = Path.Combine(directory, "screens.csv");
-                new ListWriter<Screen>(screensPath).WriteListToFile(ScreeningsPlan.Screens);
-
-                // Write films.
-                string filmsPath = Path.Combine(directory, "films.csv");
-                new ListWriter<Film>(filmsPath, Film.WriteHeader).WriteListToFile(ScreeningsPlan.Films);
 
                 // Write film info.
                 FilmInfo.SaveFilmInfoAsXml(ScreeningsPlan.FilmInfos, Path.Combine(directory, "filminfo.xml"));
 
                 // Write film ratings.
-                string filmFanRatingsPath = Path.Combine(directory, "filmfanfilmratings.csv");
+                string filmFanRatingsPath = Path.Combine(directory, "ratings.csv");
                 new ListWriter<FilmFanFilmRating>(filmFanRatingsPath, FilmFanFilmRating.WriteHeader).WriteListToFile(ScreeningsPlan.FilmFanFilmRatings);
-
-                // Write screenings.
-                string screeningsPath = Path.Combine(directory, "screenings.csv");
-                new ListWriter<Screening>(screeningsPath, Screening.WriteHeader).WriteListToFile(ScreeningsPlan.Screenings);
 
                 // Write screening info.
                 string screeningInfosPath = Path.Combine(directory, "screeninginfo.csv");
                 new ListWriter<ScreeningInfo>(screeningInfosPath, ScreeningInfo.WriteHeader).WriteListToFile(ScreeningsPlan.ScreeningInfos);
 
-                // Write screenings overview.
+                // Write screenings summary.
                 string overviewPath = Path.Combine(directory, "Screenings Summary.csv");
-                var overviewWriter = new ListWriter<Screening>(overviewPath, Screening.WriteOverviewHeader);
-                overviewWriter.WriteListToFile(Controller.Plan.AttendedScreenings(), Screening.WriteOverviewRecord);
+                new ListWriter<Screening>(overviewPath, Screening.WriteOverviewHeader).WriteListToFile(Controller.Plan.AttendedScreenings());
             });
         }
 

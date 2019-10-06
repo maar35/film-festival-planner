@@ -1,5 +1,4 @@
-﻿using System;
-namespace PresentScreenings.TableView
+﻿namespace PresentScreenings.TableView
 {
     public interface ICanWriteList
     {

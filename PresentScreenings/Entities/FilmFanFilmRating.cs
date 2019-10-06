@@ -2,7 +2,7 @@
 
 namespace PresentScreenings.TableView
 {
-    public class FilmFanFilmRating : ICanWriteList
+    public class FilmFanFilmRating : ListReader<FilmFanFilmRating>, ICanWriteList
     {
         #region Properties
         public int FilmId { get; }
@@ -11,6 +11,8 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
+        public FilmFanFilmRating() { }
+
         public FilmFanFilmRating(string filmFanFilmRatingText)
         {
             string[] fields = filmFanFilmRatingText.Split(';');
@@ -27,6 +29,13 @@ namespace PresentScreenings.TableView
             FilmId = filmId;
             FilmFan = filmFan;
             Rating = rating;
+        }
+        #endregion
+
+        #region Override Methods
+        public override bool ListFileIsMandatory()
+        {
+            return false;
         }
         #endregion
 

@@ -14,12 +14,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
-        public ListWriter(string path)
-        {
-            _path = path;
-            _useHeader = false;
-        }
-
         public ListWriter(string path, Func<string> THeaderWriter)
         {
             _path = path;
@@ -29,7 +23,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public void WriteListToFile(List<T> list, Func<T, string> TSerializer)
+        public void WriteListToFile(List<T> list)
         {
             var streamWriter = SaveStream(_path);
             if (_useHeader)
@@ -38,16 +32,11 @@ namespace PresentScreenings.TableView
             }
             foreach (var item in list)
             {
-                string line = TSerializer(item);
+                string line = item.Serialize();
                 streamWriter.WriteLine(line);
             }
             streamWriter.Flush();
             streamWriter.Close();
-        }
-
-        public void WriteListToFile(List<T> list)
-        {
-            WriteListToFile(list, item => item.Serialize());
         }
         #endregion
 

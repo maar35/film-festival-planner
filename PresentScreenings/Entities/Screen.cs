@@ -7,7 +7,7 @@ namespace PresentScreenings.TableView
 	/// Holds the information of a theater screen where a movie screening plays.
 	/// </summary>
 
-    public class Screen : IComparable, ICanWriteList
+    public class Screen : ListReader<Screen>, IComparable
 	{
         #region Properties
         public string ParseName { get; }
@@ -15,12 +15,21 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
+        public Screen() { }
+
         public Screen(string screenText)
-		{
+        {
 			string[] fields = screenText.Split(';');
 			ParseName = fields[0];
 			Abbreviation = fields[1];
 		}
+        #endregion
+
+        #region Override Methods
+        public override bool ListFileHasHeader()
+        {
+            return false;
+        }
         #endregion
 
         #region Interface Implementations
@@ -28,15 +37,10 @@ namespace PresentScreenings.TableView
         {
             return string.Compare(Abbreviation, ((Screen)obj).ToString(), StringComparison.CurrentCulture);
         }
-
-        string ICanWriteList.Serialize()
-        {
-            return string.Join(";", ParseName, Abbreviation);
-        }
         #endregion
 
         #region Public Methods
-		public override string ToString()
+        public override string ToString()
 		{
 			return Abbreviation;
 		}

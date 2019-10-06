@@ -9,7 +9,7 @@ namespace PresentScreenings.TableView
     /// attendabilty, hiding how these are represented in the screenings file.
     /// </summary>
 
-    public class ScreeningInfo : ICanWriteList
+    public class ScreeningInfo : ListReader<ScreeningInfo>, ICanWriteList
     {
         #region Public Members
         public enum ScreeningStatus
@@ -38,7 +38,6 @@ namespace PresentScreenings.TableView
 
         #region Constant Private Members
         private const string _dateTimeFormat = "yyyy-MM-dd HH:mm";
-        private const string _timeFormat = "HH:mm";
         #endregion
 
         #region Static Private Members
@@ -87,6 +86,8 @@ namespace PresentScreenings.TableView
             BoolToString = StringToBool.ToDictionary(x => x.Value, x => x.Key);
         }
 
+        public ScreeningInfo() { }
+
         public ScreeningInfo(string ScreeningInfoText)
         {
             // Parse the fields of the input string.
@@ -107,6 +108,25 @@ namespace PresentScreenings.TableView
             TicketsBought = StringToBool[ticketsBought];
             SoldOut = StringToBool[soldOut];
             Status = GetScreeningStatus(screeningStatus, myFriendsAttendanceStrings);
+        }
+
+        public ScreeningInfo(int filmId, Screen screen, DateTime startTime)
+        {
+            FilmId = filmId;
+            Screen = screen;
+            StartTime = startTime;
+            ScreeningTitle = ViewController.GetFilmById(FilmId).Title;
+            AttendingFilmFans = new List<string>{ };
+            TicketsBought = false;
+            SoldOut = false;
+            Status = ScreeningStatus.Free;
+        }
+        #endregion
+
+        #region Override Methods
+        public override bool ListFileIsMandatory()
+        {
+            return false;
         }
         #endregion
 

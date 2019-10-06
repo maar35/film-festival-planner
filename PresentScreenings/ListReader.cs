@@ -8,39 +8,40 @@ namespace PresentScreenings.TableView
     /// List reader, read a file and return is list of generic objects.
     /// </summary>
 
-    public class ListReader<T> where T : class
-	{
-		#region Private Members
-		string _fileName;
-		bool _skipHeader;
-		#endregion
+    public abstract class ListReader<T> where T : class, new()
+    {
+        #region Virtual Methods
+        public virtual bool ListFileIsMandatory()
+        {
+            return true;
+        }
+        public virtual bool ListFileHasHeader()
+        {
+            return true;
+        }
+        #endregion
 
-		#region Constructors
-		public ListReader(string fileName, bool skipHeader = false)
-		{
-			_fileName = fileName;
-			_skipHeader = skipHeader;
-		}
-		#endregion
-
-		#region Public Methods
-		public List<T> ReadListFromFile(Func<string, T> TConstructor)
-		{
-			var resultList = new List<T> { };
+        #region Public Methods
+        public List<T> ReadListFromFile(string _fileName, Func<string, T> lineConstructor)
+        {
+            var resultList = new List<T> { };
 			using (var streamReader = OpenStream(_fileName))
 			{
-				string line;
-				bool headerToBeSkipped = _skipHeader;
-				while ((line = streamReader.ReadLine()) != null)
-				{
-					if (headerToBeSkipped)
-					{
-						headerToBeSkipped = false;
-						continue;
-					}
-					resultList.Add(TConstructor(line));
-				}
-			}
+                if (streamReader != null)
+                {
+                    string line;
+                    bool headerToBeSkipped = ListFileHasHeader();
+                    while ((line = streamReader.ReadLine()) != null)
+                    {
+                        if (headerToBeSkipped)
+                        {
+                            headerToBeSkipped = false;
+                            continue;
+                        }
+                        resultList.Add(lineConstructor(line));
+                    }
+                }
+            }
 			return resultList;
 		}
 		#endregion
@@ -51,9 +52,20 @@ namespace PresentScreenings.TableView
 			FileStream fileStream;
 			try
 			{
-				fileStream = new FileStream(url, FileMode.Open, FileAccess.Read);
+                fileStream = new FileStream(url, FileMode.Open, FileAccess.Read);
 			}
-			catch (Exception ex)
+            catch (FileNotFoundException)
+            {
+                if (ListFileIsMandatory())
+                {
+                    throw new FileNotFoundException();
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            catch (Exception ex)
 			{
 				throw new Exception(string.Format("Read error, couldn't access file {0}", url), ex);
             }
