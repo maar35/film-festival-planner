@@ -22,10 +22,10 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public List<T> ReadListFromFile(string _fileName, Func<string, T> lineConstructor)
+        public List<T> ReadListFromFile(string fileName, Func<string, T> lineConstructor)
         {
             var resultList = new List<T> { };
-			using (var streamReader = OpenStream(_fileName))
+			using (var streamReader = OpenStream(fileName))
 			{
                 if (streamReader != null)
                 {

@@ -86,8 +86,8 @@ namespace PresentScreenings.TableView
                 FilmInfo.SaveFilmInfoAsXml(ScreeningsPlan.FilmInfos, Path.Combine(directory, "filminfo.xml"));
 
                 // Write film ratings.
-                string filmFanRatingsPath = Path.Combine(directory, "ratings.csv");
-                new ListWriter<FilmFanFilmRating>(filmFanRatingsPath, FilmFanFilmRating.WriteHeader).WriteListToFile(ScreeningsPlan.FilmFanFilmRatings);
+                string ratingsPath = Path.Combine(directory, "ratings.csv");
+                new ListWriter<FilmFanFilmRating>(ratingsPath, FilmFanFilmRating.WriteHeader).WriteListToFile(ScreeningsPlan.FilmFanFilmRatings);
 
                 // Write screening info.
                 string screeningInfosPath = Path.Combine(directory, "screeninginfo.csv");
