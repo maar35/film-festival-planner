@@ -305,6 +305,12 @@ namespace PresentScreenings.TableView
             return info.Count > 0 ? info.First() : null;
         }
 
+        public static Film.FilmInfoStatus GetFilmInfoStatus(int filmId)
+        {
+            var info = GetFilmInfo(filmId);
+            return info == null ? Film.FilmInfoStatus.Absent : info.InfoStatus;
+        }
+
         public static ScreeningInfo GetScreeningInfo(int filmId, Screen screen, DateTime startTime)
         {
             var info = ScreeningsPlan.ScreeningInfos.Where(s => s.FilmId == filmId && s.Screen == screen && s.StartTime == startTime).ToList();

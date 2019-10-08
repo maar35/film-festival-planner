@@ -15,17 +15,17 @@ namespace PresentScreenings.TableView
 
         #region Properties
         public int FilmId { get; }
-        public WebUtility.MediumCatagory MediumCatagory { get => ViewController.GetFilmById(FilmId).Catagory; }
-        public string Url { get => ViewController.GetFilmById(FilmId).Url; }
         public string FilmDescription { get; private set; }
         public string FilmArticle { get; private set; }
-        public Film.FilmInfoStatus InfoStatus { get => _infoStatus; set => SetFilmInfoStatus(value); }
         public struct ScreenedFilm
         {
             public string Title;
             public string Description;
         }
         public List<ScreenedFilm> ScreenedFilms { get; private set; }
+        public WebUtility.MediumCatagory MediumCatagory { get => ViewController.GetFilmById(FilmId).Catagory; }
+        public string Url { get => ViewController.GetFilmById(FilmId).Url; }
+        public Film.FilmInfoStatus InfoStatus { get => _infoStatus; set => SetFilmInfoStatus(value); }
         #endregion
 
         #region Constructors

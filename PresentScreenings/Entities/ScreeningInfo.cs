@@ -9,7 +9,7 @@ namespace PresentScreenings.TableView
     /// attendabilty, hiding how these are represented in the screenings file.
     /// </summary>
 
-    public class ScreeningInfo : ICanWriteList
+    public class ScreeningInfo : ListStreamer<ScreeningInfo>
     {
         #region Public Members
         public enum ScreeningStatus
@@ -38,7 +38,6 @@ namespace PresentScreenings.TableView
 
         #region Constant Private Members
         private const string _dateTimeFormat = "yyyy-MM-dd HH:mm";
-        private const string _timeFormat = "HH:mm";
         #endregion
 
         #region Static Private Members
@@ -87,6 +86,8 @@ namespace PresentScreenings.TableView
             BoolToString = StringToBool.ToDictionary(x => x.Value, x => x.Key);
         }
 
+        public ScreeningInfo() { }
+
         public ScreeningInfo(string ScreeningInfoText)
         {
             // Parse the fields of the input string.
@@ -108,10 +109,33 @@ namespace PresentScreenings.TableView
             SoldOut = StringToBool[soldOut];
             Status = GetScreeningStatus(screeningStatus, myFriendsAttendanceStrings);
         }
+
+        public ScreeningInfo(int filmId, Screen screen, DateTime startTime)
+        {
+            FilmId = filmId;
+            Screen = screen;
+            StartTime = startTime;
+            ScreeningTitle = ViewController.GetFilmById(FilmId).Title;
+            AttendingFilmFans = new List<string>{ };
+            TicketsBought = false;
+            SoldOut = false;
+            Status = ScreeningStatus.Free;
+        }
         #endregion
 
-        #region Interface Implemantations
-        string ICanWriteList.Serialize()
+        #region Override Methods
+        public override bool ListFileIsMandatory()
+        {
+            return false;
+        }
+
+        public override string WriteHeader()
+        {
+            string headerFmt = "filmid;screen;starttime;screeningtitle;blocked;maarten;{0};ticketsbought;soldout";
+            return string.Format(headerFmt, FriendsString());
+        }
+
+        public override string Serialize()
         {
             string line = string.Join(
                 ';',
@@ -129,13 +153,10 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Public Methods
-        public static string WriteHeader()
-        {
-            string headerFmt = "filmid;screen;starttime;screeningtitle;blocked;maarten;{0};ticketsbought;soldout";
-            return string.Format(headerFmt, FriendsString());
-        }
+        #region Interface Implemantations
+        #endregion
 
+        #region Public Methods
         static public ScreeningStatus GetScreeningStatus(string statusString, List<string> friendAttendances)
         {
             ScreeningStatus status = _screeningStatusByString[statusString];

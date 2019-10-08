@@ -26,7 +26,7 @@ namespace PresentScreenings.TableView
         private static string _filmsFile = Path.Combine(_directory, "films.csv");
         private static string _screeningsFile = Path.Combine(_directory, "screenings.csv");
         private static string _screeningInfoFile = Path.Combine(_directory, "screeninginfo.csv");
-        private static string _filmFanFilmRatingsFile = Path.Combine(_directory, "filmfanfilmratings.csv");
+        private static string _ratingsFile = Path.Combine(_directory, "ratings.csv");
         private static string _filmInfoFile = Path.Combine(_directory, "filminfo.xml");
         private Dictionary<DateTime, List<Screen>> _dayScreens;
         private int _currDayNumber;
@@ -53,23 +53,22 @@ namespace PresentScreenings.TableView
         public ScreeningsPlan()
         {
             // Read screens.
-            Screens = new ListReader<Screen>(_screensFile).ReadListFromFile(line => new Screen(line));
+            Screens = new Screen().ReadListFromFile(_screensFile, line => new Screen(line));
 
             // Read film info.
             FilmInfos = FilmInfo.LoadFilmInfoFromXml(_filmInfoFile);
 
             // Read films.
-            Films = new ListReader<Film>(_filmsFile, true).ReadListFromFile(line => new Film(line));
+            Films = new Film().ReadListFromFile(_filmsFile, line => new Film(line));
 
             // Read film ratings.
-            FilmFanFilmRatings = new ListReader<FilmFanFilmRating>(_filmFanFilmRatingsFile, true).ReadListFromFile(line => new FilmFanFilmRating(line));
+            FilmFanFilmRatings = new FilmFanFilmRating().ReadListFromFile(_ratingsFile, line => new FilmFanFilmRating(line));
 
             // Read screening info.
-            ScreeningInfos = new ListReader<ScreeningInfo>(_screeningInfoFile, true).ReadListFromFile(line => new ScreeningInfo(line));
+            ScreeningInfos = new ScreeningInfo().ReadListFromFile(_screeningInfoFile, line => new ScreeningInfo(line));
 
             // Read screenings.
-            ListReader<Screening> ScreeningsReader = new ListReader<Screening>(_screeningsFile, true);
-            Screenings = ScreeningsReader.ReadListFromFile(line => new Screening(line, Screens, Films));
+            Screenings = new Screening().ReadListFromFile(_screeningsFile, line => new Screening(line));
 
             InitializeDays();
             _currDayNumber = 0;

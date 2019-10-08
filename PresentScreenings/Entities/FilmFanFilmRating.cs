@@ -2,7 +2,7 @@
 
 namespace PresentScreenings.TableView
 {
-    public class FilmFanFilmRating : ICanWriteList
+    public class FilmFanFilmRating : ListStreamer<FilmFanFilmRating>
     {
         #region Properties
         public int FilmId { get; }
@@ -11,6 +11,8 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
+        public FilmFanFilmRating() { }
+
         public FilmFanFilmRating(string filmFanFilmRatingText)
         {
             string[] fields = filmFanFilmRatingText.Split(';');
@@ -30,17 +32,20 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Interface Implementations
-        string ICanWriteList.Serialize()
+        #region Override Methods
+        public override bool ListFileIsMandatory()
         {
-            return string.Join(";", FilmId.ToString(), FilmFan, Rating.ToString());
+            return false;
         }
-        #endregion
 
-        #region Public Methods
-        public static string WriteHeader()
+        public override string WriteHeader()
         {
             return "filmid;filmfan;rating";
+        }
+
+        public override string Serialize()
+        {
+            return string.Join(";", FilmId.ToString(), FilmFan, Rating.ToString());
         }
         #endregion
     }

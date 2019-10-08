@@ -88,8 +88,7 @@
     <Compile Include="AppDelegate.designer.cs">
       <DependentUpon>AppDelegate.cs</DependentUpon>
     </Compile>
-    <Compile Include="ListReader.cs" />
-    <Compile Include="ListWriter.cs" />
+    <Compile Include="ListStreamer.cs" />
     <Compile Include="FilmTableDataSource.cs" />
     <Compile Include="FilmTableDelegate.cs" />
     <Compile Include="CombineTitlesEventArgs.cs" />
@@ -146,7 +145,6 @@
     <Compile Include="Views\ScreeningsView.cs" />
     <Compile Include="ControlsFactory.cs" />
     <Compile Include="Controllers\GoToScreeningDialog.cs" />
-    <Compile Include="Interfaces\ICanWriteList.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

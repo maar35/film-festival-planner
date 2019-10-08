@@ -13,10 +13,9 @@ version_number = "0.3"
 project_dir = os.path.expanduser("~/Documents/Film/IFFR/IFFR2019")
 html_input_dir = os.path.join(project_dir, "_website_data")
 data_dir = os.path.join(project_dir, "_planner_data")
-screenfile = os.path.join(data_dir, "screens.csv")
+screensfile = os.path.join(data_dir, "screens.csv")
 filmsfile = os.path.join(data_dir, "films.csv")
 ucodefile = os.path.join(data_dir, "unicodemap.txt")
-filmurlfile = os.path.join(data_dir, "filmurls.txt")
 screeningsfile = os.path.join(data_dir, "screenings.csv")
 
 # Glyphs.
@@ -79,15 +78,16 @@ class Screen():
         self.name = name_abbr_tuple[0]
         self.abbr = name_abbr_tuple[1]
 
-    def __repr__(self):
+    def __str__(self):
         return self.abbr
+
+    def __repr__(self):
+        text = ";".join([self.name, self.abbr])
+        return "{}\n".format(text)
 
     def _key(self):
         return self.name
 
-    def screen_repr_csv(self):
-        text = ";".join([self.name, self.abbr])
-        return "{}\n".format(text)
 
 class Film:
 
@@ -103,9 +103,6 @@ class Film:
         self.title = title
         self.titleLanguage = ""
         self.section = ""
-        self.rating = "0"
-        self.filmInfoStatus = "UrlOnly"
-        #info = FilmInfo(self.filmId, url, "no-description")
         self.url = url
         self.medium_category = url.split("/")[5]
         self.combination_url = ""
@@ -121,13 +118,11 @@ class Film:
             "titlelanguage",
             "section",
             "mediumcategory",
-            "url",
-            "rating",
-            "filminfostatus"
+            "url"
         ])
         return "{}\n".format(text)
 
-    def film_repr_csv(self):
+    def __repr__(self):
         text = ";".join([
             (str)(self.filmId),
             self.sortstring.replace(";", ".,"),
@@ -135,15 +130,6 @@ class Film:
             self.titleLanguage,
             self.section,
             self.filmCategoryByString[self.medium_category],
-            self.url,
-            self.rating,
-            self.filmInfoStatus
-        ])
-        return "{}\n".format(text)
-
-    def filmurl_repr_txt(self):
-        text = ";".join([
-            (str)(self.filmId),
             self.url
         ])
         return "{}\n".format(text)
@@ -183,53 +169,37 @@ class Screening:
         self.screen = screen
         self.startTime = startTime
         self.endTime = endTime
-        self.screeningTitle = film.title
         self.filmsInScreening = 1
         self.extra = ""
         self.qAndA = ""
         self.ticketsBought = "ONWAAR"
         self.soldOut = "ONWAAR"
-        self.startDate = startDate
         self.filmId = film.filmId
         self.audience = audience
 
     def screening_repr_csv_head(self):
         text = ";".join([
-            "blocked",
-            "maarten",
-            "Adrienne,Manfred,Piggel",
-            "startdm",
-            "theatre",
+            "filmid",
+            "date",
+            "screen",
             "starttime",
             "endtime",
-            "title",
-            "filmsinshow",
+            "filmsinscreening",
             "extra",
-            "qanda",
-            "ticketsbought",
-            "soldout",
-            "date",
-            "filmid"
+            "qanda"
         ])
         return "{}\n".format(text)
 
-    def screening_repr_csv(self):
+    def __repr__(self):
         text = ";".join([
-            self.status,
-            self.iAttend,
-            self.attendingFriends,
+            (str)(self.filmId),
             self.startDate,
             self.screen.abbr,
             self.startTime,
             self.endTime,
-            self.screeningTitle,
             (str)(self.filmsInScreening),
             self.extra,
-            self.qAndA,
-            self.ticketsBought,
-            self.soldOut,
-            self.startDate,
-            (str)(self.filmId)
+            self.qAndA
         ])
         return "{}\n".format(text)
 
@@ -257,39 +227,28 @@ class IffrData:
         return line.rstrip(end).split(sep)
 
     def read_screens(self):
-        f = open(screenfile, "r")
-        screens = [Screen(self.splitrec(line, ";")) for line in f]
-        f.close()
-        self.screens = dict([(screen._key(), screen) for screen in screens])
+        with open(screensfile, "r") as f:
+            screens = [Screen(self.splitrec(line, ";")) for line in f]
+        self.screenbylocation = {screen._key(): screen for screen in screens}
 
     def write_screens(self):
-        f = open(screenfile, "w")
-        for screen in self.screens.values():
-            f.write(screen.screen_repr_csv())
-        f.close()
-        print("Done writing {} records to {}.".format(len(self.screens), screenfile))
+        with open(screensfile, "w")as f:
+            for screen in self.screenbylocation.values():
+                f.write(repr(screen))
+        print("Done writing {} records to {}.".format(len(self.screenbylocation), screensfile))
 
     def write_films(self):
-        f = open(filmsfile, "w")
-        f.write(self.films[0].film_repr_csv_head())
-        for film in self.films:
-            f.write(film.film_repr_csv())
-        f.close()
+        with open(filmsfile, "w") as f:
+            f.write(self.films[0].film_repr_csv_head())
+            for film in self.films:
+                f.write(repr(film))
         print("Done writing {} records to {}.".format(len(self.films), filmsfile))
 
-    def write_filmurls(self):
-        f = open(filmurlfile, "w")
-        for film in self.films:
-            f.write(film.filmurl_repr_txt())
-        f.close()
-        print("Done writing {} records to {}.".format(len(self.films), filmurlfile))
-
     def write_screenings(self):
-        f = open(screeningsfile, "w")
-        f.write(self.screenings[0].screening_repr_csv_head())
-        for screening in [s for s in self.screenings if s.audience == "publiek"]:
-            f.write(screening.screening_repr_csv())
-        f.close()
+        with open(screeningsfile, "w") as f:
+            f.write(self.screenings[0].screening_repr_csv_head())
+            for screening in [s for s in self.screenings if s.audience == "publiek"]:
+                f.write(repr(screening))
         print("Done writing {} records to {}.".format(len(self.screenings), screeningsfile))
 
 
@@ -317,7 +276,7 @@ class FilmPageParser(HTMLParser):
     def __init__(self, film):
         HTMLParser.__init__(self)
         self.film = film
-        self.screen = ""
+        self.screen = None
         self.start_date = ""
         self.times = ""
         self.audience = ""
@@ -339,7 +298,7 @@ class FilmPageParser(HTMLParser):
         endTime = self.times.split()[2]
         screening = Screening(self.film, self.screen, startDate, startTime, endTime, self.audience)
         iffr_data.screenings.append(screening)
-        self.screen = ""
+        self.screen = None
         self.times = ""
         self.audience = ""
 
@@ -413,11 +372,11 @@ class FilmPageParser(HTMLParser):
             location = data.strip()
             #-print("--  LOCATION:   {}   CATEGORY: {}".format(location, self.film.medium_category))
             try:
-                self.screen = iffr_data.screens[location]
+                self.screen = iffr_data.screenbylocation[location]
             except KeyError:
                 abbr = location.replace(" ", "").lower()
                 #-print("NEW LOCATION:  '{}' => {}".format(location, abbr))
-                iffr_data.screens[location] =  Screen((location, abbr))
+                iffr_data.screenbylocation[location] =  Screen((location, abbr))
         #if self.in_date:
         #    self.start_date = data.strip()
         #    print("    START DATE: {}".format(self.start_date))
@@ -554,7 +513,7 @@ print("\n\nDONE FEEDING\n")
 print("\n\nWRITING NOW")
 iffr_data.write_screens()
 iffr_data.write_films()
-iffr_data.write_filmurls()
+#iffr_data.write_filmurls()
 iffr_data.write_screenings()
 
 print("\nDONE")
