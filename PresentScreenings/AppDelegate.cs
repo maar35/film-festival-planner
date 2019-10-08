@@ -94,9 +94,10 @@ namespace PresentScreenings.TableView
                 new ScreeningInfo().WriteListToFile(screeningInfosPath, ScreeningsPlan.ScreeningInfos);
 
                 // Write screenings summary.
-                string overviewPath = Path.Combine(directory, "Screenings Summary.csv");
-                new Screening().WriteListToFile(overviewPath, Controller.Plan.AttendedScreenings());
+                string summaryPath = Path.Combine(directory, "Screenings Summary.csv");
+                new Screening().WriteListToFile(summaryPath, Controller.Plan.AttendedScreenings());
             });
+
         }
 
         partial void ToggleClickableLabels(Foundation.NSObject sender)

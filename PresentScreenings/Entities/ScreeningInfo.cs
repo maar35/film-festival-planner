@@ -9,7 +9,7 @@ namespace PresentScreenings.TableView
     /// attendabilty, hiding how these are represented in the screenings file.
     /// </summary>
 
-    public class ScreeningInfo : ListStreamer<ScreeningInfo>
+    public class ScreeningInfo : ListStreamer
     {
         #region Public Members
         public enum ScreeningStatus

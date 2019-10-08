@@ -8,7 +8,7 @@ namespace PresentScreenings.TableView
     /// List streamer, read/write files based on list of derived objects.
     /// </summary>
 
-    public abstract class ListStreamer<T>  where T : ListStreamer<T>, new()
+    public abstract class ListStreamer
     {
         #region Virtual Methods
         public virtual bool ListFileIsMandatory()
@@ -33,7 +33,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public List<T> ReadListFromFile(string fileName, Func<string, T> lineConstructor)
+        public List<T> ReadListFromFile<T>(string fileName, Func<string, T> lineConstructor) where T : ListStreamer
         {
             var resultList = new List<T> { };
 			using (var streamReader = GetStreamReader(fileName))
@@ -56,7 +56,7 @@ namespace PresentScreenings.TableView
 			return resultList;
 		}
 
-        public void WriteListToFile(string fileName, List<T> list)
+        public void WriteListToFile<T>(string fileName, List<T> list) where T : ListStreamer
         {
             using (var streamWriter = GetStreamWriter(fileName))
             {
