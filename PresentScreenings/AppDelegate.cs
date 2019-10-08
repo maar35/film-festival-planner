@@ -87,15 +87,15 @@ namespace PresentScreenings.TableView
 
                 // Write film ratings.
                 string ratingsPath = Path.Combine(directory, "ratings.csv");
-                new ListWriter<FilmFanFilmRating>(ratingsPath, FilmFanFilmRating.WriteHeader).WriteListToFile(ScreeningsPlan.FilmFanFilmRatings);
+                new FilmFanFilmRating().WriteListToFile(ratingsPath, ScreeningsPlan.FilmFanFilmRatings);
 
                 // Write screening info.
                 string screeningInfosPath = Path.Combine(directory, "screeninginfo.csv");
-                new ListWriter<ScreeningInfo>(screeningInfosPath, ScreeningInfo.WriteHeader).WriteListToFile(ScreeningsPlan.ScreeningInfos);
+                new ScreeningInfo().WriteListToFile(screeningInfosPath, ScreeningsPlan.ScreeningInfos);
 
                 // Write screenings summary.
                 string overviewPath = Path.Combine(directory, "Screenings Summary.csv");
-                new ListWriter<Screening>(overviewPath, Screening.WriteOverviewHeader).WriteListToFile(Controller.Plan.AttendedScreenings());
+                new Screening().WriteListToFile(overviewPath, Controller.Plan.AttendedScreenings());
             });
         }
 

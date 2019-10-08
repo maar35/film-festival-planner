@@ -12,7 +12,7 @@ namespace PresentScreenings.TableView
     /// screening is attended at the same time or the film is already planned.
     /// </summary>
 
-    public class Screening : ListReader<Screening>, IComparable, ICanWriteList
+    public class Screening : ListStreamer<Screening>, IComparable
     {
         #region Constant Private Members
         private const string _dateFormat = "yyyy-MM-dd";
@@ -98,18 +98,17 @@ namespace PresentScreenings.TableView
         {
             return string.Format("{0}\n{1} {2} {3} {4} {5}", ScreeningTitle, DayString(StartTime), DurationString(), Screen, Duration.ToString(_durationFormat), Rating);
         }
-        #endregion
-
-        #region Interface Implementations
-        public int CompareTo(object obj)
+        public override string WriteHeader()
         {
-            return StartTime.CompareTo(((Screening)obj).StartTime);
+            string headerFmt = "weekday;date;maarten;{0};screen;starttime;endtime;title;filmsinscreening;extra;qanda;url;mainfilmdescription";
+            return string.Format(headerFmt, ScreeningInfo.FriendsString().Replace(',', ';'));
         }
 
-        string ICanWriteList.Serialize()
+        public override string Serialize()
         {
             string line = string.Empty;
             List<string> fields = new List<string> { };
+
             fields.Add(StartTime.DayOfWeek.ToString().Remove(3));
             fields.Add(StartTime.ToString(_dateFormat));
             foreach (var filmFan in ScreeningInfo.FilmFans)
@@ -129,6 +128,13 @@ namespace PresentScreenings.TableView
             fields.Add(filmInfo != null ? HtmlDecode(filmInfo.FilmDescription) : "");
 
             return string.Join(";", fields);
+        }
+        #endregion
+
+        #region Interface Implementations
+        public int CompareTo(object obj)
+        {
+            return StartTime.CompareTo(((Screening)obj).StartTime);
         }
         #endregion
 
@@ -169,12 +175,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public static string WriteOverviewHeader()
-        {
-            string headerFmt = "weekday;date;maarten;{0};screen;starttime;endtime;title;filmsinscreening;extra;qanda;url;mainfilmdescription";
-            return string.Format(headerFmt, ScreeningInfo.FriendsString().Replace(',', ';'));
-        }
-
         public static string HtmlDecode(string html)
         {
             var htmlRe = new Regex(@"&amp;([a-z]{2,7});", RegexOptions.CultureInvariant);

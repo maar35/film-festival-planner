@@ -2,7 +2,7 @@
 
 namespace PresentScreenings.TableView
 {
-    public class FilmFanFilmRating : ListReader<FilmFanFilmRating>, ICanWriteList
+    public class FilmFanFilmRating : ListStreamer<FilmFanFilmRating>
     {
         #region Properties
         public int FilmId { get; }
@@ -37,19 +37,15 @@ namespace PresentScreenings.TableView
         {
             return false;
         }
-        #endregion
 
-        #region Interface Implementations
-        string ICanWriteList.Serialize()
-        {
-            return string.Join(";", FilmId.ToString(), FilmFan, Rating.ToString());
-        }
-        #endregion
-
-        #region Public Methods
-        public static string WriteHeader()
+        public override string WriteHeader()
         {
             return "filmid;filmfan;rating";
+        }
+
+        public override string Serialize()
+        {
+            return string.Join(";", FilmId.ToString(), FilmFan, Rating.ToString());
         }
         #endregion
     }

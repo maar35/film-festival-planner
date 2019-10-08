@@ -7,7 +7,7 @@ namespace PresentScreenings.TableView
 	/// Holds the information of a theater screen where a movie screening plays.
 	/// </summary>
 
-    public class Screen : ListReader<Screen>, IComparable
+    public class Screen : ListStreamer<Screen>, IComparable
 	{
         #region Properties
         public string ParseName { get; }

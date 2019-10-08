@@ -9,7 +9,7 @@ namespace PresentScreenings.TableView
     /// attendabilty, hiding how these are represented in the screenings file.
     /// </summary>
 
-    public class ScreeningInfo : ListReader<ScreeningInfo>, ICanWriteList
+    public class ScreeningInfo : ListStreamer<ScreeningInfo>
     {
         #region Public Members
         public enum ScreeningStatus
@@ -128,10 +128,14 @@ namespace PresentScreenings.TableView
         {
             return false;
         }
-        #endregion
 
-        #region Interface Implemantations
-        string ICanWriteList.Serialize()
+        public override string WriteHeader()
+        {
+            string headerFmt = "filmid;screen;starttime;screeningtitle;blocked;maarten;{0};ticketsbought;soldout";
+            return string.Format(headerFmt, FriendsString());
+        }
+
+        public override string Serialize()
         {
             string line = string.Join(
                 ';',
@@ -149,13 +153,10 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Public Methods
-        public static string WriteHeader()
-        {
-            string headerFmt = "filmid;screen;starttime;screeningtitle;blocked;maarten;{0};ticketsbought;soldout";
-            return string.Format(headerFmt, FriendsString());
-        }
+        #region Interface Implemantations
+        #endregion
 
+        #region Public Methods
         static public ScreeningStatus GetScreeningStatus(string statusString, List<string> friendAttendances)
         {
             ScreeningStatus status = _screeningStatusByString[statusString];

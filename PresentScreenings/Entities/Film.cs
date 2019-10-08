@@ -6,7 +6,7 @@ namespace PresentScreenings.TableView
     /// Keeps information about a film and supports international sorting and personal rating.
     /// </summary>
 
-    public class Film : ListReader<Film>
+    public class Film : ListStreamer<Film>
     {
         #region Public Members
         public enum FilmInfoStatus
@@ -56,13 +56,6 @@ namespace PresentScreenings.TableView
         public override string ToString()
         {
             return Title;
-        }
-        #endregion
-
-        #region Public Methods
-        public static string WriteHeader()
-        {
-            return "filmid;sort;title;titlelanguage;section;mediumcategory;url";
         }
         #endregion
     }
