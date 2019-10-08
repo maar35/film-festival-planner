@@ -6,7 +6,7 @@ namespace PresentScreenings.TableView
     /// Keeps information about a film and supports international sorting and personal rating.
     /// </summary>
 
-    public class Film : ListStreamer<Film>
+    public class Film : ListStreamer
     {
         #region Public Members
         public enum FilmInfoStatus

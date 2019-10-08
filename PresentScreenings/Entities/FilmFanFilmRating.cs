@@ -2,7 +2,7 @@
 
 namespace PresentScreenings.TableView
 {
-    public class FilmFanFilmRating : ListStreamer<FilmFanFilmRating>
+    public class FilmFanFilmRating : ListStreamer
     {
         #region Properties
         public int FilmId { get; }

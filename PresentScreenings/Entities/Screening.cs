@@ -12,7 +12,7 @@ namespace PresentScreenings.TableView
     /// screening is attended at the same time or the film is already planned.
     /// </summary>
 
-    public class Screening : ListStreamer<Screening>, IComparable
+    public class Screening : ListStreamer, IComparable
     {
         #region Constant Private Members
         private const string _dateFormat = "yyyy-MM-dd";
