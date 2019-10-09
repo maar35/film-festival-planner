@@ -143,7 +143,6 @@ namespace PresentScreenings.TableView
                 StartTime.ToString(_dateTimeFormat),
                 ScreeningTitle,
                 GetScreeningStatusString(Status),
-                //BoolToString[IAttend],
                 AttendeesString(),
                 BoolToString[TicketsBought],
                 BoolToString[SoldOut]
