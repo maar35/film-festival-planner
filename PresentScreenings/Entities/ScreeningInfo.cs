@@ -56,9 +56,9 @@ namespace PresentScreenings.TableView
         public Screen Screen { get; private set; }
         public DateTime StartTime { get; private set; }
         public string ScreeningTitle { get; set; }
-        public List<string> AttendingFilmFans { get; set; }
-        public bool IAttend { get => AttendingFilmFans.Contains(Me); }
-        public List<string> AttendingFriends { get => AttendingFilmFans.Where(f => f != Me).ToList(); }
+        public List<string> Attendees { get; set; }
+        public bool IAttend { get => Attendees.Contains(Me); }
+        public List<string> AttendingFriends { get => Attendees.Where(f => f != Me).ToList(); }
         public bool TicketsBought { get; set; }
         public bool SoldOut { get; set; }
         public ScreeningStatus Status { get; set; }
@@ -97,17 +97,16 @@ namespace PresentScreenings.TableView
             StartTime = DateTime.Parse(fields[2]);
             ScreeningTitle = fields[3];
             string screeningStatus = fields[4];
-            string myAttendanceString = fields[5];
-            var myFriendsAttendanceStrings = new List<string>(fields[6].Split(','));
-            string ticketsBought = fields[7];
-            string soldOut = fields[8];
+            var attendanceStrings = new List<string>(fields[5].Split(','));
+            string ticketsBought = fields[6];
+            string soldOut = fields[7];
 
             // Assign members.
             Screen = (from Screen s in ScreeningsPlan.Screens where s.ToString() == screen select s).ElementAt(0);
-            AttendingFilmFans = GetAttendingFilmFans(myAttendanceString, myFriendsAttendanceStrings);
+            Attendees = GetAttendeesFromStrings(attendanceStrings);
             TicketsBought = StringToBool[ticketsBought];
             SoldOut = StringToBool[soldOut];
-            Status = GetScreeningStatus(screeningStatus, myFriendsAttendanceStrings);
+            Status = GetScreeningStatus(screeningStatus, attendanceStrings);
         }
 
         public ScreeningInfo(int filmId, Screen screen, DateTime startTime)
@@ -116,7 +115,7 @@ namespace PresentScreenings.TableView
             Screen = screen;
             StartTime = startTime;
             ScreeningTitle = ViewController.GetFilmById(FilmId).Title;
-            AttendingFilmFans = new List<string>{ };
+            Attendees = new List<string>{ };
             TicketsBought = false;
             SoldOut = false;
             Status = ScreeningStatus.Free;
@@ -131,8 +130,8 @@ namespace PresentScreenings.TableView
 
         public override string WriteHeader()
         {
-            string headerFmt = "filmid;screen;starttime;screeningtitle;blocked;maarten;{0};ticketsbought;soldout";
-            return string.Format(headerFmt, FriendsString());
+            string headerFmt = "filmid;screen;starttime;screeningtitle;blocked;{0};ticketsbought;soldout";
+            return string.Format(headerFmt, FilmFansString());
         }
 
         public override string Serialize()
@@ -144,16 +143,12 @@ namespace PresentScreenings.TableView
                 StartTime.ToString(_dateTimeFormat),
                 ScreeningTitle,
                 GetScreeningStatusString(Status),
-                BoolToString[IAttend],
-                AttendingFriendsString(AttendingFriends),
+                AttendeesString(),
                 BoolToString[TicketsBought],
                 BoolToString[SoldOut]
             );
             return line;
         }
-        #endregion
-
-        #region Interface Implemantations
         #endregion
 
         #region Public Methods
@@ -179,16 +174,9 @@ namespace PresentScreenings.TableView
             return _stringByScreeningStatus[status];
         }
 
-        static public string FriendsString()
+        public static string FilmFansString()
         {
-            return string.Join(",", MyFriends);
-        }
-
-        public static string AttendingFriendsString(List<string> attendees)
-        {
-			var attendingFanStrings = AttendingFilmFansStrings(MyFriends, attendees);
-            string csString = string.Join(",", attendingFanStrings);
-            return csString;
+            return string.Join(",", FilmFans);
         }
 
         public static TicketsStatus GetTicketStatus(bool iAttend, bool ticketsBought)
@@ -203,36 +191,24 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        private static List<string> GetAttendingFilmFans(string myAttendanceString, List<string> myFriendAttendanceStrings)
-        {
-            var attendanceStrings = new List<string> { myAttendanceString };
-            attendanceStrings.AddRange(myFriendAttendanceStrings);
-            return GetAttendingFilmFans(FilmFans, attendanceStrings);
-        }
-
-        private static List<string> GetAttendingFilmFans(List<string> fans, List<string> attendanceStrings)
+        private static List<string> GetAttendeesFromStrings(List<string> attendanceStrings)
 		{
 			var attendees = new List<string> { };
-			int max = new List<int> { fans.Count, attendanceStrings.Count }.Min<int>();
+			int max = new List<int> { FilmFans.Count, attendanceStrings.Count }.Min<int>();
 			for (int i = 0; i < max; i++)
 			{
 				if (StringToBool[attendanceStrings[i]])
 				{
-					attendees.Add(fans[i]);
+					attendees.Add(FilmFans[i]);
 				}
 			}
 			return attendees;
 		}
 
-        private static List<string> AttendingFilmFansStrings(List<string> fans, List<string> attendees)
+        private string AttendeesString()
         {
-            var attendeeStrings = new List<string> { };
-            foreach (var fan in fans)
-            {
-                bool attends = attendees.Contains(fan);
-                attendeeStrings.Add(BoolToString[attends]);
-            }
-            return attendeeStrings;
+            var attendeeStrings = FilmFans.Select(f => BoolToString[Attendees.Contains(f)]);
+            return string.Join(',', attendeeStrings);
         }
         #endregion
     }
