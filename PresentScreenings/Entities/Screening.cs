@@ -39,7 +39,7 @@ namespace PresentScreenings.TableView
         public string QAndA { get; }
         public FilmRating Rating => Film.Rating;
         public string ScreeningTitle { get => _screeningInfo.ScreeningTitle; set => _screeningInfo.ScreeningTitle = value; }
-        public List<string> AttendingFilmFans { get => _screeningInfo.AttendingFilmFans; set => _screeningInfo.AttendingFilmFans = value; }
+        public List<string> AttendingFilmFans { get => _screeningInfo.Attendees; set => _screeningInfo.Attendees = value; }
         public bool IAttend { get => _screeningInfo.IAttend; }
         public List<string> AttendingFriends => _screeningInfo.AttendingFriends;
         public bool SoldOut { get => _screeningInfo.SoldOut; set => _screeningInfo.SoldOut = value; }
@@ -100,8 +100,8 @@ namespace PresentScreenings.TableView
         }
         public override string WriteHeader()
         {
-            string headerFmt = "weekday;date;maarten;{0};screen;starttime;endtime;title;filmsinscreening;extra;qanda;url;mainfilmdescription";
-            return string.Format(headerFmt, ScreeningInfo.FriendsString().Replace(',', ';'));
+            string headerFmt = "weekday;date;{0};screen;starttime;endtime;title;filmsinscreening;extra;qanda;url;mainfilmdescription";
+            return string.Format(headerFmt, ScreeningInfo.FilmFansString().Replace(',', ';'));
         }
 
         public override string Serialize()
@@ -246,7 +246,7 @@ namespace PresentScreenings.TableView
         /// <summary>
         /// Returns a string consisting of the initials of attending friends to
         /// be displayd on labels of screenings of the same film.
-        /// Does not display all film fans becuase 'my attendance' follows from
+        /// Does not display all film fans because 'my attendance' follows from
         /// the label color.
         /// </summary>
         /// <returns></returns>
@@ -266,7 +266,7 @@ namespace PresentScreenings.TableView
         /// Ratings appear directly after the initial of the friend who rated.
         /// Attending friends' initials are in upper case, initials of friends
         /// who rated the film but do not attend the screening in lower case.
-        /// Does not display all film fans becuase 'my attendance' follows from
+        /// Does not display all film fans because 'my attendance' follows from
         /// the label color.
         /// </summary>
         /// <returns></returns>
