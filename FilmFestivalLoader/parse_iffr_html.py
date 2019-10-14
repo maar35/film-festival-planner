@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import os
+import sys
 from html.parser import HTMLParser
 from html.entities import name2codepoint
 import urllib.request
@@ -18,18 +19,52 @@ filmsfile = os.path.join(data_dir, "films.csv")
 ucodefile = os.path.join(data_dir, "unicodemap.txt")
 screeningsfile = os.path.join(data_dir, "screenings.csv")
 
-# Glyphs.
+
+class Globals:
+    iffr_data = None
+
+
+# Map unicode to ASCII.
 
 f = open(ucodefile)
 umapkeys = f.readline().rstrip("\n").split(";")
 umapvalues = f.readline().rstrip("\n").split(";")
 f.close()
 
-### my parser ###
 
-# create a subclass and override the handler methods
+def main():
+    writelists = True
+    try:
+        # instantiate the parser.
+        
+        Globals.iffr_data = IffrData()
+        iffr_parser = AzProgrammeHtmlParser()
+        print("PARSER INITIATED\n")
+        
+        # Get the HTML and feed it to the parser.
+        
+        az_html_reader = HtmlReader()
+        az_html_reader.feed_pages("page{}.html", 22, iffr_parser)
+        print("\n\nDONE FEEDING\n")
+        
+    except KeyboardInterrupt:
+        print("Interrupted from keyboard... exiting")
+        writelists = False
+    except SystemExit:
+        print("Quitting now.")
+
+    if writelists:
+        print("\n\nWRITING LISTS")
+        Globals.iffr_data.write_screens()
+        Globals.iffr_data.write_films()
+        Globals.iffr_data.write_screenings()
+    
+    print("\nDONE")
+
 
 class MyHTMLParser(HTMLParser):
+    """Example HTML parser"""
+    
     def handle_starttag(self, tag, attrs):
         print("Start tag:", tag)
         for attr in attrs:
@@ -64,9 +99,6 @@ my_parser = MyHTMLParser()
 #my_parser.feed('<a href="/nl/2019/films/%C3%A0-travers-la-lune">')
 #my_parser.feed(text)
 
-### iffr parser ###
-
-# Globals
 
 def attr_str(attr, index):
     return (str)(attr[index])
@@ -96,8 +128,8 @@ class Film:
     filmCategoryByString["verzamelprogrammas"] = "CombinedProgrammes"
     filmCategoryByString["events"] = "Events"
 
-    def __init__(self, admin, title, url):
-        self.filmId = admin.new_film_id()
+    def __init__(self, filmid, title, url):
+        self.filmid = filmid
         self.sortedTitle = title
         self.sortstring = self.lower(self.sortedTitle)
         self.title = title
@@ -124,7 +156,7 @@ class Film:
 
     def __repr__(self):
         text = ";".join([
-            (str)(self.filmId),
+            (str)(self.filmid),
             self.sortstring.replace(";", ".,"),
             self.title.replace(";", ".,"),
             self.titleLanguage,
@@ -143,22 +175,6 @@ class Film:
         return self.toascii(s).lower()
 
 
-class FilmInfo:
-
-    def __init__(self, id, url, desc):
-        self.filmId = id
-        self.url = url
-        self.description = desc
-
-    def filminfo_repr_csv(self):
-        text = ";".join([
-            (str)(self.filmId),
-            self.url,
-            self.description
-        ])
-        return "{}\n".format(text)
-
-
 class Screening:
 
     def __init__(self, film, screen, startDate, startTime, endTime, audience):
@@ -174,7 +190,7 @@ class Screening:
         self.qAndA = ""
         self.ticketsBought = "ONWAAR"
         self.soldOut = "ONWAAR"
-        self.filmId = film.filmId
+        self.filmid = film.filmid
         self.audience = audience
 
     def screening_repr_csv_head(self):
@@ -192,7 +208,7 @@ class Screening:
 
     def __repr__(self):
         text = ";".join([
-            (str)(self.filmId),
+            (str)(self.filmid),
             self.startDate,
             self.screen.abbr,
             self.startTime,
@@ -211,41 +227,59 @@ class IffrData:
     def __init__(self):
         self.films = []
         self.filmUrls = []
-        self.filmInfos = []
         self.screenings = []
+        self.filmid_by_url = {}
         self.read_screens()
+        self.read_filmids()
 
-    def new_film_id(self):
-        self.curr_film_id = self.curr_film_id + 1
-        return self.curr_film_id
+    def new_film_id(self, url):
+        try:
+            filmid = self.filmid_by_url[url]
+        except KeyError:
+            self.curr_film_id = self.curr_film_id + 1
+            filmid = self.curr_film_id
+            self.filmid_by_url[url] = filmid
+        return filmid
 
     def read_url(self, url):
         pass
 
     def splitrec(self, line, sep):
-        end = sep + "\r\n"
+        end = sep + '\r\n'
         return line.rstrip(end).split(sep)
 
     def read_screens(self):
-        with open(screensfile, "r") as f:
-            screens = [Screen(self.splitrec(line, ";")) for line in f]
+        with open(screensfile, 'r') as f:
+            screens = [Screen(self.splitrec(line, ';')) for line in f]
         self.screenbylocation = {screen._key(): screen for screen in screens}
 
+    def read_filmids(self):
+        try:
+            with open(filmsfile, 'r') as f:
+                records = [self.splitrec(line, ';') for line in f]
+            for record in records[1:]:
+                filmid = int(record[0]);
+                url = record[6]
+                self.filmid_by_url[url] = filmid
+        except OSError:
+            pass
+        self.curr_film_id = max(self.filmid_by_url.values())
+
     def write_screens(self):
-        with open(screensfile, "w")as f:
+        with open(screensfile, 'w')as f:
             for screen in self.screenbylocation.values():
                 f.write(repr(screen))
         print("Done writing {} records to {}.".format(len(self.screenbylocation), screensfile))
 
     def write_films(self):
-        with open(filmsfile, "w") as f:
+        with open(filmsfile, 'w') as f:
             f.write(self.films[0].film_repr_csv_head())
             for film in self.films:
                 f.write(repr(film))
         print("Done writing {} records to {}.".format(len(self.films), filmsfile))
 
     def write_screenings(self):
-        with open(screeningsfile, "w") as f:
+        with open(screeningsfile, 'w') as f:
             f.write(self.screenings[0].screening_repr_csv_head())
             for screening in [s for s in self.screenings if s.audience == "publiek"]:
                 f.write(repr(screening))
@@ -255,9 +289,13 @@ class IffrData:
 class UrlReader:
 
     def read_url(self, url, film):
-        req = urllib.request.Request(url)
+        user_agent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
+        headers = {'User-Agent': user_agent}
+        req = urllib.request.Request(url, headers=headers)
+
         try:
-            response = urllib.request.urlopen(req)
+            with urllib.request.urlopen(req) as response:
+                html = response.read().decode()
         except urllib.error.URLError as e:
             if hasattr(e, 'reason'):
                 print('We failed to reach a server.')
@@ -265,10 +303,11 @@ class UrlReader:
             elif hasattr(e, 'code'):
                 print('The server couldn\'t fulfill the request.')
                 print('Error code: ', e.code)
-        else:
-            html = response.read()
-            #film_parser = FilmPageParser()
-            #film_parser.feed(html)
+            html = ""
+#        else:
+#            film_parser = FilmPageParser()
+#            film_parser.feed(html)
+        return html
 
 
 class FilmPageParser(HTMLParser):
@@ -297,7 +336,7 @@ class FilmPageParser(HTMLParser):
         startTime = self.times.split()[0]
         endTime = self.times.split()[2]
         screening = Screening(self.film, self.screen, startDate, startTime, endTime, self.audience)
-        iffr_data.screenings.append(screening)
+        Globals.iffr_data.screenings.append(screening)
         self.screen = None
         self.times = ""
         self.audience = ""
@@ -372,11 +411,11 @@ class FilmPageParser(HTMLParser):
             location = data.strip()
             #-print("--  LOCATION:   {}   CATEGORY: {}".format(location, self.film.medium_category))
             try:
-                self.screen = iffr_data.screenbylocation[location]
+                self.screen = Globals.iffr_data.screenbylocation[location]
             except KeyError:
                 abbr = location.replace(" ", "").lower()
                 #-print("NEW LOCATION:  '{}' => {}".format(location, abbr))
-                iffr_data.screenbylocation[location] =  Screen((location, abbr))
+                Globals.iffr_data.screenbylocation[location] =  Screen((location, abbr))
         #if self.in_date:
         #    self.start_date = data.strip()
         #    print("    START DATE: {}".format(self.start_date))
@@ -436,17 +475,29 @@ class AzProgrammeHtmlParser(HTMLParser):
                 #=print("--  FOUND ONE")
             if self.match_attr(tag, "img", attr, "alt"):
                 title = self.matching_attr_value
-                film = Film(iffr_data, title, self.url)
-                #=print("--  TITLE: {}".format(title))
-                #=print("--  URL:   {}".format(self.url))
-                #-print("---------------------- START READING FILM URL {} ---".format(self.url))
-                #url_reader = UrlReader()
-                #url_reader.read_url(self.url, film)
-                film_html_parser = FilmPageParser(film)
-                film_html_reader = HtmlReader()
-                film_html_reader.feed_page("filmpage_{:03d}.html".format(film.filmId), film_html_parser)
-                #-print("---------------------- DONE  READING FILM URL {} ---".format(film))
-                iffr_data.films.append(film)
+                filmid = Globals.iffr_data.new_film_id(self.url)
+                film = Film(filmid, title, self.url)
+                film_html_file = os.path.join(html_input_dir, "filmpage_{:03d}.html".format(film.filmid))
+                if not os.path.isfile(film_html_file):
+                    print("--  TITLE: {}".format(title))
+                    print("--  URL:   {}".format(self.url))
+                    print("---------------------- START READING FILM URL ---")
+                    url_reader = UrlReader()
+                    html = url_reader.read_url(self.url, film)
+                    if len(html)> 0:
+                        with open(film_html_file, 'w') as f:
+                            f.write(html)
+                        print("--  Done writing URL to {}.".format(film_html_file))
+                    else:
+                        print("--  ERROR: Failed at film #{} '{}'.\n".format(filmid, title))
+                        sys.exit(0)
+                if os.path.isfile(film_html_file):
+                    film_html_parser = FilmPageParser(film)
+                    film_html_reader = HtmlReader()
+                    film_html_reader.feed_page(film_html_file, film_html_parser)
+                        
+                    #-print("---------------------- DONE  READING FILM URL {} ---".format(film))
+                    Globals.iffr_data.films.append(film)
             if self.match_attr(tag, "a", attr, "href"):
                 self.url = "https://iffr.com{}".format(self.matching_attr_value)
         #if self.in_film_part and tag == "h2":
@@ -461,17 +512,15 @@ class AzProgrammeHtmlParser(HTMLParser):
     def handle_data(self, data):
         self.print_dbg("Encountered some data  :", data)
         #if self.in_title_tag:
-        #    iffr_data.films.append(Film(iffr_data, data))
+        #    Globals.iffr_data.films.append(Film(Globals.iffr_data, data))
         #    print("    OLD TITLE: {}".format(data))
 
 
 class HtmlReader:
 
-    def feed_page(self, file_name, parser):
-        html_input_file = os.path.join(html_input_dir, file_name)
-        f = open(html_input_file, "r")
-        text = "\n" + "\n".join([line for line in f])
-        f.close()
+    def feed_page(self, html_input_file, parser):
+        with open(html_input_file, 'r') as f:
+            text = '\n' + '\n'.join([line for line in f])
         try:
             parser.feed(text)
             #parser.feed(unicode(text, "utf-8"))
@@ -489,31 +538,9 @@ class HtmlReader:
         text = ""
         for page_number in range(0, page_count):
             html_input_file = os.path.join(html_input_dir, file_format.format(page_number))
-            f = open(html_input_file, "r")
-            text = text + "\n" + "\n".join([line for line in f])
-            f.close()
+            with open(html_input_file, 'r') as f:
+                text = text + '\n' + '\n'.join([line for line in f])
         parser.feed(text)
 
 
-# instantiate the parser.
-
-iffr_data = IffrData()
-iffr_parser = AzProgrammeHtmlParser()
-
-# Get the HTML and feed it to the parser.
-
-az_html_reader = HtmlReader()
-az_html_reader.feed_pages("page{}.html", 22, iffr_parser)
-
-print("\n\nDONE FEEDING\n")
-
-#for film in iffr_data.films:
-#    print(film)
-
-print("\n\nWRITING NOW")
-iffr_data.write_screens()
-iffr_data.write_films()
-#iffr_data.write_filmurls()
-iffr_data.write_screenings()
-
-print("\nDONE")
+main()
