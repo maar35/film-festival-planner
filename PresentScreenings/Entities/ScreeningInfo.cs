@@ -19,6 +19,7 @@ namespace PresentScreenings.TableView
             AttendedByFriend,
             AttendingFilm,
             TimeOverlap,
+            NoTravelTime,
             NeedingTickets
         }
         public enum Warning
@@ -72,6 +73,7 @@ namespace PresentScreenings.TableView
             _screeningStatusByString.Add("MAARTEN", ScreeningStatus.Attending);
             _screeningStatusByString.Add("FILM", ScreeningStatus.AttendingFilm);
             _screeningStatusByString.Add("TIJD", ScreeningStatus.TimeOverlap);
+            _screeningStatusByString.Add("REISTIJD", ScreeningStatus.NoTravelTime);
             _screeningStatusByString.Add("TICKETSNODIG", ScreeningStatus.NeedingTickets);
             _stringByScreeningStatus = _screeningStatusByString.ToDictionary(x => x.Value, x => x.Key);
             _stringByScreeningStatus.Add(ScreeningStatus.AttendedByFriend, "ONWAAR");

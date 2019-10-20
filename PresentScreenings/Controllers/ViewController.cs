@@ -187,6 +187,10 @@ namespace PresentScreenings.TableView
             {
                 screening.Status = ScreeningInfo.ScreeningStatus.TimeOverlap;
             }
+            else if (HasTimeOverlap(screening, true))
+            {
+                screening.Status = ScreeningInfo.ScreeningStatus.NoTravelTime;
+            }
             else
             {
                 screening.Status = ScreeningInfo.ScreeningStatus.Free;
@@ -205,25 +209,21 @@ namespace PresentScreenings.TableView
             return timesIAttendFilm;
         }
 
-        List<Screening> OverlappingAttendedScreenings(Screening screening)
+        List<Screening> OverlappingAttendedScreenings(Screening screening, bool useTravelTime = false)
         {
             var overlappingAttendedScreenings = (
                 from Screening s in ScreeningsPlan.Screenings
-                where s.IAttend
-                    && s.StartTime <= screening.EndTime
-                    && s.EndTime >= screening.StartTime
+                where s.IAttend && s.Overlaps(screening, useTravelTime)
                 select s
             ).ToList();
             return overlappingAttendedScreenings;
         }
 
-        List<Screening> OverlappingScreenings(Screening screening)
+        List<Screening> OverlappingScreenings(Screening screening, bool useTravelTime = false)
         {
             var overlappingScreenings = (
                 from Screening s in ScreeningsPlan.Screenings
-                where s.StartTime <= screening.EndTime
-                    && s.EndTime >= screening.StartTime
-                    && s.FilmId != screening.FilmId
+                where s.Overlaps(screening, useTravelTime) && s.FilmId != screening.FilmId
                 select s
             ).ToList();
             return overlappingScreenings;
@@ -239,9 +239,9 @@ namespace PresentScreenings.TableView
             return screeningsWithSameFilm;
         }
 
-        bool HasTimeOverlap(Screening screening)
+        bool HasTimeOverlap(Screening screening, bool useTravelTime = false)
         {
-            return OverlappingAttendedScreenings(screening).Count() > 0;
+            return OverlappingAttendedScreenings(screening, useTravelTime).Count() > 0;
         }
         #endregion
 
@@ -378,6 +378,13 @@ namespace PresentScreenings.TableView
                 }
             }
         }
+
+        public static FilmRating GetMaxRating(Film film)
+        {
+            var ratings = ScreeningInfo.FilmFans.Select(f => GetFilmFanFilmRating(film, f));
+            var rating = ratings.Max();
+            return rating;
+        }
         #endregion
 
         #region Public Methods working with Screening Attendance
@@ -389,6 +396,12 @@ namespace PresentScreenings.TableView
             foreach (Screening overlappingScreening in overlappingScreenings)
             {
                 UpdateOneAttendanceStatus(overlappingScreening);
+            }
+
+            var noTravelTimeScreenings = OverlappingScreenings(screening, true);
+            foreach (Screening noTravelTimeScreening in noTravelTimeScreenings)
+            {
+                UpdateOneAttendanceStatus(noTravelTimeScreening);
             }
 
             var screeningsWithSameFilm = ScreeningsWithSameFilm(screening);
