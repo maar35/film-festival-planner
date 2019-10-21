@@ -17,8 +17,7 @@ namespace PresentScreenings.TableView
     public class ScreeningControl : NSControl
     {
         #region Private Variables
-		static bool _useCoreGraphics = false;
-		static nfloat _xExtension;
+        static nfloat _xExtension;
         bool _selected = false;
         CGRect _screeningRect;
         Screening _screening;
@@ -31,7 +30,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public static bool UseCoreGraphics { get => _useCoreGraphics; set => _useCoreGraphics = value; }
+        public static bool UseCoreGraphics { get; set; }
         public Screening Screening => _screening;
         public bool Selected
         {
@@ -66,7 +65,7 @@ namespace PresentScreenings.TableView
             nfloat clickWidth = _screeningRect.Height;
             nfloat clickHeigt = _screeningRect.Height;
             CGRect labelRect = new CGRect(_xExtension, 0, Frame.Width - _xExtension, Frame.Height);
-            if (_useCoreGraphics)
+            if (UseCoreGraphics)
             {
                 _button = new ScreeningButton(labelRect, _screening);
                 _button.Activated += (sender, e) => ShowScreeningInfo(_screening);
@@ -125,8 +124,7 @@ namespace PresentScreenings.TableView
 
                 // Draw the rating of the film
                 var film = ViewController.GetFilmById(_screening.FilmId);
-                var ratings = ScreeningInfo.FilmFans.Select(f => ViewController.GetFilmFanFilmRating(film, f));
-                var rating = ratings.Max();
+                var rating = ViewController.GetMaxRating(film);
                 if (rating.IsGreaterOrEqual(FilmRating.LowestSuperRating) || rating.Equals(FilmRating.Unrated))
                 {
                     DrawRating(g, side, rating);

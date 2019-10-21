@@ -24,6 +24,12 @@ namespace PresentScreenings.TableView
 		AppKit.NSMenu _navigateMenu { get; set; }
 
 		[Outlet]
+		AppKit.NSMenuItem _plannerMenuItem { get; set; }
+
+		[Outlet]
+		AppKit.NSMenu _programMenu { get; set; }
+
+		[Outlet]
 		AppKit.NSMenu _screeningMenu { get; set; }
 
 		[Outlet]
@@ -74,6 +80,9 @@ namespace PresentScreenings.TableView
 		[Action ("ShowScreeningInfo:")]
 		partial void ShowScreeningInfo (Foundation.NSObject sender);
 
+		[Action ("StartPlanner:")]
+		partial void StartPlanner (Foundation.NSObject sender);
+
 		[Action ("ToggleClickableLabels:")]
 		partial void ToggleClickableLabels (Foundation.NSObject sender);
 
@@ -85,9 +94,19 @@ namespace PresentScreenings.TableView
 		
 		void ReleaseDesignerOutlets ()
 		{
+			if (_plannerMenuItem != null) {
+				_plannerMenuItem.Dispose ();
+				_plannerMenuItem = null;
+			}
+
 			if (_clickableLabelsMenuItem != null) {
 				_clickableLabelsMenuItem.Dispose ();
 				_clickableLabelsMenuItem = null;
+			}
+
+			if (_programMenu != null) {
+				_programMenu.Dispose ();
+				_programMenu = null;
 			}
 
 			if (_combineTitlesMenuItem != null) {

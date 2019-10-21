@@ -49,6 +49,10 @@ namespace PresentScreenings.TableView
         public ScreeningInfo.Warning Warning { get; set; } = ScreeningInfo.Warning.NoWarning;
         #endregion
 
+        #region Static Properties
+        public static TimeSpan TravelTime { get; set; }
+        #endregion
+
         #region Constructors
         public Screening() { }
 
@@ -199,6 +203,19 @@ namespace PresentScreenings.TableView
                 AttendingFilmFans.Sort((fan1, fan2) => Key(fan1).CompareTo(Key(fan2)));
             }
         }
+
+        public bool HasPlannableStatus()
+        {
+            return Status == ScreeningInfo.ScreeningStatus.Free && !SoldOut;
+        }
+
+        public bool Overlaps(Screening otherScreening, bool useTravelTime = false)
+        {            
+            var travelTime = useTravelTime ? TravelTime : TimeSpan.Zero;
+            return otherScreening.StartTime <= EndTime + travelTime
+                && otherScreening.EndTime >= StartTime - travelTime;
+
+        }
         #endregion
 
         #region Display Methods
@@ -230,6 +247,11 @@ namespace PresentScreenings.TableView
         public string ToScreeningLabelString(bool withDay = false)
         {
             return string.Format("{0}\n{1}", ScreeningTitle, ScreeningStringForLabel(withDay));
+        }
+
+        public string ToPlannedScreeningString()
+        {
+            return string.Format("{0} {1}", ToLongTimeString(), ScreeningTitle);
         }
 
         public string AttendeesString()

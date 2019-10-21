@@ -145,6 +145,12 @@
     <Compile Include="Views\ScreeningsView.cs" />
     <Compile Include="ControlsFactory.cs" />
     <Compile Include="Controllers\GoToScreeningDialog.cs" />
+    <Compile Include="Menu Delegates\ProgramMenuDelegate.cs" />
+    <Compile Include="Controllers\PlannerDialogController.cs" />
+    <Compile Include="Controllers\PlannerDialogController.designer.cs">
+      <DependentUpon>PlannerDialogController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ScreeningsPlanner.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

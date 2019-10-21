@@ -1,6 +1,5 @@
 ﻿using System;
 using AppKit;
-using System.Collections.Generic;
 
 namespace PresentScreenings.TableView
 {
