@@ -44,6 +44,9 @@ namespace PresentScreenings.TableView
         public List<string> AttendingFriends => _screeningInfo.AttendingFriends;
         public bool SoldOut { get => _screeningInfo.SoldOut; set => _screeningInfo.SoldOut = value; }
         public bool TicketsBought { get => _screeningInfo.TicketsBought; set => _screeningInfo.TicketsBought = value; }
+        public bool HasTimeOverlap { get => ViewController.OverlappingAttendedScreenings(this).Any(); }
+        public bool HasNoTravelTime { get => ViewController.OverlappingAttendedScreenings(this, true).Any(); }
+        public int TimesIAttendFilm { get => ScreeningsPlan.Screenings.Count(s => s.FilmId == FilmId && s.IAttend); }
         public ScreeningInfo.TicketsStatus TicketStatus => ScreeningInfo.GetTicketStatus(IAttend, TicketsBought);
         public ScreeningInfo.ScreeningStatus Status { get => _screeningInfo.Status; set => _screeningInfo.Status = value; }
         public ScreeningInfo.Warning Warning { get; set; } = ScreeningInfo.Warning.NoWarning;
@@ -206,7 +209,9 @@ namespace PresentScreenings.TableView
 
         public bool HasPlannableStatus()
         {
-            return Status == ScreeningInfo.ScreeningStatus.Free && !SoldOut;
+            bool free = Status == ScreeningInfo.ScreeningStatus.Free;
+            bool attendedByFriend = Status == ScreeningInfo.ScreeningStatus.AttendedByFriend;
+            return (free || attendedByFriend && TimesIAttendFilm == 0 && !HasNoTravelTime) && !SoldOut;
         }
 
         public bool Overlaps(Screening otherScreening, bool useTravelTime = false)
