@@ -34,7 +34,12 @@ namespace PresentScreenings.TableView
                 var films = ScreeningsPlan.Films.Where(f => ViewController.GetMaxRating(f).Equals(rating)).ToList();
 
                 // Select free screenings of the selected films.
-                var screenings = ScreeningsPlan.Screenings.Where(s => IsPlannable(s, films)).ToList();
+                var screenings = ScreeningsPlan.Screenings
+                    .Where(s => IsPlannable(s, films))
+                    .OrderByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.AttendedByFriend)
+                    .ThenByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.Free)
+                    .ThenByDescending(s => s.StartTime)
+                    .ToList();
 
                 // Attend the films.
                 foreach (var screening in screenings)
