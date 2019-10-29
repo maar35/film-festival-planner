@@ -44,7 +44,7 @@ namespace PresentScreenings.TableView
                 // Attend the films.
                 foreach (var screening in screenings)
                 {
-                    if (screening.HasPlannableStatus())
+                    if (screening.IsPlannable)
                     {
                         screening.ToggleFilmFanAttendance(filmFan);
                         _controller.UpdateAttendanceStatus(screening);
@@ -72,7 +72,7 @@ namespace PresentScreenings.TableView
         private bool IsPlannable(Screening screening, List<Film> films)
         {
             var inSelectedFilms = films.Count(f => f.FilmId == screening.FilmId) > 0;
-            return screening.HasPlannableStatus() && inSelectedFilms;
+            return screening.IsPlannable && inSelectedFilms;
         }
 
         private bool HasAttendedScreening(Film film, string filmFan)

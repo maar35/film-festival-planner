@@ -40,13 +40,14 @@ namespace PresentScreenings.TableView
         public FilmRating Rating => Film.Rating;
         public string ScreeningTitle { get => _screeningInfo.ScreeningTitle; set => _screeningInfo.ScreeningTitle = value; }
         public List<string> AttendingFilmFans { get => _screeningInfo.Attendees; set => _screeningInfo.Attendees = value; }
-        public bool IAttend { get => _screeningInfo.IAttend; }
+        public bool IAttend => _screeningInfo.IAttend;
         public List<string> AttendingFriends => _screeningInfo.AttendingFriends;
         public bool SoldOut { get => _screeningInfo.SoldOut; set => _screeningInfo.SoldOut = value; }
         public bool TicketsBought { get => _screeningInfo.TicketsBought; set => _screeningInfo.TicketsBought = value; }
-        public bool HasTimeOverlap { get => ViewController.OverlappingAttendedScreenings(this).Any(); }
-        public bool HasNoTravelTime { get => ViewController.OverlappingAttendedScreenings(this, true).Any(); }
-        public int TimesIAttendFilm { get => ScreeningsPlan.Screenings.Count(s => s.FilmId == FilmId && s.IAttend); }
+        public bool HasTimeOverlap => ViewController.OverlappingAttendedScreenings(this).Any();
+        public bool HasNoTravelTime => ViewController.OverlappingAttendedScreenings(this, true).Any();
+        public int TimesIAttendFilm => ScreeningsPlan.Screenings.Count(s => s.FilmId == FilmId && s.IAttend);
+        public bool IsPlannable => TimesIAttendFilm == 0 && !HasNoTravelTime && !SoldOut;
         public ScreeningInfo.TicketsStatus TicketStatus => ScreeningInfo.GetTicketStatus(IAttend, TicketsBought);
         public ScreeningInfo.ScreeningStatus Status { get => _screeningInfo.Status; set => _screeningInfo.Status = value; }
         public ScreeningInfo.Warning Warning { get; set; } = ScreeningInfo.Warning.NoWarning;
@@ -205,13 +206,6 @@ namespace PresentScreenings.TableView
                 int Key(string fan) => ScreeningInfo.FilmFans.IndexOf(fan);
                 AttendingFilmFans.Sort((fan1, fan2) => Key(fan1).CompareTo(Key(fan2)));
             }
-        }
-
-        public bool HasPlannableStatus()
-        {
-            bool free = Status == ScreeningInfo.ScreeningStatus.Free;
-            bool attendedByFriend = Status == ScreeningInfo.ScreeningStatus.AttendedByFriend;
-            return (free || attendedByFriend && TimesIAttendFilm == 0 && !HasNoTravelTime) && !SoldOut;
         }
 
         public bool Overlaps(Screening otherScreening, bool useTravelTime = false)
