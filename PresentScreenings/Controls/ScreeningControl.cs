@@ -1,8 +1,8 @@
-﻿using Foundation;
-using System;
+﻿using System;
 using AppKit;
 using CoreGraphics;
-using System.Linq;
+using CoreText;
+using Foundation;
 
 namespace PresentScreenings.TableView
 {
@@ -127,7 +127,7 @@ namespace PresentScreenings.TableView
                 var rating = ViewController.GetMaxRating(film);
                 if (rating.IsGreaterOrEqual(FilmRating.LowestSuperRating) || rating.Equals(FilmRating.Unrated))
                 {
-                    DrawRating(g, side, rating);
+                    DrawRating(g, side, rating, _screening.IAttend);
                 }
             }
         }
@@ -224,16 +224,30 @@ namespace PresentScreenings.TableView
             g.DrawPath(CGPathDrawingMode.Stroke);
         }
 
-        void DrawRating(CGContext g, nfloat side, FilmRating rating)
+        void DrawRating(CGContext g, nfloat side, FilmRating rating, bool withPi = false)
         {
             NSColor textColor = ColorView.ClickPadTextColor(Selected);
             float fontSize = 13.0f;
             g.TranslateCTM(0, fontSize);
             g.SetTextDrawingMode(CGTextDrawingMode.Fill);
             g.SetFillColor(textColor.CGColor);
-            g.SelectFont("Helvetica-Bold", fontSize, CGTextEncoding.MacRoman);
-            g.TextPosition = new CGPoint(side/2 - 4, 7);
-            g.ShowText(rating.ToString());
+            g.TextPosition = new CGPoint(side/2 - 2, 7);
+            string ratingText = rating.ToString();
+            if (withPi)
+            {
+                ratingText += "𝜋";
+            }
+            var attributedString = new NSAttributedString(
+                ratingText,
+                new CTStringAttributes
+                {
+                    ForegroundColorFromContext = true,
+                    Font = new CTFont("Helvetica-Bold", fontSize)
+                });
+            using (var textLine = new CTLine(attributedString))
+            {
+                textLine.Draw(g);
+            }
         }
 
         static CGRect ControlRect(CGRect screeningRect)
