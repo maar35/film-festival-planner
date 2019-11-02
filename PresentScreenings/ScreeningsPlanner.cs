@@ -38,6 +38,7 @@ namespace PresentScreenings.TableView
                     .Where(s => IsPlannable(s, films))
                     .OrderByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.AttendedByFriend)
                     .ThenByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.Free)
+                    .ThenBy(s => s.FilmScreeningCount)
                     .ThenByDescending(s => s.StartTime)
                     .ToList();
 
@@ -54,7 +55,7 @@ namespace PresentScreenings.TableView
                 }
 
                 // Display the results of this rating.
-                DisplayResultsOfRating(rating, filmFan, films);
+                DisplayResultsOfRating(rating, filmFan, films, screenings);
 
                 // Iterate to next lower rating.
                 rating.Decrease();
@@ -80,7 +81,7 @@ namespace PresentScreenings.TableView
             return ViewController.FilmScreenings(film.FilmId).Any(s => s.FilmFanAttends(filmFan));
         }
 
-        private void DisplayResultsOfRating(FilmRating rating, string filmFan, List<Film> films)
+        private void DisplayResultsOfRating(FilmRating rating, string filmFan, List<Film> films, List<Screening> screenings)
         {
             // Display summary for this rating.
             int highRatedFilmCount = films.Count;
@@ -99,6 +100,18 @@ namespace PresentScreenings.TableView
                 _builder.AppendJoin(Environment.NewLine, unplannedFilms);
                 _builder.AppendLine();
             }
+            _builder.AppendLine();
+
+            // Display the considered screenings in order.
+            _builder.AppendLine();
+            _builder.AppendLine("Considered screens in order:");
+            string iAttend(bool b) => b ? "M" : string.Empty;
+            string dbg(Screening s) => string.Format("{0} {1} {2} {3} {4} {5} {6}",
+                s.Film, s.FilmScreeningCount, s.Screen, Screening.LongDayString(s.StartTime),
+                s.Duration.ToString("hh\\:mm"), iAttend(s.IAttend), s.ShortFriendsString());
+            _builder.AppendLine();
+            _builder.AppendJoin(Environment.NewLine, screenings.Select(s => dbg(s)));
+            _builder.AppendLine();
             _builder.AppendLine();
         }
 
