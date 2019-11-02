@@ -72,7 +72,7 @@ namespace PresentScreenings.TableView
         {
             base.ViewWillAppear();
             _control.Selected = true;
-            _filmScreenings = _presentor.FilmScreenings(_screening);
+            _filmScreenings = ViewController.FilmScreenings(_screening.FilmId);
             _checkboxTicketsBought.Activated += (s, e) => ToggleTicketsBought();
             _checkboxSoldOut.Activated += (s, e) => ToggleSoldOut();
             SetControlValues();

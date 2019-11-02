@@ -268,17 +268,6 @@ namespace PresentScreenings.TableView
             return filmScreenings;
         }
 
-        public List<Screening> FilmScreenings(Screening screening)
-        {
-            var filmScreenings = (
-                from Screening s in ScreeningsPlan.Screenings
-                where s.FilmId == screening.FilmId
-                orderby s.StartTime
-                select s
-            ).ToList();
-            return filmScreenings;
-        }
-
         public static Film GetFilmById(int filmId)
         {
             return ScreeningsPlan.Films.First(f => f.FilmId == filmId);

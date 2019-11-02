@@ -48,6 +48,7 @@ namespace PresentScreenings.TableView
         public bool HasNoTravelTime => ViewController.OverlappingAttendedScreenings(this, true).Any();
         public int TimesIAttendFilm => ScreeningsPlan.Screenings.Count(s => s.FilmId == FilmId && s.IAttend);
         public bool IsPlannable => TimesIAttendFilm == 0 && !HasNoTravelTime && !SoldOut;
+        public int FilmScreeningCount => ViewController.FilmScreenings(FilmId).Count;
         public ScreeningInfo.TicketsStatus TicketStatus => ScreeningInfo.GetTicketStatus(IAttend, TicketsBought);
         public ScreeningInfo.ScreeningStatus Status { get => _screeningInfo.Status; set => _screeningInfo.Status = value; }
         public ScreeningInfo.Warning Warning { get; set; } = ScreeningInfo.Warning.NoWarning;
@@ -213,7 +214,6 @@ namespace PresentScreenings.TableView
             var travelTime = useTravelTime ? TravelTime : TimeSpan.Zero;
             return otherScreening.StartTime <= EndTime + travelTime
                 && otherScreening.EndTime >= StartTime - travelTime;
-
         }
         #endregion
 
