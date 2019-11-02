@@ -63,6 +63,7 @@ namespace PresentScreenings.TableView
         public bool TicketsBought { get; set; }
         public bool SoldOut { get; set; }
         public ScreeningStatus Status { get; set; }
+        public bool AutomaticallyPlanned { get; set; } = false;
         #endregion
 
         #region Constructors
@@ -98,13 +99,16 @@ namespace PresentScreenings.TableView
             string screen = fields[1];
             StartTime = DateTime.Parse(fields[2]);
             ScreeningTitle = fields[3];
-            string screeningStatus = fields[4];
-            var attendanceStrings = new List<string>(fields[5].Split(','));
-            string ticketsBought = fields[6];
-            string soldOut = fields[7];
+            string automaticallyPlanned = fields[4];
+            string screeningStatus = fields[5];
+            var attendanceStrings = new List<string>(fields[6].Split(','));
+            string ticketsBought = fields[7];
+            string soldOut = fields[8];
 
             // Assign members.
-            Screen = (from Screen s in ScreeningsPlan.Screens where s.ToString() == screen select s).ElementAt(0);
+            //Screen = (from Screen s in ScreeningsPlan.Screens where s.ToString() == screen select s).ElementAt(0);
+            Screen = ScreeningsPlan.Screens.First(s => s.ToString() == screen);
+            AutomaticallyPlanned = StringToBool[automaticallyPlanned];
             Attendees = GetAttendeesFromStrings(attendanceStrings);
             TicketsBought = StringToBool[ticketsBought];
             SoldOut = StringToBool[soldOut];
@@ -132,7 +136,7 @@ namespace PresentScreenings.TableView
 
         public override string WriteHeader()
         {
-            string headerFmt = "filmid;screen;starttime;screeningtitle;blocked;{0};ticketsbought;soldout";
+            string headerFmt = "filmid;screen;starttime;screeningtitle;autoplanned;blocked;{0};ticketsbought;soldout";
             return string.Format(headerFmt, FilmFansString());
         }
 
@@ -144,7 +148,8 @@ namespace PresentScreenings.TableView
                 Screen,
                 StartTime.ToString(_dateTimeFormat),
                 ScreeningTitle,
-                GetScreeningStatusString(Status),
+                BoolToString[AutomaticallyPlanned],
+                _stringByScreeningStatus[Status],
                 AttendeesString(),
                 BoolToString[TicketsBought],
                 BoolToString[SoldOut]
@@ -169,11 +174,6 @@ namespace PresentScreenings.TableView
                 }
             }
             return status;
-        }
-
-        static public string GetScreeningStatusString(ScreeningStatus status)
-        {
-            return _stringByScreeningStatus[status];
         }
 
         public static string FilmFansString()
