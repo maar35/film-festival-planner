@@ -144,6 +144,9 @@ namespace PresentScreenings.TableView
 
             // Display the screenings.
             GoToScreeningDialog.DisplayScreeningControls(screenings, screeningsView, GoToScreening, ref _currentScreeningControl);
+
+            // Scroll to the selected screening.
+            GoToScreeningDialog.ScrollScreeningToVisible(App.Controller.CurrentScreening, scrollView);
         }
 
         void CreateFilmArticleLink(ref float yCurr)
