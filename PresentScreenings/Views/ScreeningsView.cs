@@ -18,15 +18,17 @@ namespace PresentScreenings.TableView
         const float _labelHeight = _yLine * _linesPerScreening;
         #endregion
 
+        #region Public Constants
+        public const float HorizontalScreeningControlExtensionPixels = _labelHeight;
+        public const float ScreeningControlLineHeight = _yLine;
+        public const float VerticalTextOffset = 3;
+        #endregion
+
         #region Private Variables
         nfloat _labelLeft;
         nfloat _labelWidth;
 		ViewController _controller;
         ScreeningsTableView _superView;
-        #endregion
-
-        #region Properties
-        public const float HorizontalScreeningControlExtensionPixels = _labelHeight;
         #endregion
 
         #region Constructors

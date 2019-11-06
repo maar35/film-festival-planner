@@ -7,6 +7,11 @@ using Foundation;
 
 namespace PresentScreenings.TableView
 {
+    /// <summary>
+    /// Planner Dialog Controller, manages the user interface to automatically
+    /// plan a festival program.
+    /// </summary>
+
     public partial class PlannerDialogController : NSViewController
 	{
         #region Private Constants

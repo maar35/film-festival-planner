@@ -31,6 +31,8 @@ namespace PresentScreenings.TableView
 
         #region Properties
         public static bool UseCoreGraphics { get; set; }
+        public static nfloat FontSize { get; } = 13;
+        public static CTFont StandardFont { get; } = new CTFont(".AppleSystemUIFontBold", FontSize);
         public Screening Screening { get; }
         public bool Selected
         {
@@ -79,7 +81,7 @@ namespace PresentScreenings.TableView
             StringValue = Screening.ToScreeningLabelString();
             Alignment = NSTextAlignment.Left;
             LineBreakMode = NSLineBreakMode.TruncatingMiddle;
-            Font = NSFont.BoldSystemFontOfSize(13);
+            Font = NSFont.BoldSystemFontOfSize(FontSize);
         }
 
         void Initialize()
@@ -186,26 +188,25 @@ namespace PresentScreenings.TableView
 
         private void InitializeCoreText(CGContext context)
         {
-            float fontSize = 13.0f;
-            context.TranslateCTM(0, -1);
+            context.TranslateCTM(-1 , ScreeningsView.VerticalTextOffset);
             NSColor textColor = ColorView.ClickPadTextColor(Selected);
             context.SetTextDrawingMode(CGTextDrawingMode.Fill);
             context.SetFillColor(textColor.CGColor);
             _stringAttributes = new CTStringAttributes
             {
                 ForegroundColorFromContext = true,
-                Font = new CTFont("Helvetica-Bold", fontSize)
+                Font = StandardFont
             };
         }
 
-        private void DrawRating(CGContext context, nfloat side, FilmRating rating, bool withPi = false)
+        private void DrawRating(CGContext context, nfloat side, FilmRating rating)
         {
-            DrawText(context, rating.ToString(), side/2 - 1, 21);
+            DrawText(context, rating.ToString(), side/2, ScreeningsView.ScreeningControlLineHeight);
         }
 
         private void DrawAutomaticallyPlannedSymbol(CGContext context, nfloat side)
         {
-            DrawText(context, "𝛑", side/2 - 1, 4); // MATHEMATICAL BOLD SMALL PI = 𝛑
+            DrawText(context, "𝛑", side/2, 0); // MATHEMATICAL BOLD SMALL PI = 𝛑
         }
 
         private void DrawText(CGContext context, string text, nfloat x, nfloat y)

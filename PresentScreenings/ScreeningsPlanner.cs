@@ -5,6 +5,13 @@ using System.Text;
 
 namespace PresentScreenings.TableView
 {
+    /// <summary>
+    /// Screenings Planner, plans screenings for "Me" of films that have high
+    /// ratings. Screenings must be plannable and will be set as attended by
+    /// "Me". The order in which screenings are considered is set as to get an
+    /// optimal festival program!
+    /// </summary>
+
     public class ScreeningsPlanner
     {
         #region Private Members
@@ -12,7 +19,6 @@ namespace PresentScreenings.TableView
         private ViewController _controller;
         private Action<string> _displayResults;
         private StringBuilder _builder = new StringBuilder("Finished planning.\n");
-
         #endregion
 
         #region Constructors

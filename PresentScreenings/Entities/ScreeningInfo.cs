@@ -106,7 +106,6 @@ namespace PresentScreenings.TableView
             string soldOut = fields[8];
 
             // Assign members.
-            //Screen = (from Screen s in ScreeningsPlan.Screens where s.ToString() == screen select s).ElementAt(0);
             Screen = ScreeningsPlan.Screens.First(s => s.ToString() == screen);
             AutomaticallyPlanned = StringToBool[automaticallyPlanned];
             Attendees = GetAttendeesFromStrings(attendanceStrings);
