@@ -5,6 +5,13 @@ using System.Text;
 
 namespace PresentScreenings.TableView
 {
+    /// <summary>
+    /// Screenings Planner, plans screenings for "Me" of films that have high
+    /// ratings. Screenings must be plannable and will be set as attended by
+    /// "Me". The order in which screenings are considered is set as to get an
+    /// optimal festival program!
+    /// </summary>
+
     public class ScreeningsPlanner
     {
         #region Private Members
@@ -12,7 +19,6 @@ namespace PresentScreenings.TableView
         private ViewController _controller;
         private Action<string> _displayResults;
         private StringBuilder _builder = new StringBuilder("Finished planning.\n");
-
         #endregion
 
         #region Constructors
@@ -42,12 +48,13 @@ namespace PresentScreenings.TableView
                     .ThenByDescending(s => s.StartTime)
                     .ToList();
 
-                // Attend the films.
+                // Attend the screenings.
                 foreach (var screening in screenings)
                 {
                     if (screening.IsPlannable)
                     {
                         screening.ToggleFilmFanAttendance(filmFan);
+                        screening.AutomaticallyPlanned = true;
                         _controller.UpdateAttendanceStatus(screening);
                         _plannedScreenings.Add(screening);
                     }
@@ -104,7 +111,7 @@ namespace PresentScreenings.TableView
 
             // Display the considered screenings in order.
             _builder.AppendLine();
-            _builder.AppendLine("Considered screens in order:");
+            _builder.AppendLine("Considered screenings in order:");
             string iAttend(bool b) => b ? "M" : string.Empty;
             string dbg(Screening s) => string.Format("{0} {1} {2} {3} {4} {5} {6}",
                 s.Film, s.FilmScreeningCount, s.Screen, Screening.LongDayString(s.StartTime),
