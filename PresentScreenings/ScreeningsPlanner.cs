@@ -86,6 +86,8 @@ namespace PresentScreenings.TableView
 
             // Select the automaticaly planned screenings.
             var screenings = ScreeningsPlan.Screenings.Where(s => s.AutomaticallyPlanned && s.FilmFanAttends(attendee));
+
+            // Unattend the screenings.
             foreach (var screening in screenings)
             {
                 screening.ToggleFilmFanAttendance(attendee);
