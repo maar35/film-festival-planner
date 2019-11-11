@@ -17,8 +17,9 @@ namespace PresentScreenings.TableView
         #region Private Members
         private List<Screening> _plannedScreenings;
         private ViewController _controller;
+        private Func<string> _logTime = DownloadFilmInfoController.LogTimeString;
         private Action<string> _displayResults;
-        private StringBuilder _builder = new StringBuilder("Finished planning.\n");
+        private StringBuilder _builder = new StringBuilder();
         #endregion
 
         #region Constructors
@@ -32,6 +33,8 @@ namespace PresentScreenings.TableView
         #region Public Methods
         public void MakeScreeningsPlan(string filmFan)
         {
+            _builder.AppendLine($"{_logTime()}  Started planning.");
+            _builder.AppendLine();
             _plannedScreenings = new List<Screening> { };
             var rating = FilmRating.MaxRating;
             while (rating.IsGreaterOrEqual(FilmRating.LowestSuperRating))
@@ -74,6 +77,30 @@ namespace PresentScreenings.TableView
             // Call the display function with the result string.
             _displayResults(_builder.ToString());
         }
+
+        public void UndoScreeningsPlan(string attendee)
+        {
+            // Display that unplanning is started.
+            _builder.AppendLine();
+            _builder.AppendLine($"{_logTime()}  Started unplanning.");
+
+            // Select the automaticaly planned screenings.
+            var screenings = ScreeningsPlan.Screenings.Where(s => s.AutomaticallyPlanned && s.FilmFanAttends(attendee));
+            foreach (var screening in screenings)
+            {
+                screening.ToggleFilmFanAttendance(attendee);
+                screening.AutomaticallyPlanned = false;
+                _controller.UpdateAttendanceStatus(screening);
+            }
+            _controller.ReloadScreeningsView();
+
+            // Display that unplanning is done.
+            _builder.AppendLine($"{_logTime()}  All automatically planned screenings cancelled for {attendee}.");
+            _builder.AppendLine();
+
+            // Call the display function with the result string.
+            _displayResults(_builder.ToString());
+        }
         #endregion
 
         #region Private Methods
@@ -93,32 +120,37 @@ namespace PresentScreenings.TableView
             // Display summary for this rating.
             int highRatedFilmCount = films.Count;
             int plannedFilmCount = films.Where(f => HasAttendedScreening(f, filmFan)).Count();
-            string fmt = "{0} out of {1} films with rating {2} planned for {3}.";
-            _builder.AppendFormat(fmt, plannedFilmCount, highRatedFilmCount, rating, filmFan);
+            string str = $"{_logTime()}  {plannedFilmCount} out of {highRatedFilmCount} films with rating {rating} planned for {filmFan}.";
+            _builder.AppendFormat(str);
 
             // Display films with this rating that weren't planned.
             if (highRatedFilmCount - plannedFilmCount > 0)
             {
-                string unplannedFmt = "Films with rating {0} that could not be planned for {1}:";
+                string unplannedStr = $"Films with rating {rating} that could not be planned for {filmFan}:";
                 _builder.AppendLine();
-                _builder.AppendFormat(unplannedFmt, rating, filmFan);
-                _builder.AppendLine();
+                _builder.AppendLine(unplannedStr);
                 var unplannedFilms = films.Where(f => !HasAttendedScreening(f, filmFan));
                 _builder.AppendJoin(Environment.NewLine, unplannedFilms);
-                _builder.AppendLine();
             }
             _builder.AppendLine();
 
             // Display the considered screenings in order.
             _builder.AppendLine();
-            _builder.AppendLine("Considered screenings in order:");
-            string iAttend(bool b) => b ? "M" : string.Empty;
-            string dbg(Screening s) => string.Format("{0} {1} {2} {3} {4} {5} {6}",
-                s.Film, s.FilmScreeningCount, s.Screen, Screening.LongDayString(s.StartTime),
-                s.Duration.ToString("hh\\:mm"), iAttend(s.IAttend), s.ShortFriendsString());
-            _builder.AppendLine();
-            _builder.AppendJoin(Environment.NewLine, screenings.Select(s => dbg(s)));
-            _builder.AppendLine();
+            if (screenings.Count > 0)
+            {
+                _builder.AppendLine($"Considered screenings of films rated {rating} in order:");
+                string iAttend(bool b) => b ? "M" : string.Empty;
+                string dbg(Screening s) => string.Format("{0} {1} {2} {3} {4} {5} {6}",
+                    s.Film, s.FilmScreeningCount, s.Screen, Screening.LongDayString(s.StartTime),
+                    s.Duration.ToString("hh\\:mm"), iAttend(s.IAttend), s.ShortFriendsString());
+                _builder.AppendLine();
+                _builder.AppendJoin(Environment.NewLine, screenings.Select(s => dbg(s)));
+                _builder.AppendLine();
+            }
+            else
+            {
+                _builder.AppendLine($"No screenings of films rated {rating} could be considered.");
+            }
             _builder.AppendLine();
         }
 
@@ -128,14 +160,14 @@ namespace PresentScreenings.TableView
             _builder.AppendLine();
             if (_plannedScreenings.Count > 0)
             {
-                _builder.AppendFormat("{0} screenings planned:", _plannedScreenings.Count);
+                _builder.AppendFormat($"{_logTime()}  {_plannedScreenings.Count} screenings planned:");
                 _builder.AppendLine();
                 _plannedScreenings.Sort();
                 _builder.AppendJoin(Environment.NewLine, _plannedScreenings.Select(s => s.ToPlannedScreeningString()));
             }
             else
             {
-                _builder.Append("No new screenings planned.");
+                _builder.Append($"{_logTime()}  No new screenings planned.");
             }
             _builder.AppendLine();
         }

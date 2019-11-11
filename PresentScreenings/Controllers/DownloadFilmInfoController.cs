@@ -102,6 +102,14 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
+        #region Public Methods
+
+        public static string LogTimeString()
+        {
+            return $"{DateTime.Now.ToString(_dateTimeFormat)}";
+        }
+        #endregion
+
         #region Private Methods
         private List<Film> GetFilmsWithoutInfo(List<Film> films)
         {
@@ -287,12 +295,7 @@ namespace PresentScreenings.TableView
             }
         }
 
-        private string LogTimeString()
-        {
-            return $"{DateTime.Now.ToString(_dateTimeFormat)}";
-        }
-
-        void CloseView()
+        private void CloseView()
         {
             Presentor.DismissViewController(this);
         }
