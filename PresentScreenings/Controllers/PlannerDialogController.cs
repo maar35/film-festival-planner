@@ -20,7 +20,7 @@ namespace PresentScreenings.TableView
         private const float _xDistance = ControlsFactory.HorizontalPixelsBetweenControls;
         private const float _controlsWidth = ControlsFactory.StandardButtonWidth;
         private const float _controlsHeight = ControlsFactory.StandardButtonHeight;
-        private const float _yXcodeControlsMargin = 20;
+        private const float _yXcodeControlsMargin = ControlsFactory.HorizontalMargin;
         #endregion
 
         #region Private Variables
@@ -60,7 +60,7 @@ namespace PresentScreenings.TableView
             // Initialize.
             _presentor = _app.Controller;
             _planner = new ScreeningsPlanner(_presentor, DisplayResults);
-            _scrollViewWidth = (float)(View.Frame.Width - 2 * _xMargin);
+            _scrollViewWidth = View.Frame.Width - 2 * _xMargin;
             _scrollViewHeight = View.Frame.Height - _yXcodeControlsMargin - _yScrollView;
 
             // Create the scroll view to display planning rewsults.
@@ -93,9 +93,7 @@ namespace PresentScreenings.TableView
         private void CreateScrollView()
         {
             // Create the document view displaying information on unplanned films.
-            nfloat filmsViewWidth = _scrollViewWidth;
-            nfloat filmsViewHeight = _scrollViewHeight;
-            var docRect = new CGRect(0, 0, filmsViewWidth, filmsViewHeight);
+            var docRect = new CGRect(0, 0, _scrollViewWidth, _scrollViewHeight);
             _filmsDocumentView = ControlsFactory.NewStandardLabel(docRect);
             _filmsDocumentView.StringValue = InstructionsString();
 
@@ -116,8 +114,7 @@ namespace PresentScreenings.TableView
 
             // Create the Plan button.
             xCurr -= _xMargin + _controlsWidth;
-            var planButtonFrame = new CGRect(xCurr, _yXcodeControlsMargin, _controlsWidth, _controlsHeight);
-            _planButton = ControlsFactory.NewStandardButton(planButtonFrame);
+            _planButton = ControlsFactory.NewStandardButton(new CGRect(xCurr, _yXcodeControlsMargin, _controlsWidth, _controlsHeight));
             _planButton.Title = "Plan";
             _planButton.Enabled = true;
             _planButton.KeyEquivalent = ControlsFactory.EnterKey;

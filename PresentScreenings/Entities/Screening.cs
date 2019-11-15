@@ -254,6 +254,14 @@ namespace PresentScreenings.TableView
             return string.Format("{0} {1}", ToLongTimeString(), ScreeningTitle);
         }
 
+        public string ToConsideredScreeningString()
+        {
+            string iAttend(bool b) => b ? "M" : string.Empty;
+            return string.Format("{0} {1} {2} {3} {4} {5} {6}", Film, FilmScreeningCount, Screen,
+                                 LongDayString(StartTime), Duration.ToString("hh\\:mm"), iAttend(IAttend),
+                                 ShortFriendsString());
+        }
+
         public string AttendeesString()
         {
             return string.Join(", ", AttendingFilmFans);

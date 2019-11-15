@@ -122,15 +122,13 @@ namespace PresentScreenings.TableView
             // Display summary for this rating.
             int highRatedFilmCount = films.Count;
             int plannedFilmCount = films.Where(f => HasAttendedScreening(f, filmFan)).Count();
-            string str = $"{_logTime()}  {plannedFilmCount} out of {highRatedFilmCount} films with rating {rating} planned for {filmFan}.";
-            _builder.AppendFormat(str);
+            _builder.Append($"{_logTime()}  {plannedFilmCount} out of {highRatedFilmCount} films with rating {rating} planned for {filmFan}.");
 
             // Display films with this rating that weren't planned.
             if (highRatedFilmCount - plannedFilmCount > 0)
             {
-                string unplannedStr = $"Films with rating {rating} that could not be planned for {filmFan}:";
                 _builder.AppendLine();
-                _builder.AppendLine(unplannedStr);
+                _builder.AppendLine($"Films with rating {rating} that could not be planned for {filmFan}:");
                 var unplannedFilms = films.Where(f => !HasAttendedScreening(f, filmFan));
                 _builder.AppendJoin(Environment.NewLine, unplannedFilms);
             }
@@ -141,12 +139,8 @@ namespace PresentScreenings.TableView
             if (screenings.Count > 0)
             {
                 _builder.AppendLine($"Considered screenings of films rated {rating} in order:");
-                string iAttend(bool b) => b ? "M" : string.Empty;
-                string dbg(Screening s) => string.Format("{0} {1} {2} {3} {4} {5} {6}",
-                    s.Film, s.FilmScreeningCount, s.Screen, Screening.LongDayString(s.StartTime),
-                    s.Duration.ToString("hh\\:mm"), iAttend(s.IAttend), s.ShortFriendsString());
                 _builder.AppendLine();
-                _builder.AppendJoin(Environment.NewLine, screenings.Select(s => dbg(s)));
+                _builder.AppendJoin(Environment.NewLine, screenings.Select(s => s.ToConsideredScreeningString()));
                 _builder.AppendLine();
             }
             else
@@ -162,8 +156,7 @@ namespace PresentScreenings.TableView
             _builder.AppendLine();
             if (_plannedScreenings.Count > 0)
             {
-                _builder.AppendFormat($"{_logTime()}  {_plannedScreenings.Count} screenings planned:");
-                _builder.AppendLine();
+                _builder.AppendLine($"{_logTime()}  {_plannedScreenings.Count} screenings planned:");
                 _plannedScreenings.Sort();
                 _builder.AppendJoin(Environment.NewLine, _plannedScreenings.Select(s => s.ToPlannedScreeningString()));
             }
