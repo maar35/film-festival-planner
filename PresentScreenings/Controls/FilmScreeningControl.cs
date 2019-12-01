@@ -13,7 +13,11 @@ namespace PresentScreenings.TableView
     [Register("FilmScreeningControl")]
     public class FilmScreeningControl : NSControl
     {
-        #region Privat Variables
+        #region Constants
+        private const float _yVisualCorrection = 1;
+        #endregion
+
+        #region Private Variables
         bool _selected = false;
         Screening _screening = null;
         #endregion
@@ -70,7 +74,18 @@ namespace PresentScreenings.TableView
                 {
                     ColorView.DrawSoldOutSymbol(g, Selected, Frame);
                 }
-			}
+
+                // Draw the Autometically Planned symbol.
+                if (_screening.AutomaticallyPlanned)
+                {
+                    ScreeningControl.InitializeCoreText(g, Selected);
+                    ScreeningControl.DrawText(
+                        g,
+                        ScreeningControl.AutomaticallyPlannedSymbol,
+                        Frame.Width / 3,
+                        _yVisualCorrection + (Frame.Height - ScreeningControl.FontSize) / 2);
+                }
+            }
         }
         #endregion
 

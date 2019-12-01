@@ -3,6 +3,8 @@ using System.Text;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using AppKit;
+using CoreGraphics;
 
 namespace PresentScreenings.TableView
 {
@@ -12,7 +14,7 @@ namespace PresentScreenings.TableView
     /// screening is attended at the same time or the film is already planned.
     /// </summary>
 
-    public class Screening : ListStreamer, IComparable
+    public class Screening : ListStreamer, IComparable, IFilmOutlinable
     {
         #region Constant Private Members
         private const string _dateFormat = "yyyy-MM-dd";
@@ -53,10 +55,12 @@ namespace PresentScreenings.TableView
         public ScreeningInfo.TicketsStatus TicketStatus => ScreeningInfo.GetTicketStatus(IAttend, TicketsBought);
         public ScreeningInfo.ScreeningStatus Status { get => _screeningInfo.Status; set => _screeningInfo.Status = value; }
         public ScreeningInfo.Warning Warning { get; set; } = ScreeningInfo.Warning.NoWarning;
+        public List<IFilmOutlinable> FilmOutlinables { get; private set; } = new List<IFilmOutlinable> { };
         #endregion
 
         #region Static Properties
         public static TimeSpan TravelTime { get; set; }
+        public static bool InOutliningOverlaps { get; set; } = false;
         #endregion
 
         #region Constructors
@@ -146,41 +150,43 @@ namespace PresentScreenings.TableView
         {
             return StartTime.CompareTo(((Screening)obj).StartTime);
         }
-        #endregion
 
-        #region Private Methods
-        private DateTime DateTimeFromParsedData(DateTime date, string time)
+        bool IFilmOutlinable.ContainsFilmOutlinables()
         {
-            string parseString = string.Format("{0} {1}", date.ToShortDateString(), time);
-            return DateTime.Parse(parseString);
+            return FilmOutlinables.Count > 0;
         }
 
-        private string DurationString()
+        void IFilmOutlinable.SetTitle(NSTextField view)
         {
-            return string.Format("{0}-{1}", StartTime.ToString(_timeFormat), EndTime.ToString(_timeFormat));
+            view.StringValue = ToMenuItemString();
+            view.LineBreakMode = NSLineBreakMode.TruncatingMiddle;
         }
 
-        private static string EntityToUnicode(string html)
+        public void SetGo(NSView view)
         {
-            var replacements = new Dictionary<string, string>();
-            var regex = new Regex("&([a-z]{2,7});");
-            foreach (Match match in regex.Matches(html))
-            {
-                if (!replacements.ContainsKey(match.Value))
-                {
-                    //var unicode = System.Net.WebUtility.HtmlDecode(match.Value);
-                    //if (unicode.Length == 1)
-                    //{
-                    //    replacements.Add(match.Value, string.Concat("&#", Convert.ToInt32(unicode[0]), ";"));
-                    //}
-                    replacements.Add(match.Value, regex.Replace(match.Value, @"[$1]"));
-                }
-            }
-            foreach (var replacement in replacements)
-            {
-                html = html.Replace(replacement.Key, replacement.Value);
-            }
-            return html;
+            ScreeningsView.DisposeSubViews(view);
+            var rect = new CGRect(0, 0, view.Frame.Width, view.Frame.Height);
+            //var infoButton = new FilmScreeningControl(new CGRect(0, 0, 16 , 16), this);
+            var infoButton = new FilmScreeningControl(rect, this);
+            infoButton.ReDraw();
+            infoButton.ScreeningInfoAsked += (sender, e) => FilmOutlineLevel.GoToScreening(this);
+            infoButton.Selected = false;
+            view.AddSubview(infoButton);
+
+            //view.AddSubview(view.ImageView);
+            //view.TextField.BackgroundColor = NSColor.Orange;
+        }
+
+        void IFilmOutlinable.SetRating(NSTextField view)
+        {
+            view.StringValue = string.Empty;
+        }
+
+        void IFilmOutlinable.SetInfo(NSTextField view)
+        {
+            ColorView.SetScreeningColor(this, view);
+            view.StringValue = ScreeningStringForLabel(true);
+            view.LineBreakMode = NSLineBreakMode.TruncatingTail;
         }
         #endregion
 
@@ -188,7 +194,11 @@ namespace PresentScreenings.TableView
         public static string HtmlDecode(string html)
         {
             var htmlRe = new Regex(@"&amp;([a-z]{2,7});", RegexOptions.CultureInvariant);
-            return htmlRe.Replace(html, @":$1:").Replace("&#039;", "'").Replace(";", ".,").Replace(":nbsp:", " ").Replace(":euml:", @"ë").Replace("ldquo", @"'").Replace("lsquo", @"'").Replace("rdquo", @"'").Replace("rsquo", @"'");
+            return htmlRe.Replace(html, @":$1:").Replace("&#039;", "'").Replace(";", ".,").Replace(":nbsp:", " ")
+                .Replace(":euml:", @"ë").Replace(":eacute:", @"é").Replace(":egrave:", @"è")
+                .Replace(":iuml:", @"ï")
+                .Replace(":ndash:", @"–")
+                .Replace(":ldquo:", @"“").Replace(":lsquo:", @"‘").Replace(":rdquo:", @"”").Replace(":rsquo:", @"’");
         }
 
         public bool FilmFanAttends(string filmFan)
@@ -216,9 +226,28 @@ namespace PresentScreenings.TableView
             return otherScreening.StartTime <= EndTime + travelTime
                 && otherScreening.EndTime >= StartTime - travelTime;
         }
+
+        public void SetOverlappingScreenings()
+        {
+            if (FilmOutlinables.Count == 0)
+            {
+                Func<Screening, bool> filmHasSuperRating = s => s.Film.MaxRating.IsGreaterOrEqual(FilmRating.LowestSuperRating);
+                Func<Screening, bool> AttendedByFriend = s => s.Status == ScreeningInfo.ScreeningStatus.AttendedByFriend;
+                var screenings = ViewController.OverlappingScreenings(this, true)
+                                               .Where(s => filmHasSuperRating(s) || AttendedByFriend(s))
+                                               .OrderByDescending(s => s.Film.MaxRating);
+                var level = FilmOutlineLevel.Level.OverlappingScreening;
+                var controller = ((AppDelegate)NSApplication.SharedApplication.Delegate).AnalyserDialogController;
+                foreach (var screening in screenings)
+                {
+                    var filmOutlineLevel = new FilmOutlineLevel(screening, level, controller.GoToScreening);
+                    FilmOutlinables.Add(filmOutlineLevel);
+                }
+            }
+        }
         #endregion
 
-        #region Display Methods
+        #region Public Display Methods
         public static string DayString(DateTime date)
         {
             return string.Format("{0}{1}", date.DayOfWeek.ToString().Remove(3), date.Day.ToString());
@@ -332,6 +361,42 @@ namespace PresentScreenings.TableView
                 return string.Empty;
             }
             return string.Format($" - {ScreeningTitle}");
+        }
+        #endregion
+
+        #region Private Methods
+        private DateTime DateTimeFromParsedData(DateTime date, string time)
+        {
+            string parseString = string.Format("{0} {1}", date.ToShortDateString(), time);
+            return DateTime.Parse(parseString);
+        }
+
+        private string DurationString()
+        {
+            return string.Format("{0}-{1}", StartTime.ToString(_timeFormat), EndTime.ToString(_timeFormat));
+        }
+
+        private static string EntityToUnicode(string html)
+        {
+            var replacements = new Dictionary<string, string>();
+            var regex = new Regex("&([a-z]{2,7});");
+            foreach (Match match in regex.Matches(html))
+            {
+                if (!replacements.ContainsKey(match.Value))
+                {
+                    //var unicode = System.Net.WebUtility.HtmlDecode(match.Value);
+                    //if (unicode.Length == 1)
+                    //{
+                    //    replacements.Add(match.Value, string.Concat("&#", Convert.ToInt32(unicode[0]), ";"));
+                    //}
+                    replacements.Add(match.Value, regex.Replace(match.Value, @"[$1]"));
+                }
+            }
+            foreach (var replacement in replacements)
+            {
+                html = html.Replace(replacement.Key, replacement.Value);
+            }
+            return html;
         }
         #endregion
     }

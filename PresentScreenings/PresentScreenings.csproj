@@ -74,6 +74,7 @@
     <Folder Include="Controllers\" />
     <Folder Include="Interfaces\" />
     <Folder Include="Views\" />
+    <Folder Include="Table Classes\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Info.plist" />
@@ -83,14 +84,10 @@
   <ItemGroup>
     <Compile Include="Main.cs" />
     <Compile Include="AppDelegate.cs" />
-    <Compile Include="ScreeningsTableDataSource.cs" />
-    <Compile Include="ScreeningsTableDelegate.cs" />
     <Compile Include="AppDelegate.designer.cs">
       <DependentUpon>AppDelegate.cs</DependentUpon>
     </Compile>
     <Compile Include="ListStreamer.cs" />
-    <Compile Include="FilmTableDataSource.cs" />
-    <Compile Include="FilmTableDelegate.cs" />
     <Compile Include="CombineTitlesEventArgs.cs" />
     <Compile Include="UncombineTitlesEventArgs.cs" />
     <Compile Include="WebUtility.cs" />
@@ -151,6 +148,18 @@
       <DependentUpon>PlannerDialogController.cs</DependentUpon>
     </Compile>
     <Compile Include="ScreeningsPlanner.cs" />
+    <Compile Include="Controllers\AnalyserDialogController.cs" />
+    <Compile Include="Controllers\AnalyserDialogController.designer.cs">
+      <DependentUpon>AnalyserDialogController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Table Classes\FilmOutlineDataSource.cs" />
+    <Compile Include="Table Classes\FilmTableDataSource.cs" />
+    <Compile Include="Table Classes\ScreeningsTableDataSource.cs" />
+    <Compile Include="Table Classes\FilmTableDelegate.cs" />
+    <Compile Include="Table Classes\ScreeningsTableDelegate.cs" />
+    <Compile Include="IFilmOutlinable.cs" />
+    <Compile Include="Table Classes\FilmOutlineDelegate.cs" />
+    <Compile Include="FilmOutlineLevel.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

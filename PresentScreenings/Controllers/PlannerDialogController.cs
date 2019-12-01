@@ -57,6 +57,12 @@ namespace PresentScreenings.TableView
             // Tell the app delegate we're alive.
             _app.PlannerDialogController = this;
 
+            // Initialize the presentor.
+            _presentor = _app.Controller;
+
+            // Inactivate screenings view actions.
+            _presentor.RunningPopupsCount++;
+
             // Initialize.
             _presentor = _app.Controller;
             _planner = new ScreeningsPlanner(_presentor, DisplayResults);
@@ -79,6 +85,9 @@ namespace PresentScreenings.TableView
 
             // Tell the app delegate we're gone.
             _app.PlannerDialogController = null;
+
+            // Tell the main view controller we're gone.
+            _presentor.RunningPopupsCount--;
         }
         #endregion
 
@@ -98,7 +107,7 @@ namespace PresentScreenings.TableView
             _filmsDocumentView.StringValue = InstructionsString();
 
             // Create the scroll view.
-            CGRect scrollViewFrame = new CGRect(_xMargin, _yScrollView, _scrollViewWidth, _scrollViewHeight);
+            var scrollViewFrame = new CGRect(_xMargin, _yScrollView, _scrollViewWidth, _scrollViewHeight);
             _filmsScrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, _filmsDocumentView);
             View.AddSubview(_filmsScrollView);
 

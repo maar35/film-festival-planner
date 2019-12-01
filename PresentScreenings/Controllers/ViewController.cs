@@ -199,16 +199,6 @@ namespace PresentScreenings.TableView
             UpdateWarning(screening);
         }
 
-        List<Screening> OverlappingScreenings(Screening screening, bool useTravelTime = false)
-        {
-            var overlappingScreenings = (
-                from Screening s in ScreeningsPlan.Screenings
-                where s.Overlaps(screening, useTravelTime) && s.FilmId != screening.FilmId
-                select s
-            ).ToList();
-            return overlappingScreenings;
-        }
-
         List<Screening> ScreeningsWithSameFilm(Screening screening)
         {
             var screeningsWithSameFilm = (
@@ -221,6 +211,16 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
+        public static List<Screening> OverlappingScreenings(Screening screening, bool useTravelTime = false)
+        {
+            var overlappingScreenings = (
+                from Screening s in ScreeningsPlan.Screenings
+                where s.Overlaps(screening, useTravelTime) && s.FilmId != screening.FilmId
+                select s
+            ).ToList();
+            return overlappingScreenings;
+        }
+
         public static List<Screening> OverlappingAttendedScreenings(Screening screening, bool useTravelTime = false)
         {
             var overlappingAttendedScreenings = (
@@ -239,6 +239,10 @@ namespace PresentScreenings.TableView
         public void ReloadScreeningsView()
         {
             TableView.ReloadData();
+            if (App.AnalyserDialogController != null)
+            {
+                App.AnalyserDialogController.FilmOutlineView.ReloadData();
+            }
         }
 
         public void AddScreeningControl(Screening screening, ScreeningControl control)

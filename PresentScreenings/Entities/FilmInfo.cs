@@ -66,14 +66,6 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Private Methods
-        private void SetFilmInfoStatus(Film.FilmInfoStatus status)
-        {
-            _infoStatus = status;
-            CheckAddToFilmInfos(this);
-        }
-        #endregion
-
         #region Public Methods
         public void AddScreenedFilm(string title, string description)
         {
@@ -179,6 +171,19 @@ namespace PresentScreenings.TableView
             xml.Save(path);
         }
 
+        public static string InfoString(Film film)
+        {
+            var filmInfo = ViewController.GetFilmInfo(film.FilmId);
+            string text = filmInfo.FilmDescription;
+            if (text.Length == 0)
+            {
+                text = filmInfo.FilmArticle;
+            }
+            return Screening.HtmlDecode(text);
+        }
+        #endregion
+
+        #region Private Methods
         private static Film.FilmInfoStatus StringToFilmInfoStatus(string name)
         {
             try
@@ -189,6 +194,12 @@ namespace PresentScreenings.TableView
             {
                 throw new IllegalFilmInfoCatagoryException($"'{name}' is not a valid FilmInfoCatagory");
             }
+        }
+
+        private void SetFilmInfoStatus(Film.FilmInfoStatus status)
+        {
+            _infoStatus = status;
+            CheckAddToFilmInfos(this);
         }
         #endregion
     }

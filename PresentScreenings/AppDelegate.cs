@@ -18,6 +18,7 @@ namespace PresentScreenings.TableView
         #region Properties
         public ViewController Controller { get; set; } = null;
         public FilmRatingDialogController FilmsDialogController { get; set; }
+        public AnalyserDialogController AnalyserDialogController { get; set; }
         public CombineTitlesSheetController CombineTitleController { get; set; }
         public UncombineTitlesSheetController UncombineTitleController;
         public FilmInfoDialogController filmInfoController;
@@ -167,9 +168,13 @@ namespace PresentScreenings.TableView
         [Action("NavigateFilmScreening:")]
         internal void NavigateFilmScreening(NSObject sender)
         {
-            if(FilmsDialogController != null)
+            if (FilmsDialogController != null)
             {
                 FilmsDialogController.CloseDialog();
+            }
+            if (AnalyserDialogController != null)
+            {
+                AnalyserDialogController.CloseDialog();
             }
             var screening = ScreeningMenuDelegate.FilmScreening(((NSMenuItem)sender).Title);
             Controller.GoToScreening(screening);
