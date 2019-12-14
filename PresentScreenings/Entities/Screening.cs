@@ -56,6 +56,7 @@ namespace PresentScreenings.TableView
         public ScreeningInfo.ScreeningStatus Status { get => _screeningInfo.Status; set => _screeningInfo.Status = value; }
         public ScreeningInfo.Warning Warning { get; set; } = ScreeningInfo.Warning.NoWarning;
         public List<IFilmOutlinable> FilmOutlinables { get; private set; } = new List<IFilmOutlinable> { };
+        static public Action<Screening> GoToScreening { get; private set; }
         #endregion
 
         #region Static Properties
@@ -166,15 +167,11 @@ namespace PresentScreenings.TableView
         {
             ScreeningsView.DisposeSubViews(view);
             var rect = new CGRect(0, 0, view.Frame.Width, view.Frame.Height);
-            //var infoButton = new FilmScreeningControl(new CGRect(0, 0, 16 , 16), this);
             var infoButton = new FilmScreeningControl(rect, this);
             infoButton.ReDraw();
-            infoButton.ScreeningInfoAsked += (sender, e) => FilmOutlineLevel.GoToScreening(this);
+            infoButton.ScreeningInfoAsked += (sender, e) => GoToScreening(this);
             infoButton.Selected = false;
             view.AddSubview(infoButton);
-
-            //view.AddSubview(view.ImageView);
-            //view.TextField.BackgroundColor = NSColor.Orange;
         }
 
         void IFilmOutlinable.SetRating(NSTextField view)
@@ -231,13 +228,14 @@ namespace PresentScreenings.TableView
         {
             if (FilmOutlinables.Count == 0)
             {
-                Func<Screening, bool> filmHasSuperRating = s => s.Film.MaxRating.IsGreaterOrEqual(FilmRating.LowestSuperRating);
+                Func<Screening, bool> filmHasSuperRating = s => AnalyserDialogController.FilterFilmByRating(s.Film);
                 Func<Screening, bool> AttendedByFriend = s => s.Status == ScreeningInfo.ScreeningStatus.AttendedByFriend;
                 var screenings = ViewController.OverlappingScreenings(this, true)
                                                .Where(s => filmHasSuperRating(s) || AttendedByFriend(s))
                                                .OrderByDescending(s => s.Film.MaxRating);
                 var level = FilmOutlineLevel.Level.OverlappingScreening;
                 var controller = ((AppDelegate)NSApplication.SharedApplication.Delegate).AnalyserDialogController;
+                GoToScreening = controller.GoToScreening;
                 foreach (var screening in screenings)
                 {
                     var filmOutlineLevel = new FilmOutlineLevel(screening, level, controller.GoToScreening);

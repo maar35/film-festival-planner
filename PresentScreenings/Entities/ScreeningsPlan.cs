@@ -13,7 +13,7 @@ namespace PresentScreenings.TableView
     public class ScreeningsPlan
     {
         #region Constants
-        public const string FestivalYear = "2019";
+        public const string FestivalYear = "2020";
         #endregion
 
         #region Read Only Members
@@ -21,7 +21,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Members
-        private static string _directory = HomeFolder + @"/Documents/Film/IFFR/IFFR" + FestivalYear + @"/Screenings Plan";
+        private static string _directory = HomeFolder + @"/Documents/Film/IFFR/IFFR" + FestivalYear + @"/FestivalPlan";
         private static string _screensFile = Path.Combine(_directory, "screens.csv");
         private static string _filmsFile = Path.Combine(_directory, "films.csv");
         private static string _screeningsFile = Path.Combine(_directory, "screenings.csv");

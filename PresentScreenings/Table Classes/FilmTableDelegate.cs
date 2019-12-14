@@ -87,6 +87,12 @@ namespace PresentScreenings.TableView
                     PopulateFilm(ref filmLabel);
                     filmLabel.StringValue = film.Title;
                     return filmLabel;
+                case "Duration":
+                    NSTextField durationLabel = (NSTextField)view;
+                    PopulateDuration(ref durationLabel);
+                    durationLabel.StringValue = film.Duration.ToString("hh\\:mm");
+                    durationLabel.TextColor = film.Duration < FilmRatingDialogController.MinimalDuration ? NSColor.LightGray : NSColor.Black;
+                    return durationLabel;
                 case "Rating":
                     NSTextField myRatingField = (NSTextField)view;
                     PopulateFilmFanFilmRating(ref myRatingField, film, ScreeningInfo.Me, row);
@@ -114,6 +120,23 @@ namespace PresentScreenings.TableView
         // If a non-null view is returned, you modify it enough to reflect the new data
 
         private void PopulateFilm(ref NSTextField field)
+        {
+            if (field == null)
+            {
+                field = new NSTextField
+                {
+                    Identifier = _cellIdentifier,
+                    BackgroundColor = NSColor.Clear,
+                    Bordered = false,
+                    Selectable = false,
+                    Editable = false,
+                    Alignment = NSTextAlignment.Left,
+                    LineBreakMode = NSLineBreakMode.TruncatingMiddle
+                };
+            }
+        }
+
+        private void PopulateDuration(ref NSTextField field)
         {
             if (field == null)
             {

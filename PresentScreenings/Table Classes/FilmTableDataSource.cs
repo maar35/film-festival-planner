@@ -73,17 +73,20 @@ namespace PresentScreenings.TableView
             switch (key)
             {
                 case "Title":
-                    Films.Sort((x, y) => sign * string.Compare(x.SortedTitle, y.SortedTitle, StringComparison.CurrentCulture));
+                    Films.Sort((x, y) => sign * x.SequenceNumber.CompareTo(y.SequenceNumber));
+                    break;
+                case "Duration":
+                    Films.Sort((x, y) => sign * x.Duration.CompareTo(y.Duration));
                     break;
                 case "Rating":
-                    Films.Sort((x, y) => CombinedRating(x, ascending).CompareTo(CombinedRating(y, ascending)));
+                    SortByCombinedRating(ScreeningInfo.Me, sign);
                     break;
                 default:
                     foreach (var friend in ScreeningInfo.MyFriends)
                     {
                         if (key == friend)
                         {
-                            //Films.Sort((x, y) => sign * x.Rating.CompareTo(y.Rating));
+                            SortByCombinedRating(friend, sign);
                             break;
                         }
                     }
@@ -104,22 +107,31 @@ namespace PresentScreenings.TableView
             }
         }
 
-        private static int CombinedRating(Film film, bool ascending)
+        private void SortByCombinedRating(string fan, int sign)
+        {
+            Films.Sort((x, y) => CombinedRating(fan, x, sign).CompareTo(CombinedRating(fan, y, sign)));
+        }
+
+        private static int CombinedRating(string fan, Film film, int sign)
         {
 
             var weightFactor = FilmRating.Values.Count;
             var weightedRating = 0;
             var weight = 1;
-            var filmFans = new List<string>(ScreeningInfo.MyFriends);
-            filmFans.Insert(ascending ? 1 : 0, ScreeningInfo.Me);
-            filmFans.Reverse();
-            var filmRatings = filmFans.Select(f => new ratingInfo(f, GetFilmFanFilmRatingToInt(film, f)));
+            var fans = new List<string>(ScreeningInfo.FilmFans);
+            if (fan != ScreeningInfo.Me)
+            {
+                fans.Remove(fan);
+                fans.Insert(0, fan);
+            }
+            fans.Reverse();
+            var filmRatings = fans.Select(f => new ratingInfo(f, GetFilmFanFilmRatingToInt(film, f)));
             foreach (var rating in filmRatings.Select(r => r.Rating))
             {
                 weightedRating += weight * rating;
                 weight *= weightFactor;
             }
-            return -weightedRating;
+            return sign * weightedRating;
         }
 
         private static int GetFilmFanFilmRatingToInt(Film film, string fan)

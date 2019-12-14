@@ -23,6 +23,8 @@ namespace PresentScreenings.TableView
         #region Properties
         public NSTableView FilmRatingTableView => _filmRatingTableView;
         public static bool TypeMatchFromBegin { get; set; } = true;
+        public static bool OnlyFilmsWithScreenings { get; set; }
+        public static TimeSpan MinimalDuration { get; set; }
         #endregion
 
         #region Interface Implementation Properties
@@ -138,19 +140,21 @@ namespace PresentScreenings.TableView
             const float width = 60;
             foreach (string friend in ScreeningInfo.MyFriends)
             {
-                var friendColumn = new NSTableColumn();
-                friendColumn.Title = friend;
-                friendColumn.Width = width;
-                friendColumn.MaxWidth = width;
+                var sortDescriptor = new NSSortDescriptor(friend, false, new ObjCRuntime.Selector("compare:"));
+                var friendColumn = new NSTableColumn
+                {
+                    Title = friend,
+                    Width = width,
+                    MaxWidth = width,
+                    Identifier = friend,
+                    SortDescriptorPrototype = sortDescriptor
+                };
                 nint tag = ScreeningInfo.MyFriends.IndexOf(friend);
                 _filmRatingTableView.AddColumn(friendColumn);
                 CGRect frame = _filmRatingTableView.Frame;
                 nfloat newRight = frame.X;
                 _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + width, frame.X + width);
-                friendColumn.SetIdentifier(friend);
-                var sortDescriptor = new NSSortDescriptor(friend, true, new ObjCRuntime.Selector("compare:"));
                 _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
-                //_filmRatingTableView.Action = new ObjCRuntime.Selector("compare:");
             }
         }
 
@@ -169,7 +173,14 @@ namespace PresentScreenings.TableView
         void SetFilmsWithScreenings()
         {
             List<Film> films = ScreeningsPlan.Films;
-            _filmTableDataSource.Films = films.Where(f => GetScreeningsByFilmId(f.FilmId).Count > 0).ToList();
+            if (OnlyFilmsWithScreenings)
+            {
+                _filmTableDataSource.Films = films.Where(f => GetScreeningsByFilmId(f.FilmId).Count > 0).ToList();
+            }
+            else
+            {
+                _filmTableDataSource.Films = films;
+            }
         }
 
         void CombineTitles(CombineTitlesEventArgs e)

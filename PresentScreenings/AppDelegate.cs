@@ -54,6 +54,8 @@ namespace PresentScreenings.TableView
 
             // Preferences.
             Screening.TravelTime = new TimeSpan(0, 30, 0);
+            FilmRatingDialogController.OnlyFilmsWithScreenings = false;
+            FilmRatingDialogController.MinimalDuration = new TimeSpan(0, 35, 0);
             ScreeningControl.UseCoreGraphics = false;
 		}
         

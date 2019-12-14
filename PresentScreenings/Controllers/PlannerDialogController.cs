@@ -120,7 +120,6 @@ namespace PresentScreenings.TableView
         {
             var xCurr = View.Frame.Width;
 
-
             // Create the Plan button.
             xCurr -= _xMargin + _controlsWidth;
             _planButton = ControlsFactory.NewStandardButton(new CGRect(xCurr, _yXcodeControlsMargin, _controlsWidth, _controlsHeight));

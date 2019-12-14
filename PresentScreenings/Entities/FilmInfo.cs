@@ -174,6 +174,10 @@ namespace PresentScreenings.TableView
         public static string InfoString(Film film)
         {
             var filmInfo = ViewController.GetFilmInfo(film.FilmId);
+            if (filmInfo == null)
+            {
+                return string.Empty;
+            }
             string text = filmInfo.FilmDescription;
             if (text.Length == 0)
             {

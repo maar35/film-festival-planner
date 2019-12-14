@@ -57,7 +57,7 @@ namespace PresentScreenings.TableView
 
             // Create the list of films.
             var films = new List<Film> { };
-            var highRatedFilms = ScreeningsPlan.Films.Where(f => f.MaxRating.IsGreaterOrEqual(FilmRating.LowestSuperRating));
+            var highRatedFilms = ScreeningsPlan.Films.Where(f => FilterFilmByRating(f));
             foreach (var hrFilm in highRatedFilms)
             {
                 var screenings = ViewController.FilmScreenings(hrFilm.FilmId);
@@ -165,6 +165,15 @@ namespace PresentScreenings.TableView
                 return ViewController.FilmScreenings(film.FilmId);
             }
             return new List<Screening> { };
+        }
+
+        public static bool FilterFilmByRating(Film film)
+        {
+            if (FilmRatingDialogController.OnlyFilmsWithScreenings)
+            {
+                return film.MaxRating.IsGreaterOrEqual(FilmRating.LowestSuperRating);
+            }
+            return true;
         }
 
         public void CloseDialog()
