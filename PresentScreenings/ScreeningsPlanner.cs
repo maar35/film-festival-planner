@@ -108,7 +108,7 @@ namespace PresentScreenings.TableView
         #region Private Methods
         private bool IsPlannable(Screening screening, List<Film> films)
         {
-            var inSelectedFilms = films.Count(f => f.FilmId == screening.FilmId) > 0;
+            var inSelectedFilms = films.Any(f => f.FilmId == screening.FilmId);
             return screening.IsPlannable && inSelectedFilms;
         }
 

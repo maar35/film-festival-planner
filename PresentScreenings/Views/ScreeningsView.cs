@@ -65,7 +65,7 @@ namespace PresentScreenings.TableView
 		#endregion
 
 		#region Private Methods
-		void DisposeSubViews(NSView view)
+		public static void DisposeSubViews(NSView view)
 		{
 			foreach (var subView in view.Subviews)
 			{

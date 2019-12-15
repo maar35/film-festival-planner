@@ -19,7 +19,7 @@ namespace PresentScreenings.TableView
         #region Private Variables
         private static nfloat _xExtension;
         private bool _selected = false;
-        private CTStringAttributes _stringAttributes;
+        private static CTStringAttributes _stringAttributes;
         private CGRect _screeningRect;
         private ScreeningLabel _label;
         private ScreeningButton _button;
@@ -34,6 +34,7 @@ namespace PresentScreenings.TableView
         public static nfloat FontSize { get; } = 13;
         public static CTFont StandardFont { get; } = new CTFont(".AppleSystemUIFontBold", FontSize);
         public Screening Screening { get; }
+        public static string AutomaticallyPlannedSymbol { get; } = "𝛑"; // MATHEMATICAL BOLD SMALL PI = 𝛑
         public bool Selected
         {
             get => _selected;
@@ -125,7 +126,7 @@ namespace PresentScreenings.TableView
                 }
 
                 // Initialize CoreText settings.
-                InitializeCoreText(context);
+                InitializeCoreText(context, Selected);
 
                 // Draw Automatically Planned symbol.
                 if (Screening.AutomaticallyPlanned)
@@ -140,6 +141,31 @@ namespace PresentScreenings.TableView
                 {
                     DrawRating(context, side, rating);
                 }
+            }
+        }
+        #endregion
+
+        #region Public Methods
+        public static void InitializeCoreText(CGContext context, bool selected)
+        {
+            context.TranslateCTM(-1, ScreeningsView.VerticalTextOffset);
+            NSColor textColor = ColorView.ClickPadTextColor(selected);
+            context.SetTextDrawingMode(CGTextDrawingMode.Fill);
+            context.SetFillColor(textColor.CGColor);
+            _stringAttributes = new CTStringAttributes
+            {
+                ForegroundColorFromContext = true,
+                Font = StandardFont
+            };
+        }
+
+        public static void DrawText(CGContext context, string text, nfloat x, nfloat y)
+        {
+            context.TextPosition = new CGPoint(x, y);
+            var attributedString = new NSAttributedString(text, _stringAttributes);
+            using (var textLine = new CTLine(attributedString))
+            {
+                textLine.Draw(context);
             }
         }
         #endregion
@@ -186,19 +212,6 @@ namespace PresentScreenings.TableView
             context.DrawPath(CGPathDrawingMode.Stroke);
         }
 
-        private void InitializeCoreText(CGContext context)
-        {
-            context.TranslateCTM(-1 , ScreeningsView.VerticalTextOffset);
-            NSColor textColor = ColorView.ClickPadTextColor(Selected);
-            context.SetTextDrawingMode(CGTextDrawingMode.Fill);
-            context.SetFillColor(textColor.CGColor);
-            _stringAttributes = new CTStringAttributes
-            {
-                ForegroundColorFromContext = true,
-                Font = StandardFont
-            };
-        }
-
         private void DrawRating(CGContext context, nfloat side, FilmRating rating)
         {
             DrawText(context, rating.ToString(), side/2, ScreeningsView.ScreeningControlLineHeight);
@@ -206,17 +219,7 @@ namespace PresentScreenings.TableView
 
         private void DrawAutomaticallyPlannedSymbol(CGContext context, nfloat side)
         {
-            DrawText(context, "𝛑", side/2, 0); // MATHEMATICAL BOLD SMALL PI = 𝛑
-        }
-
-        private void DrawText(CGContext context, string text, nfloat x, nfloat y)
-        {
-            context.TextPosition = new CGPoint(x, y);
-            var attributedString = new NSAttributedString(text, _stringAttributes);
-            using (var textLine = new CTLine(attributedString))
-            {
-                textLine.Draw(context);
-            }
+            DrawText(context, AutomaticallyPlannedSymbol, side/2, 0);
         }
 
         private static CGRect ControlRect(CGRect screeningRect)

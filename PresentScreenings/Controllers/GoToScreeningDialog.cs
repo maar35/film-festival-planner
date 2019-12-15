@@ -34,8 +34,11 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Virtual Methods
-        public static void DisplayScreeningControls(List<Screening> screenings, NSView screeningsView,
-            GoToScreeningDelegate goToScreening, ref FilmScreeningControl currentScreeningControl)
+        public static void DisplayScreeningControls(
+            List<Screening> screenings,
+            NSView screeningsView,
+            GoToScreeningDelegate goToScreening,
+            ref FilmScreeningControl currentScreeningControl)
         {
             // Initialize the dictionary to find labels by screening.
             _labelByfilmScreening = new Dictionary<Screening, NSTextField> { };

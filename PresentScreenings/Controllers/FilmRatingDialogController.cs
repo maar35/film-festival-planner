@@ -59,7 +59,7 @@ namespace PresentScreenings.TableView
             _goToScreeningButton.Action = new ObjCRuntime.Selector("ShowScreenings:");
             _downloadFilmInfoButton.Action = new ObjCRuntime.Selector("DownLoadInfoForOneFilm:");
             _doneButton.KeyEquivalent = ControlsFactory.EscapeKey;
-            SetTypeMatchMethodControlerStates();
+            SetTypeMatchMethodControlStates();
         }
 
         public override void ViewWillAppear()
@@ -124,6 +124,12 @@ namespace PresentScreenings.TableView
                     break;
             }
         }
+
+        public override void GoToScreening(Screening screening)
+        {
+            _presentor.GoToScreening(screening);
+            CloseDialog();
+        }
         #endregion
 
         #region Private Methods
@@ -151,10 +157,10 @@ namespace PresentScreenings.TableView
         void ToggleTypeMatchMethod()
         {
             TypeMatchFromBegin = !TypeMatchFromBegin;
-            SetTypeMatchMethodControlerStates();
+            SetTypeMatchMethodControlStates();
         }
 
-        void SetTypeMatchMethodControlerStates()
+        void SetTypeMatchMethodControlStates()
         {
             _typeMatchMethodCheckBox.State = TypeMatchFromBegin ? NSCellStateValue.On : NSCellStateValue.Off;
             _app.ToggleTypeMatchMenuItem.State = TypeMatchFromBegin ? NSCellStateValue.On : NSCellStateValue.Off;
@@ -325,12 +331,6 @@ namespace PresentScreenings.TableView
         public List<Screening> GetScreeningsByFilmId(int filmId)
         {
             return ViewController.FilmScreenings(filmId);
-        }
-
-        public override void GoToScreening(Screening screening)
-        {
-            _app.Controller.GoToScreening(screening);
-            CloseDialog();
         }
 
         public void CloseDialog()
