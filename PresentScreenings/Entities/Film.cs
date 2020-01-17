@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using AppKit;
 
 namespace PresentScreenings.TableView
@@ -70,6 +71,28 @@ namespace PresentScreenings.TableView
         public override string ToString()
         {
             return Title;
+        }
+
+        public override string WriteHeader()
+        {
+            return "title;duration;maarten;adrienne;url;description";
+        }
+
+        public override string Serialize()
+        {
+            string line = string.Empty;
+            List<string> fields = new List<string> { };
+
+            fields.Add(ToString());
+            fields.Add(Duration.ToString(Screening._durationFormat));
+            fields.Add(Rating.ToString());
+            fields.Add(ViewController.GetFilmFanFilmRating(this, "Adrienne").ToString());
+            var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == FilmId);
+            var filmInfo = filmInfoList.Count() == 1 ? filmInfoList.First() : null;
+            fields.Add(filmInfo != null ? filmInfo.Url : "");
+            fields.Add(filmInfo != null ? Screening.HtmlDecode(filmInfo.FilmDescription) : "");
+
+            return string.Join(";", fields);
         }
         #endregion
 

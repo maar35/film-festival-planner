@@ -87,11 +87,17 @@ namespace PresentScreenings.TableView
                     PopulateFilm(ref filmLabel);
                     filmLabel.StringValue = film.Title;
                     return filmLabel;
+                case "Description":
+                    NSTextField descriptionLabel = (NSTextField)view;
+                    PopulateDescription(ref descriptionLabel);
+                    descriptionLabel.StringValue = FilmInfo.InfoString(film);
+                    descriptionLabel.TextColor = TextColor(film.Duration);
+                    return descriptionLabel;
                 case "Duration":
                     NSTextField durationLabel = (NSTextField)view;
                     PopulateDuration(ref durationLabel);
                     durationLabel.StringValue = film.Duration.ToString("hh\\:mm");
-                    durationLabel.TextColor = film.Duration < FilmRatingDialogController.MinimalDuration ? NSColor.LightGray : NSColor.Black;
+                    durationLabel.TextColor = TextColor(film.Duration);
                     return durationLabel;
                 case "Rating":
                     NSTextField myRatingField = (NSTextField)view;
@@ -152,6 +158,23 @@ namespace PresentScreenings.TableView
             }
         }
 
+        private void PopulateDescription(ref NSTextField field)
+        {
+            if (field == null)
+            {
+                field = new NSTextField
+                {
+                    Identifier = "Description",
+                    BackgroundColor = NSColor.Clear,
+                    Bordered = false,
+                    Selectable = true,
+                    Editable = false,
+                    Alignment = NSTextAlignment.Left,
+                    LineBreakMode = NSLineBreakMode.TruncatingTail
+                };
+            }
+        }
+
         private void PopulateFilmFanFilmRating(ref NSTextField box, Film film, string filmFan, nint row)
         {
             if (box == null)
@@ -168,6 +191,11 @@ namespace PresentScreenings.TableView
             }
             var ratingField = box;
             box.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(ratingField, filmFan);
+        }
+
+        private static NSColor TextColor(TimeSpan duration)
+        {
+            return duration < FilmRatingDialogController.MinimalDuration ? NSColor.LightGray : NSColor.Black;
         }
         #endregion
 

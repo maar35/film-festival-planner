@@ -62,10 +62,8 @@ namespace PresentScreenings.TableView
         {
             _controller.GoToScreening(sender.Screening);
         }
-		#endregion
 
-		#region Private Methods
-		public static void DisposeSubViews(NSView view)
+        public static void DisposeSubViews(NSView view)
 		{
 			foreach (var subView in view.Subviews)
 			{

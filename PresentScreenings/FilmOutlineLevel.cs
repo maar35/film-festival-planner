@@ -74,7 +74,6 @@ namespace PresentScreenings.TableView
                 ScreeningsView.DisposeSubViews(view);
                 var screening = (Screening)_filmOutlinable;
                 var infoButton = new FilmScreeningControl(view.Frame, screening);
-                //var infoButton = new FilmScreeningControl(new CGRect(0, 0, 28, 21), screening);
                 infoButton.ReDraw();
                 infoButton.ScreeningInfoAsked += (sender, e) => FilmOutlineLevel.GoToScreening(screening);
                 infoButton.Selected = false;

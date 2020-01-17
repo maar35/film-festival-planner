@@ -276,6 +276,7 @@ namespace PresentScreenings.TableView
                     _activityField.StringValue = builder.ToString();
                     var fit = _activityField.SizeThatFits(_activityField.Frame.Size);
                     _activityField.SetFrameSize(fit);
+                    Presentor.FilmRatingTableView.ReloadData();
                     var yScroll = _activityField.Frame.Height - _activityScrollView.Frame.Height;
                     _activityScrollView.ContentView.ScrollToPoint(new CGPoint(0, yScroll));
                     _cancelButton.Enabled = true;

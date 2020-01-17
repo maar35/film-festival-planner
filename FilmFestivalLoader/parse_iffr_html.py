@@ -10,7 +10,7 @@ import urllib.error
 version_number = "0.4"
 year = 2020
 
-az_page_count = 6
+az_page_count = 24
 project_dir = os.path.expanduser("~/Documents/Film/IFFR/IFFR{}".format(year))
 html_input_dir = os.path.join(project_dir, "_website_data")
 film_file_pattern = os.path.join(html_input_dir, "filmpage_{:03d}.html")
@@ -200,7 +200,7 @@ class Film:
 
 class Screening:
 
-    def __init__(self, film, screen, startDate, startTime, endTime, audience):
+    def __init__(self, film, screen, startDate, startTime, endTime, audience, qa, extra):
         self.status = "ONWAAR"
         self.iAttend = "ONWAAR"
         self.attendingFriends = "ONWAAR,ONWAAR,ONWAAR"
@@ -208,9 +208,9 @@ class Screening:
         self.screen = screen
         self.startTime = startTime
         self.endTime = endTime
-        self.filmsInScreening = 1
-        self.extra = ""
-        self.qAndA = ""
+        self.extra = extra
+        self.filmsInScreening = 1 if len(extra) == 0 else 2
+        self.qAndA = qa
         self.ticketsBought = "ONWAAR"
         self.soldOut = "ONWAAR"
         self.filmid = film.filmid
@@ -344,10 +344,13 @@ class FilmPageParser(HTMLParser):
         self.start_date = ""
         self.times = ""
         self.audience = ""
+        self.qa = ""
+        self.extra = ""
         self.before_screenings = True
         self.in_screenings = False
         self.in_location = False
         self.in_time = False
+        self.in_extra_or_qa = False
         self.matching_attr_value = ""
         self.debug_text = ""
 
@@ -358,21 +361,25 @@ class FilmPageParser(HTMLParser):
         print("--  times:      {}".format(self.times))
         print("--  audience:   {}".format(self.audience))
         print("--  category:   {}".format(self.film.medium_category))
+        print("--  q and a     {}".format(self.qa))
+        print("--  extra:      {}".format(self.extra))
         startDate = self.start_date.split()[0]
         startTime = self.times.split()[0]
         endTime = self.times.split()[2]
-        screening = Screening(self.film, self.screen, startDate, startTime, endTime, self.audience)
+        screening = Screening(self.film, self.screen, startDate, startTime, endTime, self.audience, self.qa, self.extra)
         Globals.iffr_data.screenings.append(screening)
         print("---SCREENING ADDED")
+        self.in_extra_or_qa = False
+        self.qa = ""
+        self.extra = ""
         self.start_date = None
         self.screen = None
         self.times = ""
         self.audience = ""
-        self.debug_text = ""
 
-    def print_dbg(self, str1, str2):
-        if self.film.filmid in [26, 110]:
-            self.debug_text += str(str1) + ' ' + str(str2) + '\n'
+    def print_debug(self, str1, str2):
+        if self.film.filmid in [100, 115, 174]:
+            self.debug_text += 'F ' + str(str1) + ' ' + str(str2) + '\n'
 
     def match_attr(self, curr_tag, test_tag, curr_attr, test_attr):
         self.matching_attr_value = ""
@@ -383,51 +390,59 @@ class FilmPageParser(HTMLParser):
         return False
 
     def handle_starttag(self, tag, attrs):
-        self.print_dbg("F Encountered a start tag:", tag)
+        self.print_debug("Encountered a start tag:", tag)
+        #for attr in attrs:
+        #    self.print_debug("         attr:      ", attr)
         for attr in attrs:
-            self.print_dbg("     attr:              ", attr)
-        for attr in attrs:
+            self.print_debug("Handling attr:      ", attr)
             if tag == "section" and attr == ("class", "film-screenings-wrapper"):
                 self.in_screenings = True
                 self.before_screenings = False
-                self.print_dbg("F --  ", "IN SCREENINGS SECTION")
+                self.print_debug("--  ", "ENTERING SCREENINGS SECTION")
             if self.before_screenings:
                 collect_attr = "/nl/{}/verzamelprogrammas/".format(year)
                 if tag == "a" and attr[0] == "href" and attr[1].startswith(collect_attr):
                     if self.film.medium_category != "verzamelprogrammas":
                         self.film.combination_url = attr[1]
-                        #-print("--  PART OF COMBINATION {}".format(self.film))
+                        print("--  PART OF COMBINATION: {}".format(self.film))
             if self.in_screenings:
                 if tag == "span" and attr == ("class", "location"):
                     self.in_location = True
+                    self.print_debug("-- ", "ENTERING LOCATION")
                 if tag =="a" and attr[0] == "data-audience":
                     self.audience = attr[1]
+                if tag == "small" and attr[1] == "film-label voorfilm-qa":
+                    self.in_extra_or_qa = True
                 if tag =="a" and attr[0] == "data-date":
                     self.start_date = attr[1]
                     #if len(self.audience) > 0 and len(self.film.combination_url) == 0 and self.film.medium_category != "events":
                     if len(self.audience) > 0 and len(self.film.combination_url) == 0:
                         print("-- adding it")
                         self.add_screening()
+                        self.print_debug("-- ", "ADDING SCREENING")
         
         if self.in_screenings:
             if tag == "time":
                 self.in_time = True
 
     def handle_endtag(self, tag):
-        self.print_dbg("F Encountered an end tag :", tag)
+        self.print_debug("Encountered an end tag :", tag)
         self.in_location = False
         if self.in_screenings:
             if tag == "section":
                 self.in_screenings = False
-                self.print_dbg("F --  ", "LEAVING SCREENINGS SECTION")
+                self.print_debug("--  ", "LEAVING SCREENINGS SECTION")
+            if tag == "small":
+                    self.in_extra_or_qa = False
             if tag == "time":
                 self.in_time = False
 
     def handle_data(self, data):
-        self.print_dbg("F Encountered some data  :", data)
+        self.print_debug("Encountered some data  :", data)
         if self.in_location:
             location = data.strip()
             print("--  LOCATION:   {}   CATEGORY: {}".format(location, self.film.medium_category))
+            self.print_debug("LOCATION", location)
             try:
                 self.screen = Globals.iffr_data.screenbylocation[location]
             except KeyError:
@@ -435,25 +450,34 @@ class FilmPageParser(HTMLParser):
                 print("NEW LOCATION:  '{}' => {}".format(location, abbr))
                 Globals.iffr_data.screenbylocation[location] =  Screen((location, abbr))
                 self.screen = Globals.iffr_data.screenbylocation[location]
+            self.in_location = False
+            self.print_debug("-- ", "LEAVING LOCATION")
+        if self.in_extra_or_qa:
+            if data == "Met Q&A":
+                self.qa = "QA"
+                self.print_debug("-- ", "FOUND QA")
+            else:
+                self.extra = data
+                self.print_debug("-- FOUND EXTRA:", self.extra)
         if self.in_time:
             self.times = data.strip()
 
-    #def handle_comment(self, data):
-    #    self.print_dbg("Comment  :", data)
+    def handle_comment(self, data):
+        self.print_debug("Comment  :", data)
 
     #def handle_entityref(self, name):
     #    c = chr(name2codepoint[name])
-    #    self.print_dbg("Named ent:", c)
+    #    self.print_debug("Named ent:", c)
 
     #def handle_charref(self, name):
     #    if name.startswith('x'):
     #        c = chr(int(name[1:], 16))
     #    else:
     #        c = chr(int(name))
-    #    self.print_dbg("Num ent  :", c)
+    #    self.print_debug("Num ent  :", c)
 
-    #def handle_decl(self, data):
-    #    self.print_dbg("Decl     :", data)
+    def handle_decl(self, data):
+        self.print_debug("Decl     :", data)
 
 
 # create a subclass and override the handler methods
@@ -472,9 +496,9 @@ class AzProgrammeHtmlParser(HTMLParser):
         self.matching_attr_value = ""
         self.errors = []
 
-    def print_dbg(self, str1, str2):
+    def print_debug(self, str1, str2):
         if self.in_film_part:
-            self.debug_text += str(str1) + ' ' + str(str2) + '\n'
+            self.debug_text += 'AZ ' + str(str1) + ' ' + str(str2) + '\n'
 
     def write_debug(self):
         if len(self.debug_text) > 0:
@@ -499,60 +523,78 @@ class AzProgrammeHtmlParser(HTMLParser):
             print("\n".join(self.errors))
 
     def handle_starttag(self, tag, attrs):
-        self.print_dbg("AZ Encountered a start tag:", tag)
+        self.print_debug("Encountered a start tag:", tag)
         for attr in attrs:
-            self.print_dbg("     attr:              ", attr)
+            self.print_debug("     attr:              ", attr)
             if attr_str(attr, 1).startswith("block-type-film"):
                 self.in_film_part = True
             if self.match_attr(tag, "img", attr, "alt"):
                 title = self.matching_attr_value
-                filmid = Globals.iffr_data.new_film_id(self.url)
-                self.filmseqnr += 1
-                self.film = Film(self.filmseqnr, filmid, title, self.url)
-                film_html_file = film_file_pattern.format(self.film.filmid)
-                if not os.path.isfile(film_html_file):
-                    print("---------------------- START READING FILM URL ---")
-                    print("--  TITLE: {}".format(title))
-                    print("--  URL:   {}".format(self.url))
-                    url_reader = UrlReader()
-                    html = url_reader.read_url(self.url)
-                    if len(html)> 0:
-                        with open(film_html_file, 'w') as f:
-                            f.write(html)
-                        print("--  Done writing URL to {}.".format(film_html_file))
-                    else:
-                        print("--  ERROR: Failed at film #{} '{}'.\n\n\n".format(filmid, title))
-                        #sys.exit(0)
-                        self.add_error("{2} could not be read (#{0} '{1}')".format(filmid, title, self.url))
-                if os.path.isfile(film_html_file):
-                    self.print_dbg("AZ --  Analysing film page of title:", title)
-                    film_html_parser = FilmPageParser(self.film)
-                    film_html_reader = HtmlReader()
-                    film_html_reader.feed_film_page(film_html_file, film_html_parser)
-                    self.debug_text += film_html_parser.debug_text
-                    Globals.iffr_data.films.append(self.film)
+                self.film = self.create_film(title, self.url)
+                if self.film is not None:
+                    if self.populate_film_fields():
+                        Globals.iffr_data.films.append(self.film)
             if self.match_attr(tag, "a", attr, "href"):
                 self.url = "https://iffr.com{}".format(self.matching_attr_value)
             if attr_str(attr, 1).startswith("edition-year-label"):
                 self.in_edition_part = True
 
     def handle_endtag(self, tag):
-        self.print_dbg("AZ Encountered an end tag :", tag)
+        self.print_debug("Encountered an end tag :", tag)
         if tag == "li":
             self.in_film_part = False
         if self.in_edition_part and tag == 'small':
-            self.film.duration = '0′'
+            if self.film is not None:
+                self.film.duration = '0′'
             self.in_edition_part = False
             self.datablock_count = 0
 
     def handle_data(self, data):
-        self.print_dbg("AZ Encountered some data  :", data)
+        self.print_debug("Encountered some data  :", data)
         if self.in_edition_part:
             self.datablock_count += 1
             if self.datablock_count == 3:
-                self.film.duration = data
+                if self.film is not None:
+                    self.film.duration = data
                 self.in_edition_part = False
                 self.datablock_count = 0
+
+    def create_film(self, title, url):
+        filmid = Globals.iffr_data.new_film_id(url)
+        if not filmid in [f.filmid for f in Globals.iffr_data.films]:
+            self.filmseqnr += 1
+            return Film(self.filmseqnr, filmid, title, url)
+        else:
+            self.add_error("Film #{} ({}) already in list".format(filmid, url))
+            return None
+
+    def populate_film_fields(self):
+        title = self.film.title
+        film_html_file = film_file_pattern.format(self.film.filmid)
+        if not os.path.isfile(film_html_file):
+            print("---------------------- START READING FILM URL ---")
+            print("--  TITLE: {}".format(title))
+            print("--  URL:   {}".format(self.url))
+            url_reader = UrlReader()
+            html = url_reader.read_url(self.url)
+            if len(html)> 0:
+                with open(film_html_file, 'w') as f:
+                    f.write(html)
+                print("--  Done writing URL to {}.".format(film_html_file))
+            else:
+                filmid = self.film.filmid
+                print("--  ERROR: Failed at film #{} '{}'.\n\n\n".format(filmid, title))
+                #sys.exit(0)
+                self.add_error("{2} could not be read (#{0} '{1}')".format(filmid, title, self.url))
+                return False
+        if os.path.isfile(film_html_file):
+            self.print_debug("--  Analysing film page of title:", title)
+            film_html_parser = FilmPageParser(self.film)
+            film_html_reader = HtmlReader()
+            film_html_reader.feed_film_page(film_html_file, film_html_parser)
+            self.debug_text += film_html_parser.debug_text
+            return True
+        return False
 
 
 class HtmlReader:

@@ -105,7 +105,7 @@ namespace PresentScreenings.TableView
         {
             _presentor.GoToScreening(screening);
 
-            // Commented out out as a work-around the prevent:
+            // Commented out as a work-around to prevent:
             // *** Terminating app due to uncaught exception 'NSInternalInconsistencyException',
             // reason: 'dismissViewController:: Error: maybe this view controller was not presented?'
             //CloseDialog();

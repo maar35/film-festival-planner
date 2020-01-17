@@ -3,6 +3,7 @@ using Foundation;
 using System;
 using System.IO;
 using ObjCRuntime;
+using System.Linq;
 
 namespace PresentScreenings.TableView
 {
@@ -103,6 +104,10 @@ namespace PresentScreenings.TableView
                 // Write screenings summary.
                 string summaryPath = Path.Combine(directory, "Screenings Summary.csv");
                 new Screening().WriteListToFile(summaryPath, Controller.Plan.AttendedScreenings());
+
+                // Write ratings sheet.
+                string sheetPath = Path.Combine(directory, "RatingsSheet.csv");
+                new Film().WriteListToFile(sheetPath, ScreeningsPlan.Films.Where(f => f.Duration >= FilmRatingDialogController.MinimalDuration).ToList());
             });
 
         }

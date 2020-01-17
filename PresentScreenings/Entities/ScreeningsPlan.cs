@@ -69,6 +69,7 @@ namespace PresentScreenings.TableView
 
             // Read screenings.
             Screenings = new Screening().ReadListFromFile(_screeningsFile, line => new Screening(line));
+            Screenings.RemoveAll(IsExtra);
 
             InitializeDays();
             _currDayNumber = 0;
@@ -111,6 +112,11 @@ namespace PresentScreenings.TableView
                     ScreenScreenings[day][screen].Sort();
                 }
             }
+        }
+
+        private static bool IsExtra(Screening screening)
+        {
+            return screening.Extra.Length >= 10 && screening.FilmTitle == screening.Extra.Remove(0, 10);
         }
         #endregion
 

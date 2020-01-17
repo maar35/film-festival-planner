@@ -11,6 +11,12 @@ namespace PresentScreenings.TableView
 {
     public partial class FilmRatingDialogController : GoToScreeningDialog, IScreeningProvider
     {
+        #region Constants
+        const float _descriptionWidth = 3000;
+        const float _descriptionMaxWidth = 4000;
+        const float _FriendRatingWidth = 60;
+        #endregion
+
         #region Private Variables
         ViewController _presentor;
         FilmTableDataSource _filmTableDataSource;
@@ -51,8 +57,9 @@ namespace PresentScreenings.TableView
         {
             base.ViewDidLoad();
 
-            // Add friends rating colums to the table view.
+            // Add in-code created colums to the table view.
             CreateFriendRatingColumns();
+            CreateDescriptionColumn();
 
             // Polulate the controls
             _typeMatchMethodCheckBox.Action = new ObjCRuntime.Selector("ToggleTypeMatchMethod:");
@@ -137,7 +144,7 @@ namespace PresentScreenings.TableView
         #region Private Methods
         void CreateFriendRatingColumns()
         {
-            const float width = 60;
+            const float width = _FriendRatingWidth;
             foreach (string friend in ScreeningInfo.MyFriends)
             {
                 var sortDescriptor = new NSSortDescriptor(friend, false, new ObjCRuntime.Selector("compare:"));
@@ -156,6 +163,25 @@ namespace PresentScreenings.TableView
                 _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + width, frame.X + width);
                 _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
             }
+        }
+
+        private void CreateDescriptionColumn()
+        {
+            var title = "Description";
+            var sortDescriptor = new NSSortDescriptor(title, false, new ObjCRuntime.Selector("compare:"));
+            var descriptionColumn = new NSTableColumn
+            {
+                Title = title,
+                Width = _descriptionWidth,
+                MaxWidth = _descriptionMaxWidth,
+                Identifier = title,
+                SortDescriptorPrototype = sortDescriptor
+            };
+            _filmRatingTableView.AddColumn(descriptionColumn);
+            CGRect frame = _filmRatingTableView.Frame;
+            nfloat newRight = frame.X;
+            _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + frame.Width + _descriptionWidth, frame.X + descriptionColumn.MaxWidth);
+            _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
         }
 
         void ToggleTypeMatchMethod()

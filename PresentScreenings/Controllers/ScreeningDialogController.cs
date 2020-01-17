@@ -111,6 +111,10 @@ namespace PresentScreenings.TableView
         private void SetControlValues()
         {
             _labelTitle.StringValue = _screening.FilmTitle;
+            if (_screening.Extra != string.Empty)
+            {
+                _labelTitle.StringValue += " (+ " + _screening.Extra + ")";
+            }
             _labelScreen.StringValue = _screening.Screen.ParseName;
             _labelTime.StringValue = _screening.ToLongTimeString();
             _labelPresent.StringValue = _screening.AttendeesString();
