@@ -179,17 +179,13 @@ namespace PresentScreenings.TableView
             {
                 screening.Status = ScreeningInfo.ScreeningStatus.AttendedByFriend;
             }
-            else if (screening.TimesIAttendFilm > 0)
+            else if (TimesIAttendFilm(screening) > 0)
             {
                 screening.Status = ScreeningInfo.ScreeningStatus.AttendingFilm;
             }
-            else if (screening.HasTimeOverlap)
+            else if (HasTimeOverlap(screening))
             {
                 screening.Status = ScreeningInfo.ScreeningStatus.TimeOverlap;
-            }
-            else if (screening.HasNoTravelTime)
-            {
-                screening.Status = ScreeningInfo.ScreeningStatus.NoTravelTime;
             }
             else
             {
@@ -197,6 +193,40 @@ namespace PresentScreenings.TableView
             }
 
             UpdateWarning(screening);
+        }
+
+        int TimesIAttendFilm(Screening screening)
+        {
+            var timesIAttendFilm = (
+                from Screening s in ScreeningsPlan.Screenings
+                where s.FilmId == screening.FilmId && s.IAttend
+                select s
+            ).Count();
+            return timesIAttendFilm;
+        }
+
+        List<Screening> OverlappingAttendedScreenings(Screening screening)
+        {
+            var overlappingAttendedScreenings = (
+                from Screening s in ScreeningsPlan.Screenings
+                where s.IAttend
+                    && s.StartTime <= screening.EndTime
+                    && s.EndTime >= screening.StartTime
+                select s
+            ).ToList();
+            return overlappingAttendedScreenings;
+        }
+
+        List<Screening> OverlappingScreenings(Screening screening)
+        {
+            var overlappingScreenings = (
+                from Screening s in ScreeningsPlan.Screenings
+                where s.StartTime <= screening.EndTime
+                    && s.EndTime >= screening.StartTime
+                    && s.FilmId != screening.FilmId
+                select s
+            ).ToList();
+            return overlappingScreenings;
         }
 
         List<Screening> ScreeningsWithSameFilm(Screening screening)
@@ -208,29 +238,14 @@ namespace PresentScreenings.TableView
             ).ToList();
             return screeningsWithSameFilm;
         }
+
+        bool HasTimeOverlap(Screening screening)
+        {
+            return OverlappingAttendedScreenings(screening).Count() > 0;
+        }
         #endregion
 
         #region Public Methods
-        public static List<Screening> OverlappingScreenings(Screening screening, bool useTravelTime = false)
-        {
-            var overlappingScreenings = (
-                from Screening s in ScreeningsPlan.Screenings
-                where s.Overlaps(screening, useTravelTime) && s.FilmId != screening.FilmId
-                select s
-            ).ToList();
-            return overlappingScreenings;
-        }
-
-        public static List<Screening> OverlappingAttendedScreenings(Screening screening, bool useTravelTime = false)
-        {
-            var overlappingAttendedScreenings = (
-                from Screening s in ScreeningsPlan.Screenings
-                where s.IAttend && s.Overlaps(screening, useTravelTime)
-                select s
-            ).ToList();
-            return overlappingAttendedScreenings;
-        }
-
         public bool ViewIsActive()
         {
             return RunningPopupsCount == 0;
@@ -239,10 +254,6 @@ namespace PresentScreenings.TableView
         public void ReloadScreeningsView()
         {
             TableView.ReloadData();
-            if (App.AnalyserDialogController != null)
-            {
-                App.AnalyserDialogController.FilmOutlineView.ReloadData();
-            }
         }
 
         public void AddScreeningControl(Screening screening, ScreeningControl control)
@@ -268,6 +279,17 @@ namespace PresentScreenings.TableView
                 where screening.FilmId == filmId
                 orderby screening.StartTime
                 select screening
+            ).ToList();
+            return filmScreenings;
+        }
+
+        public List<Screening> FilmScreenings(Screening screening)
+        {
+            var filmScreenings = (
+                from Screening s in ScreeningsPlan.Screenings
+                where s.FilmId == screening.FilmId
+                orderby s.StartTime
+                select s
             ).ToList();
             return filmScreenings;
         }
@@ -356,13 +378,6 @@ namespace PresentScreenings.TableView
                 }
             }
         }
-
-        public static FilmRating GetMaxRating(Film film)
-        {
-            var ratings = ScreeningInfo.FilmFans.Select(f => GetFilmFanFilmRating(film, f));
-            var rating = ratings.Max();
-            return rating;
-        }
         #endregion
 
         #region Public Methods working with Screening Attendance
@@ -376,12 +391,6 @@ namespace PresentScreenings.TableView
                 UpdateOneAttendanceStatus(overlappingScreening);
             }
 
-            var noTravelTimeScreenings = OverlappingScreenings(screening, true);
-            foreach (Screening noTravelTimeScreening in noTravelTimeScreenings)
-            {
-                UpdateOneAttendanceStatus(noTravelTimeScreening);
-            }
-
             var screeningsWithSameFilm = ScreeningsWithSameFilm(screening);
             foreach (Screening screeningWithSameFilm in screeningsWithSameFilm)
             {
@@ -391,7 +400,7 @@ namespace PresentScreenings.TableView
 
         public void UpdateWarning(Screening screening)
         {
-            if (screening.TimesIAttendFilm > 1)
+            if (TimesIAttendFilm(screening) > 1)
             {
                 screening.Warning = ScreeningInfo.Warning.SameMovie;
             }

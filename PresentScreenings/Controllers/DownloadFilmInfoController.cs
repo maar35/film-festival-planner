@@ -102,14 +102,6 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Public Methods
-
-        public static string LogTimeString()
-        {
-            return $"{DateTime.Now.ToString(_dateTimeFormat)}";
-        }
-        #endregion
-
         #region Private Methods
         private List<Film> GetFilmsWithoutInfo(List<Film> films)
         {
@@ -276,7 +268,6 @@ namespace PresentScreenings.TableView
                     _activityField.StringValue = builder.ToString();
                     var fit = _activityField.SizeThatFits(_activityField.Frame.Size);
                     _activityField.SetFrameSize(fit);
-                    Presentor.FilmRatingTableView.ReloadData();
                     var yScroll = _activityField.Frame.Height - _activityScrollView.Frame.Height;
                     _activityScrollView.ContentView.ScrollToPoint(new CGPoint(0, yScroll));
                     _cancelButton.Enabled = true;
@@ -296,7 +287,12 @@ namespace PresentScreenings.TableView
             }
         }
 
-        private void CloseView()
+        private string LogTimeString()
+        {
+            return $"{DateTime.Now.ToString(_dateTimeFormat)}";
+        }
+
+        void CloseView()
         {
             Presentor.DismissViewController(this);
         }

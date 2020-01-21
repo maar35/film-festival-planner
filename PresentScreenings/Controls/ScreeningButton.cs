@@ -1,7 +1,6 @@
-﻿using AppKit;
+﻿using System;
+using AppKit;
 using CoreGraphics;
-using CoreText;
-using Foundation;
 
 namespace PresentScreenings.TableView
 {
@@ -10,12 +9,8 @@ namespace PresentScreenings.TableView
     /// displays need-to-know information of that screening.
     /// </summary>
 
-    public class ScreeningButton : NSControl
+    public class ScreeningButton : NSButton
     {
-        #region Private Constants
-        private const float _lineHeight = ScreeningsView.ScreeningControlLineHeight;
-        #endregion
-
         #region Private Members
         Screening _screening;
         #endregion
@@ -25,6 +20,11 @@ namespace PresentScreenings.TableView
         {
             Initialize();
             _screening = screening;
+            Font = NSFont.BoldSystemFontOfSize(13);
+            Bordered = false;
+            StringValue = string.Empty;
+            base.UsesSingleLineMode = false;
+            LineBreakMode = NSLineBreakMode.TruncatingMiddle;
 			NeedsDisplay = true;
         }
         #endregion
@@ -35,35 +35,27 @@ namespace PresentScreenings.TableView
             base.DrawRect(dirtyRect);
 
             // Use Core Graphic routines to draw our UI
-            using (CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
+            using (CGContext g = NSGraphicsContext.CurrentContext.GraphicsPort)
             {
-                // Fill the screening color.
                 CGPath path = new CGPath();
                 CGRect frame = new CGRect(0, 0, base.Frame.Width, base.Frame.Height);
                 path.AddRect(frame);
-                ColorView.SetScreeningColor(_screening, context);
-                context.AddPath(path);
-                context.DrawPath(CGPathDrawingMode.Fill);
+                ColorView.SetScreeningColor(_screening, g);
+                g.AddPath(path);
+                g.DrawPath(CGPathDrawingMode.Fill);
 
-                // Draw screening information.
-                context.TranslateCTM(2, ScreeningsView.VerticalTextOffset);
-                context.SetTextDrawingMode(CGTextDrawingMode.Fill);
-                ColorView.SetScreeningColor(_screening, context, true);
-                CTStringAttributes attrs = new CTStringAttributes();
-                attrs.ForegroundColorFromContext = true;
-                attrs.Font = ScreeningControl.StandardFont;
-                var textPosition = new CGPoint(0, _lineHeight);
-                string[] lines = _screening.ToScreeningLabelString().Split('\n');
-                foreach (var line in lines)
-                {
-                    context.TextPosition = textPosition;
-                    var attributedString = new NSAttributedString(line, attrs);
-                    using (var textLine = new CTLine(attributedString))
-                    {
-                        textLine.Draw(context);
-                    }
-                    textPosition.Y -= _lineHeight;
-                }
+                float fontSize = 1.0f;
+                g.TranslateCTM(0, fontSize);
+                g.SetLineWidth((nfloat)0.5);
+                g.SetTextDrawingMode(CGTextDrawingMode.Fill);
+                ColorView.SetScreeningColor(_screening, g, true);
+                g.SelectFont("Helvetica-Bold", fontSize, CGTextEncoding.MacRoman);
+				g.TextPosition = new CGPoint(2, 2 + 12);
+                string labelString = _screening.ToScreeningLabelString();
+                string[] lines = labelString.Split('\n');
+                g.ShowText(lines[0]);
+                g.TextPosition = new CGPoint(2, 2 + 25);
+                g.ShowText(lines[1]);
             }
             NeedsDisplay = true;
         }

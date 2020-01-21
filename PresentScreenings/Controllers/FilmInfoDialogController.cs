@@ -144,9 +144,6 @@ namespace PresentScreenings.TableView
 
             // Display the screenings.
             GoToScreeningDialog.DisplayScreeningControls(screenings, screeningsView, GoToScreening, ref _currentScreeningControl);
-
-            // Scroll to the selected screening.
-            GoToScreeningDialog.ScrollScreeningToVisible(App.Controller.CurrentScreening, scrollView);
         }
 
         void CreateFilmArticleLink(ref float yCurr)
@@ -287,10 +284,6 @@ namespace PresentScreenings.TableView
                 SetSummaryFieldText(summary);
                 var fit = _summaryField.SizeThatFits(_summaryField.Frame.Size);
                 _summaryField.SetFrameSize(fit);
-            }
-            if (App.FilmsDialogController != null)
-            {
-                App.FilmsDialogController.FilmRatingTableView.ReloadData();
             }
         }
 

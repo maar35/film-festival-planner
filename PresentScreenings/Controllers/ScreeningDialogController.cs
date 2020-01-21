@@ -72,7 +72,7 @@ namespace PresentScreenings.TableView
         {
             base.ViewWillAppear();
             _control.Selected = true;
-            _filmScreenings = ViewController.FilmScreenings(_screening.FilmId);
+            _filmScreenings = _presentor.FilmScreenings(_screening);
             _checkboxTicketsBought.Activated += (s, e) => ToggleTicketsBought();
             _checkboxSoldOut.Activated += (s, e) => ToggleSoldOut();
             SetControlValues();
@@ -111,10 +111,6 @@ namespace PresentScreenings.TableView
         private void SetControlValues()
         {
             _labelTitle.StringValue = _screening.FilmTitle;
-            if (_screening.Extra != string.Empty)
-            {
-                _labelTitle.StringValue += " (+ " + _screening.Extra + ")";
-            }
             _labelScreen.StringValue = _screening.Screen.ParseName;
             _labelTime.StringValue = _screening.ToLongTimeString();
             _labelPresent.StringValue = _screening.AttendeesString();

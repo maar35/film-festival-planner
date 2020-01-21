@@ -15,22 +15,20 @@ namespace PresentScreenings.TableView
     {
         #region Private members
         static NSColor screeningTextColorBlack;
-        static NSColor screeningBgColorBlack;
+        static NSColor screeningBGColorBlack;
         static NSColor screeningTextColorGrey;
-        static NSColor screeningBgColorGrey;
-        static NSColor screeningTextColorDarkGrey;
-        static NSColor screeningBgColorDarkGrey;
+        static NSColor screeningBGColorGrey;
         static NSColor screeningTextColorBlue;
-        static NSColor screeningBgColorBlue;
+        static NSColor screeningBGColorBlue;
         static NSColor screeningTextColorRed;
-        static NSColor screeningBgColorRed;
+        static NSColor screeningBGColorRed;
         static NSColor screeningTextColorPurple;
-        static NSColor screeningBgColorPurple;
+        static NSColor screeningBGColorPurple;
         static NSColor screeningTextColorAqua;
-        static NSColor screeningBgColorAqua;
-        static readonly Dictionary<ScreeningInfo.ScreeningStatus, NSColor> TextColorByScreeningStatus;
-        static readonly Dictionary<ScreeningInfo.ScreeningStatus, NSColor> BgColorByScreeningStatus;
-        static readonly Dictionary<ScreeningInfo.TicketsStatus, NSColor> ColorByTicketStatus;
+        static NSColor screeningBGColorAqua;
+        static readonly Dictionary<ScreeningInfo.ScreeningStatus, NSColor> screeningTextColor;
+        static readonly Dictionary<ScreeningInfo.ScreeningStatus, NSColor> screeningBGColor;
+        static readonly Dictionary<ScreeningInfo.TicketsStatus, NSColor> ticketsStatusColor;
         static NSColor ClickPadColorBlue = NSColor.FromRgba(0, 0, 255, 207);
         static NSColor ClickPadColorGrey = NSColor.FromRgba(127, 127, 127, 119);
         static NSColor ClickPadTextColorSelected = NSColor.White;
@@ -45,44 +43,40 @@ namespace PresentScreenings.TableView
         #region Constructors
         static ColorView()
         {
-            screeningBgColorBlack = NSColor.FromRgb(0, 0, 0);
+            screeningBGColorBlack = NSColor.FromRgb(0, 0, 0);
             screeningTextColorBlack = NSColor.White;
-            screeningBgColorGrey = NSColor.FromRgb(219, 219, 219);
+            screeningBGColorGrey = NSColor.FromRgb(219, 219, 219);
             screeningTextColorGrey = NSColor.FromRgb(0, 0, 0);
-            screeningBgColorDarkGrey = NSColor.FromRgb(176, 176, 176);
-            screeningTextColorDarkGrey = NSColor.FromRgb(0, 0, 0);
-            screeningBgColorBlue = NSColor.FromRgb(0, 38, 176);
+            screeningBGColorBlue = NSColor.FromRgb(0, 38, 176);
             screeningTextColorBlue = NSColor.FromRgb(255, 255, 255);
-            screeningBgColorRed = NSColor.FromRgb(176, 0, 38);
+            screeningBGColorRed = NSColor.FromRgb(176, 0, 38);
             screeningTextColorRed = NSColor.White;
-            screeningBgColorPurple = NSColor.FromRgb(176, 0, 176);
+            screeningBGColorPurple = NSColor.FromRgb(176, 0, 176);
             screeningTextColorPurple = NSColor.White;
-            screeningBgColorAqua = NSColor.FromRgb(38, 255, 176);
+            screeningBGColorAqua = NSColor.FromRgb(38, 255, 176);
             screeningTextColorAqua = NSColor.Black;
 
-            TextColorByScreeningStatus = new Dictionary<ScreeningInfo.ScreeningStatus, NSColor> { };
-            TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Free, screeningTextColorBlack);
-            TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.NeedingTickets, screeningTextColorPurple);
-            TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Attending, screeningTextColorRed);
-            TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.AttendedByFriend, screeningTextColorBlue);
-            TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.AttendingFilm, screeningTextColorGrey);
-            TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.TimeOverlap, screeningTextColorGrey);
-            TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.NoTravelTime, screeningTextColorDarkGrey);
+            screeningTextColor = new Dictionary<ScreeningInfo.ScreeningStatus, NSColor> { };
+            screeningTextColor.Add(ScreeningInfo.ScreeningStatus.Free, screeningTextColorBlack);
+            screeningTextColor.Add(ScreeningInfo.ScreeningStatus.NeedingTickets, screeningTextColorPurple);
+            screeningTextColor.Add(ScreeningInfo.ScreeningStatus.Attending, screeningTextColorRed);
+            screeningTextColor.Add(ScreeningInfo.ScreeningStatus.AttendedByFriend, screeningTextColorBlue);
+            screeningTextColor.Add(ScreeningInfo.ScreeningStatus.AttendingFilm, screeningTextColorGrey);
+            screeningTextColor.Add(ScreeningInfo.ScreeningStatus.TimeOverlap, screeningTextColorGrey);
 
-            BgColorByScreeningStatus = new Dictionary<ScreeningInfo.ScreeningStatus, NSColor> { };
-            BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Free, screeningBgColorBlack);
-            BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.NeedingTickets, screeningBgColorPurple);
-            BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Attending, screeningBgColorRed);
-            BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.AttendedByFriend, screeningBgColorBlue);
-            BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.AttendingFilm, NSColor.Yellow);
-            BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.TimeOverlap, screeningBgColorGrey);
-            BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.NoTravelTime, screeningBgColorDarkGrey);
+            screeningBGColor = new Dictionary<ScreeningInfo.ScreeningStatus, NSColor> { };
+            screeningBGColor.Add(ScreeningInfo.ScreeningStatus.Free, screeningBGColorBlack);
+            screeningBGColor.Add(ScreeningInfo.ScreeningStatus.NeedingTickets, screeningBGColorPurple);
+            screeningBGColor.Add(ScreeningInfo.ScreeningStatus.Attending, screeningBGColorRed);
+            screeningBGColor.Add(ScreeningInfo.ScreeningStatus.AttendedByFriend, screeningBGColorBlue);
+            screeningBGColor.Add(ScreeningInfo.ScreeningStatus.AttendingFilm, NSColor.Yellow);
+            screeningBGColor.Add(ScreeningInfo.ScreeningStatus.TimeOverlap, screeningBGColorGrey);
 
-            ColorByTicketStatus = new Dictionary<ScreeningInfo.TicketsStatus, NSColor> { };
-            ColorByTicketStatus.Add(ScreeningInfo.TicketsStatus.TicketsArranged, screeningBgColorRed);
-            ColorByTicketStatus.Add(ScreeningInfo.TicketsStatus.NoTicketsNeeded, screeningBgColorBlack);
-            ColorByTicketStatus.Add(ScreeningInfo.TicketsStatus.MustBuyTickets, screeningBgColorPurple);
-            ColorByTicketStatus.Add(ScreeningInfo.TicketsStatus.MustSellTickets, screeningBgColorAqua);
+            ticketsStatusColor = new Dictionary<ScreeningInfo.TicketsStatus, NSColor> { };
+            ticketsStatusColor.Add(ScreeningInfo.TicketsStatus.TicketsArranged, screeningBGColorRed);
+            ticketsStatusColor.Add(ScreeningInfo.TicketsStatus.NoTicketsNeeded, screeningBGColorBlack);
+            ticketsStatusColor.Add(ScreeningInfo.TicketsStatus.MustBuyTickets, screeningBGColorPurple);
+            ticketsStatusColor.Add(ScreeningInfo.TicketsStatus.MustSellTickets, screeningBGColorAqua);
         }
         #endregion
 
@@ -90,15 +84,15 @@ namespace PresentScreenings.TableView
         public static void SetScreeningColor(Screening screening, NSTextField label)
         {
             var status = screening.Status;
-            label.BackgroundColor = BgColorByScreeningStatus[status];
-            label.TextColor = TextColorByScreeningStatus[status];
+            label.BackgroundColor = screeningBGColor[status];
+            label.TextColor = screeningTextColor[status];
         }
 
         public static void SetScreeningColor(Screening screening, CGContext context)
         {
             var status = screening.Status;
-            context.SetFillColor(BgColorByScreeningStatus[status].CGColor);
-            context.SetStrokeColor(TextColorByScreeningStatus[status].CGColor);
+            context.SetFillColor(screeningBGColor[status].CGColor);
+            context.SetStrokeColor(screeningTextColor[status].CGColor);
         }
 
         public static void SetScreeningColor(Screening screening, CGContext context, bool textMode)
@@ -106,8 +100,8 @@ namespace PresentScreenings.TableView
             var status = screening.Status;
             if (textMode)
             {
-                context.SetFillColor(TextColorByScreeningStatus[status].CGColor);
-                context.SetStrokeColor(TextColorByScreeningStatus[status].CGColor);
+                context.SetFillColor(screeningTextColor[status].CGColor);
+                context.SetStrokeColor(screeningTextColor[status].CGColor);
             }
             else
             {
@@ -118,7 +112,7 @@ namespace PresentScreenings.TableView
         public static void SetTicketsStatusColor(Screening screening, CGContext context)
         {
             var status = screening.TicketStatus;
-            NSColor color = ColorByTicketStatus[status];
+            NSColor color = ticketsStatusColor[status];
             context.SetStrokeColor(color.CGColor);
         }
 

@@ -59,8 +59,7 @@ namespace PresentScreenings.TableView
                 type = ParseInfoType.Article,
                 description = "Article",
                 //articelParseInfo.re = new Regex(@"\<article.*?(\<p\>.*\</p\>).*\</article\>", RegexOptions.Singleline);
-                //re = new Regex(@"\<article.*?(\<p\>.*\</p\>)\s*\</div\>\s*\</article\>", RegexOptions.Singleline)
-                re = new Regex(@"\<article.*?(\<p\>.*\</p\>)\s*\</div\>", RegexOptions.Singleline)
+                re = new Regex(@"\<article.*?(\<p\>.*\</p\>)\s*\</div\>\s*\</article\>", RegexOptions.Singleline)
             };
             var screenedFilmsParseInfo = new ParseInfo
             {
@@ -83,7 +82,7 @@ namespace PresentScreenings.TableView
         #region Public Methods
 
         /// <summary>
-        /// Html to plain text.
+        /// Htmls to plain text.
         /// By Ben Anderson (https://stackoverflow.com/questions/286813/how-do-you-convert-html-to-plain-text)
         /// </summary>
         /// <returns>The plain text.</returns>
@@ -108,11 +107,6 @@ namespace PresentScreenings.TableView
             text = stripFormattingRegex.Replace(text, string.Empty);
 
             return text;
-        }
-
-        public static string HtmlToText(string html)
-        {
-            return Screening.HtmlDecode(HtmlToPlainText(html));
         }
 
         public static string UrlString(string title, MediumCatagory catagory)

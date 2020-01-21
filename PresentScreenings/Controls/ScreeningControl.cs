@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Foundation;
+using System;
 using AppKit;
 using CoreGraphics;
-using CoreText;
-using Foundation;
+using System.Linq;
 
 namespace PresentScreenings.TableView
 {
@@ -17,12 +17,13 @@ namespace PresentScreenings.TableView
     public class ScreeningControl : NSControl
     {
         #region Private Variables
-        private static nfloat _xExtension;
-        private bool _selected = false;
-        private static CTStringAttributes _stringAttributes;
-        private CGRect _screeningRect;
-        private ScreeningLabel _label;
-        private ScreeningButton _button;
+		static bool _useCoreGraphics = false;
+		static nfloat _xExtension;
+        bool _selected = false;
+        CGRect _screeningRect;
+        Screening _screening;
+        ScreeningLabel _label;
+        ScreeningButton _button;
         #endregion
 
         #region Application Access
@@ -30,11 +31,8 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public static bool UseCoreGraphics { get; set; }
-        public static nfloat FontSize { get; } = 13;
-        public static CTFont StandardFont { get; } = new CTFont(".AppleSystemUIFontBold", FontSize);
-        public Screening Screening { get; }
-        public static string AutomaticallyPlannedSymbol { get; } = "𝛑"; // MATHEMATICAL BOLD SMALL PI = 𝛑
+        public static bool UseCoreGraphics { get => _useCoreGraphics; set => _useCoreGraphics = value; }
+        public Screening Screening => _screening;
         public bool Selected
         {
             get => _selected;
@@ -63,26 +61,26 @@ namespace PresentScreenings.TableView
         public ScreeningControl(CGRect screeningRect, Screening screening) : base(ControlRect(screeningRect))
         {
             Initialize();
-            Screening = screening;
+            _screening = screening;
             _screeningRect = screeningRect;
             nfloat clickWidth = _screeningRect.Height;
             nfloat clickHeigt = _screeningRect.Height;
             CGRect labelRect = new CGRect(_xExtension, 0, Frame.Width - _xExtension, Frame.Height);
-            if (UseCoreGraphics)
+            if (_useCoreGraphics)
             {
-                _button = new ScreeningButton(labelRect, Screening);
-                _button.Activated += (sender, e) => ShowScreeningInfo(Screening);
+                _button = new ScreeningButton(labelRect, _screening);
+                _button.Activated += (sender, e) => ShowScreeningInfo(_screening);
 				base.AddSubview(_button);
             }
             else
             {
-                _label = new ScreeningLabel(labelRect, Screening);
+                _label = new ScreeningLabel(labelRect, _screening);
 				base.AddSubview(_label);
             }
-            StringValue = Screening.ToScreeningLabelString();
+            StringValue = _screening.ToScreeningLabelString();
             Alignment = NSTextAlignment.Left;
             LineBreakMode = NSLineBreakMode.TruncatingMiddle;
-            Font = NSFont.BoldSystemFontOfSize(FontSize);
+            Font = NSFont.BoldSystemFontOfSize(13);
         }
 
         void Initialize()
@@ -97,144 +95,43 @@ namespace PresentScreenings.TableView
         {
             base.DrawRect(dirtyRect);
 
-            // Use Core Graphics routines to draw our UI.
+            // Use Core Graphic routines to draw our UI
             var side = Frame.Height;
-            using (CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
+            using (CGContext g = NSGraphicsContext.CurrentContext.GraphicsPort)
             {
-                // Define the clickable rect.
+                // Define the clickable rect
                 var clickableRect = new CGRect(0, 0, _xExtension - 2, side);
 
-                // Draw the clickable rect.
-                DrawClickRect(context, clickableRect);
+                // Draw the clickable rect
+                DrawClickRect(g, clickableRect);
 
-                // Draw a frame if something's wrong with tickets.
-                if (ScreeningInfo.TicketStatusNeedsAttention(Screening))
+                // Draw a frame if something's wrong with tickets
+                if (ScreeningInfo.TicketStatusNeedsAttention(_screening))
                 {
-                    ColorView.DrawTicketAvalabilityFrame(context, Screening, side);
+                    ColorView.DrawTicketAvalabilityFrame(g, _screening, side);
                 }
 
-                // Draw Sold Out symbol.
-                if(Screening.SoldOut)
+                // Draw Sold Out Symbol
+                if(_screening.SoldOut)
                 {
-                    ColorView.DrawSoldOutSymbol(context, Selected, clickableRect);
+                    ColorView.DrawSoldOutSymbol(g, Selected, clickableRect);
                 }
 
-                // Draw a warning symbol.
-                if (Screening.Warning != ScreeningInfo.Warning.NoWarning)
+                // Draw a warningsymbol
+                if (_screening.Warning != ScreeningInfo.Warning.NoWarning)
                 {
-                    DrawWarningMiniature(context, side);
-                }
-
-                // Initialize CoreText settings.
-                InitializeCoreText(context, Selected);
-
-                // Draw Automatically Planned symbol.
-                if (Screening.AutomaticallyPlanned)
-                {
-                    DrawAutomaticallyPlannedSymbol(context, side);
+                    DrawWarningMiniature(g, side);
                 }
 
                 // Draw the rating of the film
-                var film = ViewController.GetFilmById(Screening.FilmId);
-                var rating = ViewController.GetMaxRating(film);
+                var film = ViewController.GetFilmById(_screening.FilmId);
+                var ratings = ScreeningInfo.FilmFans.Select(f => ViewController.GetFilmFanFilmRating(film, f));
+                var rating = ratings.Max();
                 if (rating.IsGreaterOrEqual(FilmRating.LowestSuperRating) || rating.Equals(FilmRating.Unrated))
                 {
-                    DrawRating(context, side, rating);
+                    DrawRating(g, side, rating);
                 }
             }
-        }
-        #endregion
-
-        #region Public Methods
-        public static void InitializeCoreText(CGContext context, bool selected)
-        {
-            context.TranslateCTM(-1, ScreeningsView.VerticalTextOffset);
-            NSColor textColor = ColorView.ClickPadTextColor(selected);
-            context.SetTextDrawingMode(CGTextDrawingMode.Fill);
-            context.SetFillColor(textColor.CGColor);
-            _stringAttributes = new CTStringAttributes
-            {
-                ForegroundColorFromContext = true,
-                Font = StandardFont
-            };
-        }
-
-        public static void DrawText(CGContext context, string text, nfloat x, nfloat y)
-        {
-            context.TextPosition = new CGPoint(x, y);
-            var attributedString = new NSAttributedString(text, _stringAttributes);
-            using (var textLine = new CTLine(attributedString))
-            {
-                textLine.Draw(context);
-            }
-        }
-        #endregion
-
-        #region Private Methods
-        private void FlipSwitchState()
-        {
-            RaiseValueChanged();
-        }
-
-        private void DrawClickRect(CGContext context, CGRect clickRect)
-        {
-            var gpath = new CGPath();
-            gpath.AddRect(clickRect);
-            ColorView.ClickPadBackgroundColor(Selected).SetFill();
-            gpath.CloseSubpath();
-            context.AddPath(gpath);
-            context.DrawPath(CGPathDrawingMode.Fill);
-        }
-
-        private void DrawWarningMiniature(CGContext context, nfloat side)
-        {
-            nfloat x = side*1/16;
-            nfloat y = side*4/16;
-            context.SetLineWidth(1);
-            NSColor.Black.SetStroke();
-            NSColor.Yellow.SetFill();
-            var trianglePath = new CGPath();
-            trianglePath.AddLines(new CGPoint[]{
-                new CGPoint(x + side*1/16, y + side*1/16),
-                new CGPoint(x + side*4/16, y + side*7/16),
-                new CGPoint(x + side*7/16, y + side*1/16)
-            });
-            trianglePath.CloseSubpath();
-            context.AddPath(trianglePath);
-            context.DrawPath(CGPathDrawingMode.FillStroke);
-            var barPath = new CGPath();
-            barPath.AddLines(new CGPoint[]{
-                new CGPoint(x + side*4/16, y + side*2/16),
-                new CGPoint(x + side*4/16, y + side*5/16)
-            });
-            barPath.CloseSubpath();
-            context.AddPath(barPath);
-            context.DrawPath(CGPathDrawingMode.Stroke);
-        }
-
-        private void DrawRating(CGContext context, nfloat side, FilmRating rating)
-        {
-            DrawText(context, rating.ToString(), side/2, ScreeningsView.ScreeningControlLineHeight);
-        }
-
-        private void DrawAutomaticallyPlannedSymbol(CGContext context, nfloat side)
-        {
-            DrawText(context, AutomaticallyPlannedSymbol, side/2, 0);
-        }
-
-        private static CGRect ControlRect(CGRect screeningRect)
-        {
-            _xExtension = screeningRect.Height;
-            nfloat x = screeningRect.X;
-            nfloat y = screeningRect.Y;
-            nfloat w = screeningRect.Width;
-            nfloat h = screeningRect.Height;
-            return new CGRect(x - _xExtension, y, w + _xExtension, h);
-        }
-
-        private void ShowScreeningInfo(Screening screening)
-        {
-            _app.Controller.GoToScreening(screening);
         }
         #endregion
 
@@ -285,6 +182,76 @@ namespace PresentScreenings.TableView
             {
                 NSApplication.SharedApplication.SendAction(Action, Target, this);
             }
+        }
+        #endregion
+
+        #region Private Methods
+        void FlipSwitchState()
+        {
+            RaiseValueChanged();
+        }
+
+        void DrawClickRect(CGContext g, CGRect clickRect)
+        {
+            var gpath = new CGPath();
+            gpath.AddRect(clickRect);
+            ColorView.ClickPadBackgroundColor(Selected).SetFill();
+            gpath.CloseSubpath();
+            g.AddPath(gpath);
+            g.DrawPath(CGPathDrawingMode.Fill);
+        }
+
+        void DrawWarningMiniature(CGContext g, nfloat side)
+        {
+            nfloat shift = side*6/16;
+            g.SetLineWidth(1);
+            NSColor.Black.SetStroke();
+            NSColor.Yellow.SetFill();
+            var trianglePath = new CGPath();
+            trianglePath.AddLines(new CGPoint[]{
+                new CGPoint(shift + side*1/16, side*1/16),
+                new CGPoint(shift + side*4/16, side*7/16),
+                new CGPoint(shift + side*7/16, side*1/16)
+            });
+            trianglePath.CloseSubpath();
+            g.AddPath(trianglePath);
+            g.DrawPath(CGPathDrawingMode.FillStroke);
+            var barPath = new CGPath();
+            barPath.AddLines(new CGPoint[]{
+                new CGPoint(shift + side*4/16, side*2/16),
+                new CGPoint(shift + side*4/16, side*5/16)
+            });
+            barPath.CloseSubpath();
+            g.AddPath(barPath);
+            g.DrawPath(CGPathDrawingMode.Stroke);
+        }
+
+        void DrawRating(CGContext g, nfloat side, FilmRating rating)
+        {
+            NSColor textColor = ColorView.ClickPadTextColor(Selected);
+            float fontSize = 13.0f;
+            g.TranslateCTM(0, fontSize);
+            g.SetTextDrawingMode(CGTextDrawingMode.Fill);
+            g.SetFillColor(textColor.CGColor);
+            g.SelectFont("Helvetica-Bold", fontSize, CGTextEncoding.MacRoman);
+            g.TextPosition = new CGPoint(side/2 - 4, 7);
+            g.ShowText(rating.ToString());
+        }
+
+        static CGRect ControlRect(CGRect screeningRect)
+        {
+            _xExtension = screeningRect.Height;
+            nfloat x = screeningRect.X;
+            nfloat y = screeningRect.Y;
+            nfloat w = screeningRect.Width;
+            nfloat h = screeningRect.Height;
+            return new CGRect(x - _xExtension, y, w + _xExtension, h);
+        }
+
+        void ShowScreeningInfo(Screening screening)
+        {
+            ViewController controller = ((AppDelegate)NSApplication.SharedApplication.Delegate).Controller;
+            controller.GoToScreening((screening));
         }
         #endregion
     }

@@ -15,7 +15,7 @@ namespace PresentScreenings.TableView
     [Register("ScreeningLabel")]
     public class ScreeningLabel : NSTextField
     {
-        #region Private Variables
+        #region Privat Variables
         Screening _screening = null;
         #endregion
 
@@ -23,7 +23,7 @@ namespace PresentScreenings.TableView
         public ScreeningLabel(CGRect frame, Screening screening, bool withDay = false) : base(frame)
         {
             _screening = screening;
-            Font = NSFont.BoldSystemFontOfSize(ScreeningControl.FontSize);
+            Font = NSFont.BoldSystemFontOfSize(13);
             Editable = false;
             Bordered = false;
             StringValue = _screening.ToScreeningLabelString(withDay);

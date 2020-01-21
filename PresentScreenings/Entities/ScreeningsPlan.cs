@@ -21,7 +21,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Members
-        private static string _directory = HomeFolder + @"/Documents/Film/IFFR/IFFR" + FestivalYear + @"/FestivalPlan";
+        private static string _directory = HomeFolder + @"/Documents/Film/IFFR/IFFR" + FestivalYear + @"/Screenings Plan";
         private static string _screensFile = Path.Combine(_directory, "screens.csv");
         private static string _filmsFile = Path.Combine(_directory, "films.csv");
         private static string _screeningsFile = Path.Combine(_directory, "screenings.csv");
@@ -69,7 +69,6 @@ namespace PresentScreenings.TableView
 
             // Read screenings.
             Screenings = new Screening().ReadListFromFile(_screeningsFile, line => new Screening(line));
-            Screenings.RemoveAll(IsExtra);
 
             InitializeDays();
             _currDayNumber = 0;
@@ -112,11 +111,6 @@ namespace PresentScreenings.TableView
                     ScreenScreenings[day][screen].Sort();
                 }
             }
-        }
-
-        private static bool IsExtra(Screening screening)
-        {
-            return screening.Extra.Length >= 10 && screening.FilmTitle == screening.Extra.Remove(0, 10);
         }
         #endregion
 

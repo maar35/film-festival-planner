@@ -11,12 +11,6 @@ namespace PresentScreenings.TableView
 {
     public partial class FilmRatingDialogController : GoToScreeningDialog, IScreeningProvider
     {
-        #region Constants
-        const float _descriptionWidth = 3000;
-        const float _descriptionMaxWidth = 4000;
-        const float _FriendRatingWidth = 60;
-        #endregion
-
         #region Private Variables
         ViewController _presentor;
         FilmTableDataSource _filmTableDataSource;
@@ -29,8 +23,6 @@ namespace PresentScreenings.TableView
         #region Properties
         public NSTableView FilmRatingTableView => _filmRatingTableView;
         public static bool TypeMatchFromBegin { get; set; } = true;
-        public static bool OnlyFilmsWithScreenings { get; set; }
-        public static TimeSpan MinimalDuration { get; set; }
         #endregion
 
         #region Interface Implementation Properties
@@ -57,9 +49,8 @@ namespace PresentScreenings.TableView
         {
             base.ViewDidLoad();
 
-            // Add in-code created colums to the table view.
+            // Add friends rating colums to the table view.
             CreateFriendRatingColumns();
-            CreateDescriptionColumn();
 
             // Polulate the controls
             _typeMatchMethodCheckBox.Action = new ObjCRuntime.Selector("ToggleTypeMatchMethod:");
@@ -68,7 +59,7 @@ namespace PresentScreenings.TableView
             _goToScreeningButton.Action = new ObjCRuntime.Selector("ShowScreenings:");
             _downloadFilmInfoButton.Action = new ObjCRuntime.Selector("DownLoadInfoForOneFilm:");
             _doneButton.KeyEquivalent = ControlsFactory.EscapeKey;
-            SetTypeMatchMethodControlStates();
+            SetTypeMatchMethodControlerStates();
         }
 
         public override void ViewWillAppear()
@@ -133,64 +124,37 @@ namespace PresentScreenings.TableView
                     break;
             }
         }
-
-        public override void GoToScreening(Screening screening)
-        {
-            _presentor.GoToScreening(screening);
-            CloseDialog();
-        }
         #endregion
 
         #region Private Methods
         void CreateFriendRatingColumns()
         {
-            const float width = _FriendRatingWidth;
+            const float width = 60;
             foreach (string friend in ScreeningInfo.MyFriends)
             {
-                var sortDescriptor = new NSSortDescriptor(friend, false, new ObjCRuntime.Selector("compare:"));
-                var friendColumn = new NSTableColumn
-                {
-                    Title = friend,
-                    Width = width,
-                    MaxWidth = width,
-                    Identifier = friend,
-                    SortDescriptorPrototype = sortDescriptor
-                };
+                var friendColumn = new NSTableColumn();
+                friendColumn.Title = friend;
+                friendColumn.Width = width;
+                friendColumn.MaxWidth = width;
                 nint tag = ScreeningInfo.MyFriends.IndexOf(friend);
                 _filmRatingTableView.AddColumn(friendColumn);
                 CGRect frame = _filmRatingTableView.Frame;
                 nfloat newRight = frame.X;
                 _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + width, frame.X + width);
+                friendColumn.SetIdentifier(friend);
+                var sortDescriptor = new NSSortDescriptor(friend, true, new ObjCRuntime.Selector("compare:"));
                 _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
+                //_filmRatingTableView.Action = new ObjCRuntime.Selector("compare:");
             }
-        }
-
-        private void CreateDescriptionColumn()
-        {
-            var title = "Description";
-            var sortDescriptor = new NSSortDescriptor(title, false, new ObjCRuntime.Selector("compare:"));
-            var descriptionColumn = new NSTableColumn
-            {
-                Title = title,
-                Width = _descriptionWidth,
-                MaxWidth = _descriptionMaxWidth,
-                Identifier = title,
-                SortDescriptorPrototype = sortDescriptor
-            };
-            _filmRatingTableView.AddColumn(descriptionColumn);
-            CGRect frame = _filmRatingTableView.Frame;
-            nfloat newRight = frame.X;
-            _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + frame.Width + _descriptionWidth, frame.X + descriptionColumn.MaxWidth);
-            _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
         }
 
         void ToggleTypeMatchMethod()
         {
             TypeMatchFromBegin = !TypeMatchFromBegin;
-            SetTypeMatchMethodControlStates();
+            SetTypeMatchMethodControlerStates();
         }
 
-        void SetTypeMatchMethodControlStates()
+        void SetTypeMatchMethodControlerStates()
         {
             _typeMatchMethodCheckBox.State = TypeMatchFromBegin ? NSCellStateValue.On : NSCellStateValue.Off;
             _app.ToggleTypeMatchMenuItem.State = TypeMatchFromBegin ? NSCellStateValue.On : NSCellStateValue.Off;
@@ -199,14 +163,7 @@ namespace PresentScreenings.TableView
         void SetFilmsWithScreenings()
         {
             List<Film> films = ScreeningsPlan.Films;
-            if (OnlyFilmsWithScreenings)
-            {
-                _filmTableDataSource.Films = films.Where(f => GetScreeningsByFilmId(f.FilmId).Count > 0).ToList();
-            }
-            else
-            {
-                _filmTableDataSource.Films = films;
-            }
+            _filmTableDataSource.Films = films.Where(f => GetScreeningsByFilmId(f.FilmId).Count > 0).ToList();
         }
 
         void CombineTitles(CombineTitlesEventArgs e)
@@ -368,6 +325,12 @@ namespace PresentScreenings.TableView
         public List<Screening> GetScreeningsByFilmId(int filmId)
         {
             return ViewController.FilmScreenings(filmId);
+        }
+
+        public override void GoToScreening(Screening screening)
+        {
+            _app.Controller.GoToScreening(screening);
+            CloseDialog();
         }
 
         public void CloseDialog()

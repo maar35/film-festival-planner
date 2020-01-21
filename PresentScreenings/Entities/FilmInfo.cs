@@ -49,20 +49,28 @@ namespace PresentScreenings.TableView
             if (FilmDescription != string.Empty)
             {
                 builder.AppendLine(Environment.NewLine + "Description");
-                builder.AppendLine(WebUtility.HtmlToText(FilmDescription));
+                builder.AppendLine(WebUtility.HtmlToPlainText(FilmDescription));
             }
             if (FilmArticle != string.Empty)
             {
                 builder.AppendLine(Environment.NewLine + "Article");
-                builder.AppendLine(WebUtility.HtmlToText(FilmArticle));
+                builder.AppendLine(WebUtility.HtmlToPlainText(FilmArticle));
             }
             if (ScreenedFilms.Count > 1)
             {
                 builder.AppendLine(Environment.NewLine + "Screened films");
                 var space = Environment.NewLine + Environment.NewLine;
-                builder.AppendLine(string.Join(space, ScreenedFilms.Select(f => f.Title + Environment.NewLine + WebUtility.HtmlToText(f.Description))));
+                builder.AppendLine(string.Join(space, ScreenedFilms.Select(f => f.Title + Environment.NewLine + WebUtility.HtmlToPlainText(f.Description))));
             }
             return builder.ToString();
+        }
+        #endregion
+
+        #region Private Methods
+        private void SetFilmInfoStatus(Film.FilmInfoStatus status)
+        {
+            _infoStatus = status;
+            CheckAddToFilmInfos(this);
         }
         #endregion
 
@@ -171,23 +179,6 @@ namespace PresentScreenings.TableView
             xml.Save(path);
         }
 
-        public static string InfoString(Film film)
-        {
-            var filmInfo = ViewController.GetFilmInfo(film.FilmId);
-            if (filmInfo == null)
-            {
-                return string.Empty;
-            }
-            string text = filmInfo.FilmDescription;
-            if (text.Length == 0)
-            {
-                text = filmInfo.FilmArticle;
-            }
-            return Screening.HtmlDecode(text);
-        }
-        #endregion
-
-        #region Private Methods
         private static Film.FilmInfoStatus StringToFilmInfoStatus(string name)
         {
             try
@@ -198,12 +189,6 @@ namespace PresentScreenings.TableView
             {
                 throw new IllegalFilmInfoCatagoryException($"'{name}' is not a valid FilmInfoCatagory");
             }
-        }
-
-        private void SetFilmInfoStatus(Film.FilmInfoStatus status)
-        {
-            _infoStatus = status;
-            CheckAddToFilmInfos(this);
         }
         #endregion
     }

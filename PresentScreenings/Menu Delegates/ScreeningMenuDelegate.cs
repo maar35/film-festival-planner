@@ -34,7 +34,6 @@ namespace PresentScreenings.TableView
         #region Properties
         public Screening Screening { get; private set; }
         public static FilmRatingDialogController FilmRatingController => ViewController.App.FilmsDialogController;
-        public static AnalyserDialogController AnalyserDialogController => ViewController.App.AnalyserDialogController;
         #endregion
 
         #region Constructors
@@ -60,9 +59,7 @@ namespace PresentScreenings.TableView
         public override void NeedsUpdate(NSMenu menu)
         {
             // Get the screening provider.
-            _screeningProvider = FilmRatingViewRunning() ? (IScreeningProvider)FilmRatingController
-                : AnalyserViewRunning() ? (IScreeningProvider)AnalyserDialogController
-                : _controller;
+            _screeningProvider = FilmRatingViewRunning() ? (IScreeningProvider)FilmRatingController : _controller;
 
             //Get the current film.
             var currFilm = _screeningProvider.CurrentFilm;
@@ -130,7 +127,7 @@ namespace PresentScreenings.TableView
             if (_filmFanByTag.ContainsKey(item.Tag))
             {
                 var filmFan = _filmFanByTag[item.Tag];
-                if (FilmRatingViewRunning() || AnalyserViewRunning())
+                if (FilmRatingViewRunning())
                 {
                     item.State = NSCellStateValue.Off;
                     item.Enabled = false;
@@ -242,11 +239,6 @@ namespace PresentScreenings.TableView
         bool FilmRatingViewRunning()
         {
             return FilmRatingController != null;
-        }
-
-        bool AnalyserViewRunning()
-        {
-            return AnalyserDialogController != null;
         }
         #endregion
 

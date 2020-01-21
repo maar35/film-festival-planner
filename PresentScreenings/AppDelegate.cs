@@ -3,7 +3,6 @@ using Foundation;
 using System;
 using System.IO;
 using ObjCRuntime;
-using System.Linq;
 
 namespace PresentScreenings.TableView
 {
@@ -16,15 +15,16 @@ namespace PresentScreenings.TableView
     [Register("AppDelegate")]
 	public partial class AppDelegate : NSApplicationDelegate
 	{
+        #region Private Members
+        #endregion
+
         #region Properties
         public ViewController Controller { get; set; } = null;
         public FilmRatingDialogController FilmsDialogController { get; set; }
-        public AnalyserDialogController AnalyserDialogController { get; set; }
         public CombineTitlesSheetController CombineTitleController { get; set; }
         public UncombineTitlesSheetController UncombineTitleController;
         public FilmInfoDialogController filmInfoController;
         public DownloadFilmInfoController DownloadFilmInfoController;
-        public PlannerDialogController PlannerDialogController;
         public ScreeningMenuDelegate ScreeningMenuDelegate => (ScreeningMenuDelegate)_screeningMenu.Delegate;
         public NSMenuItem ToggleTypeMatchMenuItem { get => _toggleTypeMatchMethod; }
 		#endregion
@@ -38,26 +38,18 @@ namespace PresentScreenings.TableView
 		#region Override Methods
 		public override void DidFinishLaunching(NSNotification notification)
 		{
-            // Insert code here to initialize your application.
+            // Insert code here to initialize your application
 			_navigateMenu.AutoEnablesItems = false;
             _navigateMenu.Delegate = new NavigateMenuDelegate(_navigateMenu, Controller);
             _screeningMenu.AutoEnablesItems = false;
             _screeningMenu.Delegate = new ScreeningMenuDelegate(this, _screeningMenu);
             _filmsMenu.AutoEnablesItems = false;
             _filmsMenu.Delegate = new FilmsMenuDelegate(this);
-            _programMenu.AutoEnablesItems = false;
-            _programMenu.Delegate = new ProgramMenuDelegate(this, _programMenu);
             ToggleTypeMatchMenuItem.Action = new Selector("ToggleTypeMatchMethod:");
             _showScreeningsMenuItem.Action = new Selector("ShowScreenings:");
             _combineTitlesMenuItem.Action = new Selector("SelectTitlesToCombine:");
             _uncombineTitleMenuItem.Action = new Selector("ShowTitlesToUncombine:");
             Controller.ClickableLabelsMenuItem = _clickableLabelsMenuItem;
-
-            // Preferences.
-            Screening.TravelTime = new TimeSpan(0, 30, 0);
-            FilmRatingDialogController.OnlyFilmsWithScreenings = false;
-            FilmRatingDialogController.MinimalDuration = new TimeSpan(0, 35, 0);
-            ScreeningControl.UseCoreGraphics = false;
 		}
         
         public override void WillTerminate(NSNotification notification)
@@ -104,10 +96,6 @@ namespace PresentScreenings.TableView
                 // Write screenings summary.
                 string summaryPath = Path.Combine(directory, "Screenings Summary.csv");
                 new Screening().WriteListToFile(summaryPath, Controller.Plan.AttendedScreenings());
-
-                // Write ratings sheet.
-                string sheetPath = Path.Combine(directory, "RatingsSheet.csv");
-                new Film().WriteListToFile(sheetPath, ScreeningsPlan.Films.Where(f => f.Duration >= FilmRatingDialogController.MinimalDuration).ToList());
             });
 
         }
@@ -175,13 +163,9 @@ namespace PresentScreenings.TableView
         [Action("NavigateFilmScreening:")]
         internal void NavigateFilmScreening(NSObject sender)
         {
-            if (FilmsDialogController != null)
+            if(FilmsDialogController != null)
             {
                 FilmsDialogController.CloseDialog();
-            }
-            if (AnalyserDialogController != null)
-            {
-                AnalyserDialogController.CloseDialog();
             }
             var screening = ScreeningMenuDelegate.FilmScreening(((NSMenuItem)sender).Title);
             Controller.GoToScreening(screening);
