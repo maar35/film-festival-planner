@@ -362,34 +362,37 @@ class FilmPageParser(HTMLParser):
         #    else:
         #        print("ENCODE ERROR: {}".format(e))
 
+    def handle_starttag_attr(self, tag, attr):
+        #self.print_dbg("     attr:", attr)
+        #-print("     attr:", attr)
+        if tag == "section" and attr == ("class", "film-screenings-wrapper"):
+            self.in_screenings = True
+            self.before_screenings = False
+            #-print("--  IN SCREENINGS SECTION")
+        if self.before_screenings:
+            if tag == "a" and attr[0] == "href" and attr[1].startswith("/nl/2019/verzamelprogrammas/"):
+                if self.film.medium_category != "verzamelprogrammas":
+                    self.film.combination_url = attr[1]
+                    #-print("--  PART OF COMBINATION {}".format(self.film))
+        if self.in_screenings:
+            if tag == "span" and attr == ("class", "location"):
+                self.in_location = True
+            #if tag == "span" and attr == ("class", "date"):
+            #    self.in_date = True
+            if tag == "a" and attr[0] == "data-audience":
+                self.audience = attr[1]
+                #-print("--  AUDIENCE:   {}".format(self.audience))
+            if tag == "a" and attr[0] == "data-date":
+                self.start_date = attr[1]
+                #-print("--  STARTDATE:  {}".format(self.start_date))
+                if len(self.audience) > 0 and len(self.film.combination_url) == 0 and self.film.medium_category != "events":
+                    self.add_screening()
+
     def handle_starttag(self, tag, attrs):
         #self.print_dbg("Start tag:", tag)
         #-print("Start tag:", tag)
         for attr in attrs:
-            #self.print_dbg("     attr:", attr)
-            #-print("     attr:", attr)
-            if tag == "section" and attr == ("class", "film-screenings-wrapper"):
-                self.in_screenings = True
-                self.before_screenings = False
-                #-print("--  IN SCREENINGS SECTION")
-            if self.before_screenings:
-                if tag == "a" and attr[0] == "href" and attr[1].startswith("/nl/2019/verzamelprogrammas/"):
-                    if self.film.medium_category != "verzamelprogrammas":
-                        self.film.combination_url = attr[1]
-                        #-print("--  PART OF COMBINATION {}".format(self.film))
-            if self.in_screenings:
-                if tag == "span" and attr == ("class", "location"):
-                    self.in_location = True
-                #if tag == "span" and attr == ("class", "date"):
-                #    self.in_date = True
-                if tag =="a" and attr[0] == "data-audience":
-                    self.audience = attr[1]
-                    #-print("--  AUDIENCE:   {}".format(self.audience))
-                if tag =="a" and attr[0] == "data-date":
-                    self.start_date = attr[1]
-                    #-print("--  STARTDATE:  {}".format(self.start_date))
-                    if len(self.audience) > 0 and len(self.film.combination_url) == 0 and self.film.medium_category != "events":
-                        self.add_screening()
+            self.handle_starttag_attr(tag, attr)
 
     def handle_endtag(self, tag):
         #self.print_dbg("End tag  :", tag)
