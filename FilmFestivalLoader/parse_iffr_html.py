@@ -3,18 +3,18 @@
 import os
 import sys
 from html.parser import HTMLParser
-from html.entities import name2codepoint
 import urllib.request
 import urllib.error
 
 version_number = "0.4"
 year = 2020
-
 az_page_count = 24
+include_events = True
+
 project_dir = os.path.expanduser("~/Documents/Film/IFFR/IFFR{}".format(year))
 html_input_dir = os.path.join(project_dir, "_website_data")
-film_file_pattern = os.path.join(html_input_dir, "filmpage_{:03d}.html")
-az_file_pattern = os.path.join(html_input_dir, "azpage_{:02d}.html")
+film_file_format = os.path.join(html_input_dir, "filmpage_{:03d}.html")
+az_file_format = os.path.join(html_input_dir, "azpage_{:02d}.html")
 data_dir = os.path.join(project_dir, "_planner_data")
 screensfile = os.path.join(data_dir, "screens.csv")
 filmsfile = os.path.join(data_dir, "films.csv")
@@ -68,44 +68,6 @@ def main():
         print("Films NOT WRITTEN")
     
     print("\nDONE")
-
-
-class MyHTMLParser(HTMLParser):
-    """Example HTML parser"""
-    
-    def handle_starttag(self, tag, attrs):
-        print("Start tag:", tag)
-        for attr in attrs:
-            print("     attr:", attr)
-
-    def handle_endtag(self, tag):
-        print("End tag  :", tag)
-
-    def handle_data(self, data):
-        print("Data     :", data)
-
-    def handle_comment(self, data):
-        print("Comment  :", data)
-
-    def handle_entityref(self, name):
-        c = chr(name2codepoint[name])
-        print("Named ent:", c)
-
-    def handle_charref(self, name):
-        if name.startswith('x'):
-            c = chr(int(name[1:], 16))
-        else:
-            c = chr(int(name))
-        print("Num ent  :", c)
-
-    def handle_decl(self, data):
-        print("Decl     :", data)
-
-
-# instantiate the parser and feed it some HTML
-#my_parser = MyHTMLParser()
-#my_parser.feed('<a href="/nl/2019/films/%C3%A0-travers-la-lune">')
-#my_parser.feed(text)
 
 
 def attr_str(attr, index):
@@ -340,12 +302,7 @@ class FilmPageParser(HTMLParser):
     def __init__(self, film):
         HTMLParser.__init__(self)
         self.film = film
-        self.screen = None
-        self.start_date = ""
-        self.times = ""
-        self.audience = ""
-        self.qa = ""
-        self.extra = ""
+        self.init_screening_data()
         self.before_screenings = True
         self.in_screenings = False
         self.in_location = False
@@ -353,6 +310,14 @@ class FilmPageParser(HTMLParser):
         self.in_extra_or_qa = False
         self.matching_attr_value = ""
         self.debug_text = ""
+
+    def init_screening_data(self):
+        self.screen = None
+        self.start_date = None
+        self.times = None
+        self.audience = None
+        self.qa = ""
+        self.extra = ""
 
     def add_screening(self):
         print("--  {}".format(self.film.title))
@@ -370,15 +335,10 @@ class FilmPageParser(HTMLParser):
         Globals.iffr_data.screenings.append(screening)
         print("---SCREENING ADDED")
         self.in_extra_or_qa = False
-        self.qa = ""
-        self.extra = ""
-        self.start_date = None
-        self.screen = None
-        self.times = ""
-        self.audience = ""
+        self.init_screening_data()
 
     def print_debug(self, str1, str2):
-        if self.film.filmid in [100, 115, 174]:
+        if self.film.filmid in [100]:
             self.debug_text += 'F ' + str(str1) + ' ' + str(str2) + '\n'
 
     def match_attr(self, curr_tag, test_tag, curr_attr, test_attr):
@@ -415,11 +375,11 @@ class FilmPageParser(HTMLParser):
                     self.in_extra_or_qa = True
                 if tag =="a" and attr[0] == "data-date":
                     self.start_date = attr[1]
-                    #if len(self.audience) > 0 and len(self.film.combination_url) == 0 and self.film.medium_category != "events":
-                    if len(self.audience) > 0 and len(self.film.combination_url) == 0:
-                        print("-- adding it")
-                        self.add_screening()
-                        self.print_debug("-- ", "ADDING SCREENING")
+                    if self.audience is not None and len(self.film.combination_url) == 0:
+                        if include_events or self.film.medium_category != "events":
+                            print("-- adding it")
+                            self.add_screening()
+                            self.print_debug("-- ", "ADDING SCREENING")
         
         if self.in_screenings:
             if tag == "time":
@@ -464,17 +424,6 @@ class FilmPageParser(HTMLParser):
 
     def handle_comment(self, data):
         self.print_debug("Comment  :", data)
-
-    #def handle_entityref(self, name):
-    #    c = chr(name2codepoint[name])
-    #    self.print_debug("Named ent:", c)
-
-    #def handle_charref(self, name):
-    #    if name.startswith('x'):
-    #        c = chr(int(name[1:], 16))
-    #    else:
-    #        c = chr(int(name))
-    #    self.print_debug("Num ent  :", c)
 
     def handle_decl(self, data):
         self.print_debug("Decl     :", data)
@@ -570,7 +519,7 @@ class AzProgrammeHtmlParser(HTMLParser):
 
     def populate_film_fields(self):
         title = self.film.title
-        film_html_file = film_file_pattern.format(self.film.filmid)
+        film_html_file = film_file_format.format(self.film.filmid)
         if not os.path.isfile(film_html_file):
             print("---------------------- START READING FILM URL ---")
             print("--  TITLE: {}".format(title))
@@ -618,7 +567,7 @@ class HtmlReader:
         text = ""
 
         for page_number in range(0, page_count):
-            html_input_file = az_file_pattern.format(page_number)
+            html_input_file = az_file_format.format(page_number)
             az_url_root = "https://iffr.com/nl/programma/{}/".format(year)
             az_url_leave = "a-z"
             if not os.path.isfile(html_input_file):
