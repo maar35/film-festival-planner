@@ -58,8 +58,7 @@ namespace PresentScreenings.TableView
             {
                 type = ParseInfoType.Article,
                 description = "Article",
-                //articelParseInfo.re = new Regex(@"\<article.*?(\<p\>.*\</p\>).*\</article\>", RegexOptions.Singleline);
-                re = new Regex(@"\<article.*?(\<p\>.*\</p\>)\s*\</div\>\s*\</article\>", RegexOptions.Singleline)
+                re = new Regex(@"\<article.*?(\<p\>.*\</p\>)\s*\</div\>", RegexOptions.Singleline)
             };
             var screenedFilmsParseInfo = new ParseInfo
             {
@@ -82,7 +81,7 @@ namespace PresentScreenings.TableView
         #region Public Methods
 
         /// <summary>
-        /// Htmls to plain text.
+        /// Html to plain text.
         /// By Ben Anderson (https://stackoverflow.com/questions/286813/how-do-you-convert-html-to-plain-text)
         /// </summary>
         /// <returns>The plain text.</returns>
@@ -109,9 +108,14 @@ namespace PresentScreenings.TableView
             return text;
         }
 
+        public static string HtmlToText(string html)
+        {
+            return Screening.HtmlDecode(HtmlToPlainText(html));
+        }
+
         public static string UrlString(string title, MediumCatagory catagory)
         {
-            string baseUrl = "https://iffr.com/nl/" + ScreeningsPlan.FestivalYear + "/" + FolderByCatagory[catagory] + "/";
+            string baseUrl = "https://iffr.com/nl/" + AppDelegate.FestivalYear + "/" + FolderByCatagory[catagory] + "/";
             var quotes = @"['`""]";
             var disposables = @"[./()?]";
             var strippables = @"(" + quotes + @"+\s*)|" + disposables + @"+";

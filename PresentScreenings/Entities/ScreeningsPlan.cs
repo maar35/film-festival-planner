@@ -12,22 +12,19 @@ namespace PresentScreenings.TableView
 
     public class ScreeningsPlan
     {
-        #region Constants
-        public const string FestivalYear = "2019";
+        #region Static Properties
+        public static List<Screen> Screens { get; private set; }
+        public static List<Film> Films { get; private set; }
+        public static List<Screening> Screenings { get; private set; }
+        public static List<ScreeningInfo> ScreeningInfos { get; private set; }
+        public static List<FilmFanFilmRating> FilmFanFilmRatings { get; private set; }
+        public static List<FilmInfo> FilmInfos { get; private set; }
         #endregion
 
         #region Read Only Members
-        private static readonly string HomeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
         #endregion
 
         #region Private Members
-        private static string _directory = HomeFolder + @"/Documents/Film/IFFR/IFFR" + FestivalYear + @"/Screenings Plan";
-        private static string _screensFile = Path.Combine(_directory, "screens.csv");
-        private static string _filmsFile = Path.Combine(_directory, "films.csv");
-        private static string _screeningsFile = Path.Combine(_directory, "screenings.csv");
-        private static string _screeningInfoFile = Path.Combine(_directory, "screeninginfo.csv");
-        private static string _ratingsFile = Path.Combine(_directory, "ratings.csv");
-        private static string _filmInfoFile = Path.Combine(_directory, "filminfo.xml");
         private Dictionary<DateTime, List<Screen>> _dayScreens;
         private int _currDayNumber;
         private int _currScreenNumber;
@@ -40,35 +37,39 @@ namespace PresentScreenings.TableView
         public Screening CurrScreening => ScreenScreenings[CurrDay][CurrScreen][_currScreenScreeningNumber];
         public List<DateTime> FestivalDays { get; private set; }
         public List<Screen> CurrDayScreens => _dayScreens[CurrDay];
-        public static List<Screen> Screens { get; private set; }
-        public static List<Film> Films { get; private set; }
         public DateTime CurrDay => FestivalDays[_currDayNumber];
-        public static List<Screening> Screenings { get; private set; }
-        public static List<ScreeningInfo> ScreeningInfos { get; private set; }
-        public static List<FilmFanFilmRating> FilmFanFilmRatings { get; private set; }
-        public static List<FilmInfo> FilmInfos { get; private set; }
         #endregion
 
         #region Constructors
-        public ScreeningsPlan()
+        public ScreeningsPlan(string FestivalYear)
         {
+            // Initialize file names.
+            string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            string directory = homeFolder + @"/Documents/Film/IFFR/IFFR" + FestivalYear + @"/FestivalPlan";
+            string screensFile = Path.Combine(directory, "screens.csv");
+            string filmsFile = Path.Combine(directory, "films.csv");
+            string screeningsFile = Path.Combine(directory, "screenings.csv");
+            string screeningInfoFile = Path.Combine(directory, "screeninginfo.csv");
+            string ratingsFile = Path.Combine(directory, "ratings.csv");
+            string filmInfoFile = Path.Combine(directory, "filminfo.xml");
+
             // Read screens.
-            Screens = new Screen().ReadListFromFile(_screensFile, line => new Screen(line));
+            Screens = new Screen().ReadListFromFile(screensFile, line => new Screen(line));
 
             // Read film info.
-            FilmInfos = FilmInfo.LoadFilmInfoFromXml(_filmInfoFile);
+            FilmInfos = FilmInfo.LoadFilmInfoFromXml(filmInfoFile);
 
             // Read films.
-            Films = new Film().ReadListFromFile(_filmsFile, line => new Film(line));
+            Films = new Film().ReadListFromFile(filmsFile, line => new Film(line));
 
             // Read film ratings.
-            FilmFanFilmRatings = new FilmFanFilmRating().ReadListFromFile(_ratingsFile, line => new FilmFanFilmRating(line));
+            FilmFanFilmRatings = new FilmFanFilmRating().ReadListFromFile(ratingsFile, line => new FilmFanFilmRating(line));
 
             // Read screening info.
-            ScreeningInfos = new ScreeningInfo().ReadListFromFile(_screeningInfoFile, line => new ScreeningInfo(line));
+            ScreeningInfos = new ScreeningInfo().ReadListFromFile(screeningInfoFile, line => new ScreeningInfo(line));
 
             // Read screenings.
-            Screenings = new Screening().ReadListFromFile(_screeningsFile, line => new Screening(line));
+            Screenings = new Screening().ReadListFromFile(screeningsFile, line => new Screening(line));
 
             InitializeDays();
             _currDayNumber = 0;
@@ -112,6 +113,7 @@ namespace PresentScreenings.TableView
                 }
             }
         }
+
         #endregion
 
         #region Public methods

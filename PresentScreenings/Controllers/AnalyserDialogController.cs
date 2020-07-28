@@ -57,7 +57,7 @@ namespace PresentScreenings.TableView
 
             // Create the list of films.
             var films = new List<Film> { };
-            var highRatedFilms = ScreeningsPlan.Films.Where(f => f.MaxRating.IsGreaterOrEqual(FilmRating.LowestSuperRating));
+            var highRatedFilms = ScreeningsPlan.Films.Where(f => FilterFilmByRating(f));
             foreach (var hrFilm in highRatedFilms)
             {
                 var screenings = ViewController.FilmScreenings(hrFilm.FilmId);
@@ -68,7 +68,7 @@ namespace PresentScreenings.TableView
             }
 
             // Add the films to the outline data source.
-            var sortedFilms = films.OrderByDescending(f => f.MaxRating).ThenBy(f => f.FilmId);
+            var sortedFilms = films.OrderByDescending(f => f.MaxRating).ThenBy(f => f.SequenceNumber);
             foreach (var film in sortedFilms)
             {
                 film.SetScreenings();
@@ -105,7 +105,7 @@ namespace PresentScreenings.TableView
         {
             _presentor.GoToScreening(screening);
 
-            // Commented out out as a work-around the prevent:
+            // Commented out as a work-around to prevent:
             // *** Terminating app due to uncaught exception 'NSInternalInconsistencyException',
             // reason: 'dismissViewController:: Error: maybe this view controller was not presented?'
             //CloseDialog();
@@ -165,6 +165,15 @@ namespace PresentScreenings.TableView
                 return ViewController.FilmScreenings(film.FilmId);
             }
             return new List<Screening> { };
+        }
+
+        public static bool FilterFilmByRating(Film film)
+        {
+            if (FilmRatingDialogController.OnlyFilmsWithScreenings)
+            {
+                return film.MaxRating.IsGreaterOrEqual(FilmRating.LowestSuperRating);
+            }
+            return true;
         }
 
         public void CloseDialog()

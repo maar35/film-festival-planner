@@ -27,10 +27,10 @@ namespace PresentScreenings.TableView
         #region Private Variables
         private readonly IFilmOutlinable _filmOutlinable;
         private readonly Level _level;
-        public List<IFilmOutlinable> FilmOutlinables { get; } = new List<IFilmOutlinable> { };
         #endregion
 
         #region Properties
+        public List<IFilmOutlinable> FilmOutlinables { get; } = new List<IFilmOutlinable> { };
         public Level OutlineLevel => _level;
         public IFilmOutlinable FilmOutlinable => _filmOutlinable;
         static public Action<Screening> GoToScreening { get; private set; }
@@ -74,7 +74,6 @@ namespace PresentScreenings.TableView
                 ScreeningsView.DisposeSubViews(view);
                 var screening = (Screening)_filmOutlinable;
                 var infoButton = new FilmScreeningControl(view.Frame, screening);
-                //var infoButton = new FilmScreeningControl(new CGRect(0, 0, 28, 21), screening);
                 infoButton.ReDraw();
                 infoButton.ScreeningInfoAsked += (sender, e) => FilmOutlineLevel.GoToScreening(screening);
                 infoButton.Selected = false;

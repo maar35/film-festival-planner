@@ -4,6 +4,11 @@ using Foundation;
 
 namespace PresentScreenings.TableView.TableClasses
 {
+    /// <summary>
+    /// Film Outline Delegate, provides behaviour for the outline view in the
+    /// plan analisys dialog.
+    /// </summary>
+
     public class FilmOutlineDelegate : NSOutlineViewDelegate
     {
         #region Constants
@@ -28,14 +33,10 @@ namespace PresentScreenings.TableView.TableClasses
         public override NSView GetView(NSOutlineView outlineView, NSTableColumn tableColumn, NSObject item)
         {
             // Get the view cell.
-            //NSTextField view = (NSTextField)outlineView.MakeView(_cellIdentifier, this);
             NSView cellView = outlineView.MakeView(tableColumn.Title, this);
 
             // Cast item.
             var filmOutlinable = item as IFilmOutlinable;
-
-            //// Tag view
-            //label.Tag = outlineView.RowForItem(item);
 
             // Setup view based on the column selected.
             switch (tableColumn.Title)
@@ -90,17 +91,6 @@ namespace PresentScreenings.TableView.TableClasses
         {
             if (control == null)
             {
-                //cellView = new NSTableCellView();
-                //if (tableColumn.Title == "Go")
-                //{
-                //    cellView = new NSTextField(new CGRect(20, 0, 400, 16));
-                //}
-                //else
-                //{
-                //    NSTextField label = (NSTextField)cellView;
-                //    label = new NSTextField(new CGRect(0, 0, 400, 16));
-                //}
-                //cellView = new NSTextField(new CGRect(20, 0, 400, 16));
                 var side = column.TableView.RowHeight;
                 control = new NSClipView
                 {

@@ -3,3 +3,6 @@
 PresentScreenings/bin/
 PresentScreenings/obj/
 packages/
+old_restored_dot_git/
+FilmFestivalLoader/get_filmurls.sh
+FilmFestivalLoader/get_urls.sh

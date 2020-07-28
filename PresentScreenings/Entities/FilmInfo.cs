@@ -49,18 +49,18 @@ namespace PresentScreenings.TableView
             if (FilmDescription != string.Empty)
             {
                 builder.AppendLine(Environment.NewLine + "Description");
-                builder.AppendLine(WebUtility.HtmlToPlainText(FilmDescription));
+                builder.AppendLine(WebUtility.HtmlToText(FilmDescription));
             }
             if (FilmArticle != string.Empty)
             {
                 builder.AppendLine(Environment.NewLine + "Article");
-                builder.AppendLine(WebUtility.HtmlToPlainText(FilmArticle));
+                builder.AppendLine(WebUtility.HtmlToText(FilmArticle));
             }
             if (ScreenedFilms.Count > 1)
             {
                 builder.AppendLine(Environment.NewLine + "Screened films");
                 var space = Environment.NewLine + Environment.NewLine;
-                builder.AppendLine(string.Join(space, ScreenedFilms.Select(f => f.Title + Environment.NewLine + WebUtility.HtmlToPlainText(f.Description))));
+                builder.AppendLine(string.Join(space, ScreenedFilms.Select(f => f.Title + Environment.NewLine + WebUtility.HtmlToText(f.Description))));
             }
             return builder.ToString();
         }
@@ -174,6 +174,10 @@ namespace PresentScreenings.TableView
         public static string InfoString(Film film)
         {
             var filmInfo = ViewController.GetFilmInfo(film.FilmId);
+            if (filmInfo == null)
+            {
+                return string.Empty;
+            }
             string text = filmInfo.FilmDescription;
             if (text.Length == 0)
             {

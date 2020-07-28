@@ -3,6 +3,7 @@ using Foundation;
 using System;
 using System.IO;
 using ObjCRuntime;
+using System.Linq;
 
 namespace PresentScreenings.TableView
 {
@@ -15,6 +16,10 @@ namespace PresentScreenings.TableView
     [Register("AppDelegate")]
 	public partial class AppDelegate : NSApplicationDelegate
 	{
+        #region Static Properties
+        public static string FestivalYear { get; private set; }
+        #endregion
+
         #region Properties
         public ViewController Controller { get; set; } = null;
         public FilmRatingDialogController FilmsDialogController { get; set; }
@@ -31,12 +36,18 @@ namespace PresentScreenings.TableView
 		#region Constructors
 		public AppDelegate()
 		{
-		}
-		#endregion
+            // Preferences.
+            FestivalYear = "2020";
+            Screening.TravelTime = new TimeSpan(0, 30, 0);
+            FilmRatingDialogController.OnlyFilmsWithScreenings = false;
+            FilmRatingDialogController.MinimalDuration = new TimeSpan(0, 35, 0);
+            ScreeningControl.UseCoreGraphics = false;
+        }
+        #endregion
 
-		#region Override Methods
-		public override void DidFinishLaunching(NSNotification notification)
-		{
+        #region Override Methods
+        public override void DidFinishLaunching(NSNotification notification)
+        {
             // Insert code here to initialize your application.
 			_navigateMenu.AutoEnablesItems = false;
             _navigateMenu.Delegate = new NavigateMenuDelegate(_navigateMenu, Controller);
@@ -51,10 +62,6 @@ namespace PresentScreenings.TableView
             _combineTitlesMenuItem.Action = new Selector("SelectTitlesToCombine:");
             _uncombineTitleMenuItem.Action = new Selector("ShowTitlesToUncombine:");
             Controller.ClickableLabelsMenuItem = _clickableLabelsMenuItem;
-
-            // Preferences.
-            Screening.TravelTime = new TimeSpan(0, 30, 0);
-            ScreeningControl.UseCoreGraphics = false;
 		}
         
         public override void WillTerminate(NSNotification notification)
@@ -101,6 +108,10 @@ namespace PresentScreenings.TableView
                 // Write screenings summary.
                 string summaryPath = Path.Combine(directory, "Screenings Summary.csv");
                 new Screening().WriteListToFile(summaryPath, Controller.Plan.AttendedScreenings());
+
+                // Write ratings sheet.
+                string sheetPath = Path.Combine(directory, "RatingsSheet.csv");
+                new Film().WriteListToFile(sheetPath, ScreeningsPlan.Films.Where(f => f.Duration >= FilmRatingDialogController.MinimalDuration).ToList());
             });
 
         }

@@ -288,6 +288,10 @@ namespace PresentScreenings.TableView
                 var fit = _summaryField.SizeThatFits(_summaryField.Frame.Size);
                 _summaryField.SetFrameSize(fit);
             }
+            if (App.FilmsDialogController != null)
+            {
+                App.FilmsDialogController.FilmRatingTableView.ReloadData();
+            }
         }
 
         private static void GoToScreening(Screening screening)
