@@ -64,7 +64,6 @@ namespace PresentScreenings.TableView
             _presentor.RunningPopupsCount++;
 
             // Initialize.
-            _presentor = _app.Controller;
             _planner = new ScreeningsPlanner(_presentor, DisplayResults);
             _scrollViewWidth = View.Frame.Width - 2 * _xMargin;
             _scrollViewHeight = View.Frame.Height - _yXcodeControlsMargin - _yScrollView;

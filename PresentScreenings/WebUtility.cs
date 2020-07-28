@@ -58,8 +58,6 @@ namespace PresentScreenings.TableView
             {
                 type = ParseInfoType.Article,
                 description = "Article",
-                //articelParseInfo.re = new Regex(@"\<article.*?(\<p\>.*\</p\>).*\</article\>", RegexOptions.Singleline);
-                //re = new Regex(@"\<article.*?(\<p\>.*\</p\>)\s*\</div\>\s*\</article\>", RegexOptions.Singleline)
                 re = new Regex(@"\<article.*?(\<p\>.*\</p\>)\s*\</div\>", RegexOptions.Singleline)
             };
             var screenedFilmsParseInfo = new ParseInfo
@@ -117,7 +115,7 @@ namespace PresentScreenings.TableView
 
         public static string UrlString(string title, MediumCatagory catagory)
         {
-            string baseUrl = "https://iffr.com/nl/" + ScreeningsPlan.FestivalYear + "/" + FolderByCatagory[catagory] + "/";
+            string baseUrl = "https://iffr.com/nl/" + AppDelegate.FestivalYear + "/" + FolderByCatagory[catagory] + "/";
             var quotes = @"['`""]";
             var disposables = @"[./()?]";
             var strippables = @"(" + quotes + @"+\s*)|" + disposables + @"+";

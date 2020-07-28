@@ -399,29 +399,6 @@ namespace PresentScreenings.TableView
         {
             return string.Format("{0}-{1}", StartTime.ToString(_timeFormat), EndTime.ToString(_timeFormat));
         }
-
-        private static string EntityToUnicode(string html)
-        {
-            var replacements = new Dictionary<string, string>();
-            var regex = new Regex("&([a-z]{2,7});");
-            foreach (Match match in regex.Matches(html))
-            {
-                if (!replacements.ContainsKey(match.Value))
-                {
-                    //var unicode = System.Net.WebUtility.HtmlDecode(match.Value);
-                    //if (unicode.Length == 1)
-                    //{
-                    //    replacements.Add(match.Value, string.Concat("&#", Convert.ToInt32(unicode[0]), ";"));
-                    //}
-                    replacements.Add(match.Value, regex.Replace(match.Value, @"[$1]"));
-                }
-            }
-            foreach (var replacement in replacements)
-            {
-                html = html.Replace(replacement.Key, replacement.Value);
-            }
-            return html;
-        }
-        #endregion
+                    #endregion
     }
 }

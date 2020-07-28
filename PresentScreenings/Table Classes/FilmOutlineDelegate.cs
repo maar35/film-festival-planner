@@ -33,7 +33,6 @@ namespace PresentScreenings.TableView.TableClasses
         public override NSView GetView(NSOutlineView outlineView, NSTableColumn tableColumn, NSObject item)
         {
             // Get the view cell.
-            //NSTextField view = (NSTextField)outlineView.MakeView(_cellIdentifier, this);
             NSView cellView = outlineView.MakeView(tableColumn.Title, this);
 
             // Cast item.

@@ -68,7 +68,7 @@ namespace PresentScreenings.TableView
             }
 
             // Add the films to the outline data source.
-            var sortedFilms = films.OrderByDescending(f => f.MaxRating).ThenBy(f => f.FilmId);
+            var sortedFilms = films.OrderByDescending(f => f.MaxRating).ThenBy(f => f.SequenceNumber);
             foreach (var film in sortedFilms)
             {
                 film.SetScreenings();

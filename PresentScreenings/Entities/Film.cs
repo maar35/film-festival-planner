@@ -22,9 +22,6 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Private Members
-        #endregion
-
         #region Properties
         public int SequenceNumber { get; private set; }
         public int FilmId { get; private set; }

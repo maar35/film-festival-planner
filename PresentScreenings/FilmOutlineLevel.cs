@@ -27,10 +27,10 @@ namespace PresentScreenings.TableView
         #region Private Variables
         private readonly IFilmOutlinable _filmOutlinable;
         private readonly Level _level;
-        public List<IFilmOutlinable> FilmOutlinables { get; } = new List<IFilmOutlinable> { };
         #endregion
 
         #region Properties
+        public List<IFilmOutlinable> FilmOutlinables { get; } = new List<IFilmOutlinable> { };
         public Level OutlineLevel => _level;
         public IFilmOutlinable FilmOutlinable => _filmOutlinable;
         static public Action<Screening> GoToScreening { get; private set; }

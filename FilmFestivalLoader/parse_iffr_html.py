@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/Users/maarten/opt/anaconda3/bin/python3
 
 import os
 import sys
@@ -349,10 +349,19 @@ class FilmPageParser(HTMLParser):
                 return True
         return False
 
+    def ok_to_add_screening(self):
+        if self.audience is None:
+            return False
+        if len(self.film.combination_url) > 0:
+            return False
+        if self.extra == "Voorfilm: " + self.film.title:
+            return False
+        if not include_events and self.film.medium_category == "events":
+            return False
+        return True
+
     def handle_starttag(self, tag, attrs):
         self.print_debug("Encountered a start tag:", tag)
-        #for attr in attrs:
-        #    self.print_debug("         attr:      ", attr)
         for attr in attrs:
             self.print_debug("Handling attr:      ", attr)
             if tag == "section" and attr == ("class", "film-screenings-wrapper"):
@@ -375,11 +384,9 @@ class FilmPageParser(HTMLParser):
                     self.in_extra_or_qa = True
                 if tag =="a" and attr[0] == "data-date":
                     self.start_date = attr[1]
-                    if self.audience is not None and len(self.film.combination_url) == 0:
-                        if include_events or self.film.medium_category != "events":
-                            print("-- adding it")
-                            self.add_screening()
-                            self.print_debug("-- ", "ADDING SCREENING")
+                    if self.ok_to_add_screening():
+                        self.add_screening()
+                        self.print_debug("-- ", "ADDING SCREENING")
         
         if self.in_screenings:
             if tag == "time":
@@ -533,7 +540,6 @@ class AzProgrammeHtmlParser(HTMLParser):
             else:
                 filmid = self.film.filmid
                 print("--  ERROR: Failed at film #{} '{}'.\n\n\n".format(filmid, title))
-                #sys.exit(0)
                 self.add_error("{2} could not be read (#{0} '{1}')".format(filmid, title, self.url))
                 return False
         if os.path.isfile(film_html_file):

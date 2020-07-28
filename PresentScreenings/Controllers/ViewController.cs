@@ -65,30 +65,32 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Override Methods
-        public override void ViewDidLoad()
-        {
-            base.ViewDidLoad();
-
-            // Do any additional setup after loading the view.
-            DisposeColorLabels();
-            _plan = new ScreeningsPlan();
-            _mainView = new ScreeningsTableView(this, ScreensColumn, ScreeningsColumn);
-            InitializeScreeningControls();
-        }
-
         public override void AwakeFromNib()
         {
             base.AwakeFromNib();
 
             // Tell the application delegate we're alive.
             App.Controller = this;
+        }
 
-            // Set the header text of the columns.
-            _plan = new ScreeningsPlan();
+        /// <summary>
+        /// Do any additional setup after loading the view.
+        /// </summary>
+        public override void ViewDidLoad()
+        {
+            base.ViewDidLoad();
+
+            // Dispose the labels that only exist to store colors.
+            DisposeColorLabels();
+
+            // Create the screenings plan.
+            _plan = new ScreeningsPlan(AppDelegate.FestivalYear);
+
+            // Create the screenings table view and draw the headers.
             _mainView = new ScreeningsTableView(this, ScreensColumn, ScreeningsColumn);
             _mainView.DrawHeaders(_plan);
 
-            // Create the Screening Table Data Source and populate it
+            // Create the screening table data source and populate it
             var screeningTableDataSource = new ScreeningsTableDataSource();
             screeningTableDataSource.Plan = _plan;
 
@@ -98,6 +100,9 @@ namespace PresentScreenings.TableView
             TableView.AllowsMultipleSelection = false;
             TableView.SelectionHighlightStyle = NSTableViewSelectionHighlightStyle.Regular;
             TableView.UsesAlternatingRowBackgroundColors = true;
+
+            // Initialize the screening controls admin.
+            InitializeScreeningControls();
         }
 
         public override void PrepareForSegue(NSStoryboardSegue segue, NSObject sender)
