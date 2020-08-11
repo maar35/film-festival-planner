@@ -122,17 +122,17 @@ namespace PresentScreenings.TableView
             }
         }
 
-        public override void ViewWillAppear()
-        {
-            base.ViewWillAppear();
-        }
+        //public override void ViewWillAppear()
+        //{
+        //    base.ViewWillAppear();
+        //}
 
-        public override void ViewWillDisappear()
-        {
-            base.ViewDidDisappear();
+        //public override void ViewWillDisappear()
+        //{
+        //    base.ViewDidDisappear();
 
-            App.Controller = null;
-        }
+        //    //App.Controller = null;
+        //}
         #endregion
 
         #region Private Methods
