@@ -21,10 +21,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public ViewController Controller {
-            get;
-            set;
-        } = null;
+        public ViewController Controller { get; set; } = null;
         public FilmRatingDialogController FilmsDialogController { get; set; }
         public AnalyserDialogController AnalyserDialogController { get; set; }
         public CombineTitlesSheetController CombineTitleController { get; set; }
