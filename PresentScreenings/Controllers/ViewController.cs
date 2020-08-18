@@ -65,13 +65,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Override Methods
-        public override void AwakeFromNib()
-        {
-            base.AwakeFromNib();
-
-            // Tell the application delegate we're alive.
-            App.Controller = this;
-        }
 
         /// <summary>
         /// Do any additional setup after loading the view.
@@ -79,6 +72,9 @@ namespace PresentScreenings.TableView
         public override void ViewDidLoad()
         {
             base.ViewDidLoad();
+
+            // Tell the application delegate we're alive.
+            App.Controller = this;
 
             // Dispose the labels that only exist to store colors.
             DisposeColorLabels();
@@ -120,18 +116,6 @@ namespace PresentScreenings.TableView
                     dialog.Presentor = this;
                     break;
             }
-        }
-
-        public override void ViewWillAppear()
-        {
-            base.ViewWillAppear();
-        }
-
-        public override void ViewWillDisappear()
-        {
-            base.ViewDidDisappear();
-
-            App.Controller = null;
         }
         #endregion
 
