@@ -56,10 +56,10 @@ namespace PresentScreenings.TableView
         public ScreeningInfo.ScreeningStatus Status { get => _screeningInfo.Status; set => _screeningInfo.Status = value; }
         public ScreeningInfo.Warning Warning { get; set; } = ScreeningInfo.Warning.NoWarning;
         public List<IFilmOutlinable> FilmOutlinables { get; private set; } = new List<IFilmOutlinable> { };
-        static public Action<Screening> GoToScreening { get; private set; }
         #endregion
 
         #region Static Properties
+        public static Action<Screening> GoToScreening { get; set; }
         public static TimeSpan TravelTime { get; set; }
         public static bool InOutliningOverlaps { get; set; } = false;
         #endregion
@@ -233,17 +233,14 @@ namespace PresentScreenings.TableView
         {
             if (FilmOutlinables.Count == 0)
             {
-                Func<Screening, bool> filmHasSuperRating = s => AnalyserDialogController.FilterFilmByRating(s.Film);
-                Func<Screening, bool> AttendedByFriend = s => s.Status == ScreeningInfo.ScreeningStatus.AttendedByFriend;
+                Func<Screening, bool> Attending = s => s.Status == ScreeningInfo.ScreeningStatus.Attending;
                 var screenings = ViewController.OverlappingScreenings(this, true)
-                                               .Where(s => filmHasSuperRating(s) || AttendedByFriend(s))
+                                               .Where(s => Attending(s))
                                                .OrderByDescending(s => s.Film.MaxRating);
                 var level = FilmOutlineLevel.Level.OverlappingScreening;
-                var controller = ((AppDelegate)NSApplication.SharedApplication.Delegate).AnalyserDialogController;
-                GoToScreening = controller.GoToScreening;
                 foreach (var screening in screenings)
                 {
-                    var filmOutlineLevel = new FilmOutlineLevel(screening, level, controller.GoToScreening);
+                    var filmOutlineLevel = new FilmOutlineLevel(screening, level, GoToScreening);
                     FilmOutlinables.Add(filmOutlineLevel);
                 }
             }

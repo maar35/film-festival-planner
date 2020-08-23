@@ -33,7 +33,8 @@ namespace PresentScreenings.TableView
         public string Url { get; private set; }
         public FilmRating Rating => ViewController.GetFilmFanFilmRating(this, ScreeningInfo.Me);
         public WebUtility.MediumCatagory Catagory { get; private set; }
-        public FilmInfoStatus InfoStatus { get => ViewController.GetFilmInfoStatus(FilmId); }
+        public FilmInfoStatus InfoStatus => ViewController.GetFilmInfoStatus(FilmId);
+
         public FilmRating MaxRating => ViewController.GetMaxRating(this);
         public List<IFilmOutlinable> FilmOutlinables { get; private set; } = new List<IFilmOutlinable> { };
         #endregion
