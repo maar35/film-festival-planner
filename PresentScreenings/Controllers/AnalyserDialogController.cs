@@ -49,21 +49,28 @@ namespace PresentScreenings.TableView
             // Initialize the presentor.
             _presentor = _app.Controller;
 
-            // Tell the app delgate we're alive.
+            // Tell the app delegate we're alive.
             _app.AnalyserDialogController = this;
+
+            // Set the GoToScreening function for screenings.
+            Screening.GoToScreening = GoToScreening;
 
             // Create data source and populate.
             _dataSource = new FilmOutlineDataSource();
 
             // Create the list of films.
             var films = new List<Film> { };
-            var highRatedFilms = ScreeningsPlan.Films.Where(f => FilterFilmByRating(f));
-            foreach (var hrFilm in highRatedFilms)
+            var highRatedFilms = ScreeningsPlan.Films.Where(f => FilterHighRatedFilms(f));
+            foreach (var highRatedFilm in highRatedFilms)
             {
-                var screenings = ViewController.FilmScreenings(hrFilm.FilmId);
+                var screenings = ViewController.FilmScreenings(highRatedFilm.FilmId);
+                if (screenings.Count == 0)
+                {
+                    continue;
+                }
                 if (!screenings.Exists(s => s.AutomaticallyPlanned) && !screenings.Exists(s => s.IAttend))
                 {
-                    films.Add(hrFilm);
+                    films.Add(highRatedFilm);
                 }
             }
 
@@ -75,7 +82,7 @@ namespace PresentScreenings.TableView
                 _dataSource.FilmOutlinables.Add(film);
             }
 
-            // Populate the outline
+            // Populate the outline.
             _filmOutlineView.DataSource = _dataSource;
             _filmOutlineView.Delegate = new FilmOutlineDelegate(_dataSource, this);
             _filmOutlineView.AllowsColumnSelection = false;
@@ -167,13 +174,9 @@ namespace PresentScreenings.TableView
             return new List<Screening> { };
         }
 
-        public static bool FilterFilmByRating(Film film)
+        public static bool FilterHighRatedFilms(Film film)
         {
-            if (FilmRatingDialogController.OnlyFilmsWithScreenings)
-            {
-                return film.MaxRating.IsGreaterOrEqual(FilmRating.LowestSuperRating);
-            }
-            return true;
+            return film.MaxRating.IsGreaterOrEqual(FilmRating.LowestSuperRating);
         }
 
         public void CloseDialog()
