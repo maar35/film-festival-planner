@@ -39,7 +39,7 @@ namespace PresentScreenings.TableView
             // Preferences.
             FestivalYear = "2020";
             Screening.TravelTime = new TimeSpan(0, 30, 0);
-            FilmRatingDialogController.OnlyFilmsWithScreenings = false;
+            FilmRatingDialogController.OnlyFilmsWithScreenings = true;
             FilmRatingDialogController.MinimalDuration = new TimeSpan(0, 35, 0);
             ScreeningControl.UseCoreGraphics = false;
         }

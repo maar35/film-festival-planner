@@ -69,7 +69,7 @@ namespace PresentScreenings.TableView
             _filmIds = new List<int>();
             _scrollViewWidth = (float)(View.Frame.Width - 2 * _xMargin);
 
-            // Create the ducument view displaying the film title radio buttons.
+            // Create the document view displaying the film title radio buttons.
             nfloat titlesViewWidth = _scrollViewWidth - 2 * _xMargin;
             nfloat titlesViewHeight = filmList.Count * _controlsHeight + (filmList.Count - 1) *_yControlsDistance;
             CGRect titlesViewFrame = new CGRect(0, 0, titlesViewWidth, titlesViewHeight);
