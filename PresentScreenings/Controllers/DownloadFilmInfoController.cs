@@ -36,7 +36,6 @@ namespace PresentScreenings.TableView
         private NSTextField _activityField;
         private NSScrollView _activityScrollView;
         private NSButton _startButton;
-        private NSButton _allFilmsButton;
         private NSButton _closeButton;
         private List<Film> _films;
         private List<Film> _filmsWithoutInfo;
@@ -103,7 +102,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-
         public static string LogTimeString()
         {
             return $"{DateTime.Now.ToString(_dateTimeFormat)}";
@@ -137,7 +135,7 @@ namespace PresentScreenings.TableView
             _withoutInfoLabel.StringValue = $"Without info: {_filmsWithoutInfo.Count}";
             View.AddSubview(_withoutInfoLabel);
 
-            //Create the progress label.
+            // Create the progress label.
             yCurr -= _yBetweenLabels + _labelHeight;
             var progressRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
             _progressLabel = ControlsFactory.NewStandardLabel(progressRect);
@@ -206,15 +204,6 @@ namespace PresentScreenings.TableView
             _startButton.Action = new ObjCRuntime.Selector("DownloadFilmInfo:");
             View.AddSubview(_startButton);
             xCurr += (float)_startButton.Frame.Width + _xBetweenControls;
-
-            // Create the All Films button.
-            var allFilmsButtonRect = new CGRect(xCurr, yCurr, _buttonWidth, _buttonHeight);
-            _allFilmsButton = ControlsFactory.NewStandardButton(allFilmsButtonRect);
-            _allFilmsButton.Title = "All films";
-            _allFilmsButton.Enabled = false; // Action not implemented.
-            _allFilmsButton.Action = new ObjCRuntime.Selector("VisitAllFilms:");
-            View.AddSubview(_allFilmsButton);
-            xCurr += (float)_allFilmsButton.Frame.Width + _xBetweenControls;
 
             // Create the Cancel button.
             var cancelButtonRect = new CGRect(xCurr, yCurr, _buttonWidth, _buttonHeight);

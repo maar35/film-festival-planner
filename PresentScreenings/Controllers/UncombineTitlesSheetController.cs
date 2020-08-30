@@ -196,9 +196,9 @@ namespace PresentScreenings.TableView
 
         void CreateUncombineButton()
         {
-            nfloat spliButtonX = _xMargin + _cancelButtonWidth + _xControlsDistance;
-            nfloat splitButtonWidth = _sheetFrame.Width - spliButtonX - _xMargin;
-            CGRect splitButtonRect = new CGRect(spliButtonX, _yMargin, splitButtonWidth, _buttonHeight);
+            nfloat splitButtonX = _xMargin + _cancelButtonWidth + _xControlsDistance;
+            nfloat splitButtonWidth = _sheetFrame.Width - splitButtonX - _xMargin;
+            CGRect splitButtonRect = new CGRect(splitButtonX, _yMargin, splitButtonWidth, _buttonHeight);
             NSButton splitButton = ControlsFactory.NewStandardButton(splitButtonRect);
             splitButton.Action = new ObjCRuntime.Selector("UncombineFilms:");
             int filmCount = _distinctTitles.Count();

@@ -250,6 +250,20 @@ namespace PresentScreenings.TableView
             List<Screening> screenings = e.Screenings;
 
             // Find the original film ID of each distinct screening title.
+            Dictionary<string, Film> filmByTitle = GetFilmByTitleDict(screenings);
+
+            // Restore the original film ID in each of the given screenings.
+            RestoreOriginalFilmId(screenings, filmByTitle);
+
+            // Update the world outside.
+            PropagateScreeningUpdates(screenings);
+
+            // Select the uncombined films.
+            SelectFilms(filmByTitle.Values.ToList());
+        }
+
+        private Dictionary<string, Film> GetFilmByTitleDict(List<Screening> screenings)
+        {
             Dictionary<string, Film> filmByTitle = new Dictionary<string, Film> { };
             List<string> distinctTitles = (
                 from Screening screening in screenings
@@ -260,8 +274,11 @@ namespace PresentScreenings.TableView
                 Film film = GetFilmByTitle(distinctTitle);
                 filmByTitle[distinctTitle] = film;
             }
+            return filmByTitle;
+        }
 
-            // Restore the original film ID in each of the given screenings.
+        private void RestoreOriginalFilmId(List<Screening> screenings, Dictionary<string, Film> filmByTitle)
+        {
             foreach (var screening in screenings)
             {
                 Film originalFilm = filmByTitle[screening.ScreeningTitle];
@@ -270,12 +287,6 @@ namespace PresentScreenings.TableView
                     screening.FilmId = originalFilm.FilmId;
                 }
             }
-
-            // Update the world outside.
-            PropagateScreeningUpdates(screenings);
-
-            // Select the uncombined films.
-            SelectFilms(filmByTitle.Values.ToList());
         }
 
         private void PropagateScreeningUpdates(List<Screening> screenings)
