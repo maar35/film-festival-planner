@@ -142,7 +142,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        void CreateFriendRatingColumns()
+        private void CreateFriendRatingColumns()
         {
             const float width = _FriendRatingWidth;
             foreach (string friend in ScreeningInfo.MyFriends)
@@ -184,19 +184,19 @@ namespace PresentScreenings.TableView
             _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
         }
 
-        void ToggleTypeMatchMethod()
+        private void ToggleTypeMatchMethod()
         {
             TypeMatchFromBegin = !TypeMatchFromBegin;
             SetTypeMatchMethodControlStates();
         }
 
-        void SetTypeMatchMethodControlStates()
+        private void SetTypeMatchMethodControlStates()
         {
             _typeMatchMethodCheckBox.State = TypeMatchFromBegin ? NSCellStateValue.On : NSCellStateValue.Off;
             _app.ToggleTypeMatchMenuItem.State = TypeMatchFromBegin ? NSCellStateValue.On : NSCellStateValue.Off;
         }
 
-        void SetFilmsWithScreenings()
+        private void SetFilmsWithScreenings()
         {
             List<Film> films = ScreeningsPlan.Films;
             if (OnlyFilmsWithScreenings)
@@ -209,7 +209,7 @@ namespace PresentScreenings.TableView
             }
         }
 
-        void CombineTitles(CombineTitlesEventArgs e)
+        private void CombineTitles(CombineTitlesEventArgs e)
         {
             // Get the data from the event args.
             int mainFilmId = e.MainFilmId;
@@ -244,13 +244,27 @@ namespace PresentScreenings.TableView
             _filmRatingTableView.ScrollRowToVisible(selectedRow);
         }
 
-        void UncombineScreeningTitles(UncombineTitlesEventArgs e)
+        private void UncombineScreeningTitles(UncombineTitlesEventArgs e)
         {
             // Get the screenings from the event args.
             List<Screening> screenings = e.Screenings;
 
             // Find the original film ID of each distinct screening title.
-            Dictionary<string, Film> titleToFilm = new Dictionary<string, Film> { };
+            Dictionary<string, Film> filmByTitle = GetFilmByTitleDict(screenings);
+
+            // Restore the original film ID in each of the given screenings.
+            RestoreOriginalFilmId(screenings, filmByTitle);
+
+            // Update the world outside.
+            PropagateScreeningUpdates(screenings);
+
+            // Select the uncombined films.
+            SelectFilms(filmByTitle.Values.ToList());
+        }
+
+        private Dictionary<string, Film> GetFilmByTitleDict(List<Screening> screenings)
+        {
+            Dictionary<string, Film> filmByTitle = new Dictionary<string, Film> { };
             List<string> distinctTitles = (
                 from Screening screening in screenings
                 select screening.ScreeningTitle
@@ -258,34 +272,24 @@ namespace PresentScreenings.TableView
             foreach (var distinctTitle in distinctTitles)
             {
                 Film film = GetFilmByTitle(distinctTitle);
-                titleToFilm[distinctTitle] = film;
+                filmByTitle[distinctTitle] = film;
             }
+            return filmByTitle;
+        }
 
-            // Restore the original film ID in each of the given screenings.
+        private void RestoreOriginalFilmId(List<Screening> screenings, Dictionary<string, Film> filmByTitle)
+        {
             foreach (var screening in screenings)
             {
-                Film originalFilm = titleToFilm[screening.ScreeningTitle];
+                Film originalFilm = filmByTitle[screening.ScreeningTitle];
                 if (screening.FilmId != originalFilm.FilmId)
                 {
                     screening.FilmId = originalFilm.FilmId;
                 }
             }
-
-            // Update the world outside.
-            PropagateScreeningUpdates(screenings);
-
-            // Select the uncombined films.
-            NSMutableIndexSet rows = new NSMutableIndexSet();
-            foreach (var film in titleToFilm.Values)
-            {
-                int row = _filmTableDataSource.Films.IndexOf(film);
-                rows.Add(new NSIndexSet(row));
-            }
-            _filmRatingTableView.SelectRows(rows, false);
-            _filmRatingTableView.ScrollRowToVisible((nint)rows.First());
         }
 
-        void PropagateScreeningUpdates(List<Screening> screenings)
+        private void PropagateScreeningUpdates(List<Screening> screenings)
         {
             // Update the data source.
             SetFilmsWithScreenings();
@@ -305,7 +309,7 @@ namespace PresentScreenings.TableView
             _presentor.ReloadScreeningsView();
         }
 
-        List<Screening> GetScreeningsOfSelectedFilm()
+        private List<Screening> GetScreeningsOfSelectedFilm()
         {
             var screeningList = new List<Screening> { };
             if (OneFilmSelected())
@@ -338,6 +342,18 @@ namespace PresentScreenings.TableView
             _uncombineTitleButton.Enabled = OneFilmSelected();
             _goToScreeningButton.Enabled = OneFilmSelected();
             _downloadFilmInfoButton.Enabled = OneOrMoreFilmsSelected();
+        }
+
+        public void SelectFilms(List<Film> films)
+        {
+            NSMutableIndexSet rows = new NSMutableIndexSet();
+            foreach (var film in films)
+            {
+                int row = _filmTableDataSource.Films.IndexOf(film);
+                rows.Add(new NSIndexSet(row));
+            }
+            _filmRatingTableView.SelectRows(rows, false);
+            _filmRatingTableView.ScrollRowToVisible((nint)rows.First());
         }
 
         public Film GetSelectedFilm()

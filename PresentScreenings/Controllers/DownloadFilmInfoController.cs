@@ -36,8 +36,7 @@ namespace PresentScreenings.TableView
         private NSTextField _activityField;
         private NSScrollView _activityScrollView;
         private NSButton _startButton;
-        private NSButton _allFilmsButton;
-        private NSButton _cancelButton;
+        private NSButton _closeButton;
         private List<Film> _films;
         private List<Film> _filmsWithoutInfo;
         #endregion
@@ -103,7 +102,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-
         public static string LogTimeString()
         {
             return $"{DateTime.Now.ToString(_dateTimeFormat)}";
@@ -137,7 +135,7 @@ namespace PresentScreenings.TableView
             _withoutInfoLabel.StringValue = $"Without info: {_filmsWithoutInfo.Count}";
             View.AddSubview(_withoutInfoLabel);
 
-            //Create the progress label.
+            // Create the progress label.
             yCurr -= _yBetweenLabels + _labelHeight;
             var progressRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
             _progressLabel = ControlsFactory.NewStandardLabel(progressRect);
@@ -207,21 +205,12 @@ namespace PresentScreenings.TableView
             View.AddSubview(_startButton);
             xCurr += (float)_startButton.Frame.Width + _xBetweenControls;
 
-            // Create the All Films button.
-            var allFilmsButtonRect = new CGRect(xCurr, yCurr, _buttonWidth, _buttonHeight);
-            _allFilmsButton = ControlsFactory.NewStandardButton(allFilmsButtonRect);
-            _allFilmsButton.Title = "All films";
-            _allFilmsButton.Enabled = false;
-            _allFilmsButton.Action = new ObjCRuntime.Selector("VisitAllFilms:");
-            View.AddSubview(_allFilmsButton);
-            xCurr += (float)_allFilmsButton.Frame.Width + _xBetweenControls;
-
             // Create the Cancel button.
             var cancelButtonRect = new CGRect(xCurr, yCurr, _buttonWidth, _buttonHeight);
-            _cancelButton = ControlsFactory.NewCancelButton(cancelButtonRect);
-            _cancelButton.Title = "Close";
-            _cancelButton.Action = new ObjCRuntime.Selector("CancelDownloadFilmInfo:");
-            View.AddSubview(_cancelButton);
+            _closeButton = ControlsFactory.NewCancelButton(cancelButtonRect);
+            _closeButton.Title = "Close";
+            _closeButton.Action = new ObjCRuntime.Selector("CancelDownloadFilmInfo:");
+            View.AddSubview(_closeButton);
         }
 
         private void VisitUrl(Film film)
@@ -251,7 +240,7 @@ namespace PresentScreenings.TableView
         {
             // Disable the buttons on the modal dialog, forcing to await feedback.
             _startButton.Enabled = false;
-            _cancelButton.Enabled = false;
+            _closeButton.Enabled = false;
 
             // Start processing in background.
             var startTime = DateTime.Now;
@@ -277,9 +266,10 @@ namespace PresentScreenings.TableView
                     var fit = _activityField.SizeThatFits(_activityField.Frame.Size);
                     _activityField.SetFrameSize(fit);
                     Presentor.FilmRatingTableView.ReloadData();
+                    Presentor.SelectFilms(_films);
                     var yScroll = _activityField.Frame.Height - _activityScrollView.Frame.Height;
                     _activityScrollView.ContentView.ScrollToPoint(new CGPoint(0, yScroll));
-                    _cancelButton.Enabled = true;
+                    _closeButton.Enabled = true;
                 },
                 // Force the code in the ContinueWith block to be run on the
                 // calling thread.
