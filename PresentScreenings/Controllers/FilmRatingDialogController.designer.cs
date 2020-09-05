@@ -13,10 +13,10 @@ namespace PresentScreenings.TableView
 	partial class FilmRatingDialogController
 	{
 		[Outlet]
-		AppKit.NSButton _combineTitlesButton { get; set; }
+		AppKit.NSButton _closeButton { get; set; }
 
 		[Outlet]
-		AppKit.NSButton _doneButton { get; set; }
+		AppKit.NSButton _combineTitlesButton { get; set; }
 
 		[Outlet]
 		AppKit.NSButton _downloadFilmInfoButton { get; set; }
@@ -43,9 +43,14 @@ namespace PresentScreenings.TableView
 				_combineTitlesButton = null;
 			}
 
-			if (_doneButton != null) {
-				_doneButton.Dispose ();
-				_doneButton = null;
+			if (_closeButton != null) {
+				_closeButton.Dispose ();
+				_closeButton = null;
+			}
+
+			if (_downloadFilmInfoButton != null) {
+				_downloadFilmInfoButton.Dispose ();
+				_downloadFilmInfoButton = null;
 			}
 
 			if (_filmRatingTableView != null) {
@@ -66,11 +71,6 @@ namespace PresentScreenings.TableView
 			if (_uncombineTitleButton != null) {
 				_uncombineTitleButton.Dispose ();
 				_uncombineTitleButton = null;
-			}
-
-			if (_downloadFilmInfoButton != null) {
-				_downloadFilmInfoButton.Dispose ();
-				_downloadFilmInfoButton = null;
 			}
 		}
 	}

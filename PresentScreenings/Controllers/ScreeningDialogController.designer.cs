@@ -22,6 +22,9 @@ namespace PresentScreenings.TableView
 		AppKit.NSButtonCell _checkboxTicketsBought { get; set; }
 
 		[Outlet]
+		AppKit.NSButton _closeButton { get; set; }
+
+		[Outlet]
 		AppKit.NSComboBox _comboboxRating { get; set; }
 
 		[Outlet]
@@ -102,6 +105,11 @@ namespace PresentScreenings.TableView
 			if (_labelTitle != null) {
 				_labelTitle.Dispose ();
 				_labelTitle = null;
+			}
+
+			if (_closeButton != null) {
+				_closeButton.Dispose ();
+				_closeButton = null;
 			}
 		}
 	}

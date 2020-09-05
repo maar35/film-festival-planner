@@ -182,7 +182,7 @@ namespace PresentScreenings.TableView
                 box = new NSTextField
                 {
                     Identifier = _cellIdentifier,
-                    BackgroundColor = NSColor.Clear,
+                    //BackgroundColor = NSColor.Clear,
                     Bordered = false,
                     Selectable = false,
                     Editable = true,
@@ -190,6 +190,7 @@ namespace PresentScreenings.TableView
                 };
             }
             var ratingField = box;
+            box.EditingBegan += (s, e) => HandleFilmFanRatingEditingBegan();
             box.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(ratingField, filmFan);
         }
 
@@ -200,10 +201,16 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
+        private void HandleFilmFanRatingEditingBegan()
+        {
+            _dialogController.TextBeingEdited = true;
+        }
+
         private void HandleFilmFanRatingEditingEnded(NSTextField field, string filmFan)
         {
             int filmId = _dataSource.Films[(int)field.Tag].FilmId;
             _controller.SetRatingIfValid(field, r => field.StringValue, filmId, filmFan);
+            _dialogController.TextBeingEdited = false;
         }
         #endregion
     }

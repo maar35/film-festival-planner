@@ -211,6 +211,10 @@ namespace PresentScreenings.TableView
     #region Exceptions
     public sealed class IllegalFilmInfoCatagoryException : Exception
     {
+        public IllegalFilmInfoCatagoryException()
+        {
+        }
+
         public IllegalFilmInfoCatagoryException(string message) : base(message)
         {
         }

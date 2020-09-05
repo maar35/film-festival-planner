@@ -521,6 +521,7 @@
                         <outlet property="ShowFilmRatings" destination="l2M-r4-jN4" id="F9v-ps-kGC"/>
                         <outlet property="_ShowFilmRatingsMenuItem" destination="l2M-r4-jN4" id="M94-Bv-AeI"/>
                         <outlet property="_clickableLabelsMenuItem" destination="CSW-Sl-2GZ" id="cMX-lr-wYA"/>
+                        <outlet property="_closeWindowMenuItem" destination="DVo-aG-piG" id="Daa-2x-NT9"/>
                         <outlet property="_combineTitlesMenuItem" destination="sG4-4A-cBU" id="V2D-4S-BS1"/>
                         <outlet property="_filmsMenu" destination="H0R-t1-cOF" id="c2J-k7-sDI"/>
                         <outlet property="_navigateMenu" destination="FJw-Lu-hGY" id="tRh-KN-Ggw"/>
@@ -955,6 +956,7 @@ Gw
                         <outlet property="_checkboxSoldOut" destination="r1u-vm-oul" id="gtJ-zw-LmS"/>
                         <outlet property="_checkboxTicketsBought" destination="JRb-Dc-A6F" id="Psc-JB-bQ4"/>
                         <outlet property="_checkboxTicketsNeeded" destination="6dc-lf-7ip" id="EVE-7S-tsI"/>
+                        <outlet property="_closeButton" destination="FBV-lJ-fAI" id="IJP-To-v2h"/>
                         <outlet property="_comboboxRating" destination="LTo-dB-IYk" id="Hj8-Dd-H63"/>
                         <outlet property="_filmInfoButton" destination="0fB-1r-jAn" id="EuS-Zq-2sv"/>
                         <outlet property="_labelPresent" destination="hCw-vZ-7Dv" id="iuo-kY-WJh"/>
@@ -1214,6 +1216,7 @@ DQ
                         </constraints>
                     </view>
                     <connections>
+                        <outlet property="_closeButton" destination="gmW-ky-y0A" id="PrI-XZ-XuU"/>
                         <outlet property="_combineTitlesButton" destination="Utj-eZ-Fhm" id="8B2-OR-Jqr"/>
                         <outlet property="_doneButton" destination="gmW-ky-y0A" id="K4R-xe-Vue"/>
                         <outlet property="_downloadFilmInfoButton" destination="KcU-Ml-kPa" id="qvb-Zz-rAk"/>
