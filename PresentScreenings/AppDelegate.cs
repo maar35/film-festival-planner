@@ -30,11 +30,11 @@ namespace PresentScreenings.TableView
         public DownloadFilmInfoController DownloadFilmInfoController;
         public PlannerDialogController PlannerDialogController;
         public ScreeningMenuDelegate ScreeningMenuDelegate => (ScreeningMenuDelegate)_screeningMenu.Delegate;
-        public NSMenuItem ToggleTypeMatchMenuItem { get => _toggleTypeMatchMethod; }
-		#endregion
+        public NSMenuItem ToggleTypeMatchMenuItem => _toggleTypeMatchMethod;
+        #endregion
 
-		#region Constructors
-		public AppDelegate()
+        #region Constructors
+        public AppDelegate()
 		{
             // Preferences.
             FestivalYear = "2020";

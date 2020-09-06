@@ -207,13 +207,4 @@ namespace PresentScreenings.TableView
         }
         #endregion
     }
-
-    #region Exceptions
-    public sealed class IllegalFilmInfoCatagoryException : Exception
-    {
-        public IllegalFilmInfoCatagoryException(string message) : base(message)
-        {
-        }
-    }
-    #endregion
 }

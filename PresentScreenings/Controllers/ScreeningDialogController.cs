@@ -156,6 +156,7 @@ namespace PresentScreenings.TableView
                 // Create the Rating combobox for this film fan.
                 comboBoxFrame.Y = _yCurr;
                 var fanRatingComboBox = ControlsFactory.NewRatingComboBox(comboBoxFrame, comboBoxFont);
+                fanRatingComboBox.EditingBegan += (s, e) => HandleFilmFanRatingEditingBegan(fanRatingComboBox, filmfan);
                 fanRatingComboBox.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(fanRatingComboBox, filmfan);
                 fanRatingComboBox.StringValue = ViewController.GetFilmFanFilmRating(_screening.FilmId, filmfan).ToString();
                 View.AddSubview(fanRatingComboBox);
@@ -212,12 +213,17 @@ namespace PresentScreenings.TableView
         {
             _presentor.DismissViewController(this);
         }
+        private void HandleFilmFanRatingEditingBegan(NSComboBox comboBox, string filmFan)
+        {
+            _closeButton.Enabled = false;
+        }
 
         private void HandleFilmFanRatingEditingEnded(NSComboBox comboBox, string filmFan)
         {
             int filmId = _screening.FilmId;
             Func<string, string> getControlValue = r => GetNewValueFromComboBox(comboBox, r);
             _presentor.SetRatingIfValid(comboBox, getControlValue, filmId, filmFan);
+            _closeButton.Enabled = true;
         }
 
         private string GetNewValueFromComboBox(NSComboBox comboBox, string oldString)
@@ -228,7 +234,7 @@ namespace PresentScreenings.TableView
                 if (!comboBox.Values.Any(v => v.ToString() == comboBoxString))
                 {
                     comboBox.StringValue = oldString;
-                    return oldString;
+                    throw new IllegalRatingException(comboBoxString);
                 }
             }
             else

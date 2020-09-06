@@ -15,6 +15,9 @@ namespace PresentScreenings.TableView
 		AppKit.NSMenuItem _clickableLabelsMenuItem { get; set; }
 
 		[Outlet]
+		AppKit.NSMenuItem _closeWindowMenuItem { get; set; }
+
+		[Outlet]
 		AppKit.NSMenuItem _combineTitlesMenuItem { get; set; }
 
 		[Outlet]
@@ -94,19 +97,14 @@ namespace PresentScreenings.TableView
 		
 		void ReleaseDesignerOutlets ()
 		{
-			if (_plannerMenuItem != null) {
-				_plannerMenuItem.Dispose ();
-				_plannerMenuItem = null;
-			}
-
 			if (_clickableLabelsMenuItem != null) {
 				_clickableLabelsMenuItem.Dispose ();
 				_clickableLabelsMenuItem = null;
 			}
 
-			if (_programMenu != null) {
-				_programMenu.Dispose ();
-				_programMenu = null;
+			if (_closeWindowMenuItem != null) {
+				_closeWindowMenuItem.Dispose ();
+				_closeWindowMenuItem = null;
 			}
 
 			if (_combineTitlesMenuItem != null) {
@@ -122,6 +120,16 @@ namespace PresentScreenings.TableView
 			if (_navigateMenu != null) {
 				_navigateMenu.Dispose ();
 				_navigateMenu = null;
+			}
+
+			if (_plannerMenuItem != null) {
+				_plannerMenuItem.Dispose ();
+				_plannerMenuItem = null;
+			}
+
+			if (_programMenu != null) {
+				_programMenu.Dispose ();
+				_programMenu = null;
 			}
 
 			if (_screeningMenu != null) {

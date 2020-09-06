@@ -18,6 +18,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Variables
+        bool _textBeingEdited = false;
         ViewController _presentor;
         FilmTableDataSource _filmTableDataSource;
         #endregion
@@ -28,6 +29,16 @@ namespace PresentScreenings.TableView
 
         #region Properties
         public NSTableView FilmRatingTableView => _filmRatingTableView;
+        public NSButton DoneButton => _closeButton;
+        public bool TextBeingEdited
+        {
+            get => _textBeingEdited;
+            set
+            {
+                _textBeingEdited = value;
+                SetFilmRatingDialogButtonStates();
+            }
+        }
         public static bool TypeMatchFromBegin { get; set; } = true;
         public static bool OnlyFilmsWithScreenings { get; set; }
         public static TimeSpan MinimalDuration { get; set; }
@@ -67,7 +78,8 @@ namespace PresentScreenings.TableView
             _uncombineTitleButton.Action = new ObjCRuntime.Selector("ShowTitlesToUncombine:");
             _goToScreeningButton.Action = new ObjCRuntime.Selector("ShowScreenings:");
             _downloadFilmInfoButton.Action = new ObjCRuntime.Selector("DownLoadInfoForOneFilm:");
-            _doneButton.KeyEquivalent = ControlsFactory.EscapeKey;
+            DoneButton.KeyEquivalent = ControlsFactory.EscapeKey;
+            DoneButton.StringValue = "Noot";
             SetTypeMatchMethodControlStates();
         }
 
@@ -338,10 +350,11 @@ namespace PresentScreenings.TableView
 
         public void SetFilmRatingDialogButtonStates()
         {
-            _combineTitlesButton.Enabled = MultipleFilmsSelected();
-            _uncombineTitleButton.Enabled = OneFilmSelected();
-            _goToScreeningButton.Enabled = OneFilmSelected();
-            _downloadFilmInfoButton.Enabled = OneOrMoreFilmsSelected();
+            _combineTitlesButton.Enabled = MultipleFilmsSelected() && ! TextBeingEdited;
+            _uncombineTitleButton.Enabled = OneFilmSelected() && !TextBeingEdited;
+            _goToScreeningButton.Enabled = OneFilmSelected() && !TextBeingEdited;
+            _downloadFilmInfoButton.Enabled = OneOrMoreFilmsSelected() && !TextBeingEdited;
+            DoneButton.Enabled = !TextBeingEdited;
         }
 
         public void SelectFilms(List<Film> films)
@@ -395,7 +408,6 @@ namespace PresentScreenings.TableView
         #region Custom Actions
         partial void AcceptDialog(Foundation.NSObject sender)
         {
-            RaiseDialogAccepted();
             CloseDialog();
         }
 
@@ -427,15 +439,6 @@ namespace PresentScreenings.TableView
         void DownloadFilmInfo(NSObject sender)
         {
             PerformSegue("DownloadFilmInfoSegue", sender);
-        }
-        #endregion
-
-        #region Events
-        public EventHandler DialogAccepted;
-
-        internal void RaiseDialogAccepted()
-        {
-            DialogAccepted?.Invoke(this, EventArgs.Empty);
         }
         #endregion
     }

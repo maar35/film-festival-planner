@@ -44,25 +44,26 @@ namespace PresentScreenings.TableView
                 }
 
                 // Take action based on the menu tag.
+                FilmRatingDialogController controller = _app.FilmsDialogController;
                 switch (item.Tag)
                 {
                     case _showFilmsMenuItemTag:
-                        item.Enabled = _app.FilmsDialogController == null && _app.Controller.ViewIsActive();
+                        item.Enabled = controller == null && _app.Controller.ViewIsActive();
                         break;
                     case _toggleTypeMatchMethodMenuItemTag:
-                        item.Enabled = _app.FilmsDialogController != null;
+                        item.Enabled = controller != null;
                         break;
                     case _showFilmInfoMenuItemTag:
-                        item.Enabled = _app.FilmsDialogController != null && _app.FilmsDialogController.OneFilmSelected();
+                        item.Enabled = controller != null && !controller.TextBeingEdited && controller.OneFilmSelected();
                         break;
                     case _combineTitlesMenuItemTag:
-                        item.Enabled = _app.FilmsDialogController != null && _app.FilmsDialogController.MultipleFilmsSelected();
+                        item.Enabled = controller != null && !controller.TextBeingEdited && controller.MultipleFilmsSelected();
                         break;
                     case _uncombineTitleMenuItemTag:
-                        item.Enabled = _app.FilmsDialogController != null && _app.FilmsDialogController.OneFilmSelected();
+                        item.Enabled = controller != null && !controller.TextBeingEdited && controller.OneFilmSelected();
                         break;
                     case _downloadFilmInfoMenuItemTag:
-                        item.Enabled = true;
+                        item.Enabled = controller != null && !controller.TextBeingEdited && controller.OneOrMoreFilmsSelected();
                         break;
                     default:
                         item.Enabled = false;

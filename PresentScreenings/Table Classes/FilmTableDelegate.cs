@@ -100,7 +100,7 @@ namespace PresentScreenings.TableView
                     durationLabel.TextColor = TextColor(film.Duration);
                     return durationLabel;
                 case "Rating":
-                    NSTextField myRatingField = (NSTextField)view;
+                    RatingField myRatingField = (RatingField)view;
                     PopulateFilmFanFilmRating(ref myRatingField, film, ScreeningInfo.Me, row);
                     myRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, ScreeningInfo.Me).ToString();
                     myRatingField.Tag = row;
@@ -108,7 +108,7 @@ namespace PresentScreenings.TableView
                 default:
                     if (ScreeningInfo.MyFriends.Contains(tableColumn.Title))
                     {
-                        NSTextField friendRatingField = (NSTextField)view;
+                        RatingField friendRatingField = (RatingField)view;
                         PopulateFilmFanFilmRating(ref friendRatingField, film, tableColumn.Title, row);
                         friendRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, tableColumn.Title).ToString();
                         friendRatingField.Tag = row;
@@ -175,11 +175,11 @@ namespace PresentScreenings.TableView
             }
         }
 
-        private void PopulateFilmFanFilmRating(ref NSTextField box, Film film, string filmFan, nint row)
+        private void PopulateFilmFanFilmRating(ref RatingField box, Film film, string filmFan, nint row)
         {
             if (box == null)
             {
-                box = new NSTextField
+                box = new RatingField(_dialogController)
                 {
                     Identifier = _cellIdentifier,
                     BackgroundColor = NSColor.Clear,

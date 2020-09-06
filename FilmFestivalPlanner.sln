@@ -25,5 +25,13 @@ Global
 		$2.scope = text/x-csharp
 		$0.CSharpFormattingPolicy = $3
 		$3.scope = text/x-csharp
+		$0.StandardHeader = $4
+		$0.VersionControlPolicy = $5
+		$5.CommitMessageStyle = $6
+		$6.FirstFilePrefix = 
+		$6.FileSeparator = @:\n
+		$6.LastFilePostfix = @:\n
+		$6.LineAlign = 0
+		$6.Wrap = False
 	EndGlobalSection
 EndGlobal

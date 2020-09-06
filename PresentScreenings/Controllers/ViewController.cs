@@ -331,19 +331,41 @@ namespace PresentScreenings.TableView
         {
             FilmRating rating = GetFilmFanFilmRating(filmId, filmFan);
             string oldRatingString = rating.Value;
-            string newRatingString = GetControlValue(oldRatingString);
-            if (newRatingString != oldRatingString)
+            string newRatingString;
+            try
             {
-                if (rating.SetRating(newRatingString))
+                newRatingString = GetControlValue(oldRatingString);
+                if (newRatingString != oldRatingString)
                 {
-                    SetFilmFanFilmRating(filmId, filmFan, rating);
-                    ReloadScreeningsView();
+                    if (rating.SetRating(newRatingString))
+                    {
+                        SetFilmFanFilmRating(filmId, filmFan, rating);
+                        ReloadScreeningsView();
+                    }
+                    else
+                    {
+                        control.StringValue = rating.Value;
+                        throw new IllegalRatingException(newRatingString);
+                    }
                 }
-                else
-                {
-                    control.StringValue = rating.Value;
-                }
+
             }
+            catch (IllegalRatingException ex)
+            {
+                RunRatingNotChangedAlert(filmId, filmFan, oldRatingString, ex.Message);
+                newRatingString = oldRatingString;
+            }
+        }
+
+        public static void RunRatingNotChangedAlert(int filmId, string filmFan, string oldRatingString, string newRatingString)
+        {
+            var alert = new NSAlert()
+            {
+                AlertStyle = NSAlertStyle.Informational,
+                InformativeText = $"'{newRatingString}' is not a valid rating.\n{filmFan}'s rating of '{GetFilmById(filmId)}' remains {oldRatingString}.",
+                MessageText = $"Rating Not Changed",
+            };
+            alert.RunModal();
         }
 
         public static FilmRating GetMaxRating(Film film)
