@@ -164,6 +164,7 @@
     <Compile Include="Table Classes\FilmOutlineDelegate.cs" />
     <Compile Include="FilmOutlineLevel.cs" />
     <Compile Include="Exceptions\IllegalRatingException.cs" />
+    <Compile Include="Controls\RatingField.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

@@ -100,7 +100,7 @@ namespace PresentScreenings.TableView
                     durationLabel.TextColor = TextColor(film.Duration);
                     return durationLabel;
                 case "Rating":
-                    NSTextField myRatingField = (NSTextField)view;
+                    RatingField myRatingField = (RatingField)view;
                     PopulateFilmFanFilmRating(ref myRatingField, film, ScreeningInfo.Me, row);
                     myRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, ScreeningInfo.Me).ToString();
                     myRatingField.Tag = row;
@@ -108,7 +108,7 @@ namespace PresentScreenings.TableView
                 default:
                     if (ScreeningInfo.MyFriends.Contains(tableColumn.Title))
                     {
-                        NSTextField friendRatingField = (NSTextField)view;
+                        RatingField friendRatingField = (RatingField)view;
                         PopulateFilmFanFilmRating(ref friendRatingField, film, tableColumn.Title, row);
                         friendRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, tableColumn.Title).ToString();
                         friendRatingField.Tag = row;
@@ -175,14 +175,14 @@ namespace PresentScreenings.TableView
             }
         }
 
-        private void PopulateFilmFanFilmRating(ref NSTextField box, Film film, string filmFan, nint row)
+        private void PopulateFilmFanFilmRating(ref RatingField box, Film film, string filmFan, nint row)
         {
             if (box == null)
             {
-                box = new NSTextField
+                box = new RatingField(_dialogController)
                 {
                     Identifier = _cellIdentifier,
-                    //BackgroundColor = NSColor.Clear,
+                    BackgroundColor = NSColor.Clear,
                     Bordered = false,
                     Selectable = false,
                     Editable = true,
@@ -190,7 +190,6 @@ namespace PresentScreenings.TableView
                 };
             }
             var ratingField = box;
-            box.EditingBegan += (s, e) => HandleFilmFanRatingEditingBegan();
             box.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(ratingField, filmFan);
         }
 
@@ -201,16 +200,10 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        private void HandleFilmFanRatingEditingBegan()
-        {
-            _dialogController.TextBeingEdited = true;
-        }
-
         private void HandleFilmFanRatingEditingEnded(NSTextField field, string filmFan)
         {
             int filmId = _dataSource.Films[(int)field.Tag].FilmId;
             _controller.SetRatingIfValid(field, r => field.StringValue, filmId, filmFan);
-            _dialogController.TextBeingEdited = false;
         }
         #endregion
     }
