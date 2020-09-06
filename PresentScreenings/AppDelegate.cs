@@ -30,7 +30,6 @@ namespace PresentScreenings.TableView
         public DownloadFilmInfoController DownloadFilmInfoController;
         public PlannerDialogController PlannerDialogController;
         public ScreeningMenuDelegate ScreeningMenuDelegate => (ScreeningMenuDelegate)_screeningMenu.Delegate;
-        public NSMenuItem CloseWindowMenuItem => _closeWindowMenuItem;
         public NSMenuItem ToggleTypeMatchMenuItem => _toggleTypeMatchMethod;
         #endregion
 

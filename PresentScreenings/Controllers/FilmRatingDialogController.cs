@@ -355,7 +355,6 @@ namespace PresentScreenings.TableView
             _goToScreeningButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             _downloadFilmInfoButton.Enabled = OneOrMoreFilmsSelected() && !TextBeingEdited;
             DoneButton.Enabled = !TextBeingEdited;
-            _app.CloseWindowMenuItem.Enabled = !TextBeingEdited;
         }
 
         public void SelectFilms(List<Film> films)

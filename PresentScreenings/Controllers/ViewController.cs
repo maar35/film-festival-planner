@@ -117,22 +117,6 @@ namespace PresentScreenings.TableView
                     break;
             }
         }
-
-        //public override void DismissViewController(NSViewController viewController)
-        //{
-        //    if (viewController is FilmRatingDialogController || viewController is PlannerDialogController)
-        //    {
-        //        var alert = new NSAlert()
-        //        {
-        //            AlertStyle = NSAlertStyle.Informational,
-        //            InformativeText = $"Just checking the walls.",
-        //            MessageText = $"Checking Walls",
-        //        };
-        //        alert.RunModal();
-
-        //    }
-        //    base.DismissViewController(viewController);
-        //}
         #endregion
 
         #region Private Methods
@@ -361,7 +345,6 @@ namespace PresentScreenings.TableView
                     else
                     {
                         control.StringValue = rating.Value;
-                        //RunRatingNotChangedAlert(filmId, filmFan, oldRatingString, newRatingString);
                         throw new IllegalRatingException(newRatingString);
                     }
                 }

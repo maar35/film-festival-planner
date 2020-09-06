@@ -165,6 +165,8 @@
     <Compile Include="FilmOutlineLevel.cs" />
     <Compile Include="Exceptions\IllegalRatingException.cs" />
     <Compile Include="Controls\RatingField.cs" />
+    <Compile Include="Exceptions\IllegalFilmInfoCatagoryException.cs" />
+    <Compile Include="Exceptions\UnparseblePageException.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />
