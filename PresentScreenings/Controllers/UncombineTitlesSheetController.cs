@@ -39,8 +39,8 @@ namespace PresentScreenings.TableView
         private CGRect _scrollerFrame;
         private CGRect _screeningsFrame;
         private NSView _screeningsView;
+        private NSView _sampleView;
         private Dictionary<bool, string> _enabledToLabelTitle;
-        private NSTextField _titleLabel;
         #endregion
 
         #region Application Access
@@ -48,7 +48,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public FilmRatingDialogController Presentor;
+        public FilmRatingDialogController Presentor { get; set; }
         #endregion
 
         #region Constructors
@@ -94,8 +94,8 @@ namespace PresentScreenings.TableView
             // Create the uncombine button.
             CreateUncombineButton();
 
-            // Make the sheet unresizable.
-            Presentor.DisableResizing(_titleLabel, "title", _yMargin);
+            // Disable resizing.
+            Presentor.DisableResizing(this, _sampleView);
         }
 
         public override void ViewWillDisappear()
@@ -129,25 +129,28 @@ namespace PresentScreenings.TableView
         {
             nfloat labelWidth = _sheetFrame.Width - 2 * _xMargin;
 
+            // Create the window title label.
             _yCurr -= _labelHeight;
+            var titleLabel = new NSTextField(new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight));
+            titleLabel.Editable = false;
+            titleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
+            titleLabel.BackgroundColor = NSColor.WindowBackground;
+            titleLabel.Bordered = false;
+            titleLabel.StringValue = "Uncombine film";
+            View.AddSubview(titleLabel);
 
-            _titleLabel = new NSTextField(new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight));
-            _titleLabel.Editable = false;
-            _titleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
-            _titleLabel.BackgroundColor = NSColor.WindowBackground;
-            _titleLabel.Bordered = false;
-            _titleLabel.StringValue = "Uncombine film";
-            View.AddSubview(_titleLabel);
-
+            // Create the instruction label.
             _yCurr -= _labelHeight + _yLabelsDistance;
-
-            NSTextField instructionLabel = new NSTextField(new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight));
+            var instructionLabel = new NSTextField(new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight));
             instructionLabel.Editable = false;
             instructionLabel.Font = NSFont.LabelFontOfSize(NSFont.LabelFontSize);
             instructionLabel.BackgroundColor = NSColor.WindowBackground;
             instructionLabel.Bordered = false;
             instructionLabel.StringValue = "Create multiple films, one per distinct screening title";
             View.AddSubview(instructionLabel);
+
+            // Set sample view used to disable resizing.
+            _sampleView = titleLabel;
         }
 
         void CreateScrollView()

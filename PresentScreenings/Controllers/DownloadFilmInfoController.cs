@@ -31,13 +31,13 @@ namespace PresentScreenings.TableView
         #region Private Variables
         private float _contentWidth;
         private float _yCurr;
-        private NSTextField _selectedCountLabel;
         private NSTextField _withoutInfoLabel;
         private NSTextField _progressLabel;
         private NSTextField _activityField;
         private NSScrollView _activityScrollView;
         private NSButton _startButton;
         private NSButton _closeButton;
+        private NSView _sampleView;
         private List<Film> _films;
         private List<Film> _filmsWithoutInfo;
         #endregion
@@ -47,7 +47,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public FilmRatingDialogController Presentor;
+        public FilmRatingDialogController Presentor { get; set; }
         #endregion
 
         #region Constructors
@@ -84,8 +84,8 @@ namespace PresentScreenings.TableView
             _yCurr = _yMargin + _buttonHeight;
             CreateActionButtons(ref _yCurr);
 
-            // Disable Resizing.
-            Presentor.DisableResizing(_selectedCountLabel, "count", _yMargin);
+            // Disable resizing.
+            Presentor.DisableResizing(this, _sampleView);
         }
 
         public override void ViewWillAppear()
@@ -128,9 +128,12 @@ namespace PresentScreenings.TableView
             // Create the selected films count label.
             yCurr -= _labelHeight;
             var selectedCountRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            _selectedCountLabel = ControlsFactory.NewStandardLabel(selectedCountRect);
-            _selectedCountLabel.StringValue = $"Selected films: {_films.Count}";
-            View.AddSubview(_selectedCountLabel);
+            var selectedCountLabel = ControlsFactory.NewStandardLabel(selectedCountRect);
+            selectedCountLabel.StringValue = $"Selected films: {_films.Count}";
+            View.AddSubview(selectedCountLabel);
+
+            // Set sample view used to disable resizing.
+            _sampleView = selectedCountLabel;
 
             // Create the films without info count label.
             yCurr -= _yBetweenLabels + _labelHeight;

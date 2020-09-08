@@ -27,16 +27,17 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Members
-        nfloat _yCurr;
-        Screening _screening;
-        ScreeningControl _control;
-        ViewController _presentor;
-        List<Screening> _filmScreenings;
-        FilmScreeningControl _screeningInfoControl;
-        Dictionary<string, AttendanceCheckbox> _attendanceCheckboxByFilmFan;
+        private nfloat _yCurr;
+        private Screening _screening;
+        private ScreeningControl _control;
+        private ViewController _presentor;
+        private List<Screening> _filmScreenings;
+        private FilmScreeningControl _screeningInfoControl;
+        private Dictionary<string, AttendanceCheckbox> _attendanceCheckboxByFilmFan;
+        private NSView _sampleSubView;
         #endregion
 
-        #region Computed Properties
+        #region Properties
         public ViewController Presentor
         {
             get => _presentor;
@@ -59,29 +60,30 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Override Methods
-        public override void ViewDidLoad()
-        {
-            // Tell the presentor we're alive.
-            _presentor.RunningPopupsCount += 1;
-
-            // Populate controls.
-            _filmInfoButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
-        }
-
         public override void ViewWillAppear()
         {
             base.ViewWillAppear();
-            _control.Selected = true;
+
+            // Tell the presentor we're alive.
+            _presentor.RunningPopupsCount += 1;
+
+            // Initialize the list of screenings.
             _filmScreenings = ViewController.FilmScreenings(_screening.FilmId);
-            _checkboxTicketsBought.Activated += (s, e) => ToggleTicketsBought();
-            _checkboxSoldOut.Activated += (s, e) => ToggleSoldOut();
+
+            // Populate the controls.
             SetControlValues();
             CreateFilmFanControls();
+
+            // Create the screenings scroll view.
             CreateScreeningsScrollView();
+
+            // Disable Resizing.
+            DisableResizing(this, _sampleSubView);
         }
 
         public override void ViewWillDisappear()
         {
+            // Tell the presentor we're gone.
             _presentor.RunningPopupsCount--;
         }
 
@@ -110,6 +112,10 @@ namespace PresentScreenings.TableView
         #region Private Methods
         private void SetControlValues()
         {
+            _control.Selected = true;
+            _filmInfoButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
+            _checkboxTicketsBought.Activated += (s, e) => ToggleTicketsBought();
+            _checkboxSoldOut.Activated += (s, e) => ToggleSoldOut();
             _labelTitle.StringValue = _screening.FilmTitle;
             if (_screening.Extra != string.Empty)
             {
@@ -198,6 +204,9 @@ namespace PresentScreenings.TableView
 
             // Scroll to the selected screening.
             ScrollScreeningToVisible(CurrentScreening, scrollView);
+
+            // Set sample view used to disable resizing.
+            _sampleSubView = scrollView;
         }
 
         private void UpdateAttendances()

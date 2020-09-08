@@ -28,16 +28,15 @@ namespace PresentScreenings.TableView
         const float _yToplabelsDistance = 8;
         const float _bottomControlsHeight = 13;
         const float _yXcodeControlsMargin = 20;
-        //const float _magicTwenty = 20;
         #endregion
 
         #region Private Variables
-        float _scrollViewWidth;
-        nuint[] _filmIndexes;
-        List<int> _filmIds;
-        int _mainFilmId;
-        NSScrollView _titlesScrollView;
-        NSView _titlesDocumentView;
+        private float _scrollViewWidth;
+        private nuint[] _filmIndexes;
+        private List<int> _filmIds;
+        private int _mainFilmId;
+        private NSView _titlesDocumentView;
+        private NSView _sampleView;
         #endregion
 
         #region Application Access
@@ -45,7 +44,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public FilmRatingDialogController Presentor;
+        public FilmRatingDialogController Presentor { get; set; }
         #endregion
 
         #region Constructors
@@ -78,8 +77,8 @@ namespace PresentScreenings.TableView
             // Create the scroll view.
             CreateTitlesScrollView();
 
-            // Set constraints of the in-code generated UI elements.
-            SetConstraints();
+            // Disable resizing.
+            Presentor.DisableResizing(this, _sampleView);
         }
 
         public override void ViewWillDisappear()
@@ -98,11 +97,14 @@ namespace PresentScreenings.TableView
             nfloat yScrollView = 2 * _yXcodeControlsMargin + _bottomControlsHeight;
             nfloat scrollViewHeight = View.Frame.Height - _yXcodeControlsMargin - 2 * (_topLabelsHeigh + _yToplabelsDistance) - yScrollView;
             CGRect scrollViewFrame = new CGRect(_xMargin, yScrollView, _scrollViewWidth, scrollViewHeight);
-            _titlesScrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, _titlesDocumentView);
-            View.AddSubview(_titlesScrollView);
+            var titlesScrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, _titlesDocumentView);
+            View.AddSubview(titlesScrollView);
 
             // Create labels with the film titles.
             PopulateTitlesDocumentView();
+
+            // Set sample view used to disable resizing.
+            _sampleView = titlesScrollView;
         }
 
         private void PopulateTitlesDocumentView()
@@ -142,15 +144,6 @@ namespace PresentScreenings.TableView
                 // Ajust the vertical position with the distance between two controls.
                 yCurr -= _yControlsDistance;
             }
-        }
-
-        /// <summary>
-        /// Sets the constraints as to make the sheet unresizable.
-        /// </summary>
-        private void SetConstraints()
-        {
-            nfloat yFromTop = _yXcodeControlsMargin + 2 * (_topLabelsHeigh + _yToplabelsDistance);
-            Presentor.DisableResizing(_titlesScrollView, "scroller", yFromTop);
         }
 
         private void CloseSheet()

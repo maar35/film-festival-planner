@@ -100,18 +100,26 @@ namespace PresentScreenings.TableView
         }
 
         /// <summary>
-        /// Disable resizing of the view containing the given subview.
+        /// Disable resizing of the given controller's view based on the width
+        /// of the given subview.
         /// </summary>
+        /// <param name="controller"></param>
         /// <param name="subView"></param>
-        /// <param name="controlName"></param>
-        /// <param name="yFromTop"></param>
-        public void DisableResizing(NSObject subView, string controlName, nfloat yFromTop)
+        public void DisableResizing(NSViewController controller, NSView subView)
         {
+            // Set a dummy name for the subview.
+            string controlName = "subview";
+
+            // Get the distance from the top of the subview to the top of the containing view;
+            CGRect subViewFrame = subView.Frame;
+            nfloat yFromTop = controller.View.Frame.Height - subViewFrame.Height - subViewFrame.Y;
+
             // Get views being constrained.
             var views = new NSMutableDictionary();
             views.Add(new NSString(controlName), subView);
 
-            // Define format and assemble constraints (sorry, couln't find an other way).
+            // Define format and assemble constraints.
+            // (sorry, couln't find an other way to disable resizing)
             var horzFormat = $"|-[{controlName}]-|";
             var horzConstraints = NSLayoutConstraint.FromVisualFormat(horzFormat, NSLayoutFormatOptions.None, null, views);
 
