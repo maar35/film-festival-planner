@@ -37,6 +37,7 @@ namespace PresentScreenings.TableView
         private NSScrollView _activityScrollView;
         private NSButton _startButton;
         private NSButton _closeButton;
+        private NSView _sampleView;
         private List<Film> _films;
         private List<Film> _filmsWithoutInfo;
         #endregion
@@ -46,7 +47,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public FilmRatingDialogController Presentor;
+        public FilmRatingDialogController Presentor { get; set; }
         #endregion
 
         #region Constructors
@@ -82,6 +83,9 @@ namespace PresentScreenings.TableView
             // Create the buttons at the bottom of the view.
             _yCurr = _yMargin + _buttonHeight;
             CreateActionButtons(ref _yCurr);
+
+            // Disable resizing.
+            Presentor.DisableResizing(this, _sampleView);
         }
 
         public override void ViewWillAppear()
@@ -127,6 +131,9 @@ namespace PresentScreenings.TableView
             var selectedCountLabel = ControlsFactory.NewStandardLabel(selectedCountRect);
             selectedCountLabel.StringValue = $"Selected films: {_films.Count}";
             View.AddSubview(selectedCountLabel);
+
+            // Set sample view used to disable resizing.
+            _sampleView = selectedCountLabel;
 
             // Create the films without info count label.
             yCurr -= _yBetweenLabels + _labelHeight;

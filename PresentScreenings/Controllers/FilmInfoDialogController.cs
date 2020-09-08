@@ -31,19 +31,20 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Variables
-        float _contentWidth;
-        float _yCurr;
-        Film _film;
-        FilmInfo _filmInfo;
-        CGRect _dialogFrame;
-        NSTextField _summaryField;
-        NSFont _originalSummaryFieldFont;
-        NSColor _originalSummaryFieldColor;
-        bool _summaryFieldFormatIsOriginal;
-        NSScrollView _summaryScrollView;
-        NSButton _linkButton;
-        NSButton _cancelButton;
-        FilmScreeningControl _currentScreeningControl;
+        private float _contentWidth;
+        private float _yCurr;
+        private Film _film;
+        private FilmInfo _filmInfo;
+        private CGRect _dialogFrame;
+        private NSTextField _summaryField;
+        private NSFont _originalSummaryFieldFont;
+        private NSColor _originalSummaryFieldColor;
+        private bool _summaryFieldFormatIsOriginal;
+        private NSScrollView _summaryScrollView;
+        private NSButton _linkButton;
+        private NSButton _cancelButton;
+        private FilmScreeningControl _currentScreeningControl;
+        private NSView _sampleView;
         #endregion
 
         #region Application Access
@@ -51,8 +52,8 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public static GoToScreeningDialog Presentor;
-        public bool ShowScreenings = true;
+        public static GoToScreeningDialog Presentor { get; set; }
+        public bool ShowScreenings { get; set; } = true;
         #endregion
 
         #region Constructors
@@ -103,6 +104,9 @@ namespace PresentScreenings.TableView
             _yCurr = _yMargin + _buttonHeight + _yBetweenViews;   // temp
             _yCurr -= _yBetweenViews;
             CreateCancelButton(ref _yCurr);
+
+            // Disable resizing.
+            Presentor.DisableResizing(this, _sampleView);
         }
 
         public override void ViewWillDisappear()
@@ -123,6 +127,9 @@ namespace PresentScreenings.TableView
             filmTitleLabel.StringValue = _film.Title;
             filmTitleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
             View.AddSubview(filmTitleLabel);
+
+            // Set sample view used to disable resizing.
+            _sampleView = filmTitleLabel;
         }
 
         void CreateScreeningsScrollView(ref float yCurr)

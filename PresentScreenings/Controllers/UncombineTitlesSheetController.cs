@@ -32,14 +32,15 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Variables
-        nfloat _yCurr;
-        List<Screening> _screenings;
-        List<string> _distinctTitles;
-        CGRect _sheetFrame;
-        CGRect _scrollerFrame;
-        CGRect _screeningsFrame;
-        NSView _screeningsView;
-        Dictionary<bool, string> _enabledToLabelTitle;
+        private nfloat _yCurr;
+        private List<Screening> _screenings;
+        private List<string> _distinctTitles;
+        private CGRect _sheetFrame;
+        private CGRect _scrollerFrame;
+        private CGRect _screeningsFrame;
+        private NSView _screeningsView;
+        private NSView _sampleView;
+        private Dictionary<bool, string> _enabledToLabelTitle;
         #endregion
 
         #region Application Access
@@ -47,7 +48,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public FilmRatingDialogController Presentor;
+        public FilmRatingDialogController Presentor { get; set; }
         #endregion
 
         #region Constructors
@@ -92,6 +93,9 @@ namespace PresentScreenings.TableView
 
             // Create the uncombine button.
             CreateUncombineButton();
+
+            // Disable resizing.
+            Presentor.DisableResizing(this, _sampleView);
         }
 
         public override void ViewWillDisappear()
@@ -125,9 +129,9 @@ namespace PresentScreenings.TableView
         {
             nfloat labelWidth = _sheetFrame.Width - 2 * _xMargin;
 
+            // Create the window title label.
             _yCurr -= _labelHeight;
-
-            NSTextField titleLabel = new NSTextField(new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight));
+            var titleLabel = new NSTextField(new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight));
             titleLabel.Editable = false;
             titleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
             titleLabel.BackgroundColor = NSColor.WindowBackground;
@@ -135,9 +139,9 @@ namespace PresentScreenings.TableView
             titleLabel.StringValue = "Uncombine film";
             View.AddSubview(titleLabel);
 
+            // Create the instruction label.
             _yCurr -= _labelHeight + _yLabelsDistance;
-
-            NSTextField instructionLabel = new NSTextField(new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight));
+            var instructionLabel = new NSTextField(new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight));
             instructionLabel.Editable = false;
             instructionLabel.Font = NSFont.LabelFontOfSize(NSFont.LabelFontSize);
             instructionLabel.BackgroundColor = NSColor.WindowBackground;
@@ -145,22 +149,8 @@ namespace PresentScreenings.TableView
             instructionLabel.StringValue = "Create multiple films, one per distinct screening title";
             View.AddSubview(instructionLabel);
 
-            // Make the sheet unresizable (sorry, couln't find an other way).
-
-            //// Get views being constrained
-            var views = new NSMutableDictionary();
-            views.Add(new NSString("title"), titleLabel);
-
-            // Define format and assemble constraints
-            var horzFormat = "|-[title]-|";
-            var horzConstraints = NSLayoutConstraint.FromVisualFormat(horzFormat, NSLayoutFormatOptions.None, null, views);
-
-            var vertFormat = "V:|-[title]";
-            var vertConstraints = NSLayoutConstraint.FromVisualFormat(vertFormat, NSLayoutFormatOptions.None, null, views);
-
-            // Apply constraints
-            NSLayoutConstraint.ActivateConstraints(horzConstraints);
-            NSLayoutConstraint.ActivateConstraints(vertConstraints);
+            // Set sample view used to disable resizing.
+            _sampleView = titleLabel;
         }
 
         void CreateScrollView()
