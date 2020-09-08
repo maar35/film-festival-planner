@@ -149,23 +149,8 @@ namespace PresentScreenings.TableView
         /// </summary>
         private void SetConstraints()
         {
-            // Prepare setting constraints.
-            var views = new NSMutableDictionary();
-
-            // Get views being constrained.
-            views.Add(new NSString("scroller"), _titlesScrollView);
-
-            // Define format and assemble constraints.
-            nfloat yFromBottom = 2 * _yXcodeControlsMargin + _bottomControlsHeight;
             nfloat yFromTop = _yXcodeControlsMargin + 2 * (_topLabelsHeigh + _yToplabelsDistance);
-            var horzFormat = "|-[scroller]-|";
-            var horzConstraints = NSLayoutConstraint.FromVisualFormat(horzFormat, NSLayoutFormatOptions.None, null, views);
-            var vertFormat = $"V:|-{yFromTop}-[scroller]-{yFromBottom}-|";
-            var vertConstraints = NSLayoutConstraint.FromVisualFormat(vertFormat, NSLayoutFormatOptions.None, null, views);
-
-            // Apply constraints.
-            NSLayoutConstraint.ActivateConstraints(horzConstraints);
-            NSLayoutConstraint.ActivateConstraints(vertConstraints);
+            Presentor.DisableResizing(_titlesScrollView, "scroller", yFromTop);
         }
 
         private void CloseSheet()

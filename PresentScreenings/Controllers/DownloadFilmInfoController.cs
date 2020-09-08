@@ -31,6 +31,7 @@ namespace PresentScreenings.TableView
         #region Private Variables
         private float _contentWidth;
         private float _yCurr;
+        private NSTextField _selectedCountLabel;
         private NSTextField _withoutInfoLabel;
         private NSTextField _progressLabel;
         private NSTextField _activityField;
@@ -82,6 +83,9 @@ namespace PresentScreenings.TableView
             // Create the buttons at the bottom of the view.
             _yCurr = _yMargin + _buttonHeight;
             CreateActionButtons(ref _yCurr);
+
+            // Disable Resizing.
+            Presentor.DisableResizing(_selectedCountLabel, "count", _yMargin);
         }
 
         public override void ViewWillAppear()
@@ -124,9 +128,9 @@ namespace PresentScreenings.TableView
             // Create the selected films count label.
             yCurr -= _labelHeight;
             var selectedCountRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            var selectedCountLabel = ControlsFactory.NewStandardLabel(selectedCountRect);
-            selectedCountLabel.StringValue = $"Selected films: {_films.Count}";
-            View.AddSubview(selectedCountLabel);
+            _selectedCountLabel = ControlsFactory.NewStandardLabel(selectedCountRect);
+            _selectedCountLabel.StringValue = $"Selected films: {_films.Count}";
+            View.AddSubview(_selectedCountLabel);
 
             // Create the films without info count label.
             yCurr -= _yBetweenLabels + _labelHeight;

@@ -31,19 +31,20 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Variables
-        float _contentWidth;
-        float _yCurr;
-        Film _film;
-        FilmInfo _filmInfo;
-        CGRect _dialogFrame;
-        NSTextField _summaryField;
-        NSFont _originalSummaryFieldFont;
-        NSColor _originalSummaryFieldColor;
-        bool _summaryFieldFormatIsOriginal;
-        NSScrollView _summaryScrollView;
-        NSButton _linkButton;
-        NSButton _cancelButton;
-        FilmScreeningControl _currentScreeningControl;
+        private float _contentWidth;
+        private float _yCurr;
+        private Film _film;
+        private FilmInfo _filmInfo;
+        private CGRect _dialogFrame;
+        private NSTextField _filmTitleLabel;
+        private NSTextField _summaryField;
+        private NSFont _originalSummaryFieldFont;
+        private NSColor _originalSummaryFieldColor;
+        private bool _summaryFieldFormatIsOriginal;
+        private NSScrollView _summaryScrollView;
+        private NSButton _linkButton;
+        private NSButton _cancelButton;
+        private FilmScreeningControl _currentScreeningControl;
         #endregion
 
         #region Application Access
@@ -103,6 +104,9 @@ namespace PresentScreenings.TableView
             _yCurr = _yMargin + _buttonHeight + _yBetweenViews;   // temp
             _yCurr -= _yBetweenViews;
             CreateCancelButton(ref _yCurr);
+
+            // Make the dialog unresizable.
+            Presentor.DisableResizing(_filmTitleLabel, "title", _yMargin);
         }
 
         public override void ViewWillDisappear()
@@ -119,10 +123,10 @@ namespace PresentScreenings.TableView
         {
             yCurr -= _labelHeight;
             var rect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            var filmTitleLabel = ControlsFactory.NewStandardLabel(rect);
-            filmTitleLabel.StringValue = _film.Title;
-            filmTitleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
-            View.AddSubview(filmTitleLabel);
+            _filmTitleLabel = ControlsFactory.NewStandardLabel(rect);
+            _filmTitleLabel.StringValue = _film.Title;
+            _filmTitleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
+            View.AddSubview(_filmTitleLabel);
         }
 
         void CreateScreeningsScrollView(ref float yCurr)

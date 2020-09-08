@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using AppKit;
 using CoreGraphics;
+using Foundation;
 
 namespace PresentScreenings.TableView
 {
@@ -96,6 +97,30 @@ namespace PresentScreenings.TableView
                 ColorView.SetScreeningColor(screening, _labelByfilmScreening[screening]);
                 _labelByfilmScreening[screening].StringValue = screening.ToFilmScreeningLabelString();
             }
+        }
+
+        /// <summary>
+        /// Disable resizing of the view containing the given subview.
+        /// </summary>
+        /// <param name="subView"></param>
+        /// <param name="controlName"></param>
+        /// <param name="yFromTop"></param>
+        public void DisableResizing(NSObject subView, string controlName, nfloat yFromTop)
+        {
+            // Get views being constrained.
+            var views = new NSMutableDictionary();
+            views.Add(new NSString(controlName), subView);
+
+            // Define format and assemble constraints (sorry, couln't find an other way).
+            var horzFormat = $"|-[{controlName}]-|";
+            var horzConstraints = NSLayoutConstraint.FromVisualFormat(horzFormat, NSLayoutFormatOptions.None, null, views);
+
+            var vertFormat = $"V:|-{yFromTop}-[{controlName}]";
+            var vertConstraints = NSLayoutConstraint.FromVisualFormat(vertFormat, NSLayoutFormatOptions.None, null, views);
+
+            // Apply constraints.
+            NSLayoutConstraint.ActivateConstraints(horzConstraints);
+            NSLayoutConstraint.ActivateConstraints(vertConstraints);
         }
         #endregion
 
