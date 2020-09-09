@@ -48,6 +48,7 @@ namespace PresentScreenings.TableView
 
         #region Properties
         public FilmRatingDialogController Presentor { get; set; }
+        private NSCell CocoaCloseButton => (NSCell)View.Window.AccessibilityCloseButton;
         #endregion
 
         #region Constructors
@@ -245,9 +246,8 @@ namespace PresentScreenings.TableView
 
         private void DownloadFilmInfo()
         {
-            // Disable the buttons on the modal dialog, forcing to await feedback.
-            _startButton.Enabled = false;
-            _closeButton.Enabled = false;
+            // Disable the controls on the modal dialog, forcing to await feedback.
+            DisableControls();
 
             // Start processing in background.
             var startTime = DateTime.Now;
@@ -276,7 +276,7 @@ namespace PresentScreenings.TableView
                     Presentor.SelectFilms(_films);
                     var yScroll = _activityField.Frame.Height - _activityScrollView.Frame.Height;
                     _activityScrollView.ContentView.ScrollToPoint(new CGPoint(0, yScroll));
-                    _closeButton.Enabled = true;
+                    ReEnableControls();
                 },
                 // Force the code in the ContinueWith block to be run on the
                 // calling thread.
@@ -291,6 +291,19 @@ namespace PresentScreenings.TableView
                 VisitUrl(film);
                 builder.AppendLine($"{LogTimeString()} - {film.ToString()} - {film.InfoStatus.ToString()}");
             }
+        }
+
+        private void DisableControls()
+        {
+            _startButton.Enabled = false;
+            _closeButton.Enabled = false;
+            CocoaCloseButton.Enabled = false;
+        }
+
+        private void ReEnableControls()
+        {
+            _closeButton.Enabled = true;
+            CocoaCloseButton.Enabled = true; 
         }
 
         private void CloseView()
