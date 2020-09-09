@@ -122,8 +122,8 @@ namespace PresentScreenings.TableView
 
         #region Private Methods to populate the cell view
         // This pattern allows you reuse existing views when they are no-longer in use.
-        // If the returned view is null, you instance up a new view
-        // If a non-null view is returned, you modify it enough to reflect the new data
+        // If the returned view is null, you instance up a new view.
+        // If a non-null view is returned, you modify it enough to reflect the new data.
 
         private void PopulateFilm(ref NSTextField field)
         {

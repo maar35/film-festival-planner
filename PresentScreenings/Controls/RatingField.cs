@@ -7,6 +7,7 @@ namespace PresentScreenings.TableView
     {
         #region Properties
         public FilmRatingDialogController DialogController { get; }
+        private NSCell CocoaCloseButton => (NSCell)DialogController.View.Window.AccessibilityCloseButton;
         #endregion
 
         #region Constructors
@@ -23,6 +24,7 @@ namespace PresentScreenings.TableView
             if (began)
             {
                 DialogController.TextBeingEdited = true;
+                CocoaCloseButton.Enabled = false;
             }
             return began;
         }
@@ -33,6 +35,7 @@ namespace PresentScreenings.TableView
             if (ended)
             {
                 DialogController.TextBeingEdited = false;
+                CocoaCloseButton.Enabled = true;
             }
             return ended;
         }
@@ -43,6 +46,7 @@ namespace PresentScreenings.TableView
             if (aborted)
             {
                 DialogController.TextBeingEdited = false;
+                CocoaCloseButton.Enabled = true;
             }
             return aborted;
         }
