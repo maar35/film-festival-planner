@@ -369,6 +369,11 @@ namespace PresentScreenings.TableView
             _filmRatingTableView.ScrollRowToVisible((nint)rows.First());
         }
 
+        public void SelectFilm(Film film)
+        {
+            SelectFilms(new List<Film> { film });
+        }
+
         public Film GetSelectedFilm()
         {
             if (OneFilmSelected())

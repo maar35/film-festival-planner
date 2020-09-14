@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace PresentScreenings.TableView
 {
@@ -130,30 +131,45 @@ namespace PresentScreenings.TableView
 
         public static FilmInfo TryParseUrlSummary(HttpWebRequest request, string url, MediumCatagory catagory, int filmId)
         {
+            // Get the website response.
             var response = request.GetResponse() as HttpWebResponse;
+
+            // Get the wbsite text from the response.
             var stream = new StreamReader(response.GetResponseStream());
             var text = stream.ReadToEnd();
             stream.Close();
-            var builder = new StringBuilder();
+
+            // Parse the website text.
+            var filmInfo = TryParseText(text, catagory, filmId);
+
+            return filmInfo;
+        }
+
+        public static FilmInfo TryParseText(string text, MediumCatagory catagory, int filmId)
+        {
             var allParsesFailed = false;
             var filmDescription = string.Empty;
             var article = string.Empty;
             var ScreenedFileDescriptionByTitle = new Dictionary<string, string> { };
+
+            // Parse the different segments as expected with this catagory.
             foreach (var parseInfo in _parseInfoByCatagory[catagory])
             {
                 var success = false;
+
+                // Carry out text replacements when available for this kind of segment.
                 if (parseInfo.filterRe != null && parseInfo.filterReplacement != null)
                 {
                     text = parseInfo.filterRe.Replace(text, parseInfo.filterReplacement);
                 }
+
+                // Match the regular expression for this kind of segment.
                 foreach (Match match in parseInfo.re.Matches(text))
                 {
-                    //builder.AppendFormat($"-match-at-{match.Index}-->\n");
                     var groupCount = match.Groups.Count;
                     string screenedFilmTitle = string.Empty;
                     for (int groupNumber = 1; groupNumber < groupCount; groupNumber++)
                     {
-                        //builder.AppendFormat($"-group-{groupNumber}-->\n");
                         var textUnit = match.Groups[groupNumber].Value;
                         switch (parseInfo.type)
                         {
@@ -177,24 +193,80 @@ namespace PresentScreenings.TableView
                     }
                     success = true;
                 }
+
+                // Assert if there were no matches for this segment.
                 if (!success)
                 {
                     allParsesFailed = true;
                 }
             }
+
+            // Throw an exception if at least one of the expected segments didn't match.
             if (allParsesFailed)
             {
-                builder.AppendLine($"URL {url} could not be parsed.");
-                builder.AppendLine("===");
-                builder.Append(text);
-                throw new UnparseblePageException(builder.ToString());
+                throw new UnparseblePageException(text);
             }
+
+            // Create a Film Info instance with the information found.
             var info = new FilmInfo(filmId, Film.FilmInfoStatus.Complete, filmDescription, article);
             foreach (string title in ScreenedFileDescriptionByTitle.Keys)
             {
                 info.AddScreenedFilm(title, ScreenedFileDescriptionByTitle[title]);
             }
+
             return info;
+        }
+
+        public static async Task<bool> VisitUrl(Film film, CancellationToken cancellationToken)
+        {
+            MediumCatagory catagory = film.Catagory;
+            string url = film.Url;
+            bool canceled = false;
+            bool webErrorOccurred = false;
+            WebClient httpClient = new WebClient();
+            string contents = string.Empty;
+
+            // Read the website of the given film.
+            try
+            {
+                // Create an task to asynchroneously read the website.
+                Task<string> contentsTask = httpClient.DownloadStringTaskAsync(url);
+
+                // Return control to the calling code until the asynchronous
+                // task finishes on its own thread.
+                contents = await contentsTask;
+
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+            catch (OperationCanceledException)
+            {
+                canceled = true;
+            }
+            catch (WebException)
+            {
+                FilmInfo.AddNewFilmInfo(film.FilmId, Film.FilmInfoStatus.UrlError);
+                webErrorOccurred = true;
+            }
+
+            // Parse the website text if no error occurred.
+            if (!canceled && !webErrorOccurred)
+            {
+                try
+                {
+                    var filminfo = TryParseText(contents, catagory, film.FilmId);
+                    if (filminfo != null)
+                    {
+                        // Add the Film Info to the list of the Screenings Plan.
+                        filminfo.InfoStatus = Film.FilmInfoStatus.Complete;
+                    }
+                }
+                catch (UnparseblePageException)
+                {
+                    FilmInfo.AddNewFilmInfo(film.FilmId, Film.FilmInfoStatus.ParseError);
+                }
+            }
+
+            return canceled;
         }
         #endregion
     }
