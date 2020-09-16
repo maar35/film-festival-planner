@@ -229,7 +229,7 @@ namespace PresentScreenings.TableView
             // Read the website of the given film.
             try
             {
-                // Create an task to asynchroneously read the website.
+                // Create a task to asynchronously read the website.
                 Task<string> contentsTask = httpClient.DownloadStringTaskAsync(url);
 
                 // Return control to the calling code until the asynchronous

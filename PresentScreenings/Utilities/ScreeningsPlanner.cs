@@ -97,7 +97,7 @@ namespace PresentScreenings.TableView
             _controller.ReloadScreeningsView();
 
             // Display that unplanning is done.
-            _builder.AppendLine($"{_logTime()}  All automatically planned screenings cancelled for {attendee}.");
+            _builder.AppendLine($"{_logTime()}  All automatically planned screenings canceled for {attendee}.");
             _builder.AppendLine();
 
             // Call the display function with the result string.

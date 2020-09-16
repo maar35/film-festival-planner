@@ -29,12 +29,12 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Variables
-        private bool _cancelled;
+        private bool _canceled;
         private float _contentWidth;
         private float _yCurr;
-        private NSTextField _withoutInfoLabel;
         private NSTextField _progressLabel;
-        private NSTextField _statusLabel;
+        private NSTextField _infoStatusCountsLabel;
+        private NSTextField _activityLabel;
         private NSTextField _activityField;
         private NSScrollView _activityScrollView;
         private NSButton _startButton;
@@ -112,16 +112,6 @@ namespace PresentScreenings.TableView
         {
             return $"{DateTime.Now.ToString(_dateTimeFormat)}";
         }
-
-        public List<Film> GetFilmsWithoutInfo(List<Film> films)
-        {
-            var filmsWithoutInfo = (
-                from Film film in _films
-                where film.InfoStatus != Film.FilmInfoStatus.Complete
-                select ViewController.GetFilmById(film.FilmId)
-            ).ToList();
-            return filmsWithoutInfo;
-        }
         #endregion
 
         #region Private Methods to complete the UI.
@@ -137,26 +127,33 @@ namespace PresentScreenings.TableView
             // Set sample view used to disable resizing.
             _sampleView = selectedCountLabel;
 
-            // Create the label to display the count of films without info.
-            yCurr -= _yBetweenLabels + _labelHeight;
-            var withoutInfoRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            _withoutInfoLabel = ControlsFactory.NewStandardLabel(withoutInfoRect);
-            _withoutInfoLabel.StringValue = $"Without info: {_filmsWithoutInfo.Count}";
-            View.AddSubview(_withoutInfoLabel);
-
-            // Create the progress label.
+            // Create the label to display progress.
             yCurr -= _yBetweenLabels + _labelHeight;
             var progressRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
             _progressLabel = ControlsFactory.NewStandardLabel(progressRect);
-            DisplayCountsPerFilmInfoStatus();
+            _progressLabel.StringValue = $"Without info: {_filmsWithoutInfo.Count}";
             View.AddSubview(_progressLabel);
 
-            // Create the status label.
+            // Create the label to display the count of each film info status.
             yCurr -= _yBetweenLabels + _labelHeight;
-            var statusRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
-            _statusLabel = ControlsFactory.NewStandardLabel(statusRect);
-            _statusLabel.StringValue = $"Ready to visit {_filmsWithoutInfo.Count} websites.";
-            View.AddSubview(_statusLabel);
+            var infoStatusCountsRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
+            _infoStatusCountsLabel = ControlsFactory.NewStandardLabel(infoStatusCountsRect);
+            DisplayCountsPerFilmInfoStatus();
+            View.AddSubview(_infoStatusCountsLabel);
+
+            // Create the activity label.
+            yCurr -= _yBetweenLabels + _labelHeight;
+            var activityRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
+            _activityLabel = ControlsFactory.NewStandardLabel(activityRect);
+            if (_filmsWithoutInfo.Count == 0)
+            {
+                DisplayNewActivity("No films without information");
+            }
+            else
+            {
+                DisplayNewActivity($"Ready to visit {_filmsWithoutInfo.Count} websites.");
+            }
+            View.AddSubview(_activityLabel);
         }
 
         private void CreateActivityScrollView(ref float yCurr, float height)
@@ -207,19 +204,19 @@ namespace PresentScreenings.TableView
             var closeButtonRect = new CGRect(xCurr, yCurr, _buttonWidth, _buttonHeight);
             _closeButton = ControlsFactory.NewCancelButton(closeButtonRect);
             _closeButton.Title = "Close";
-            _closeButton.Action = new ObjCRuntime.Selector("CancelDownloadFilmInfo:");
+            _closeButton.Action = new ObjCRuntime.Selector("CloseDownloadFilmInfoDialog:");
             View.AddSubview(_closeButton);
         }
         #endregion
 
-        #region Private Methods to support displaying information.
-        private void SetWithoutInfoLabelText(int todoCount = 0)
+        #region Private Methods to maintain the UI.
+        private void DisplayProgress(int todoCount = 0)
         {
             var oldCount = _filmsWithoutInfo.Count;
             var newCount = GetFilmsWithoutInfo(_films).Count;
             var processedCount = oldCount - todoCount;
             var completedCount = oldCount - newCount;
-            _withoutInfoLabel.StringValue = $"Processed: {processedCount}, completed: {completedCount}";
+            _progressLabel.StringValue = $"Processed: {processedCount}, completed: {completedCount}";
         }
 
         private void DisplayCountsPerFilmInfoStatus()
@@ -231,10 +228,15 @@ namespace PresentScreenings.TableView
                 var statusName = Enum.GetName(typeof(Film.FilmInfoStatus), filmInfoStatus);
                 states.Add($"{statusCount} {statusName}");
             }
-            _progressLabel.StringValue = string.Join(", ", states);
+            _infoStatusCountsLabel.StringValue = string.Join(", ", states);
         }
 
-        private void SetActivityText(StringBuilder builder)
+        private void DisplayNewActivity(string activityDescription)
+        {
+            _activityLabel.StringValue = activityDescription;
+        }
+
+        private void SetActivityScrollerText(StringBuilder builder)
         {
             _activityField.StringValue = builder.ToString();
             var fit = _activityField.SizeThatFits(_activityField.Frame.Size);
@@ -252,86 +254,6 @@ namespace PresentScreenings.TableView
                 builder.AppendLine($"{film}, {film.InfoStatus}");
             }
             return builder.ToString();
-        }
-        #endregion
-
-        #region Private Methods to download the films.
-        private async void DownloadFilmInfo()
-        {
-            // Prevent the popup window to be closed.
-            SetButtonEnablementForDownload();
-
-            // Prepare statistics to be displayed.
-            int todoCount = _filmsWithoutInfo.Count;
-            var startTime = DateTime.Now;
-            var builder = new StringBuilder($"{LogTimeString()} Start analyzing {_filmsWithoutInfo.Count} websites" + _nl);
-
-            // For each site to be visited, load the content in background.
-            _cancellationTokenSource = new CancellationTokenSource();
-            _cancelled = false;
-            foreach (var film in _filmsWithoutInfo)
-            {
-                _statusLabel.StringValue = $"{todoCount} to do, working on {film}.";
-                var stringResult = await DownloadInfoOfOneFilm(film);
-                if (_cancelled)
-                {
-                    break;
-                }
-                --todoCount;
-                builder.AppendLine($"{LogTimeString()} - {film} - {film.InfoStatus}");
-                SetActivityText(builder);
-                _statusLabel.StringValue = $"To do {todoCount}, done with {film}.";
-            }
-
-            // Report what was accomplished.
-            var endTime = DateTime.Now;
-            var duration = endTime - startTime;
-            DisplayCountsPerFilmInfoStatus();
-            SetWithoutInfoLabelText(todoCount);
-            if (_cancelled)
-            {
-                _statusLabel.StringValue = $"Stopped.";
-                builder.AppendLine($"{LogTimeString()} Downloading stopped, duration {duration:hh\\:mm\\:ss}");
-            }
-            else
-            {
-                _statusLabel.StringValue = $"Done visiting {_filmsWithoutInfo.Count} websites.";
-                builder.AppendLine($"{LogTimeString()} Done analyzing, duration {duration:hh\\:mm\\:ss}");
-            }
-            SetActivityText(builder);
-
-            // Dispose the cancellation token source.
-            _cancellationTokenSource = null;
-
-            // Reload the data.
-            Presentor.FilmRatingTableView.ReloadData();
-
-            // Restore the original selection of films.
-            Presentor.SelectFilms(_films);
-
-            // Allow closing og the popup window.
-            SetButtonEnablementForAfterDownload();
-        }
-
-        private async Task<string> DownloadInfoOfOneFilm(Film film)
-        {
-            var cancelled = await WebUtility.VisitUrl(film, _cancellationTokenSource.Token);
-            if (cancelled)
-            {
-                _cancelled = true;
-            }
-            DisplayCountsPerFilmInfoStatus();
-            var resultString = Enum.GetName(typeof(Film.FilmInfoStatus), film.InfoStatus);
-            return resultString;
-        }
-
-        private void CancelDownloading()
-        {
-            if (_cancellationTokenSource != null)
-            {
-                _statusLabel.StringValue = "Cancelling downloads....";
-                _cancellationTokenSource.Cancel();
-            }
         }
 
         private void SetButtonEnablementForDownload()
@@ -355,6 +277,87 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
+        #region Private Methods working with downloading.
+        private List<Film> GetFilmsWithoutInfo(List<Film> films)
+        {
+            var filmsWithoutInfo = (
+                from Film film in _films
+                where film.InfoStatus != Film.FilmInfoStatus.Complete
+                select ViewController.GetFilmById(film.FilmId)
+            ).ToList();
+            return filmsWithoutInfo;
+        }
+
+        private async void DownloadFilmInfo()
+        {
+            // Prevent the popup window to be closed.
+            SetButtonEnablementForDownload();
+
+            // Prepare statistics to be displayed.
+            int todoCount = _filmsWithoutInfo.Count;
+            var startTime = DateTime.Now;
+            var builder = new StringBuilder($"{LogTimeString()} Start analyzing {_filmsWithoutInfo.Count} websites" + _nl);
+
+            // For each site to be visited, load the content in background.
+            _cancellationTokenSource = new CancellationTokenSource();
+            _canceled = false;
+            foreach (var film in _filmsWithoutInfo)
+            {
+                DisplayNewActivity($"{todoCount} to do, working on {film}.");
+                _canceled = await WebUtility.VisitUrl(film, _cancellationTokenSource.Token);
+                if (_canceled)
+                {
+                    break;
+                }
+                --todoCount;
+                DisplayNewActivity($"{todoCount} to do, done with {film}.");
+                DisplayCountsPerFilmInfoStatus();
+                DisplayProgress(todoCount);
+                builder.AppendLine($"{LogTimeString()} - {film} - {film.InfoStatus}");
+                SetActivityScrollerText(builder);
+            }
+
+            // Report what was accomplished.
+            var endTime = DateTime.Now;
+            var duration = endTime - startTime;
+            var durationString = $"duration {duration:hh\\:mm\\:ss}";
+            DisplayCountsPerFilmInfoStatus();
+            DisplayProgress(todoCount);
+            if (_canceled)
+            {
+                DisplayNewActivity($"Stopped.");
+                builder.AppendLine($"{LogTimeString()} Downloading stopped, {durationString}");
+            }
+            else
+            {
+                DisplayNewActivity($"Done visiting {_filmsWithoutInfo.Count} websites.");
+                builder.AppendLine($"{LogTimeString()} Done analyzing, {durationString}");
+            }
+            SetActivityScrollerText(builder);
+
+            // Dispose the cancellation token source.
+            _cancellationTokenSource = null;
+
+            // Reload the data.
+            Presentor.FilmRatingTableView.ReloadData();
+
+            // Restore the original selection of films.
+            Presentor.SelectFilms(_films);
+
+            // Allow closing og the popup window.
+            SetButtonEnablementForAfterDownload();
+        }
+
+        private void CancelDownloading()
+        {
+            if (_cancellationTokenSource != null)
+            {
+                DisplayNewActivity("Cancelling downloads....");
+                _cancellationTokenSource.Cancel();
+            }
+        }
+        #endregion
+
         #region Custom Actions
         [Action("DownloadFilmInfo:")]
         private void DownloadFilmInfo(NSObject sender)
@@ -368,8 +371,8 @@ namespace PresentScreenings.TableView
             CancelDownloading();
         }
 
-        [Action("CancelDownloadFilmInfo:")]
-        private void CancelDownloadFilmInfo(NSObject sender)
+        [Action("CloseDownloadFilmInfoDialog:")]
+        private void CloseDownloadFilmInfoDialog(NSObject sender)
         {
             CloseView();
         }
