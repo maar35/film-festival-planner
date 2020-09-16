@@ -19,6 +19,7 @@ namespace PresentScreenings.TableView
         private const float _xMargin = ControlsFactory.HorizontalMargin;
         private const float _xBetweenControls = ControlsFactory.HorizontalPixelsBetweenControls;
         private const float _buttonWidth = ControlsFactory.StandardButtonWidth;
+        private const float _wideButtonWidth = _buttonWidth + 15;
         private const float _yMargin = ControlsFactory.BigVerticalMargin;
         private const float _yBetweenViews = ControlsFactory.VerticalPixelsBetweenViews;
         private const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
@@ -30,6 +31,7 @@ namespace PresentScreenings.TableView
 
         #region Private Variables
         private bool _canceled;
+        private int _orgWithoutInfoCount;
         private float _contentWidth;
         private float _yCurr;
         private NSTextField _progressLabel;
@@ -42,8 +44,7 @@ namespace PresentScreenings.TableView
         private NSButton _closeButton;
         private NSView _sampleView;
         private CancellationTokenSource _cancellationTokenSource;
-        private List<Film> _films;
-        private List<Film> _filmsWithoutInfo;
+        private List<Film> _selectedFilms;
         #endregion
 
         #region Properties
@@ -55,7 +56,6 @@ namespace PresentScreenings.TableView
         #region Constructors
         public DownloadFilmInfoController(IntPtr handle) : base(handle)
         {
-            _filmsWithoutInfo = new List<Film>();
         }
         #endregion
 
@@ -66,8 +66,8 @@ namespace PresentScreenings.TableView
 
             // Get the selected films.
             var indexes = Presentor.FilmRatingTableView.SelectedRows.ToList();
-            _films = new List<Film>(indexes.Select(Presentor.GetFilmByIndex));
-            _filmsWithoutInfo = GetFilmsWithoutInfo(_films);
+            _selectedFilms = new List<Film>(indexes.Select(Presentor.GetFilmByIndex));
+            _orgWithoutInfoCount = GetFilmsWithoutInfoCount();
 
             // Set generally usable dimensions.
             var frame = View.Frame;
@@ -121,7 +121,7 @@ namespace PresentScreenings.TableView
             yCurr -= _labelHeight;
             var selectedCountRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
             var selectedCountLabel = ControlsFactory.NewStandardLabel(selectedCountRect);
-            selectedCountLabel.StringValue = $"Selected films: {_films.Count}";
+            selectedCountLabel.StringValue = $"Selected films: {_selectedFilms.Count}, without info: {_orgWithoutInfoCount}";
             View.AddSubview(selectedCountLabel);
 
             // Set sample view used to disable resizing.
@@ -131,7 +131,7 @@ namespace PresentScreenings.TableView
             yCurr -= _yBetweenLabels + _labelHeight;
             var progressRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
             _progressLabel = ControlsFactory.NewStandardLabel(progressRect);
-            _progressLabel.StringValue = $"Without info: {_filmsWithoutInfo.Count}";
+            DisplayProgress(_orgWithoutInfoCount);
             View.AddSubview(_progressLabel);
 
             // Create the label to display the count of each film info status.
@@ -145,13 +145,13 @@ namespace PresentScreenings.TableView
             yCurr -= _yBetweenLabels + _labelHeight;
             var activityRect = new CGRect(_xMargin, yCurr, _contentWidth, _labelHeight);
             _activityLabel = ControlsFactory.NewStandardLabel(activityRect);
-            if (_filmsWithoutInfo.Count == 0)
+            if (_orgWithoutInfoCount == 0)
             {
                 DisplayNewActivity("No films without information");
             }
             else
             {
-                DisplayNewActivity($"Ready to visit {_filmsWithoutInfo.Count} websites.");
+                DisplayNewActivity($"Ready to visit {_orgWithoutInfoCount} websites.");
             }
             View.AddSubview(_activityLabel);
         }
@@ -178,15 +178,14 @@ namespace PresentScreenings.TableView
         {
             var xCurr = _xMargin;
             yCurr -= _buttonHeight;
-            var visitCount = _filmsWithoutInfo.Count;
 
             // Create the Start button.
-            var startButtonRect = new CGRect(xCurr, yCurr, _buttonWidth + 10, _buttonHeight);
+            var startButtonRect = new CGRect(xCurr, yCurr, _wideButtonWidth, _buttonHeight);
             _startButton = ControlsFactory.NewStandardButton(startButtonRect);
-            _startButton.Title = $"Visit {visitCount} sites";
+            SetStartButtonTitle(_orgWithoutInfoCount);
             _startButton.LineBreakMode = NSLineBreakMode.ByWordWrapping;
             _startButton.KeyEquivalent = ControlsFactory.EnterKey;
-            _startButton.Enabled = visitCount > 0;
+            _startButton.Enabled = _orgWithoutInfoCount > 0;
             _startButton.Action = new ObjCRuntime.Selector("DownloadFilmInfo:");
             View.AddSubview(_startButton);
             xCurr += (float)_startButton.Frame.Width + _xBetweenControls;
@@ -212,8 +211,8 @@ namespace PresentScreenings.TableView
         #region Private Methods to maintain the UI.
         private void DisplayProgress(int todoCount = 0)
         {
-            var oldCount = _filmsWithoutInfo.Count;
-            var newCount = GetFilmsWithoutInfo(_films).Count;
+            var oldCount = _orgWithoutInfoCount;
+            var newCount = GetFilmsWithoutInfoCount();
             var processedCount = oldCount - todoCount;
             var completedCount = oldCount - newCount;
             _progressLabel.StringValue = $"Processed: {processedCount}, completed: {completedCount}";
@@ -224,7 +223,7 @@ namespace PresentScreenings.TableView
             var states = new List<string> { };
             foreach (Film.FilmInfoStatus filmInfoStatus in Enum.GetValues(typeof(Film.FilmInfoStatus)))
             {
-                var statusCount = _films.Count(f => f.InfoStatus == filmInfoStatus);
+                var statusCount = _selectedFilms.Count(f => f.InfoStatus == filmInfoStatus);
                 var statusName = Enum.GetName(typeof(Film.FilmInfoStatus), filmInfoStatus);
                 states.Add($"{statusCount} {statusName}");
             }
@@ -249,11 +248,16 @@ namespace PresentScreenings.TableView
         private string ToDoFilmsString()
         {
             var builder = new StringBuilder("To do:" + NewLine + NewLine);
-            foreach (Film film in _filmsWithoutInfo)
+            foreach (Film film in GetFilmsWithoutInfo())
             {
                 builder.AppendLine($"{film}, {film.InfoStatus}");
             }
             return builder.ToString();
+        }
+
+        private void SetStartButtonTitle(int toVisitCount)
+        {
+            _startButton.Title = $"Visit {toVisitCount} sites";
         }
 
         private void SetButtonEnablementForDownload()
@@ -266,6 +270,8 @@ namespace PresentScreenings.TableView
 
         private void SetButtonEnablementForAfterDownload()
         {
+            _startButton.Enabled = true;
+            SetStartButtonTitle(GetFilmsWithoutInfoCount());
             _closeButton.Enabled = true;
             CocoaCloseButton.Enabled = true;
             _stopButton.Enabled = false;
@@ -278,14 +284,24 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods working with downloading.
-        private List<Film> GetFilmsWithoutInfo(List<Film> films)
+        private List<Film> GetFilmsWithoutInfo()
         {
             var filmsWithoutInfo = (
-                from Film film in _films
+                from Film film in _selectedFilms
                 where film.InfoStatus != Film.FilmInfoStatus.Complete
                 select ViewController.GetFilmById(film.FilmId)
             ).ToList();
             return filmsWithoutInfo;
+        }
+
+        private int GetFilmsWithoutInfoCount()
+        {
+            var filmsWithoutInfoCount = (
+                from Film film in _selectedFilms
+                where film.InfoStatus != Film.FilmInfoStatus.Complete
+                select 0
+            ).Count();
+            return filmsWithoutInfoCount;
         }
 
         private async void DownloadFilmInfo()
@@ -294,14 +310,15 @@ namespace PresentScreenings.TableView
             SetButtonEnablementForDownload();
 
             // Prepare statistics to be displayed.
-            int todoCount = _filmsWithoutInfo.Count;
+            int visitCount = GetFilmsWithoutInfoCount();
+            int todoCount = visitCount;
             var startTime = DateTime.Now;
-            var builder = new StringBuilder($"{LogTimeString()} Start analyzing {_filmsWithoutInfo.Count} websites" + _nl);
+            var builder = new StringBuilder($"{LogTimeString()} Start analyzing {visitCount} websites" + _nl);
 
             // For each site to be visited, load the content in background.
             _cancellationTokenSource = new CancellationTokenSource();
             _canceled = false;
-            foreach (var film in _filmsWithoutInfo)
+            foreach (var film in GetFilmsWithoutInfo())
             {
                 DisplayNewActivity($"{todoCount} to do, working on {film}.");
                 _canceled = await WebUtility.VisitUrl(film, _cancellationTokenSource.Token);
@@ -330,7 +347,7 @@ namespace PresentScreenings.TableView
             }
             else
             {
-                DisplayNewActivity($"Done visiting {_filmsWithoutInfo.Count} websites.");
+                DisplayNewActivity($"Done visiting {visitCount} websites.");
                 builder.AppendLine($"{LogTimeString()} Done analyzing, {durationString}");
             }
             SetActivityScrollerText(builder);
@@ -342,7 +359,7 @@ namespace PresentScreenings.TableView
             Presentor.FilmRatingTableView.ReloadData();
 
             // Restore the original selection of films.
-            Presentor.SelectFilms(_films);
+            Presentor.SelectFilms(_selectedFilms);
 
             // Allow closing og the popup window.
             SetButtonEnablementForAfterDownload();
