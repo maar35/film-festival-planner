@@ -440,8 +440,14 @@ namespace PresentScreenings.TableView
             PerformSegue("GoToScreeningSegue", sender);
         }
 
-        [Action("DownLoadInfoForOneFilm:")]
+        [Action("DownloadFilmInfo:")]
         void DownloadFilmInfo(NSObject sender)
+        {
+            PerformSegue("DownloadFilmInfoSegue", sender);
+        }
+
+        [Action("DownLoadInfoForOneFilm:")]
+        void DownLoadInfoForOneFilm(NSObject sender)
         {
             PerformSegue("DownloadFilmInfoSegue", sender);
         }
