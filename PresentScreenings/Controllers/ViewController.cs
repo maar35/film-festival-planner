@@ -499,11 +499,6 @@ namespace PresentScreenings.TableView
             ReloadScreeningsView();
         }
 
-        public void DownloadFilmInfo(NSObject sender)
-        {
-            App.FilmsDialogController?.PerformSegue("DownloadFilmInfoSegue", sender);
-        }
-
         [Action("ShowFilmRatings:")]
         internal void ShowFilmRating(NSObject sender)
         {
