@@ -34,10 +34,10 @@ namespace PresentScreenings.TableView
 
         public override void NeedsUpdate(NSMenu menu)
         {
-            // Replace the DownLoad Film Info menu item.
+            // Add the DownLoad Film Info menu item.
             if (!_initialized)
             {
-                ReplaceDownloadMenuItem(menu);
+                AddDownloadMenuItem(menu);
                 _initialized = true;
             }
 
@@ -82,19 +82,13 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        private void ReplaceDownloadMenuItem(NSMenu menu)
+        private void AddDownloadMenuItem(NSMenu menu)
         {
-            // Remove the malfuctioning menunitem.
-            var oldItem = menu.ItemWithTag(_downloadFilmInfoMenuItemTag);
-            var title = oldItem.Title;
-            var keyEquivalent = oldItem.KeyEquivalent;
-            menu.RemoveItem(menu.ItemWithTag(_downloadFilmInfoMenuItemTag));
-
-            // Add the replacement.
+            var title = "Download Film Info";
             var newItem = new NSMenuItem(title);
             newItem.Action = new ObjCRuntime.Selector("OpenDownloadFilmInfo:");
             newItem.Tag = _downloadFilmInfoMenuItemTag;
-            newItem.KeyEquivalent = keyEquivalent;
+            newItem.KeyEquivalent = "d";
             menu.AddItem(newItem);
         }
         #endregion
