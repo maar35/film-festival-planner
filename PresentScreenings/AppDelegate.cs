@@ -61,6 +61,7 @@ namespace PresentScreenings.TableView
             _showScreeningsMenuItem.Action = new Selector("ShowScreenings:");
             _combineTitlesMenuItem.Action = new Selector("SelectTitlesToCombine:");
             _uncombineTitleMenuItem.Action = new Selector("ShowTitlesToUncombine:");
+            _downloadFilmInfoMenuItem.Action = new Selector("OpenDownloadFilmInfo:");
             Controller.ClickableLabelsMenuItem = _clickableLabelsMenuItem;
 		}
         
@@ -121,7 +122,7 @@ namespace PresentScreenings.TableView
             Controller.ToggleClickableLabels();
         }
 
-        partial void DownloadFilmInfo(NSObject sender)
+        partial void DownloadFilmInfo(Foundation.NSObject sender)
         {
             Controller.DownloadFilmInfo(sender);
         }

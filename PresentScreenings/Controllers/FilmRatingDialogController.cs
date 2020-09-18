@@ -77,7 +77,8 @@ namespace PresentScreenings.TableView
             _combineTitlesButton.Action = new ObjCRuntime.Selector("SelectTitlesToCombine:");
             _uncombineTitleButton.Action = new ObjCRuntime.Selector("ShowTitlesToUncombine:");
             _goToScreeningButton.Action = new ObjCRuntime.Selector("ShowScreenings:");
-            _downloadFilmInfoButton.Action = new ObjCRuntime.Selector("DownLoadInfoForOneFilm:");
+            //_downloadFilmInfoButton.Action = new ObjCRuntime.Selector("DownLoadInfoForOneFilm:");
+            _downloadFilmInfoButton.Action = new ObjCRuntime.Selector("OpenDownloadFilmInfo:");
             DoneButton.KeyEquivalent = ControlsFactory.EscapeKey;
             DoneButton.StringValue = "Noot";
             SetTypeMatchMethodControlStates();
@@ -440,8 +441,8 @@ namespace PresentScreenings.TableView
             PerformSegue("GoToScreeningSegue", sender);
         }
 
-        [Action("DownloadFilmInfo:")]
-        void DownloadFilmInfo(NSObject sender)
+        [Action("OpenDownloadFilmInfo:")]
+        void OpenDownloadFilmInfo(NSObject sender)
         {
             PerformSegue("DownloadFilmInfoSegue", sender);
         }

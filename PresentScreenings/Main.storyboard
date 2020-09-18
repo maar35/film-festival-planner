@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="14460.31" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
     <dependencies>
-        <deployment identifier="macosx"/>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="14460.31"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -382,8 +381,7 @@
                                         <menuItem title="Combine Titles" tag="504" keyEquivalent="k" id="sG4-4A-cBU"/>
                                         <menuItem title="Uncombine Title" tag="505" keyEquivalent="K" id="NR9-b1-rZW"/>
                                         <menuItem isSeparatorItem="YES" id="2qy-BY-Op3"/>
-                                        <menuItem title="Download Film Info" tag="506" keyEquivalent="I" id="6tr-b1-Qmi">
-                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                        <menuItem title="Download Film Info" tag="506" keyEquivalent="d" id="6tr-b1-Qmi">
                                             <connections>
                                                 <action selector="DownloadFilmInfo:" target="Voe-Tx-rLC" id="ajd-88-dBc"/>
                                             </connections>
@@ -523,6 +521,7 @@
                         <outlet property="_clickableLabelsMenuItem" destination="CSW-Sl-2GZ" id="cMX-lr-wYA"/>
                         <outlet property="_closeWindowMenuItem" destination="DVo-aG-piG" id="Daa-2x-NT9"/>
                         <outlet property="_combineTitlesMenuItem" destination="sG4-4A-cBU" id="V2D-4S-BS1"/>
+                        <outlet property="_downloadFilmInfoMenuItem" destination="6tr-b1-Qmi" id="Hde-qu-GxV"/>
                         <outlet property="_filmsMenu" destination="H0R-t1-cOF" id="c2J-k7-sDI"/>
                         <outlet property="_navigateMenu" destination="FJw-Lu-hGY" id="tRh-KN-Ggw"/>
                         <outlet property="_plannerMenuItem" destination="1oz-bg-aQu" id="nQZ-wQ-Ryi"/>
@@ -542,7 +541,7 @@
                 <customObject id="Ady-hI-5gd" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
                 <userDefaultsController representsSharedInstance="YES" id="sZm-qZ-jgu"/>
             </objects>
-            <point key="canvasLocation" x="248" y="-145"/>
+            <point key="canvasLocation" x="240" y="-138"/>
         </scene>
         <!--Planner-->
         <scene sceneID="3La-aE-ipS">
@@ -1192,6 +1191,9 @@ DQ
                                     <string key="keyEquivalent">i</string>
                                     <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
                                 </buttonCell>
+                                <connections>
+                                    <action selector="DownloadFilmInfo:" target="gJ5-Ju-597" id="6mj-t5-RRl"/>
+                                </connections>
                             </button>
                         </subviews>
                         <constraints>
@@ -1538,7 +1540,7 @@ Gw
                 </viewController>
                 <customObject id="jp2-L0-Ogz" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="3831" y="409"/>
+            <point key="canvasLocation" x="2268" y="402"/>
         </scene>
     </scenes>
     <resources>

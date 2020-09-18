@@ -21,6 +21,9 @@ namespace PresentScreenings.TableView
 		AppKit.NSMenuItem _combineTitlesMenuItem { get; set; }
 
 		[Outlet]
+		AppKit.NSMenuItem _downloadFilmInfoMenuItem { get; set; }
+
+		[Outlet]
 		AppKit.NSMenu _filmsMenu { get; set; }
 
 		[Outlet]
@@ -110,6 +113,11 @@ namespace PresentScreenings.TableView
 			if (_combineTitlesMenuItem != null) {
 				_combineTitlesMenuItem.Dispose ();
 				_combineTitlesMenuItem = null;
+			}
+
+			if (_downloadFilmInfoMenuItem != null) {
+				_downloadFilmInfoMenuItem.Dispose ();
+				_downloadFilmInfoMenuItem = null;
 			}
 
 			if (_filmsMenu != null) {
