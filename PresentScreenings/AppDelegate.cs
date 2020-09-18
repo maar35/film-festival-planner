@@ -121,11 +121,6 @@ namespace PresentScreenings.TableView
             Controller.ToggleClickableLabels();
         }
 
-        partial void DownloadFilmInfo(NSObject sender)
-        {
-            Controller.DownloadFilmInfo(sender);
-        }
-
         partial void ShowScreeningInfo(Foundation.NSObject sender)
         {
             Controller.ShowScreeningInfo();
@@ -198,5 +193,5 @@ namespace PresentScreenings.TableView
             Controller.ToggleAttendance(filmFan);
         }
         #endregion
-	}
+    }
 }

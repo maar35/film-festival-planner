@@ -64,7 +64,7 @@ namespace PresentScreenings.TableView
                 : AnalyserViewRunning() ? (IScreeningProvider)AnalyserDialogController
                 : _controller;
 
-            //Get the current film.
+            // Get the current film.
             var currFilm = _screeningProvider.CurrentFilm;
             if (currFilm != _film)
             {

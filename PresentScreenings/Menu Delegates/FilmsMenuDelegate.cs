@@ -10,13 +10,14 @@ namespace PresentScreenings.TableView
     public class FilmsMenuDelegate : NSMenuDelegate
     {
         #region Private Members
-        const int _showFilmsMenuItemTag = 501;
-        const int _toggleTypeMatchMethodMenuItemTag = 502;
-        const int _showFilmInfoMenuItemTag = 503;
-        const int _combineTitlesMenuItemTag = 504;
-        const int _uncombineTitleMenuItemTag = 505;
-        const int _downloadFilmInfoMenuItemTag = 506;
-        AppDelegate _app;
+        private const int _showFilmsMenuItemTag = 501;
+        private const int _toggleTypeMatchMethodMenuItemTag = 502;
+        private const int _showFilmInfoMenuItemTag = 503;
+        private const int _combineTitlesMenuItemTag = 504;
+        private const int _uncombineTitleMenuItemTag = 505;
+        private const int _downloadFilmInfoMenuItemTag = 506;
+        private bool _initialized = false;
+        private readonly AppDelegate _app;
         #endregion
 
         #region Constructors
@@ -33,6 +34,13 @@ namespace PresentScreenings.TableView
 
         public override void NeedsUpdate(NSMenu menu)
         {
+            // Add the DownLoad Film Info menu item.
+            if (!_initialized)
+            {
+                AddDownloadMenuItem(menu);
+                _initialized = true;
+            }
+
             // Process every item in the menu
             foreach (NSMenuItem item in menu.Items)
             {
@@ -70,6 +78,18 @@ namespace PresentScreenings.TableView
                         break;
                 }
             }
+        }
+        #endregion
+
+        #region Private Methods
+        private void AddDownloadMenuItem(NSMenu menu)
+        {
+            var title = "Download Film Info";
+            var newItem = new NSMenuItem(title);
+            newItem.Action = new ObjCRuntime.Selector("OpenDownloadFilmInfo:");
+            newItem.Tag = _downloadFilmInfoMenuItemTag;
+            newItem.KeyEquivalent = "d";
+            menu.AddItem(newItem);
         }
         #endregion
     }

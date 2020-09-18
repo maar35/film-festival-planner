@@ -382,12 +382,6 @@
                                         <menuItem title="Combine Titles" tag="504" keyEquivalent="k" id="sG4-4A-cBU"/>
                                         <menuItem title="Uncombine Title" tag="505" keyEquivalent="K" id="NR9-b1-rZW"/>
                                         <menuItem isSeparatorItem="YES" id="2qy-BY-Op3"/>
-                                        <menuItem title="Download Film Info" tag="506" keyEquivalent="I" id="6tr-b1-Qmi">
-                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
-                                            <connections>
-                                                <action selector="DownloadFilmInfo:" target="Voe-Tx-rLC" id="ajd-88-dBc"/>
-                                            </connections>
-                                        </menuItem>
                                     </items>
                                 </menu>
                             </menuItem>
@@ -542,7 +536,7 @@
                 <customObject id="Ady-hI-5gd" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
                 <userDefaultsController representsSharedInstance="YES" id="sZm-qZ-jgu"/>
             </objects>
-            <point key="canvasLocation" x="248" y="-145"/>
+            <point key="canvasLocation" x="240" y="-138"/>
         </scene>
         <!--Planner-->
         <scene sceneID="3La-aE-ipS">
@@ -1192,6 +1186,9 @@ DQ
                                     <string key="keyEquivalent">i</string>
                                     <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
                                 </buttonCell>
+                                <connections>
+                                    <action selector="DownloadFilmInfo:" target="gJ5-Ju-597" id="6mj-t5-RRl"/>
+                                </connections>
                             </button>
                         </subviews>
                         <constraints>
@@ -1538,7 +1535,7 @@ Gw
                 </viewController>
                 <customObject id="jp2-L0-Ogz" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="3831" y="409"/>
+            <point key="canvasLocation" x="2268" y="402"/>
         </scene>
     </scenes>
     <resources>
