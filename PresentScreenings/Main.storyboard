@@ -394,13 +394,19 @@
                                                 <action selector="ShowScreeningInfo:" target="Voe-Tx-rLC" id="Kna-6U-yif"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem title="Show Film Info" tag="202" keyEquivalent="i" id="Vnl-WP-Kdg">
+                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                            <connections>
+                                                <action selector="TryShowFilmInfo:" target="Ady-hI-5gd" id="fMM-P2-mgW"/>
+                                            </connections>
+                                        </menuItem>
                                         <menuItem isSeparatorItem="YES" id="KFc-Ms-vYF"/>
                                         <menuItem title="Tickets Bought" tag="204" keyEquivalent="t" id="MON-Uj-84c">
                                             <connections>
                                                 <action selector="ToggleTicketsBought:" target="Ady-hI-5gd" id="HQr-xH-thz"/>
                                             </connections>
                                         </menuItem>
-                                        <menuItem title="Sold Out" tag="202" keyEquivalent="/" id="3xF-sp-B2f">
+                                        <menuItem title="Sold Out" tag="203" keyEquivalent="/" id="3xF-sp-B2f">
                                             <connections>
                                                 <action selector="ToggleSoldOut:" target="Ady-hI-5gd" id="Lky-RY-BIF"/>
                                             </connections>
@@ -755,6 +761,7 @@
                         <outlet property="ScreensColomn" destination="Hzd-WA-p3s" id="YIS-LZ-bR5"/>
                         <outlet property="ScreensColumn" destination="sss-rU-t1T" id="d92-tW-E9D"/>
                         <outlet property="ScreensTableColumn" destination="Hzd-WA-p3s" id="Zja-nB-Nj2"/>
+                        <segue destination="heZ-Uf-iae" kind="modal" identifier="ScreeningsToFilmInfo" id="8rT-zS-dn2"/>
                     </connections>
                 </viewController>
                 <customObject id="rPt-NT-nkU" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
@@ -1546,7 +1553,7 @@ Gw
         <sound name="Glass"/>
     </resources>
     <inferredMetricsTieBreakers>
-        <segue reference="GdS-O0-lhM"/>
-        <segue reference="MQZ-rL-cxz"/>
+        <segue reference="Aco-xL-TKu"/>
+        <segue reference="aIf-jF-vlz"/>
     </inferredMetricsTieBreakers>
 </document>

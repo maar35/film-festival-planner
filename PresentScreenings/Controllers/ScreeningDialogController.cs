@@ -113,7 +113,7 @@ namespace PresentScreenings.TableView
         private void SetControlValues()
         {
             _control.Selected = true;
-            _filmInfoButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
+            _filmInfoButton.Action = new ObjCRuntime.Selector("TryShowFilmInfo:");
             _checkboxTicketsBought.Activated += (s, e) => ToggleTicketsBought();
             _checkboxSoldOut.Activated += (s, e) => ToggleSoldOut();
             _labelTitle.StringValue = _screening.FilmTitle;
@@ -280,6 +280,38 @@ namespace PresentScreenings.TableView
             var attendanceState = AttendanceCheckbox.GetAttendanceState(_screening.FilmFanAttends(filmFan));
             _attendanceCheckboxByFilmFan[filmFan].State = attendanceState;
         }
+
+        private void TryShowFilmInfo(NSObject sender)
+        {
+            var film = _screening.Film;
+            if (ViewController.FilmInfoIsAvailable(film))
+            {
+                PerformSegue("ScreeningToFilmInfo", sender);
+            }
+            else
+            {
+                var alert = new NSAlert()
+                {
+                    AlertStyle = NSAlertStyle.Informational,
+                    MessageText = "No Film Info",
+                    InformativeText = $"No description available for {film}",
+                };
+                alert.AddButton("Done");
+                alert.AddButton("Visit Site");
+                var result = alert.RunModal();
+                switch (result)
+                {
+                    case (1000):
+                        break;
+                    case (1001):
+                        Presentor.PerformSegue("ScreeningsToFilmInfo", sender);
+                        CloseDialog();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
         #endregion
 
         #region Custom Actions
@@ -321,10 +353,10 @@ namespace PresentScreenings.TableView
             GoToScreening(screening);
         }
 
-        [Action("ShowFilmInfo:")]
+        [Action("TryShowFilmInfo:")]
         internal void ShowFilmInfo(NSObject sender)
         {
-            PerformSegue("ScreeningToFilmInfo", sender);
+            TryShowFilmInfo(sender);
         }
         #endregion
 

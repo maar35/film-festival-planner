@@ -47,13 +47,11 @@ namespace PresentScreenings.TableView
         private NSView _sampleView;
         #endregion
 
-        #region Application Access
-        public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
-        #endregion
-
         #region Properties
+        public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
         public static GoToScreeningDialog Presentor { get; set; }
         public bool BehaveAsPopup { get; set; } = false;
+        public bool DialogShouldClose { get; set; } = false;
         #endregion
 
         #region Constructors
@@ -260,7 +258,7 @@ namespace PresentScreenings.TableView
 
         bool FilmInfoIsAvailable()
         {
-            return _filmInfo != null && _filmInfo.InfoStatus == Film.FilmInfoStatus.Complete;
+            return ViewController.FilmInfoIsAvailable(_filmInfo);
         }
 
         void VisitUrl()
@@ -312,9 +310,13 @@ namespace PresentScreenings.TableView
             }
         }
 
-        private static void GoToScreening(Screening screening)
+        private void GoToScreening(Screening screening)
         {
             Presentor.GoToScreening(screening);
+            if (DialogShouldClose)
+            {
+                ClosePopOver();
+            }
         }
 
         void ClosePopOver()
