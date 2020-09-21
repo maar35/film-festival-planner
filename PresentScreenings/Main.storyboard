@@ -1335,10 +1335,10 @@ Gw
             </objects>
             <point key="canvasLocation" x="1028" y="1414"/>
         </scene>
-        <!--Film Info Sheet Controller-->
+        <!--Film Info Controller-->
         <scene sceneID="1sJ-mx-miZ">
             <objects>
-                <viewController id="heZ-Uf-iae" customClass="FilmInfoSheetController" sceneMemberID="viewController">
+                <viewController title="Film Info Controller" id="heZ-Uf-iae" customClass="FilmInfoSheetController" sceneMemberID="viewController">
                     <view key="view" id="cJm-1J-zdj">
                         <rect key="frame" x="0.0" y="0.0" width="408" height="569"/>
                         <autoresizingMask key="autoresizingMask"/>
@@ -1546,7 +1546,7 @@ Gw
         <sound name="Glass"/>
     </resources>
     <inferredMetricsTieBreakers>
-        <segue reference="Aco-xL-TKu"/>
+        <segue reference="GdS-O0-lhM"/>
         <segue reference="MQZ-rL-cxz"/>
     </inferredMetricsTieBreakers>
 </document>

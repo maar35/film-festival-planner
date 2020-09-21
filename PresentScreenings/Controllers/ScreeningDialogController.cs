@@ -97,7 +97,7 @@ namespace PresentScreenings.TableView
                 case "ScreeningToFilmInfo":
                     var filmInfoModal = segue.DestinationController as FilmInfoDialogController;
                     FilmInfoDialogController.Presentor = this;
-                    filmInfoModal.ShowScreenings = false;
+                    filmInfoModal.BehaveAsPopup = true;
                     break;
             }
         }
