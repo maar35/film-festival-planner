@@ -29,7 +29,7 @@ namespace PresentScreenings.TableView
         #region Private Members
         private nfloat _yCurr;
         private Screening _screening;
-        private ScreeningControl _control;
+        private ScreeningControl _senderControl;
         private ViewController _presentor;
         private List<Screening> _filmScreenings;
         private FilmScreeningControl _screeningInfoControl;
@@ -112,7 +112,14 @@ namespace PresentScreenings.TableView
         #region Private Methods
         private void SetControlValues()
         {
-            _control.Selected = true;
+            // Set the Info Button image as applicable.
+            var imageByAvailability = new Dictionary<bool, NSImage> { };
+            imageByAvailability[true] = _filmInfoButton.Image;
+            imageByAvailability[false] = _filmInfoButton.AlternateImage;
+            var isAvailable = ViewController.FilmInfoIsAvailable(_screening.Film);
+            _filmInfoButton.Image = imageByAvailability[isAvailable];
+
+            _senderControl.Selected = true;
             _filmInfoButton.Action = new ObjCRuntime.Selector("TryShowFilmInfo:");
             _checkboxTicketsBought.Activated += (s, e) => ToggleTicketsBought();
             _checkboxSoldOut.Activated += (s, e) => ToggleSoldOut();
@@ -257,7 +264,7 @@ namespace PresentScreenings.TableView
         #region Public Methods
         public void PopulateDialog(ScreeningControl sender)
         {
-            _control = sender;
+            _senderControl = sender;
             _screening = sender.Screening;
         }
 
@@ -290,26 +297,8 @@ namespace PresentScreenings.TableView
             }
             else
             {
-                var alert = new NSAlert()
-                {
-                    AlertStyle = NSAlertStyle.Informational,
-                    MessageText = "No Film Info",
-                    InformativeText = $"No description available for {film}",
-                };
-                alert.AddButton("Done");
-                alert.AddButton("Visit Site");
-                var result = alert.RunModal();
-                switch (result)
-                {
-                    case (1000):
-                        break;
-                    case (1001):
-                        Presentor.PerformSegue("ScreeningsToFilmInfo", sender);
-                        CloseDialog();
-                        break;
-                    default:
-                        break;
-                }
+                Presentor.PerformSegue("ScreeningsToFilmInfo", sender);
+                CloseDialog();
             }
         }
         #endregion

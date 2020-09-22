@@ -910,7 +910,7 @@ Gw
                             <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="0fB-1r-jAn">
                                 <rect key="frame" x="14" y="478" width="48" height="32"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <buttonCell key="cell" type="push" title="Info" bezelStyle="rounded" image="NSInfo" imagePosition="only" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Fy9-GM-W0w">
+                                <buttonCell key="cell" type="push" title="Info" bezelStyle="rounded" image="NSInfo" imagePosition="only" alignment="center" alternateImage="NSNetwork" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Fy9-GM-W0w">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
                                 </buttonCell>
@@ -1553,7 +1553,7 @@ Gw
         <sound name="Glass"/>
     </resources>
     <inferredMetricsTieBreakers>
-        <segue reference="Aco-xL-TKu"/>
+        <segue reference="GdS-O0-lhM"/>
         <segue reference="aIf-jF-vlz"/>
     </inferredMetricsTieBreakers>
 </document>
