@@ -108,7 +108,7 @@ namespace PresentScreenings.TableView
             // Take action based on the segue name.
             switch (segue.Identifier)
             {
-                case "ModalSegue":
+                case "ScreeningsToScreeningInfo:":
                     var dialog = segue.DestinationController as ScreeningDialogController;
                     dialog.PopulateDialog((ScreeningControl)sender);
                     dialog.DialogAccepted += (s, e) => TableView.DeselectRow(TableView.SelectedRow);
@@ -130,7 +130,7 @@ namespace PresentScreenings.TableView
             TableView.Display();
             TableView.ScrollRowToVisible(_plan.CurrDayScreens.IndexOf(screening.Screen));
             ScreeningControl control = _controlByScreening[screening];
-            PerformSegue("ModalSegue", control);
+            PerformSegue("ScreeningsToScreeningInfo:", control);
         }
         #endregion
 
@@ -487,7 +487,7 @@ namespace PresentScreenings.TableView
         {
             Screening screening = _plan.CurrScreening;
             ScreeningControl control = _controlByScreening[screening];
-            PerformSegue("ModalSegue", control);
+            PerformSegue("ScreeningsToScreeningInfo:", control);
         }
 
         public void ToggleTicketsBought()

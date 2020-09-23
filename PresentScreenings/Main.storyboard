@@ -611,7 +611,7 @@
                                 </textFieldCell>
                                 <connections>
                                     <action selector="ScreeningControlAction:" target="XfG-lQ-9wD" id="sLF-lY-3cG"/>
-                                    <segue destination="vU8-og-eGU" kind="modal" identifier="ModalSegue" id="jWZ-PX-pnt"/>
+                                    <segue destination="vU8-og-eGU" kind="modal" identifier="ScreeningsToScreeningInfo:" id="jWZ-PX-pnt"/>
                                 </connections>
                             </textField>
                             <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="2sN-Sq-g6d">
@@ -1554,6 +1554,6 @@ Gw
     </resources>
     <inferredMetricsTieBreakers>
         <segue reference="GdS-O0-lhM"/>
-        <segue reference="aIf-jF-vlz"/>
+        <segue reference="MQZ-rL-cxz"/>
     </inferredMetricsTieBreakers>
 </document>

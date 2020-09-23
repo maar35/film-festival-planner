@@ -97,7 +97,7 @@ namespace PresentScreenings.TableView
                 case "ScreeningToFilmInfo":
                     var filmInfoModal = segue.DestinationController as FilmInfoDialogController;
                     FilmInfoDialogController.Presentor = this;
-                    filmInfoModal.BehaveAsPopup = true;
+                    filmInfoModal.BehaveAsPopover = true;
                     break;
             }
         }
@@ -112,17 +112,18 @@ namespace PresentScreenings.TableView
         #region Private Methods
         private void SetControlValues()
         {
-            // Set the Info Button image as applicable.
+            // Populate the Info Button.
             var imageByAvailability = new Dictionary<bool, NSImage> { };
             imageByAvailability[true] = _filmInfoButton.Image;
             imageByAvailability[false] = _filmInfoButton.AlternateImage;
             var isAvailable = ViewController.FilmInfoIsAvailable(_screening.Film);
             _filmInfoButton.Image = imageByAvailability[isAvailable];
-
-            _senderControl.Selected = true;
             _filmInfoButton.Action = new ObjCRuntime.Selector("TryShowFilmInfo:");
-            _checkboxTicketsBought.Activated += (s, e) => ToggleTicketsBought();
-            _checkboxSoldOut.Activated += (s, e) => ToggleSoldOut();
+
+            // Select the sending screening control.
+            _senderControl.Selected = true;
+
+            // Populate the labels.
             _labelTitle.StringValue = _screening.FilmTitle;
             if (_screening.Extra != string.Empty)
             {
@@ -131,7 +132,11 @@ namespace PresentScreenings.TableView
             _labelScreen.StringValue = _screening.Screen.ParseName;
             _labelTime.StringValue = _screening.ToLongTimeString();
             _labelPresent.StringValue = _screening.AttendeesString();
+
+            // Populate the checkboxes.
+            _checkboxTicketsBought.Activated += (s, e) => ToggleTicketsBought();
             _checkboxTicketsBought.State = ViewController.GetNSCellStateValue(_screening.TicketsBought);
+            _checkboxSoldOut.Activated += (s, e) => ToggleSoldOut();
             _checkboxSoldOut.State = ViewController.GetNSCellStateValue(_screening.SoldOut);
         }
 

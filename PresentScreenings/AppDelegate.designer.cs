@@ -94,9 +94,6 @@ namespace PresentScreenings.TableView
 
 		[Action ("ToggleTicketsBought:")]
 		partial void ToggleTicketsBought (Foundation.NSObject sender);
-
-		[Action ("TryShowFilmInfo:")]
-		partial void TryShowFilmInfo (Foundation.NSObject sender);
 		
 		void ReleaseDesignerOutlets ()
 		{
