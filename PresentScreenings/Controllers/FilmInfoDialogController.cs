@@ -276,14 +276,14 @@ namespace PresentScreenings.TableView
         private void VisitUrl()
         {
             string summary = string.Empty;
-            var catagory = _film.Catagory;
+            var category = _film.Category;
             FilmInfo filmInfo;
             var url = _film.Url;
             _summaryScrollView.BackgroundColor = NSColor.WindowBackground;
             var request = WebRequest.Create(url) as HttpWebRequest;
             try
             {
-                filmInfo = WebUtility.TryParseUrlSummary(request, url, catagory, _film.FilmId);
+                filmInfo = WebUtility.TryParseUrlSummary(request, url, category, _film.FilmId);
                 if (filmInfo != null)
                 {
                     _filmInfo = filmInfo;

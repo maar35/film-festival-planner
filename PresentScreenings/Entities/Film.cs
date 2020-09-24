@@ -32,7 +32,7 @@ namespace PresentScreenings.TableView
         public TimeSpan Duration { get; private set; }
         public string Url { get; private set; }
         public FilmRating Rating => ViewController.GetFilmFanFilmRating(this, ScreeningInfo.Me);
-        public WebUtility.MediumCatagory Catagory { get; private set; }
+        public WebUtility.MediumCategory Category { get; private set; }
         public FilmInfoStatus InfoStatus => ViewController.GetFilmInfoStatus(FilmId);
 
         public FilmRating MaxRating => ViewController.GetMaxRating(this);
@@ -53,7 +53,7 @@ namespace PresentScreenings.TableView
             TitleLanguage = fields[4];
             Section = fields[5];
             string duration = fields[6];
-            string catagory = fields[7];
+            string category = fields[7];
             Url = fields[8];
 
             // Assign properties that need calculating.
@@ -61,7 +61,7 @@ namespace PresentScreenings.TableView
             FilmId = int.Parse(filmId);
             int minutes = int.Parse(duration.TrimEnd('′'));
             Duration = new TimeSpan(0, minutes, 0);
-            Catagory = (WebUtility.MediumCatagory)Enum.Parse(typeof(WebUtility.MediumCatagory), catagory);
+            Category = (WebUtility.MediumCategory)Enum.Parse(typeof(WebUtility.MediumCategory), category);
         }
         #endregion
 
