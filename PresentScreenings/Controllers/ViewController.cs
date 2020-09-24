@@ -11,7 +11,7 @@ namespace PresentScreenings.TableView
     /// to display the screenings of one festival day.
     /// </summary>
 
-    public partial class ViewController : NSViewController, IScreeningProvider
+    public partial class ViewController : GoToScreeningDialog, IScreeningProvider
     {
         #region Private Members
         ScreeningsPlan _plan = null;
@@ -108,14 +108,29 @@ namespace PresentScreenings.TableView
             // Take action based on the segue name.
             switch (segue.Identifier)
             {
-                case "ModalSegue":
+                case "ScreeningsToScreeningInfo:":
                     var dialog = segue.DestinationController as ScreeningDialogController;
                     dialog.PopulateDialog((ScreeningControl)sender);
                     dialog.DialogAccepted += (s, e) => TableView.DeselectRow(TableView.SelectedRow);
                     dialog.DialogCanceled += (s, e) => TableView.DeselectRow(TableView.SelectedRow);
                     dialog.Presentor = this;
                     break;
+                case "ScreeningsToFilmInfo":
+                    var filmInfoDialog = segue.DestinationController as FilmInfoDialogController;
+                    filmInfoDialog.DialogShouldClose = true;
+                    FilmInfoDialogController.Presentor = this;
+                    break;
             }
+        }
+
+        public override void GoToScreening(Screening screening)
+        {
+            _plan.SetCurrScreening(screening);
+            DisplayScreeningsView();
+            TableView.Display();
+            TableView.ScrollRowToVisible(_plan.CurrDayScreens.IndexOf(screening.Screen));
+            ScreeningControl control = _controlByScreening[screening];
+            PerformSegue("ScreeningsToScreeningInfo:", control);
         }
         #endregion
 
@@ -270,6 +285,16 @@ namespace PresentScreenings.TableView
         {
             var info = ScreeningsPlan.FilmInfos.Where(f => f.FilmId == filmId).ToList();
             return info.Count > 0 ? info.First() : null;
+        }
+
+        public static bool FilmInfoIsAvailable(FilmInfo filmInfo)
+        {
+            return filmInfo != null && filmInfo.InfoStatus == Film.FilmInfoStatus.Complete;
+        }
+
+        public static bool FilmInfoIsAvailable(Film film)
+        {
+            return FilmInfoIsAvailable(GetFilmInfo(film.FilmId));
         }
 
         public static Film.FilmInfoStatus GetFilmInfoStatus(int filmId)
@@ -458,21 +483,11 @@ namespace PresentScreenings.TableView
             ScreeningSelected = true;
         }
 
-        public void GoToScreening(Screening screening)
-        {
-            _plan.SetCurrScreening(screening);
-            DisplayScreeningsView();
-            TableView.Display();
-            TableView.ScrollRowToVisible(_plan.CurrDayScreens.IndexOf(screening.Screen));
-            ScreeningControl control = _controlByScreening[screening];
-            PerformSegue("ModalSegue", control);
-        }
-
         public void ShowScreeningInfo()
         {
             Screening screening = _plan.CurrScreening;
             ScreeningControl control = _controlByScreening[screening];
-            PerformSegue("ModalSegue", control);
+            PerformSegue("ScreeningsToScreeningInfo:", control);
         }
 
         public void ToggleTicketsBought()
@@ -503,6 +518,12 @@ namespace PresentScreenings.TableView
         internal void ShowFilmRating(NSObject sender)
         {
             PerformSegue("FilmRatingSegue", sender);
+        }
+
+        [Action("TryShowFilmInfo:")]
+        internal void TryShowFilmInfo(NSObject sender)
+        {
+            PerformSegue("ScreeningsToFilmInfo", sender);
         }
         #endregion
     }

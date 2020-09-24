@@ -143,13 +143,13 @@ namespace PresentScreenings.TableView
             {
                 return null;
             }
-            if (filmOutlinable is Film)
+            if (filmOutlinable is Film film)
             {
-                return (Film)filmOutlinable;
+                return film;
             }
-            if (filmOutlinable is Screening)
+            if (filmOutlinable is Screening screening)
             {
-                return ((Screening)filmOutlinable).Film;
+                return screening.Film;
             }
             var level = (FilmOutlineLevel)filmOutlinable;
             switch (level.OutlineLevel)

@@ -29,7 +29,7 @@ namespace PresentScreenings.TableView
         #region Private Members
         private nfloat _yCurr;
         private Screening _screening;
-        private ScreeningControl _control;
+        private ScreeningControl _senderControl;
         private ViewController _presentor;
         private List<Screening> _filmScreenings;
         private FilmScreeningControl _screeningInfoControl;
@@ -97,7 +97,7 @@ namespace PresentScreenings.TableView
                 case "ScreeningToFilmInfo":
                     var filmInfoModal = segue.DestinationController as FilmInfoDialogController;
                     FilmInfoDialogController.Presentor = this;
-                    filmInfoModal.ShowScreenings = false;
+                    filmInfoModal.BehaveAsPopover = true;
                     break;
             }
         }
@@ -112,10 +112,18 @@ namespace PresentScreenings.TableView
         #region Private Methods
         private void SetControlValues()
         {
-            _control.Selected = true;
-            _filmInfoButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
-            _checkboxTicketsBought.Activated += (s, e) => ToggleTicketsBought();
-            _checkboxSoldOut.Activated += (s, e) => ToggleSoldOut();
+            // Populate the Info Button.
+            var imageByAvailability = new Dictionary<bool, NSImage> { };
+            imageByAvailability[true] = _filmInfoButton.Image;
+            imageByAvailability[false] = _filmInfoButton.AlternateImage;
+            var isAvailable = ViewController.FilmInfoIsAvailable(_screening.Film);
+            _filmInfoButton.Image = imageByAvailability[isAvailable];
+            _filmInfoButton.Action = new ObjCRuntime.Selector("TryShowFilmInfo:");
+
+            // Select the sending screening control.
+            _senderControl.Selected = true;
+
+            // Populate the labels.
             _labelTitle.StringValue = _screening.FilmTitle;
             if (_screening.Extra != string.Empty)
             {
@@ -124,7 +132,11 @@ namespace PresentScreenings.TableView
             _labelScreen.StringValue = _screening.Screen.ParseName;
             _labelTime.StringValue = _screening.ToLongTimeString();
             _labelPresent.StringValue = _screening.AttendeesString();
+
+            // Populate the checkboxes.
+            _checkboxTicketsBought.Activated += (s, e) => ToggleTicketsBought();
             _checkboxTicketsBought.State = ViewController.GetNSCellStateValue(_screening.TicketsBought);
+            _checkboxSoldOut.Activated += (s, e) => ToggleSoldOut();
             _checkboxSoldOut.State = ViewController.GetNSCellStateValue(_screening.SoldOut);
         }
 
@@ -257,7 +269,7 @@ namespace PresentScreenings.TableView
         #region Public Methods
         public void PopulateDialog(ScreeningControl sender)
         {
-            _control = sender;
+            _senderControl = sender;
             _screening = sender.Screening;
         }
 
@@ -279,6 +291,20 @@ namespace PresentScreenings.TableView
             UpdateAttendances();
             var attendanceState = AttendanceCheckbox.GetAttendanceState(_screening.FilmFanAttends(filmFan));
             _attendanceCheckboxByFilmFan[filmFan].State = attendanceState;
+        }
+
+        private void TryShowFilmInfo(NSObject sender)
+        {
+            var film = _screening.Film;
+            if (ViewController.FilmInfoIsAvailable(film))
+            {
+                PerformSegue("ScreeningToFilmInfo", sender);
+            }
+            else
+            {
+                Presentor.PerformSegue("ScreeningsToFilmInfo", sender);
+                CloseDialog();
+            }
         }
         #endregion
 
@@ -321,10 +347,10 @@ namespace PresentScreenings.TableView
             GoToScreening(screening);
         }
 
-        [Action("ShowFilmInfo:")]
+        [Action("TryShowFilmInfo:")]
         internal void ShowFilmInfo(NSObject sender)
         {
-            PerformSegue("ScreeningToFilmInfo", sender);
+            TryShowFilmInfo(sender);
         }
         #endregion
 
