@@ -11,7 +11,7 @@ namespace PresentScreenings.TableView
     public static class WebUtility
     {
         #region Public Members
-        public enum MediumCatagory
+        public enum MediumCategory
         {
             Films,
             CombinedProgrammes,
@@ -35,20 +35,20 @@ namespace PresentScreenings.TableView
             public Regex filterRe;
             public string filterReplacement;
         }
-        static Dictionary<MediumCatagory, List<ParseInfo>> _parseInfoByCatagory;
+        static Dictionary<MediumCategory, List<ParseInfo>> _parseInfoByCategory;
         #endregion
 
         #region Properties
-        static public Dictionary<MediumCatagory, string> FolderByCatagory;
+        static public Dictionary<MediumCategory, string> FolderByCategory;
         #endregion
 
         #region Constructors
         static WebUtility()
         {
-            FolderByCatagory = new Dictionary<MediumCatagory, string> { };
-            FolderByCatagory[MediumCatagory.Films] = "films";
-            FolderByCatagory[MediumCatagory.CombinedProgrammes] = "verzamelprogrammas";
-            FolderByCatagory[MediumCatagory.Events] = "events";
+            FolderByCategory = new Dictionary<MediumCategory, string> { };
+            FolderByCategory[MediumCategory.Films] = "films";
+            FolderByCategory[MediumCategory.CombinedProgrammes] = "verzamelprogrammas";
+            FolderByCategory[MediumCategory.Events] = "events";
             var descriptionParseInfo = new ParseInfo
             {
                 type = ParseInfoType.Description,
@@ -69,10 +69,10 @@ namespace PresentScreenings.TableView
                 filterRe = new Regex(@"^(.*)(\<main.*\</main\>)(.*)$", RegexOptions.Singleline),
                 filterReplacement = @"$2"
             };
-            _parseInfoByCatagory = new Dictionary<MediumCatagory, List<ParseInfo>> { };
-            _parseInfoByCatagory[MediumCatagory.Films] = new List<ParseInfo> { descriptionParseInfo, articleParseInfo };
-            _parseInfoByCatagory[MediumCatagory.Events] = new List<ParseInfo> { articleParseInfo };
-            _parseInfoByCatagory[MediumCatagory.CombinedProgrammes] = new List<ParseInfo> { articleParseInfo, screenedFilmsParseInfo };
+            _parseInfoByCategory = new Dictionary<MediumCategory, List<ParseInfo>> { };
+            _parseInfoByCategory[MediumCategory.Films] = new List<ParseInfo> { descriptionParseInfo, articleParseInfo };
+            _parseInfoByCategory[MediumCategory.Events] = new List<ParseInfo> { articleParseInfo };
+            _parseInfoByCategory[MediumCategory.CombinedProgrammes] = new List<ParseInfo> { articleParseInfo, screenedFilmsParseInfo };
         }
         #endregion
 
@@ -114,9 +114,9 @@ namespace PresentScreenings.TableView
             return Screening.HtmlDecode(HtmlToPlainText(html));
         }
 
-        public static string UrlString(string title, MediumCatagory catagory)
+        public static string UrlString(string title, MediumCategory category)
         {
-            string baseUrl = "https://iffr.com/nl/" + AppDelegate.FestivalYear + "/" + FolderByCatagory[catagory] + "/";
+            string baseUrl = "https://iffr.com/nl/" + AppDelegate.FestivalYear + "/" + FolderByCategory[category] + "/";
             var quotes = @"['`""]";
             var disposables = @"[./()?]";
             var strippables = @"(" + quotes + @"+\s*)|" + disposables + @"+";
@@ -129,7 +129,7 @@ namespace PresentScreenings.TableView
             return result;
         }
 
-        public static FilmInfo TryParseUrlSummary(HttpWebRequest request, string url, MediumCatagory catagory, int filmId)
+        public static FilmInfo TryParseUrlSummary(HttpWebRequest request, string url, MediumCategory category, int filmId)
         {
             // Get the website response.
             var response = request.GetResponse() as HttpWebResponse;
@@ -140,20 +140,20 @@ namespace PresentScreenings.TableView
             stream.Close();
 
             // Parse the website text.
-            var filmInfo = TryParseText(text, catagory, filmId);
+            var filmInfo = TryParseText(text, category, filmId);
 
             return filmInfo;
         }
 
-        public static FilmInfo TryParseText(string text, MediumCatagory catagory, int filmId)
+        public static FilmInfo TryParseText(string text, MediumCategory category, int filmId)
         {
             var allParsesFailed = false;
             var filmDescription = string.Empty;
             var article = string.Empty;
             var ScreenedFileDescriptionByTitle = new Dictionary<string, string> { };
 
-            // Parse the different segments as expected with this catagory.
-            foreach (var parseInfo in _parseInfoByCatagory[catagory])
+            // Parse the different segments as expected with this category.
+            foreach (var parseInfo in _parseInfoByCategory[category])
             {
                 var success = false;
 
@@ -219,7 +219,7 @@ namespace PresentScreenings.TableView
 
         public static async Task<bool> VisitUrl(Film film, CancellationToken cancellationToken)
         {
-            MediumCatagory catagory = film.Catagory;
+            MediumCategory category = film.Category;
             string url = film.Url;
             bool canceled = false;
             bool webErrorOccurred = false;
@@ -253,7 +253,7 @@ namespace PresentScreenings.TableView
             {
                 try
                 {
-                    var filminfo = TryParseText(contents, catagory, film.FilmId);
+                    var filminfo = TryParseText(contents, category, film.FilmId);
                     if (filminfo != null)
                     {
                         // Add the Film Info to the list of the Screenings Plan.

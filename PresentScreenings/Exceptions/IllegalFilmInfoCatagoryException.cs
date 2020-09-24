@@ -2,9 +2,9 @@
 
 namespace PresentScreenings.TableView
 {
-    public sealed class IllegalFilmInfoCatagoryException : Exception
+    public sealed class IllegalFilmInfoCategoryException : Exception
     {
-        public IllegalFilmInfoCatagoryException(string message) : base(message)
+        public IllegalFilmInfoCategoryException(string message) : base(message)
         {
         }
     }

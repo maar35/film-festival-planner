@@ -23,7 +23,7 @@ namespace PresentScreenings.TableView
             public string Description;
         }
         public List<ScreenedFilm> ScreenedFilms { get; private set; }
-        public WebUtility.MediumCatagory MediumCatagory { get => ViewController.GetFilmById(FilmId).Catagory; }
+        public WebUtility.MediumCategory MediumCategory { get => ViewController.GetFilmById(FilmId).Category; }
         public string Url { get => ViewController.GetFilmById(FilmId).Url; }
         public Film.FilmInfoStatus InfoStatus { get => _infoStatus; set => SetFilmInfoStatus(value); }
         #endregion
@@ -196,7 +196,7 @@ namespace PresentScreenings.TableView
             }
             catch
             {
-                throw new IllegalFilmInfoCatagoryException($"'{name}' is not a valid FilmInfoCatagory");
+                throw new IllegalFilmInfoCategoryException($"'{name}' is not a valid FilmInfoCategory");
             }
         }
 
