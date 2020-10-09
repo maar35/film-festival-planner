@@ -41,11 +41,11 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
-        public ScreeningsPlan(string FestivalYear)
+        public ScreeningsPlan(string festival, string FestivalYear)
         {
             // Initialize file names.
             string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-            string directory = homeFolder + @"/Documents/Film/IFFR/IFFR" + FestivalYear + @"/FestivalPlan";
+            string directory = homeFolder + $"/Documents/Film/{festival}/{festival}{FestivalYear}/FestivalPlan";
             string screensFile = Path.Combine(directory, "screens.csv");
             string filmsFile = Path.Combine(directory, "films.csv");
             string screeningsFile = Path.Combine(directory, "screenings.csv");

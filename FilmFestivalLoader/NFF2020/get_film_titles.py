@@ -33,9 +33,10 @@ url_by_title = {}
 url_by_title['Flodder'] = 'https://www.filmfestival.nl/en/films/flodder-5'
 url_by_title['De Futurotheek'] = 'https://www.filmfestival.nl/en/films/futurotheek'
 url_by_title['Gooische vrouwen'] = 'https://www.filmfestival.nl/en/archive/gooische-vrouwen-2'
-url_by_title['More Moiré²'] = 'https://www.filmfestival.nl/en/films/more-moire²'
 url_by_title['Teledoc Campus - When You Hear the Divine Call'] = 'https://www.filmfestival.nl/en/films/teledoc-campus-a-divine-call'
 url_by_title['The Undercurrent'] = 'https://www.filmfestival.nl/en/films/-1'
+
+premiere_prefix = "festivalpremiere-"
 
 def main():
     festival_data = FestivalData()
@@ -54,13 +55,18 @@ def main():
     external_data = parse_nff_html.FestivalData()
     fill_external_data(external_data, festival_data.films)
     external_data.write_films()
+    
     get_screenings(external_data)
+    
+    parse_nff_html.Globals.nff_data.write_screens()
+    parse_nff_html.Globals.nff_data.write_screenings()
 
 def get_url(title):
     if title in url_by_title.keys():
         return url_by_title[title]
     lower = title.lower()
-    disquoted = re.sub("['\"]+", "", lower)
+    ascii_string = parse_nff_html.toascii(lower)
+    disquoted = re.sub("['\"]+", "", ascii_string)
     connected = re.sub("\W+", "-", disquoted)
     frontstripped = re.sub("^\W+", "", connected)
     stripped = re.sub("\W+$", "", frontstripped)
@@ -75,17 +81,29 @@ def fill_external_data(data, films):
         title = film.title
         url = get_url(film.title)
         external_film = parse_nff_html.Film(seqnr, filmid, title, url)
-        external_film.url = get_url(external_film.toascii(title))
-        print(external_film.url)
         external_film.medium_category = "films"
+        external_film.duration = film.duration
         data.films.append(external_film)
     
 def get_screenings(data):
+    print("\nInitializing external data.")
+    parse_nff_html.Globals.nff_data = parse_nff_html.FestivalData()
+    parse_nff_html.Globals.nff_data.read_screens()
+    print("\nStart reading premiêre screenings.")
+    files_read_count = 0
     az_parser = parse_nff_html.AzProgrammeHtmlParser()
     for film in data.films:
         az_parser.film = film
-        az_parser.url = film.url
-        az_parser.populate_film_fields()
+        az_parser.url = re.sub("en/films/", premiere_prefix, film.url)
+        url_file = os.path.join(webdata_dir, az_parser.url.split("/")[3]) + ".html"
+        if os.access(url_file, os.F_OK):
+            files_read_count += 1
+            print("Now reading {}/".format(az_parser.url))
+            az_parser.populate_film_fields(False, url_file)
+    print("\nDone reading {} premiêre screenings.".format(files_read_count))
+    print("\nDebug text:\n{}".format(az_parser.debug_text))
+    az_parser.write_debug()
+    print("\nDebug text written to {}.".format(parse_nff_html.debugfile))
 
 
 class Film:
@@ -140,4 +158,5 @@ def parse_az(az_text, films):
         return film_count
 
 
-main()
+if __name__ == "__main__":
+    main()
