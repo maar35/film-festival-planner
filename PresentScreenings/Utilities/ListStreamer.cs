@@ -50,7 +50,14 @@ namespace PresentScreenings.TableView
                             headerToBeSkipped = false;
                             continue;
                         }
-                        resultList.Add(lineConstructor(line));
+                        try
+                        {
+                            resultList.Add(lineConstructor(line));
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new ApplicationException($"Error when adding an element to {typeof(T)} list based on: {line}", ex);
+                        }
                     }
                 }
             }
