@@ -5,45 +5,26 @@ import sys
 from html.parser import HTMLParser
 import urllib.request
 import urllib.error
-import re
-import datetime
 
-# Version.
 version_number = "0.4"
-
-# Parammeters.
 year = 2020
-az_page_count = 5
+az_page_count = 24
 include_events = True
 
-# Directories.
-project_dir = os.path.expanduser("~/Documents/Film/NFF/NFF{}".format(year))
+project_dir = os.path.expanduser("~/Documents/Film/IFFR/IFFR{}".format(year))
 html_input_dir = os.path.join(project_dir, "_website_data")
-data_dir = os.path.join(project_dir, "_planner_data")
-
-# File name formats.
 film_file_format = os.path.join(html_input_dir, "filmpage_{:03d}.html")
 az_file_format = os.path.join(html_input_dir, "azpage_{:02d}.html")
-
-# Files.
+data_dir = os.path.join(project_dir, "_planner_data")
 screensfile = os.path.join(data_dir, "screens.csv")
 filmsfile = os.path.join(data_dir, "films.csv")
 ucodefile = os.path.join(data_dir, "unicodemap.txt")
 screeningsfile = os.path.join(data_dir, "screenings.csv")
 debugfile = os.path.join(data_dir, "debug.txt")
 
-# URL information.
-az_url_root = "https://www.filmfestival.nl/films/"
-az_url_leave_format = "?s=&hPP=48&idx=prod_films&nr={}"
-
-# Regular expressions.
-re_date = re.compile("\d+ \w+")
-re_time = re.compile("\d+:\d+")
-#re_time = re.compile("(?P<hours>\d+):(?P<minutes>\d+)")
-
 
 class Globals:
-    nff_data = None
+    iffr_data = None
 
 
 def main():
@@ -52,7 +33,7 @@ def main():
     
     try:
         # Instantiate the parser.
-        Globals.nff_data = FestivalData()
+        Globals.iffr_data = IffrData()
         az_parser = AzProgrammeHtmlParser()
         print("PARSER INITIATED\n")
         
@@ -76,36 +57,18 @@ def main():
         print("\n\nWRITING LISTS")
     
     if writeotherlists:
-        Globals.nff_data.write_screens()
-        Globals.nff_data.write_screenings()
+        Globals.iffr_data.write_screens()
+        Globals.iffr_data.write_screenings()
     else:
         print("Screens and screenings NOT WRITTEN")
     
     if writefilmlist:
-        Globals.nff_data.write_films()
+        Globals.iffr_data.write_films()
     else:
         print("Films NOT WRITTEN")
     
     print("\nDONE")
 
-
-def toascii(s):
-    umap_initialized = False;
-    
-    def read_umap():
-        with open(ucodefile) as f:
-            umap_keys = f.readline().rstrip("\n").split(";")
-            umap_values = f.readline().rstrip("\n").split(";")
-        return umap_keys, umap_values
-    
-    if not umap_initialized:
-        (umap_keys, umap_values) = read_umap()
-        umap_initialized = True;
-        
-    for (u, a) in zip(umap_keys, umap_values):
-        s = s.replace(u, a)
-
-    return s
 
 def attr_str(attr, index):
     return (str)(attr[index])
@@ -134,8 +97,12 @@ class Film:
     filmCategoryByString["films"] = "Films"
     filmCategoryByString["verzamelprogrammas"] = "CombinedProgrammes"
     filmCategoryByString["events"] = "Events"
+    umap_is_read = False
 
     def __init__(self, seqnr, filmid, title, url):
+        if not self.umap_is_read:
+            self.read_umap()
+            self.umap_is_read = True
         self.seqnr = seqnr
         self.filmid = filmid
         self.sortedTitle = title
@@ -173,14 +140,24 @@ class Film:
             self.title.replace(";", ".,"),
             self.titleLanguage,
             self.section,
-            self.duration + "′",
+            self.duration,
             self.filmCategoryByString[self.medium_category],
             self.url
         ])
         return "{}\n".format(text)
 
+    def read_umap(self):
+        with open(ucodefile) as f:
+            self.umapkeys = f.readline().rstrip("\n").split(";")
+            self.umapvalues = f.readline().rstrip("\n").split(";")
+
+    def toascii(self, s):
+        for (u, a) in zip(self.umapkeys, self.umapvalues):
+            s = s.replace(u, a)
+        return s
+
     def lower(self, s):
-        return toascii(s).lower()
+        return self.toascii(s).lower()
 
 
 class Screening:
@@ -228,7 +205,7 @@ class Screening:
         return "{}\n".format(text)
 
 
-class FestivalData:
+class IffrData:
 
     curr_film_id = 0
 
@@ -277,17 +254,16 @@ class FestivalData:
             self.curr_film_id = 0
 
     def write_screens(self):
-        with open(screensfile, 'w') as f:
+        with open(screensfile, 'w')as f:
             for screen in self.screenbylocation.values():
                 f.write(repr(screen))
         print("Done writing {} records to {}.".format(len(self.screenbylocation), screensfile))
 
     def write_films(self):
-        if len(self.films):
-            with open(filmsfile, 'w') as f:
-                f.write(self.films[0].film_repr_csv_head())
-                for film in self.films:
-                    f.write(repr(film))
+        with open(filmsfile, 'w') as f:
+            f.write(self.films[0].film_repr_csv_head())
+            for film in self.films:
+                f.write(repr(film))
         print("Done writing {} records to {}.".format(len(self.films), filmsfile))
 
     def write_screenings(self):
@@ -302,8 +278,7 @@ class FestivalData:
 class UrlReader:
 
     def read_url(self, url):
-        user_agent_org = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
-        user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1 Safari/605.1.15"
+        user_agent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
         headers = {'User-Agent': user_agent}
         req = urllib.request.Request(url, headers=headers)
 
@@ -318,10 +293,6 @@ class UrlReader:
                 print('The server couldn\'t fulfill the request.')
                 print('Error code: ', e.code)
             html = ""
-        except UnicodeEncodeError as e:
-            print('Does this URL {} contain fancy characters?'.format(url))
-            print(e)
-            html = ""
 
         return html
 
@@ -332,66 +303,44 @@ class FilmPageParser(HTMLParser):
         HTMLParser.__init__(self)
         self.film = film
         self.init_screening_data()
-        self.start_date = None
-        self.debugging = True
         self.before_screenings = True
         self.in_screenings = False
         self.in_location = False
-        self.in_town = False
         self.in_time = False
-        self.in_date = False
         self.in_extra_or_qa = False
         self.matching_attr_value = ""
         self.debug_text = ""
-        self.month_by_name = {}
-        self.month_by_name["september"] = 9
-        self.month_by_name["oktober"] = 10
 
     def init_screening_data(self):
-        self.location = None
         self.screen = None
-        self.start_time = None
-        self.audience = "publiek"
+        self.start_date = None
+        self.times = None
+        self.audience = None
         self.qa = ""
         self.extra = ""
 
     def add_screening(self):
         print("--  {}".format(self.film.title))
-        print("--  screen:     {}".format(self.screen))
         print("--  start date: {}".format(self.start_date))
-        print("--  start time: {}".format(self.start_time))
-        print("--  duration:   {}".format(self.film.duration))
+        print("--  screen:     {}".format(self.screen))
+        print("--  times:      {}".format(self.times))
         print("--  audience:   {}".format(self.audience))
         print("--  category:   {}".format(self.film.medium_category))
-        print("--  q and a:    {}".format(self.qa))
+        print("--  q and a     {}".format(self.qa))
         print("--  extra:      {}".format(self.extra))
-        startDateTime = self.get_datetime(self.start_date, self.start_time)
-        startDate = datetime.date(startDateTime.year, startDateTime.month, startDateTime.day)
-        startTime = datetime.time(startDateTime.hour, startDateTime.minute)
-        duration = datetime.timedelta(minutes=int(self.film.duration))
-        endDateTime = startDateTime + duration
-        endTime = datetime.time(endDateTime.hour, endDateTime.minute)
-        screening = Screening(self.film, self.screen, startDate.isoformat(),
-                              startTime.isoformat(timespec='minutes'),
-                              endTime.isoformat(timespec='minutes'),
-                              self.audience, self.qa, self.extra)
-        Globals.nff_data.screenings.append(screening)
+        startDate = self.start_date.split()[0]
+        startTime = self.times.split()[0]
+        endTime = self.times.split()[2]
+        screening = Screening(self.film, self.screen, startDate, startTime, endTime, self.audience, self.qa, self.extra)
+        Globals.iffr_data.screenings.append(screening)
         print("---SCREENING ADDED")
         self.in_extra_or_qa = False
         self.init_screening_data()
 
     def print_debug(self, str1, str2):
-        if self.debugging:
+        if self.film.filmid in [100]:
             self.debug_text += 'F ' + str(str1) + ' ' + str(str2) + '\n'
 
-    def get_datetime(self, date_string, time_string):
-        year = 2020
-        month = self.month_by_name[date_string.split(" ")[1]]
-        day = date_string.split(" ")[0]
-        hour = time_string.split(":")[0]
-        minute = time_string.split(":")[1]
-        return datetime.datetime(int(year), int(month), int(day), int(hour), int(minute))
-    
     def match_attr(self, curr_tag, test_tag, curr_attr, test_attr):
         self.matching_attr_value = ""
         if curr_tag == test_tag:
@@ -399,15 +348,6 @@ class FilmPageParser(HTMLParser):
                 self.matching_attr_value = attr_str(curr_attr, 1)
                 return True
         return False
-
-    def set_screen(self, location):
-        try:
-            self.screen = Globals.nff_data.screenbylocation[location]
-        except KeyError:
-            abbr = location.replace(" ", "").lower()
-            print("NEW LOCATION:  '{}' => {}".format(location, abbr))
-            Globals.nff_data.screenbylocation[location] =  Screen((location, abbr))
-            self.screen = Globals.nff_data.screenbylocation[location]
 
     def ok_to_add_screening(self):
         if self.audience is None:
@@ -422,10 +362,6 @@ class FilmPageParser(HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         self.print_debug("Encountered a start tag:", tag)
-        if self.in_town and tag == "strong":
-            self.in_location = True
-        if tag == "h4":
-            self.in_date = True
         for attr in attrs:
             self.print_debug("Handling attr:      ", attr)
             if tag == "section" and attr == ("class", "film-screenings-wrapper"):
@@ -458,8 +394,7 @@ class FilmPageParser(HTMLParser):
 
     def handle_endtag(self, tag):
         self.print_debug("Encountered an end tag :", tag)
-        if self.in_location and tag == "strong":
-            self.in_location = False
+        self.in_location = False
         if self.in_screenings:
             if tag == "section":
                 self.in_screenings = False
@@ -468,36 +403,22 @@ class FilmPageParser(HTMLParser):
                     self.in_extra_or_qa = False
             if tag == "time":
                 self.in_time = False
-        if self.in_date:
-            if tag == "h4":
-                self.in_date = False
 
     def handle_data(self, data):
         self.print_debug("Encountered some data  :", data)
-        if data == "Amsterdam":
-            self.in_town = True
-        if data == "Apeldoorn":
-            self.in_town = False
-            self.in_time = False
-            self.debugging = False
-        if self.in_time and data.strip().startswith("Start:"):
-            self.start_time = re_time.findall(data)[0]
-            self.print_debug("-- ", "START TIME found: {}".format(self.start_time))
-            self.in_time = False
-            self.set_screen(self.location)
-            self.add_screening()
-        if self.in_date:
-            self.start_date = re_date.findall(data)[0]
-            self.print_debug("--", "DATE found: {}".format(self.start_date))
         if self.in_location:
             location = data.strip()
-            if len(location) > 0:
-                print("--  LOCATION:   {}   CATEGORY: {}".format(location, self.film.medium_category))
-                self.print_debug("LOCATION", location)
-                self.location = location
-                self.in_location = False
-                self.print_debug("-- ", "LEAVING LOCATION")
-                self.in_time = True
+            print("--  LOCATION:   {}   CATEGORY: {}".format(location, self.film.medium_category))
+            self.print_debug("LOCATION", location)
+            try:
+                self.screen = Globals.iffr_data.screenbylocation[location]
+            except KeyError:
+                abbr = location.replace(" ", "").lower()
+                print("NEW LOCATION:  '{}' => {}".format(location, abbr))
+                Globals.iffr_data.screenbylocation[location] =  Screen((location, abbr))
+                self.screen = Globals.iffr_data.screenbylocation[location]
+            self.in_location = False
+            self.print_debug("-- ", "LEAVING LOCATION")
         if self.in_extra_or_qa:
             if data == "Met Q&A":
                 self.qa = "QA"
@@ -505,6 +426,8 @@ class FilmPageParser(HTMLParser):
             else:
                 self.extra = data
                 self.print_debug("-- FOUND EXTRA:", self.extra)
+        if self.in_time:
+            self.times = data.strip()
 
     def handle_comment(self, data):
         self.print_debug("Comment  :", data)
@@ -530,9 +453,8 @@ class AzProgrammeHtmlParser(HTMLParser):
         self.errors = []
 
     def print_debug(self, str1, str2):
-#        if self.in_film_part:
-#            self.debug_text += 'AZ ' + str(str1) + ' ' + str(str2) + '\n'
-        self.debug_text += 'AZ ' + str(str1) + ' ' + str(str2) + '\n'
+        if self.in_film_part:
+            self.debug_text += 'AZ ' + str(str1) + ' ' + str(str2) + '\n'
 
     def write_debug(self):
         if len(self.debug_text) > 0:
@@ -567,7 +489,7 @@ class AzProgrammeHtmlParser(HTMLParser):
                 self.film = self.create_film(title, self.url)
                 if self.film is not None:
                     if self.populate_film_fields():
-                        Globals.nff_data.films.append(self.film)
+                        Globals.iffr_data.films.append(self.film)
             if self.match_attr(tag, "a", attr, "href"):
                 self.url = "https://iffr.com{}".format(self.matching_attr_value)
             if attr_str(attr, 1).startswith("edition-year-label"):
@@ -594,19 +516,18 @@ class AzProgrammeHtmlParser(HTMLParser):
                 self.datablock_count = 0
 
     def create_film(self, title, url):
-        filmid = Globals.nff_data.new_film_id(url)
-        if not filmid in [f.filmid for f in Globals.nff_data.films]:
+        filmid = Globals.iffr_data.new_film_id(url)
+        if not filmid in [f.filmid for f in Globals.iffr_data.films]:
             self.filmseqnr += 1
             return Film(self.filmseqnr, filmid, title, url)
         else:
             self.add_error("Film #{} ({}) already in list".format(filmid, url))
             return None
 
-    def populate_film_fields(self, read_url=True, film_html_file=None):
+    def populate_film_fields(self):
         title = self.film.title
-        if film_html_file is None:
-            film_html_file = film_file_format.format(self.film.filmid)
-        if read_url and not os.path.isfile(film_html_file):
+        film_html_file = film_file_format.format(self.film.filmid)
+        if not os.path.isfile(film_html_file):
             print("---------------------- START READING FILM URL ---")
             print("--  TITLE: {}".format(title))
             print("--  URL:   {}".format(self.url))
@@ -653,8 +574,11 @@ class HtmlReader:
 
         for page_number in range(0, page_count):
             html_input_file = az_file_format.format(page_number)
-            az_url_leave = az_url_leave_format.format(page_number)
+            az_url_root = "https://iffr.com/nl/programma/{}/".format(year)
+            az_url_leave = "a-z"
             if not os.path.isfile(html_input_file):
+                if page_number > 0:
+                    az_url_leave = "a-z?page={}".format(page_number)
                 url = az_url_root + az_url_leave
                 print("--  AZ PAGE: {}".format(page_number))
                 print("--  URL:     {}".format(url))
@@ -674,5 +598,4 @@ class HtmlReader:
         parser.feed(text)
 
 
-if __name__ == "__main__":
-    main()
+main()

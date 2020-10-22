@@ -17,6 +17,7 @@ namespace PresentScreenings.TableView
 	public partial class AppDelegate : NSApplicationDelegate
 	{
         #region Static Properties
+        public static string Festival { get; private set; }
         public static string FestivalYear { get; private set; }
         #endregion
 
@@ -37,6 +38,7 @@ namespace PresentScreenings.TableView
         public AppDelegate()
 		{
             // Preferences.
+            Festival = "NFF";
             FestivalYear = "2020";
             Screening.TravelTime = new TimeSpan(0, 30, 0);
             FilmRatingDialogController.OnlyFilmsWithScreenings = true;
