@@ -66,7 +66,7 @@ t, sound and moving moiré patterns."""
     nff_film = get_film_titles.NffFilm(title, duration, description, directors, competitions)
     
     # Act.
-    url = get_film_titles.FestivalData().get_url(nff_film.title)
+    url = get_film_titles.NffData("/tmp").get_url(nff_film.title)
     
     # Assert.
     return url, 'https://www.filmfestival.nl/en/films/more-moire²'

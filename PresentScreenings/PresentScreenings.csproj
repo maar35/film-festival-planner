@@ -182,7 +182,7 @@
       <Properties>
         <Policies>
           <VersionControlPolicy>
-            <CommitMessageStyle FirstFilePrefix="" FileSeparator=":&#xA;" LastFilePostfix=":&#xA;" LineAlign="0" Wrap="False" />
+            <CommitMessageStyle FirstFilePrefix="" FileSeparator=":&#xA;" LastFilePostfix=":&#xA;" LineAlign="0" IncludeDirectoryPaths="True" Wrap="False" />
           </VersionControlPolicy>
         </Policies>
       </Properties>

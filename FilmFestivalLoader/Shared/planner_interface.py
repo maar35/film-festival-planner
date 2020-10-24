@@ -160,9 +160,6 @@ class FestivalData:
         self.screenings_file = os.path.join(plandata_dir, "screenings.csv")
         self.read_screens()
 
-    def __repr__(self):
-        return "\n".join([str(film) for film in self.nff_films])
-
     def get_screen(self, location):
         try:
             screen = self.screen_by_location[location]
