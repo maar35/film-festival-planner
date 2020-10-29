@@ -4,12 +4,12 @@ using CoreGraphics;
 
 namespace PresentScreenings.TableView
 {
-	/// <summary>
+    /// <summary>
     /// Screenings view, responsible to draw the screenings of a given theater
     /// screen and manage the corresponding controls.
-	/// </summary>
+    /// </summary>
 
-	public class ScreeningsView
+    public class ScreeningsView
 	{
         #region Private Constants
         const float _labelTop = 2;
@@ -44,8 +44,8 @@ namespace PresentScreenings.TableView
 		{
 			DisposeSubViews(view);
             var currScreening = plan.CurrScreening;
-			foreach (var screening in plan.ScreenScreenings[day][screen])
-			{
+            foreach (var screening in plan.ScreenScreenings[day][screen])
+            {
                 _controller.UpdateWarning(screening);
                 _labelLeft = _superView.NumberOfPixelsFromTime(screening.StartTime);
 				_labelWidth = _superView.NumberOfPixelsFromDuration(screening.Duration);

@@ -81,11 +81,18 @@ namespace PresentScreenings.TableView
         #region Private Methods
         private void InitializeDays()
         {
+            // Initialize the days, screens and screens per day dictionaries.
             FestivalDays = new List<DateTime> { };
             _dayScreens = new Dictionary<DateTime, List<Screen>> { };
             ScreenScreenings = new Dictionary<DateTime, Dictionary<Screen, List<Screening>>> { };
 
-            foreach (Screening screening in Screenings)
+            // Fill the dictionaries based on on-location screenings.
+            var onLocationScreenings = (
+                from Screening s in Screenings
+                where s.Location
+                select s
+            ).ToList();
+            foreach (Screening screening in onLocationScreenings)
             {
                 DateTime day = screening.StartDate;
                 if (!FestivalDays.Contains(day))
@@ -113,10 +120,30 @@ namespace PresentScreenings.TableView
                 }
             }
         }
-
         #endregion
 
         #region Public methods
+        public Screening AddOnlineScreening(Screening screening)
+        {
+            Screen screen = screening.Screen;
+            DateTime day = CurrDay;
+            Screening tempScreening = new Screening(screening, day);
+            _dayScreens[day].Add(screen);
+            ScreenScreenings[day].Add(screen, new List<Screening> { });
+            ScreenScreenings[day][screen].Add(tempScreening);
+            SetCurrScreening(tempScreening);
+            return tempScreening;
+        }
+
+        public void RemoveOnlineScreening(Screening oldScreening)
+        {
+            Screen screen = oldScreening.Screen;
+            DateTime day = oldScreening.StartDate;
+            ScreenScreenings[day][screen].Remove(oldScreening);
+            ScreenScreenings[day].Remove(screen);
+            _dayScreens[day].Remove(screen);
+        }
+
         public void SetNextDay(int numberOfDays = 1)
         {
             if (NextDayExists(numberOfDays))

@@ -20,7 +20,9 @@ namespace PresentScreenings.TableView
             AttendingFilm,
             TimeOverlap,
             NoTravelTime,
-            NeedingTickets
+            NeedingTickets,
+            OnLine,
+            OnLineSeen
         }
         public enum Warning
         {
@@ -123,7 +125,14 @@ namespace PresentScreenings.TableView
             Attendees = new List<string>{ };
             TicketsBought = false;
             SoldOut = false;
-            Status = ScreeningStatus.Free;
+            if (Screen.Type == Screen.ScreenType.OnLine)
+            {
+                Status = ScreeningStatus.OnLine;
+            }
+            else
+            {
+                Status = ScreeningStatus.Free;
+            }
         }
         #endregion
 

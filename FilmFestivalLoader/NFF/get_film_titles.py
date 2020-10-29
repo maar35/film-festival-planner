@@ -388,7 +388,7 @@ class ScreeningsLoader():
             film = find_film(sub.title, sub.description, films)
             if film is not None:
                 if is_walk_in:
-                    screen = nff_data.get_screen(f"{key.screen}-{film.title}")
+                    screen = nff_data.get_screen("Utrecht", f"{key.screen}-{film.title}")
                     start_dt = key.start_dt
                     end_dt = key.end_dt
                 else:
@@ -567,8 +567,8 @@ class HtmlPageParser(HTMLParser):
         self.init_screening_data()
         return screening
 
-    def set_screen(self, location):
-        self.screen = self.nff_data.get_screen(location)
+    def set_screen(self, city, location):
+        self.screen = self.nff_data.get_screen(city, location)
 
     def handle_starttag(self, tag, attrs):
         self.print_debug("Encountered a start tag:", tag)
@@ -593,6 +593,7 @@ class PremierePageParser(HtmlPageParser):
 
     def __init__(self, film, nff_data):
         HtmlPageParser.__init__(self, film, nff_data)
+        self.city = None
            
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -626,9 +627,11 @@ class PremierePageParser(HtmlPageParser):
             except IndexError:
                 self.print_debug("--", f"ERROR can't construct date from '{data}'.")
         if data == "Amsterdam":
+            self.city = data
             self.in_town = True
             self.debugging = True
         if data == "Apeldoorn":
+            self.city = data
             self.in_town = False
             if self.in_time:
                 Globals.error_collector.add(f"'in_time' still true when arriving in {data}",
@@ -644,7 +647,7 @@ class PremierePageParser(HtmlPageParser):
                 minute = int(start_time_str.split(":")[1])
                 self.start_time = datetime.time(hour, minute)
                 self.in_time = False
-                self.set_screen(self.location)
+                self.set_screen(self.city, self.location)
                 self.add_screening()
             except IndexError:
                 self.print_debug("-- ", f"ERROR can't construct time from: '{data}'.")
@@ -685,7 +688,7 @@ class FilmPageParser(HtmlPageParser):
         self.last_tag = tag
         if self.in_extratimes and tag == "h3":
             self.in_extratimes = False
-            self.set_screen(self.location)
+            self.set_screen("Utrecht", self.location)
             if self.screen.abbr == "102filmtheatersdoorhetland":
                 self.print_debug("-- ", f"NATIONAL PREMIERE {self.film.title} REFERENCE skipped")
             else:

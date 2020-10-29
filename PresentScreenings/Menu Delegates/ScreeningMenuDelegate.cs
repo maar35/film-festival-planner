@@ -13,23 +13,23 @@ namespace PresentScreenings.TableView
     public class ScreeningMenuDelegate : NSMenuDelegate
     {
         #region Constants
-        const int _showScreeningInfoMenuItemTag = 201;
-        const int _showFilmInfoMenuItemTag = 202;
-        const int _soldOutMenuItemTag = 203;
-        const int _ticketsBoughtMenuItemTag = 204;
-        const int _myAttendanceMenuItemTag = 210;
-        const int _filmMenuHeaderItemTag = 400;
+        private const int _showScreeningInfoMenuItemTag = 201;
+        private const int _showFilmInfoMenuItemTag = 202;
+        private const int _soldOutMenuItemTag = 203;
+        private const int _ticketsBoughtMenuItemTag = 204;
+        private const int _myAttendanceMenuItemTag = 210;
+        private const int _filmMenuHeaderItemTag = 400;
         #endregion
 
         #region Private Members
-        NSMenu _screeningMenu;
-        AppDelegate _app;
-        ViewController _controller;
-        IScreeningProvider _screeningProvider;
-        Film _film;
-        Dictionary<nint, string> _filmFanByTag;
-        static Dictionary<nint, bool> _FilmScreeningEnabledByTag;
-        static Dictionary<string, Screening> _filmScreeningByMenuItemTitle;
+        private NSMenu _screeningMenu;
+        private AppDelegate _app;
+        private ViewController _controller;
+        private IScreeningProvider _screeningProvider;
+        private Film _film;
+        readonly Dictionary<nint, string> _filmFanByTag;
+        private static Dictionary<nint, bool> _FilmScreeningEnabledByTag;
+        private static Dictionary<string, Screening> _filmScreeningByMenuItemTitle;
         #endregion
 
         #region Properties
@@ -116,7 +116,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        bool FilmScreeningItemIsHandled(NSMenuItem item)
+        private bool FilmScreeningItemIsHandled(NSMenuItem item)
         {
             if (_FilmScreeningEnabledByTag.ContainsKey(item.Tag))
             {
@@ -126,7 +126,7 @@ namespace PresentScreenings.TableView
             return false;
         }
 
-        bool AttendanceItemIsHandled(NSMenuItem item)
+        private bool AttendanceItemIsHandled(NSMenuItem item)
         {
             if (_filmFanByTag.ContainsKey(item.Tag))
             {
@@ -146,7 +146,7 @@ namespace PresentScreenings.TableView
             return false;
         }
 
-        bool ItemIsHandledByTag(NSMenuItem item)
+        private bool ItemIsHandledByTag(NSMenuItem item)
         {
             bool itemHandled = true;
             switch (item.Tag)
@@ -176,7 +176,7 @@ namespace PresentScreenings.TableView
             return itemHandled;
         }
 
-        void PopulateAttendanceMenuItems()
+        private void PopulateAttendanceMenuItems()
         {
             foreach (var filmFan in ScreeningInfo.FilmFans)
             {
@@ -192,7 +192,7 @@ namespace PresentScreenings.TableView
             }
         }
 
-        void InitializeFilmMenuItems()
+        private void InitializeFilmMenuItems()
         {
             _screeningMenu.AddItem(NSMenuItem.SeparatorItem);
             NSMenuItem item = new NSMenuItem
@@ -208,7 +208,7 @@ namespace PresentScreenings.TableView
         /// </summary>
         /// <param name="menu">Menu.</param>
         /// 
-        void PopulateFilmScreeningsMenuItems(NSMenu menu)
+        private void PopulateFilmScreeningsMenuItems(NSMenu menu)
         {
             // Remove the existing screening items from the menu.
             foreach (var item in _filmScreeningByMenuItemTitle.Keys)
@@ -243,12 +243,12 @@ namespace PresentScreenings.TableView
             }
         }
 
-        bool FilmRatingViewRunning()
+        private bool FilmRatingViewRunning()
         {
             return FilmRatingController != null;
         }
 
-        bool AnalyserViewRunning()
+        private bool AnalyserViewRunning()
         {
             return AnalyserDialogController != null;
         }

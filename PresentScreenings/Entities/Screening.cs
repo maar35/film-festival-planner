@@ -48,6 +48,9 @@ namespace PresentScreenings.TableView
         public bool TicketsBought { get => _screeningInfo.TicketsBought; set => _screeningInfo.TicketsBought = value; }
         public bool HasTimeOverlap => ViewController.OverlappingAttendedScreenings(this).Any();
         public bool HasNoTravelTime => ViewController.OverlappingAttendedScreenings(this, true).Any();
+        private Screen.ScreenType ScreenType => Screen.Type;
+        public bool OnLine => ScreenType == Screen.ScreenType.OnLine;
+        public bool Location => ScreenType == Screen.ScreenType.Location;
         public int TimesIAttendFilm => ScreeningsPlan.Screenings.Count(s => s.FilmId == FilmId && s.IAttend);
         public bool IsPlannable => TimesIAttendFilm == 0 && !HasNoTravelTime && !SoldOut;
         public int FilmScreeningCount => ViewController.FilmScreenings(FilmId).Count;
@@ -66,6 +69,19 @@ namespace PresentScreenings.TableView
 
         #region Constructors
         public Screening() { }
+
+        public Screening(Screening screening, DateTime day)
+        {
+            FilmId = screening.Film.FilmId;
+            Film = screening.Film;
+            Screen = screening.Screen;
+            StartTime = DateTimeFromParsedData(day.Date, "09:00");
+            EndTime = DateTimeFromParsedData(day.Date, "23:59");
+            FilmsInScreening = 1;
+            Extra = screening.Extra;
+            QAndA = screening.QAndA;
+            _screeningInfo = screening._screeningInfo;
+        }
 
         public Screening(string screeningText)
         {
@@ -223,7 +239,11 @@ namespace PresentScreenings.TableView
         }
 
         public bool Overlaps(Screening otherScreening, bool useTravelTime = false)
-        {            
+        {
+            if (OnLine || otherScreening.OnLine)
+            {
+                return false;
+            }
             var travelTime = useTravelTime ? TravelTime : TimeSpan.Zero;
             return otherScreening.StartTime <= EndTime + travelTime
                 && otherScreening.EndTime >= StartTime - travelTime;
@@ -348,19 +368,25 @@ namespace PresentScreenings.TableView
         /// who rated the film but do not attend the screening in lower case.
         /// Does not display all film fans because 'my attendance' follows from
         /// the label color.
+        /// Does include 'me' when the screening is on-line.
         /// </summary>
         /// <returns></returns>
         public string ShortFriendsString()
         {
             var screeningFilmRatings = ScreeningsPlan.FilmFanFilmRatings.Where(f => f.FilmId == FilmId);
             StringBuilder builder = new StringBuilder();
-            foreach (string friend in ScreeningInfo.MyFriends)
+            var filmFans = ScreeningInfo.FilmFans;
+            if (Location)
             {
-                var friendRatings = screeningFilmRatings.Where(f => f.FilmFan == friend);
+                filmFans.Remove(ScreeningInfo.Me);
+            }
+            foreach (string filmFan in filmFans)
+            {
+                var friendRatings = screeningFilmRatings.Where(f => f.FilmFan == filmFan);
                 bool friendHasRated = friendRatings.Any();
-                if (AttendingFriends.Contains(friend))
+                if (AttendingFilmFans.Contains(filmFan))
                 {
-                    builder.Append(friend.Remove(1).ToUpper());
+                    builder.Append(filmFan.Remove(1).ToUpper());
                     if(friendHasRated)
                     {
                         builder.Append(friendRatings.First().Rating.ToString());
@@ -368,7 +394,7 @@ namespace PresentScreenings.TableView
                 }
                 else if(friendHasRated)
                 {
-                    builder.Append(friend.Remove(1).ToLower());
+                    builder.Append(filmFan.Remove(1).ToLower());
                     builder.Append(friendRatings.First().Rating.ToString());
                 }
             }
