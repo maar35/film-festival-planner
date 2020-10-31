@@ -368,25 +368,20 @@ namespace PresentScreenings.TableView
         /// who rated the film but do not attend the screening in lower case.
         /// Does not display all film fans because 'my attendance' follows from
         /// the label color.
-        /// Does include 'me' when the screening is on-line.
         /// </summary>
         /// <returns></returns>
         public string ShortFriendsString()
         {
             var screeningFilmRatings = ScreeningsPlan.FilmFanFilmRatings.Where(f => f.FilmId == FilmId);
-            StringBuilder builder = new StringBuilder();
-            var filmFans = ScreeningInfo.FilmFans;
-            if (Location)
+            var builder = new StringBuilder();
+            var friends = ScreeningInfo.MyFriends;
+            foreach (string friend in friends)
             {
-                filmFans.Remove(ScreeningInfo.Me);
-            }
-            foreach (string filmFan in filmFans)
-            {
-                var friendRatings = screeningFilmRatings.Where(f => f.FilmFan == filmFan);
+                var friendRatings = screeningFilmRatings.Where(f => f.FilmFan == friend);
                 bool friendHasRated = friendRatings.Any();
-                if (AttendingFilmFans.Contains(filmFan))
+                if (AttendingFilmFans.Contains(friend))
                 {
-                    builder.Append(filmFan.Remove(1).ToUpper());
+                    builder.Append(friend.Remove(1).ToUpper());
                     if(friendHasRated)
                     {
                         builder.Append(friendRatings.First().Rating.ToString());
@@ -394,7 +389,7 @@ namespace PresentScreenings.TableView
                 }
                 else if(friendHasRated)
                 {
-                    builder.Append(filmFan.Remove(1).ToLower());
+                    builder.Append(friend.Remove(1).ToLower());
                     builder.Append(friendRatings.First().Rating.ToString());
                 }
             }

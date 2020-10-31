@@ -131,7 +131,6 @@ namespace PresentScreenings.TableView
             _dayScreens[day].Add(screen);
             ScreenScreenings[day].Add(screen, new List<Screening> { });
             ScreenScreenings[day][screen].Add(tempScreening);
-            SetCurrScreening(tempScreening);
             return tempScreening;
         }
 

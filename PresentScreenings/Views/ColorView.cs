@@ -14,33 +14,33 @@ namespace PresentScreenings.TableView
     public static class ColorView
     {
         #region Private members
-        static NSColor screeningBgColorBlack = NSColor.FromRgb(0, 0, 0);
-        static NSColor screeningTextColorBlack = NSColor.White;
-        static NSColor screeningBgColorGrey = NSColor.FromRgb(219, 219, 219);
-        static NSColor screeningTextColorGrey = NSColor.FromRgb(0, 0, 0);
-        static NSColor screeningBgColorDarkGrey = NSColor.FromRgb(176, 176, 176);
-        static NSColor screeningTextColorDarkGrey = NSColor.FromRgb(0, 0, 0);
-        static NSColor screeningBgColorBlue = NSColor.FromRgb(0, 38, 176);
-        static NSColor screeningTextColorBlue = NSColor.FromRgb(255, 255, 255);
-        static NSColor screeningBgColorRed = NSColor.FromRgb(176, 0, 38);
-        static NSColor screeningTextColorRed = NSColor.White;
-        static NSColor screeningBgColorBrightRed = NSColor.FromRgb(255, 38, 0);
-        static NSColor screeningTextColorBrightRed = NSColor.FromRgb(0, 217, 255);
-        static NSColor screeningBgColorGreen = NSColor.FromRgb(0, 255, 38);
-        static NSColor screeningTextColorGreen = NSColor.FromRgb(255, 0, 217);
-        static NSColor screeningBgColorPurple = NSColor.FromRgb(176, 0, 176);
-        static NSColor screeningTextColorPurple = NSColor.White;
-        static NSColor screeningBgColorAqua = NSColor.FromRgb(38, 255, 176);
-        static NSColor screeningTextColorAqua = NSColor.Black;
+        static readonly NSColor screeningBgColorBlack = NSColor.FromRgb(0, 0, 0);
+        static readonly NSColor screeningTextColorBlack = NSColor.White;
+        static readonly NSColor screeningBgColorGrey = NSColor.FromRgb(219, 219, 219);
+        static readonly NSColor screeningTextColorGrey = NSColor.FromRgb(0, 0, 0);
+        static readonly NSColor screeningBgColorDarkGrey = NSColor.FromRgb(176, 176, 176);
+        static readonly NSColor screeningTextColorDarkGrey = NSColor.FromRgb(0, 0, 0);
+        static readonly NSColor screeningBgColorBlue = NSColor.FromRgb(0, 38, 176);
+        static readonly NSColor screeningTextColorBlue = NSColor.FromRgb(255, 255, 255);
+        static readonly NSColor screeningBgColorRed = NSColor.FromRgb(176, 0, 38);
+        static readonly NSColor screeningTextColorRed = NSColor.White;
+        static readonly NSColor screeningBgColorBrightRed = NSColor.FromRgb(255, 38, 0);
+        static readonly NSColor screeningTextColorBrightRed = NSColor.FromRgb(0, 217, 255);
+        static readonly NSColor screeningBgColorGreen = NSColor.FromRgb(0, 255, 38);
+        static readonly NSColor screeningTextColorGreen = NSColor.FromRgb(255, 0, 217);
+        static readonly NSColor screeningBgColorPurple = NSColor.FromRgb(176, 0, 176);
+        static readonly NSColor screeningTextColorPurple = NSColor.White;
+        static readonly NSColor screeningBgColorAqua = NSColor.FromRgb(38, 255, 176);
+        static readonly NSColor screeningTextColorAqua = NSColor.Black;
         static readonly Dictionary<ScreeningInfo.ScreeningStatus, NSColor> TextColorByScreeningStatus;
         static readonly Dictionary<ScreeningInfo.ScreeningStatus, NSColor> BgColorByScreeningStatus;
         static readonly Dictionary<ScreeningInfo.TicketsStatus, NSColor> ColorByTicketStatus;
-        static NSColor ClickPadColorBlue = NSColor.FromRgba(0, 0, 255, 207);
-        static NSColor ClickPadColorGrey = NSColor.FromRgba(127, 127, 127, 119);
-        static NSColor ClickPadTextColorSelected = NSColor.White;
-        static NSColor ClickPadTextColorUnselected = NSColor.Red;
-        static NSColor soldOutColorSelected = NSColor.FromRgb(219, 176, 38);
-        static NSColor soldOutColorUnselected = NSColor.FromRgb(176, 79, 38);
+        static readonly NSColor ClickPadColorBlue = NSColor.FromRgba(0, 0, 255, 207);
+        static readonly NSColor ClickPadColorGrey = NSColor.FromRgba(127, 127, 127, 119);
+        static readonly NSColor ClickPadTextColorSelected = NSColor.White;
+        static readonly NSColor ClickPadTextColorUnselected = NSColor.Red;
+        static readonly NSColor soldOutColorSelected = NSColor.FromRgb(219, 176, 38);
+        static readonly NSColor soldOutColorUnselected = NSColor.FromRgb(176, 79, 38);
         #endregion
 
         #region Constructors
@@ -55,7 +55,7 @@ namespace PresentScreenings.TableView
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.TimeOverlap, screeningTextColorGrey);
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.NoTravelTime, screeningTextColorDarkGrey);
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.OnLine, screeningTextColorBrightRed);
-            TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.OnLineSeen, screeningTextColorGreen);
+            TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.SeeOnLine, screeningTextColorGreen);
 
             BgColorByScreeningStatus = new Dictionary<ScreeningInfo.ScreeningStatus, NSColor> { };
             BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Free, screeningBgColorBlack);
@@ -66,7 +66,7 @@ namespace PresentScreenings.TableView
             BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.TimeOverlap, screeningBgColorGrey);
             BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.NoTravelTime, screeningBgColorDarkGrey);
             BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.OnLine, screeningBgColorBrightRed);
-            BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.OnLineSeen, screeningBgColorGreen);
+            BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.SeeOnLine, screeningBgColorGreen);
 
             ColorByTicketStatus = new Dictionary<ScreeningInfo.TicketsStatus, NSColor> { };
             ColorByTicketStatus.Add(ScreeningInfo.TicketsStatus.TicketsArranged, screeningBgColorRed);

@@ -22,7 +22,7 @@ namespace PresentScreenings.TableView
             NoTravelTime,
             NeedingTickets,
             OnLine,
-            OnLineSeen
+            SeeOnLine
         }
         public enum Warning
         {
@@ -78,6 +78,8 @@ namespace PresentScreenings.TableView
             _screeningStatusByString.Add("TIJD", ScreeningStatus.TimeOverlap);
             _screeningStatusByString.Add("REISTIJD", ScreeningStatus.NoTravelTime);
             _screeningStatusByString.Add("TICKETSNODIG", ScreeningStatus.NeedingTickets);
+            _screeningStatusByString.Add("ONLINE", ScreeningStatus.OnLine);
+            _screeningStatusByString.Add("ONLINEZIEN", ScreeningStatus.SeeOnLine);
             _stringByScreeningStatus = _screeningStatusByString.ToDictionary(x => x.Value, x => x.Key);
             _stringByScreeningStatus.Add(ScreeningStatus.AttendedByFriend, "ONWAAR");
             _ticketStatusByAttendBought = new Dictionary<Tuple<bool, bool>, TicketsStatus> { };

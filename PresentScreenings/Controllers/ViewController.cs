@@ -197,7 +197,7 @@ namespace PresentScreenings.TableView
             {
                 if (screening.OnLine)
                 {
-                    screening.Status = ScreeningInfo.ScreeningStatus.OnLineSeen;
+                    screening.Status = ScreeningInfo.ScreeningStatus.SeeOnLine;
                 }
                 else if (screening.TicketsBought)
                 {

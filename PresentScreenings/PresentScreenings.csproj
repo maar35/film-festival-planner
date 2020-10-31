@@ -86,6 +86,7 @@
     <None Include="Info.plist" />
     <None Include="Entitlements.plist" />
     <None Include="packages.config" />
+    <None Include="..\.editorconfig" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Main.cs" />
