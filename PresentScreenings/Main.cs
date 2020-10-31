@@ -25,7 +25,6 @@ namespace PresentScreenings.TableView
                 };
                 try
                 {
-                    AlertWhenAlertCrashes(ex, ex);
                     alert.RunModal();
                 }
                 catch (System.Exception ex2)
