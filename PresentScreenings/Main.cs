@@ -15,7 +15,7 @@ namespace PresentScreenings.TableView
                 NSApplication.Init();
                 NSApplication.Main(args);
             }
-            catch (System.Exception ex)
+            catch (Exception ex)
             {
                 var alert = new NSAlert()
                 {
@@ -27,7 +27,7 @@ namespace PresentScreenings.TableView
                 {
                     alert.RunModal();
                 }
-                catch (System.Exception ex2)
+                catch (Exception ex2)
                 {
                     AlertWhenAlertCrashes(ex, ex2);
                 }
