@@ -61,7 +61,8 @@ namespace PresentScreenings.TableView
                 var infoButton = new FilmScreeningControl(buttonRect, screening);
                 infoButton.ReDraw();
                 infoButton.ScreeningInfoAsked += (sender, e) => goToScreening(screening);
-                if (screening == _app.Controller.CurrentScreening)
+                var currScreening = _app.Controller.CurrentScreening;
+                if (screening == currScreening || screening.OnLine && currScreening.OnLine)
                 {
                     currentScreeningControl = infoButton;
                     currentScreeningControl.Selected = true;

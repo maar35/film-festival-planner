@@ -8,9 +8,20 @@ namespace PresentScreenings.TableView
 
     public class Screen : ListStreamer, IComparable
 	{
+        #region Public Members
+        public enum ScreenType
+        {
+            Location,
+            OnLine
+        }
+        #endregion
+
         #region Properties
+        public int ScreenId { get; }
+        public string City { get; }
         public string ParseName { get; }
         public string Abbreviation { get; }
+        public ScreenType Type { get; }
         #endregion
 
         #region Constructors
@@ -18,10 +29,18 @@ namespace PresentScreenings.TableView
 
         public Screen(string screenText)
         {
-			string[] fields = screenText.Split(';');
-			ParseName = fields[0];
-			Abbreviation = fields[1];
-		}
+            // Assign the fields of the input string.
+            string[] fields = screenText.Split(';');
+            string screenId = fields[0];
+            City = fields[1];
+			ParseName = fields[2];
+			Abbreviation = fields[3];
+            string screenType = fields[4];
+
+            // Assign properties that need calculating.
+            ScreenId = int.Parse(screenId);
+            Type = (ScreenType)Enum.Parse(typeof(ScreenType), screenType);
+        }
         #endregion
 
         #region Override Methods

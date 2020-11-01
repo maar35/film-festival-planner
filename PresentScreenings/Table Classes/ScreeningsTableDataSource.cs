@@ -23,7 +23,7 @@ namespace PresentScreenings.TableView
 		#region Override Methods
 		public override nint GetRowCount(NSTableView tableView)
 		{
-			return Plan.CurrDayScreens.Count;
+            return Plan.CurrDayScreens.Count;
 		}
 		#endregion
 	}

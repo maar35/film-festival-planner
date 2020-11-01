@@ -43,7 +43,7 @@ namespace PresentScreenings.TableView
                 _selected = value;
                 if (value)
                 {
-                    // Make the view scroll as to make the control visible.
+                    // Scroll the view as to make the control visible.
                     var plan = _app.Controller.Plan;
                     var table = _app.Controller.TableView;
                     _app.Controller.TableView.ScrollRowToVisible(plan.CurrDayScreens.IndexOf(plan.CurrScreen));

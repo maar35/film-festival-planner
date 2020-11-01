@@ -48,6 +48,9 @@ namespace PresentScreenings.TableView
         public bool TicketsBought { get => _screeningInfo.TicketsBought; set => _screeningInfo.TicketsBought = value; }
         public bool HasTimeOverlap => ViewController.OverlappingAttendedScreenings(this).Any();
         public bool HasNoTravelTime => ViewController.OverlappingAttendedScreenings(this, true).Any();
+        private Screen.ScreenType ScreenType => Screen.Type;
+        public bool OnLine => ScreenType == Screen.ScreenType.OnLine;
+        public bool Location => ScreenType == Screen.ScreenType.Location;
         public int TimesIAttendFilm => ScreeningsPlan.Screenings.Count(s => s.FilmId == FilmId && s.IAttend);
         public bool IsPlannable => TimesIAttendFilm == 0 && !HasNoTravelTime && !SoldOut;
         public int FilmScreeningCount => ViewController.FilmScreenings(FilmId).Count;
@@ -66,6 +69,19 @@ namespace PresentScreenings.TableView
 
         #region Constructors
         public Screening() { }
+
+        public Screening(Screening screening, DateTime day)
+        {
+            FilmId = screening.Film.FilmId;
+            Film = screening.Film;
+            Screen = screening.Screen;
+            StartTime = DateTimeFromParsedData(day.Date, "09:00");
+            EndTime = DateTimeFromParsedData(day.Date, "23:59");
+            FilmsInScreening = 1;
+            Extra = screening.Extra;
+            QAndA = screening.QAndA;
+            _screeningInfo = screening._screeningInfo;
+        }
 
         public Screening(string screeningText)
         {
@@ -223,7 +239,11 @@ namespace PresentScreenings.TableView
         }
 
         public bool Overlaps(Screening otherScreening, bool useTravelTime = false)
-        {            
+        {
+            if (OnLine || otherScreening.OnLine)
+            {
+                return false;
+            }
             var travelTime = useTravelTime ? TravelTime : TimeSpan.Zero;
             return otherScreening.StartTime <= EndTime + travelTime
                 && otherScreening.EndTime >= StartTime - travelTime;
@@ -353,12 +373,13 @@ namespace PresentScreenings.TableView
         public string ShortFriendsString()
         {
             var screeningFilmRatings = ScreeningsPlan.FilmFanFilmRatings.Where(f => f.FilmId == FilmId);
-            StringBuilder builder = new StringBuilder();
-            foreach (string friend in ScreeningInfo.MyFriends)
+            var builder = new StringBuilder();
+            var friends = ScreeningInfo.MyFriends;
+            foreach (string friend in friends)
             {
                 var friendRatings = screeningFilmRatings.Where(f => f.FilmFan == friend);
                 bool friendHasRated = friendRatings.Any();
-                if (AttendingFriends.Contains(friend))
+                if (AttendingFilmFans.Contains(friend))
                 {
                     builder.Append(friend.Remove(1).ToUpper());
                     if(friendHasRated)

@@ -90,19 +90,26 @@ class Film:
 
 class Screen():
 
-    def __init__(self, name_abbr_tuple):
-        self.name = name_abbr_tuple[0]
-        self.abbr = name_abbr_tuple[1]
+    type_by_onlocation = {}
+    type_by_onlocation[True]= "Location"
+    type_by_onlocation[False] = "OnLine"
+    
+    def __init__(self, screen_id, city, name, abbr, on_location=True):
+        self.screen_id = screen_id
+        self.city = city
+        self.name = name
+        self.abbr = abbr
+        self.type = self.type_by_onlocation[on_location]
 
     def __str__(self):
         return self.abbr
 
     def __repr__(self):
-        text = ";".join([self.name, self.abbr])
+        text = ";".join([str(self.screen_id), self.city, self.name, self.abbr, self.type])
         return "{}\n".format(text)
 
     def _key(self):
-        return self.name
+        return (self.city, self.name)
 
 
 class Screening:
@@ -149,6 +156,8 @@ class Screening:
 
 class FestivalData:
 
+    curr_screen_id = None
+
     def __init__(self, plandata_dir):
         self.nff_films = []
         self.films = []
@@ -160,17 +169,17 @@ class FestivalData:
         self.screenings_file = os.path.join(plandata_dir, "screenings.csv")
         self.read_screens()
 
-    def __repr__(self):
-        return "\n".join([str(film) for film in self.nff_films])
-
-    def get_screen(self, location):
+    def get_screen(self, city, name):
+        screen_key = (city, name)
         try:
-            screen = self.screen_by_location[location]
+            screen = self.screen_by_location[screen_key]
         except KeyError:
-            abbr = location.replace(" ", "").lower()
-            print(f"NEW LOCATION:  '{location}' => {abbr}")
-            self.screen_by_location[location] =  Screen((location, abbr))
-            screen = self.screen_by_location[location]
+            self.curr_screen_id += 1
+            screen_id = self.curr_screen_id
+            abbr = name.replace(" ", "").lower()
+            print(f"NEW LOCATION:  '{city} {name}' => {abbr}")
+            self.screen_by_location[screen_key] =  Screen(screen_id, city, name, abbr)
+            screen = self.screen_by_location[screen_key]
         return screen
             
     def splitrec(self, line, sep):
@@ -178,12 +187,26 @@ class FestivalData:
         return line.rstrip(end).split(sep)
 
     def read_screens(self):
+        def create_screen(fields):
+            screen_id = int(fields[0])
+            city = fields[1]
+            name = fields[2]
+            abbr = fields[3]
+            screen_type_str = fields[4]
+            screen_types = [k for (k, v) in Screen.type_by_onlocation.items() if v == screen_type_str]
+            screen_type = screen_types[0]
+            return Screen(screen_id, city, name, abbr, screen_type)
+
         try:
             with open(self.screens_file, 'r') as f:
-                screens = [Screen(self.splitrec(line, ';')) for line in f]
+                screens = [create_screen(self.splitrec(line, ';')) for line in f]
             self.screen_by_location = {screen._key(): screen for screen in screens}
         except OSError:
             pass
+        try:
+            self.curr_screen_id = max([screen.screen_id for screen in self.screen_by_location.values()])
+        except ValueError:
+            self.curr_screen_id = 0
 
     def read_filmids(self):
         try:

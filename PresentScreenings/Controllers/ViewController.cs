@@ -18,6 +18,7 @@ namespace PresentScreenings.TableView
         ScreeningsTableView _mainView = null;
         Dictionary<Screening, ScreeningControl> _controlByScreening;
         NSMenuItem _clickableLabelsMenuItem = null;
+        Screening _stubOnlineScreening = null;
         #endregion
 
         #region Application Access
@@ -28,6 +29,7 @@ namespace PresentScreenings.TableView
         public ScreeningsPlan Plan => _plan;
         public NSTableView TableView => ScreeningsTable;
         internal int RunningPopupsCount { get; set; } = 0;
+        public Screening LastLocationScreening { get; private set; }
         #endregion
 
         #region Computed Properties
@@ -125,34 +127,57 @@ namespace PresentScreenings.TableView
 
         public override void GoToScreening(Screening screening)
         {
-            _plan.SetCurrScreening(screening);
-            DisplayScreeningsView();
-            TableView.Display();
-            TableView.ScrollRowToVisible(_plan.CurrDayScreens.IndexOf(screening.Screen));
-            ScreeningControl control = _controlByScreening[screening];
+            Screening targetScreening = screening;
+
+            // Remenber current screening if on location.
+            if (CurrentScreening.Location)
+            {
+                LastLocationScreening = CurrentScreening;
+            }
+
+            // If the target screening is on-line, create a stub screening.
+            if (screening.OnLine)
+            {
+                _stubOnlineScreening = _plan.AddOnlineScreening(screening);
+                targetScreening = _stubOnlineScreening;
+            }
+
+            // Make the target screening the selected screening.
+            SetCurrScreening(targetScreening);
+
+            // Pass the target screening control to the screening info dialog.
+            ScreeningControl control = _controlByScreening[targetScreening];
             PerformSegue("ScreeningsToScreeningInfo:", control);
         }
         #endregion
 
         #region Private Methods
-        void SetClickableLabelsMenuItemState()
+        private void SetCurrScreening(Screening screening)
+        {
+            _plan.SetCurrScreening(screening);
+            DisplayScreeningsView();
+            TableView.Display();
+            TableView.ScrollRowToVisible(_plan.CurrDayScreens.IndexOf(screening.Screen));
+        }
+
+        private void SetClickableLabelsMenuItemState()
         {
             _clickableLabelsMenuItem.State = GetNSCellStateValue(ScreeningControl.UseCoreGraphics);
         }
 
-        void DisplayScreeningsView()
+        private void DisplayScreeningsView()
         {
             _mainView.HeadersView.DrawCurrDay(_plan);
             InitializeScreeningControls();
             ReloadScreeningsView();
         }
 
-        void InitializeScreeningControls()
+        private void InitializeScreeningControls()
         {
             _controlByScreening = new Dictionary<Screening, ScreeningControl> { };
         }
 
-        void DisposeColorLabels()
+        private void DisposeColorLabels()
         {
             BlackLabel.RemoveFromSuperview();
             GreyLabel.RemoveFromSuperview();
@@ -166,11 +191,15 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Screening Status methods
-        void UpdateOneAttendanceStatus(Screening screening)
+        private void UpdateOneAttendanceStatus(Screening screening)
         {
             if (screening.IAttend)
             {
-                if (screening.TicketsBought)
+                if (screening.OnLine)
+                {
+                    screening.Status = ScreeningInfo.ScreeningStatus.SeeOnLine;
+                }
+                else if (screening.TicketsBought)
                 {
                     screening.Status = ScreeningInfo.ScreeningStatus.Attending;
                 }
@@ -195,6 +224,10 @@ namespace PresentScreenings.TableView
             {
                 screening.Status = ScreeningInfo.ScreeningStatus.NoTravelTime;
             }
+            else if (screening.OnLine)
+            {
+                screening.Status = ScreeningInfo.ScreeningStatus.OnLine;
+            }
             else
             {
                 screening.Status = ScreeningInfo.ScreeningStatus.Free;
@@ -203,7 +236,7 @@ namespace PresentScreenings.TableView
             UpdateWarning(screening);
         }
 
-        List<Screening> ScreeningsWithSameFilm(Screening screening)
+        private List<Screening> ScreeningsWithSameFilm(Screening screening)
         {
             var screeningsWithSameFilm = (
                 from Screening s in ScreeningsPlan.Screenings
@@ -261,6 +294,20 @@ namespace PresentScreenings.TableView
         static public NSCellStateValue GetNSCellStateValue(bool shouldBeOn)
         {
             return shouldBeOn ? NSCellStateValue.On : NSCellStateValue.Off;
+        }
+
+        public void RemoveTempOnlineScreening(bool toDayScheme)
+        {
+            if (_stubOnlineScreening != null)
+            {
+                _plan.RemoveOnlineScreening(_stubOnlineScreening);
+                _stubOnlineScreening = null;
+                DisplayScreeningsView();
+            }
+            if(toDayScheme)
+            {
+                SetCurrScreening(LastLocationScreening);
+            }
         }
         #endregion
 

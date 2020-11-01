@@ -75,7 +75,7 @@ namespace PresentScreenings.TableView
                     ColorView.DrawSoldOutSymbol(g, Selected, Frame);
                 }
 
-                // Draw the Autometically Planned symbol.
+                // Draw the Automatically Planned symbol.
                 if (_screening.AutomaticallyPlanned)
                 {
                     ScreeningControl.InitializeCoreText(g, Selected);

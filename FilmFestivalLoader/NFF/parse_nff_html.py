@@ -11,8 +11,9 @@ Created on Fri Oct  2 21:35:14 2020
 import sys
 import re
 import os
-from html.parser import HTMLParser
 import datetime
+from html.parser import HTMLParser
+import xml.etree.ElementTree as ET
 
 sys.path.insert(0, "/Users/maarten/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 import planner_interface as planner
@@ -33,6 +34,7 @@ film_file_format = os.path.join(webdata_dir, "filmpage_{:03d}.html")
 
 # Files.
 filmdata_file = os.path.join(plandata_dir, "filmdata.csv")
+filminfo_file = os.path.join(plandata_dir, "filminfo.xml")
 debug_file = os.path.join(plandata_dir, "debug.txt")
 
 # URL information.
@@ -49,27 +51,28 @@ def main():
     Globals.debug_recorder = tools.DebugRecorder(debug_file)
     
     # initialize a festival data object.
-    festival_data = NffData(plandata_dir)
+    nff_data = NffData(plandata_dir)
     
     comment("Parsing AZ pages.")
     films_loader = FilmsLoader(az_page_count)
-    films_loader.get_films(festival_data)
+    films_loader.get_films(nff_data)
     
     comment("Parsing premiêre pages.")
     premieres_loader = PremieresLoader()
-    premieres_loader.get_screenings(festival_data)
+    premieres_loader.get_screenings(nff_data)
     
     comment("Parsing regular film pages.")
     screenings_loader = ScreeningsLoader()
-    screenings_loader.get_screenings(festival_data)
+    screenings_loader.get_screenings(nff_data)
     
     if(Globals.error_collector.error_count() > 0):
         comment("Encountered some errors:")
         print(Globals.error_collector)
         
     comment("Done laoding NFF data.")
-    festival_data.write_screens()
-    festival_data.write_screenings()
+    nff_data.write_screens()
+    nff_data.write_screenings()
+    nff_data.write_filminfo()
     Globals.debug_recorder.write_debug()
 
 def comment(text):
@@ -151,24 +154,24 @@ class FilmsLoader():
     def __init__(self, page_count):
         self.page_count = page_count
     
-    def get_films(self, festival_data):
+    def get_films(self, nff_data):
         
         # Parse AZ pages.
-        self.parse_az_pages(festival_data)
-        festival_data.write_nff_films()
+        self.parse_az_pages(nff_data)
+        nff_data.write_nff_films()
         
         # Convert NFF films to the format expected by the C# planner.
-        festival_data.fill_films_list()
-        festival_data.write_films()
+        nff_data.fill_films_list()
+        nff_data.write_films()
 
-    def parse_az_pages(self, festival_data):
+    def parse_az_pages(self, nff_data):
         for page_number in range(self.page_count):
             az_file = az_copy_paste_file_format.format(page_number)
             print(f"Searching {az_file}...", end="")
             try:
                 with open(az_file, 'r') as f:
                     az_text = f.read()
-                film_count = self.parse_one_az_page(az_text, festival_data.nff_films)
+                film_count = self.parse_one_az_page(az_text, nff_data.nff_films)
                 print(f" {film_count} films found")
             except FileNotFoundError as e:
                 Globals.error_collector.add(e, "while parsing az pages in FilmsLoader")
@@ -206,26 +209,26 @@ class PremieresLoader():
     def print_debug(self, str1, str2):
         Globals.debug_recorder.add('AZ ' + str(str1) + ' ' + str(str2))
 
-    def get_screenings(self, festival_data):
-        festival_data.read_screens()
+    def get_screenings(self, nff_data):
+        nff_data.read_screens()
         files_read_count = 0
-        for film in festival_data.films:
+        for film in nff_data.films:
             self.film = film
             self.url = re.sub("en/films/", premiere_prefix, film.url)
             url_file = os.path.join(webdata_dir, self.url.split("/")[3]) + ".html"
             if os.access(url_file, os.F_OK):
                 print(f"Now reading {self.url}")
-                self.get_screenings_of_one_film(url_file, festival_data)
+                self.get_screenings_of_one_film(url_file, nff_data)
                 files_read_count += 1
         print(f"\nDone reading screenings of {files_read_count} premiêre.")
-        festival_data.write_screens()
-        festival_data.write_screenings()
+        nff_data.write_screens()
+        nff_data.write_screenings()
 
-    def get_screenings_of_one_film(self, film_html_file, festival_data):
+    def get_screenings_of_one_film(self, film_html_file, nff_data):
         title = self.film.title
         if os.path.isfile(film_html_file):
             self.print_debug("--  Analysing premiêre page of title:", title)
-            premiere_parser = PremierePageParser(self.film, festival_data)
+            premiere_parser = PremierePageParser(self.film, nff_data)
             with open(film_html_file, 'r') as f:
                 text = '\n' + '\n'.join([line for line in f])
             premiere_parser.feed(text)
@@ -242,28 +245,28 @@ class ScreeningsLoader():
     def print_debug(self, str1, str2):
         Globals.debug_recorder.add('RF ' + str(str1) + ' ' + str(str2))
 
-    def get_screenings(self, festival_data):
-        self.parse_film_pages(festival_data)
-        self.add_unique_screenings(festival_data)
-        festival_data.write_screenings()
+    def get_screenings(self, nff_data):
+        self.parse_film_pages(nff_data)
+        self.add_unique_screenings(nff_data)
+        nff_data.write_screenings()
         
-    def parse_film_pages(self, festival_data):
-        for film in festival_data.films:
+    def parse_film_pages(self, nff_data):
+        for film in nff_data.films:
             film_file = film_file_format.format(film.filmid)
             print(f"Now reading {film_file} - {film.title} ({film.duration_str()})")
             try:
                 with open(film_file, 'r') as f:
                     film_text = f.read()
-                self.parse_one_film_page(film, film_text, festival_data)
+                self.parse_one_film_page(film, film_text, nff_data)
             except FileNotFoundError as e:
                 Globals.error_collector.add(e, "while parsing film pages in ScreeningsLoader")
             
-    def parse_one_film_page(self, film, film_text, festival_data):
+    def parse_one_film_page(self, film, film_text, nff_data):
         self.print_debug(f"--  Analysing regular film page of title:", "{film.title} ({film.duration_str()})")
-        film_parser = FilmPageParser(film, festival_data, self.nff_screenings)
+        film_parser = FilmPageParser(film, nff_data, self.nff_screenings)
         film_parser.feed(film_text)
         
-    def add_unique_screenings(self, festival_data):
+    def add_unique_screenings(self, nff_data):
         """
         Repair all coinciding screenings that are listed on the web-site.
         
@@ -372,10 +375,10 @@ class ScreeningsLoader():
             if len(films) == 1:
                 film_by_en_name[name] = films[0]
                 return films[0]
-            nff_films = [n for n in festival_data.nff_films if n.description == descr]
+            nff_films = [n for n in nff_data.nff_films if n.description == descr]
             if len(nff_films) == 1:
                 nff_film = nff_films[0]
-                films = [f for f in festival_data.films if f.title == nff_film.title]
+                films = [f for f in nff_data.films if f.title == nff_film.title]
                 if len(films) == 1:
                     film_by_en_name[name] = films[0]
                     return films[0]
@@ -385,7 +388,7 @@ class ScreeningsLoader():
             film = find_film(sub.title, sub.description, films)
             if film is not None:
                 if is_walk_in:
-                    screen = festival_data.get_screen(f"{key.screen}-{film.title}")
+                    screen = nff_data.get_screen("Utrecht", f"{key.screen}-{film.title}")
                     start_dt = key.start_dt
                     end_dt = key.end_dt
                 else:
@@ -416,7 +419,7 @@ class ScreeningsLoader():
                     film.duration_str())
             print(description, end="")
             if not dry_run:
-                festival_data.screenings.append(screening)
+                nff_data.screenings.append(screening)
                 print(" ---SCREENING ADDED")
             else:
                 print(" ---NOT ADDED")
@@ -502,10 +505,10 @@ class ScreeningsLoader():
 
 class HtmlPageParser(HTMLParser):
     
-    def __init__(self, film, festival_data):
+    def __init__(self, film, nff_data):
         HTMLParser.__init__(self)
         self.film = film
-        self.festival_data = festival_data
+        self.nff_data = nff_data
         self.init_screening_data()
         self.debugging = False
         self.debug_text = ""
@@ -557,15 +560,15 @@ class HtmlPageParser(HTMLParser):
             self.print_debug("--- ", f"START TIME = {start_datetime}, END TIME = {end_datetime}")
         screening = planner.Screening(self.film, self.screen, start_datetime, end_datetime, self.qa, self.extra, self.audience)
         if not dry_run:
-            self.festival_data.screenings.append(screening)
+            self.nff_data.screenings.append(screening)
             print("---SCREENING ADDED")
         else:
             print("---NOT ADDED")
         self.init_screening_data()
         return screening
 
-    def set_screen(self, location):
-        self.screen = self.festival_data.get_screen(location)
+    def set_screen(self, city, location):
+        self.screen = self.nff_data.get_screen(city, location)
 
     def handle_starttag(self, tag, attrs):
         self.print_debug("Encountered a start tag:", tag)
@@ -588,8 +591,9 @@ class PremierePageParser(HtmlPageParser):
     re_date = re.compile("\d+ \w+")
     re_time = re.compile("\d+:\d+")
 
-    def __init__(self, film, festival_data):
-        HtmlPageParser.__init__(self, film, festival_data)
+    def __init__(self, film, nff_data):
+        HtmlPageParser.__init__(self, film, nff_data)
+        self.city = None
            
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -623,9 +627,11 @@ class PremierePageParser(HtmlPageParser):
             except IndexError:
                 self.print_debug("--", f"ERROR can't construct date from '{data}'.")
         if data == "Amsterdam":
+            self.city = data
             self.in_town = True
             self.debugging = True
         if data == "Apeldoorn":
+            self.city = data
             self.in_town = False
             if self.in_time:
                 Globals.error_collector.add(f"'in_time' still true when arriving in {data}",
@@ -641,7 +647,7 @@ class PremierePageParser(HtmlPageParser):
                 minute = int(start_time_str.split(":")[1])
                 self.start_time = datetime.time(hour, minute)
                 self.in_time = False
-                self.set_screen(self.location)
+                self.set_screen(self.city, self.location)
                 self.add_screening()
             except IndexError:
                 self.print_debug("-- ", f"ERROR can't construct time from: '{data}'.")
@@ -660,8 +666,8 @@ class FilmPageParser(HtmlPageParser):
     re_datetime = re.compile("(?P<day>\d+) (?P<month>\w+) (?P<starttime>\d\d:\d\d) - (?P<endtime>\d\d:\d\d)")
     re_extratime = re.compile("^(?P<time>\d\d:\d\d)$")
 
-    def __init__(self, film, festival_data, nff_screenings):
-        HtmlPageParser.__init__(self, film, festival_data)
+    def __init__(self, film, nff_data, nff_screenings):
+        HtmlPageParser.__init__(self, film, nff_data)
         self.debugging = True
         self.nff_screenings = nff_screenings
  
@@ -682,7 +688,7 @@ class FilmPageParser(HtmlPageParser):
         self.last_tag = tag
         if self.in_extratimes and tag == "h3":
             self.in_extratimes = False
-            self.set_screen(self.location)
+            self.set_screen("Utrecht", self.location)
             if self.screen.abbr == "102filmtheatersdoorhetland":
                 self.print_debug("-- ", f"NATIONAL PREMIERE {self.film.title} REFERENCE skipped")
             else:
@@ -757,6 +763,9 @@ class NffData(planner.FestivalData):
     def _init__(self, plandata_dir):
         planner.FestivalData.__init__(self, plandata_dir)
 
+    def __repr__(self):
+        return "\n".join([str(film) for film in self.nff_films])
+
     def fill_films_list(self):
         filmid = 0
         for nff_film in self.nff_films:
@@ -786,6 +795,20 @@ class NffData(planner.FestivalData):
             text = repr(self) + "\n"
             f.write(text)
         print(f"\nDone writing {len(self.nff_films)} records to {filmdata_file}.\n")
+
+    def write_filminfo(self):
+        info_count = 0
+        filminfos = ET.Element('FilmInfos')
+        for nff_film in self.nff_films:
+            ids = [film.filmid for film in self.films if film.title == nff_film.title]
+            if len(ids) == 1:
+                info_count += 1
+                id = str(ids[0])
+                filminfo = ET.SubElement(filminfos, 'FilmInfo', FilmId=id, FilmArticle='', FilmDescription=nff_film.description, InfoStatus='Complete')
+                _ = ET.SubElement(filminfo, 'ScreenedFilms')
+        tree = ET.ElementTree(filminfos)
+        tree.write(filminfo_file, encoding='utf-8', xml_declaration=True)
+        print(f"Done writing {info_count} records to {filminfo_file}.")
 
 
 if __name__ == "__main__":

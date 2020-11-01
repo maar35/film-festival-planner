@@ -3,6 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PresentScreenings", "PresentScreenings\PresentScreenings.csproj", "{135FAC81-2CFF-41B6-AA4F-791D335EEA88}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E542647E-69C5-4717-9E01-10325865B6DF}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -33,5 +38,6 @@ Global
 		$6.LastFilePostfix = @:\n
 		$6.LineAlign = 0
 		$6.Wrap = False
+		$6.IncludeDirectoryPaths = True
 	EndGlobalSection
 EndGlobal

@@ -105,7 +105,7 @@ namespace PresentScreenings.TableView
         public override void GoToScreening(Screening screening)
         {
             _presentor.GoToScreening(screening);
-            CloseDialog();
+            CloseDialog(false);
         }
         #endregion
 
@@ -120,7 +120,7 @@ namespace PresentScreenings.TableView
             _filmInfoButton.Image = imageByAvailability[isAvailable];
             _filmInfoButton.Action = new ObjCRuntime.Selector("TryShowFilmInfo:");
 
-            // Select the sending screening control.
+            // Select the sending screening control in the screenings table.
             _senderControl.Selected = true;
 
             // Populate the labels.
@@ -230,10 +230,15 @@ namespace PresentScreenings.TableView
             _screeningInfoControl.ReDraw();
         }
 
-        private void CloseDialog()
+        private void CloseDialog(bool toDayScheme = true)
         {
+            if (_screening.OnLine)
+            {
+                _presentor.RemoveTempOnlineScreening(toDayScheme);
+            }
             _presentor.DismissViewController(this);
         }
+
         private void HandleFilmFanRatingEditingBegan(NSComboBox comboBox, string filmFan)
         {
             _closeButton.Enabled = false;

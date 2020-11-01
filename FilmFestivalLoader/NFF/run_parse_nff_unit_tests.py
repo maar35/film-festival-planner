@@ -7,8 +7,7 @@ Created on Wed Oct  7 15:13:21 2020
 """
 
 import datetime
-#import parse_nff_html
-import get_film_titles
+import parse_nff_html
 
 
 def main():
@@ -48,7 +47,7 @@ def test_toascii():
     unicode_string = 'ñé²'
     
     # Act.
-    ascii_string = get_film_titles.unicode_mapper.toascii(unicode_string)
+    ascii_string = parse_nff_html.unicode_mapper.toascii(unicode_string)
     
     # Assert.
     return ascii_string, 'ne²'
@@ -63,10 +62,10 @@ n More Moiré2 creates an overwhelming filmic experience in a panoramic space, r
 t, sound and moving moiré patterns."""
     directors = 'Philip Vermeulen'
     competitions = 'Gouden Kalf Competitie'
-    nff_film = get_film_titles.NffFilm(title, duration, description, directors, competitions)
+    nff_film = parse_nff_html.NffFilm(title, duration, description, directors, competitions)
     
     # Act.
-    url = get_film_titles.FestivalData().get_url(nff_film.title)
+    url = parse_nff_html.NffData("/tmp").get_url(nff_film.title)
     
     # Assert.
     return url, 'https://www.filmfestival.nl/en/films/more-moire²'
