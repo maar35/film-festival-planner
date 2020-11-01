@@ -495,7 +495,7 @@ class ScreeningsLoader():
                             print_heading("combination program")
                             add_screening_from_sub(key, sub, films)
                             self.combi_count += 1
-                    else:
+                    elif len(subs) == 1:
                         sub = subs[0]
                         print_heading("walk-in event")
                         add_screening_from_sub(key, sub, films, True)
@@ -519,6 +519,8 @@ class HtmlPageParser(HTMLParser):
         self.en_month_by_abbr = {}
         self.en_month_by_abbr["Sep"] = 9
         self.en_month_by_abbr["Oct"] = 10
+        self.en_month_by_abbr["September"] = 9
+        self.en_month_by_abbr["October"] = 10
         self.nl_month_by_name = {}
         self.nl_month_by_name["september"] = 9
         self.nl_month_by_name["oktober"] = 10
@@ -633,10 +635,7 @@ class PremierePageParser(HtmlPageParser):
         if data == "Apeldoorn":
             self.city = data
             self.in_town = False
-            if self.in_time:
-                Globals.error_collector.add(f"'in_time' still true when arriving in {data}",
-                                            f"while PremiérePageParser parses {self.film.title}")
-                self.in_time = False
+            self.in_time = False
             self.debugging = False
         if self.in_time and data.strip().startswith("Start:"):
             self.print_debug("-- ", f"START TIME found: {data}")
@@ -665,10 +664,18 @@ class FilmPageParser(HtmlPageParser):
 
     re_datetime = re.compile("(?P<day>\d+) (?P<month>\w+) (?P<starttime>\d\d:\d\d) - (?P<endtime>\d\d:\d\d)")
     re_extratime = re.compile("^(?P<time>\d\d:\d\d)$")
+    re_online = re.compile(
+    r"""
+        ^available\ from
+        \ (?P<start_day>\d+)\ (?P<start_month>\w+)\ (?P<start_time>\d\d:\d\d)
+        \ until
+        \ (?P<end_day>\d+)\ (?P<end_month>\w+)\ (?P<end_time>\d\d:\d\d)$
+    """, re.VERBOSE)
 
     def __init__(self, film, nff_data, nff_screenings):
         HtmlPageParser.__init__(self, film, nff_data)
         self.debugging = True
+        self.in_online = True;
         self.nff_screenings = nff_screenings
  
     def init_screening_data(self):
@@ -719,7 +726,23 @@ class FilmPageParser(HtmlPageParser):
     def handle_data(self, data):
         HtmlPageParser.handle_data(self, data)
         stripped_data = data.strip()
-        if data == "On location":
+        if self.in_online and stripped_data.startswith("available"):
+            self.in_online = False
+            self.print_debug("--", f"ONLINE screening of {self.film} found: '{stripped_data}'")
+            m = self.re_online.match(stripped_data)
+            if m is not None:
+                start_day = int(m.group('start_day'))
+                start_month = self.en_month_by_abbr[m.group('start_month')]
+                start_time = m.group('start_time')
+                self.start_date = datetime.date(festival_year, start_month, start_day)
+                self.start_time = datetime.time.fromisoformat(start_time)
+                end_time = m.group('end_time')
+                self.end_time = datetime.time.fromisoformat(end_time)
+                self.set_screen('', 'On-Line')
+                self.add_screening()
+            else:
+                self.print_debug("---", f"ERROR: {self.re_online} NOT MATCHED")
+        elif data == "On location":
             self.in_location = True
         elif self.in_location and len(stripped_data) > 0:
             self.location = stripped_data
