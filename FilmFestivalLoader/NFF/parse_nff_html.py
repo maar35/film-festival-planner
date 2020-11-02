@@ -18,6 +18,7 @@ import xml.etree.ElementTree as ET
 sys.path.insert(0, "/Users/maarten/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 import planner_interface as planner
 import application_tools as tools
+import web_tools
 
 # Parameters.
 festival_year = 2020
@@ -229,10 +230,11 @@ class PremieresLoader():
         if os.path.isfile(film_html_file):
             self.print_debug("--  Analysing premiêre page of title:", title)
             premiere_parser = PremierePageParser(self.film, nff_data)
-            with open(film_html_file, 'r') as f:
+            charset = web_tools.get_charset(film_html_file)
+            with open(film_html_file, 'r', encoding=charset) as f:
                 text = '\n' + '\n'.join([line for line in f])
             premiere_parser.feed(text)
- 
+
 
 class ScreeningsLoader():
     
@@ -255,7 +257,8 @@ class ScreeningsLoader():
             film_file = film_file_format.format(film.filmid)
             print(f"Now reading {film_file} - {film.title} ({film.duration_str()})")
             try:
-                with open(film_file, 'r') as f:
+                charset = web_tools.get_charset(film_file)
+                with open(film_file, 'r', encoding=charset) as f:
                     film_text = f.read()
                 self.parse_one_film_page(film, film_text, nff_data)
             except FileNotFoundError as e:
@@ -573,7 +576,7 @@ class HtmlPageParser(HTMLParser):
         self.screen = self.nff_data.get_screen(city, location)
 
     def handle_starttag(self, tag, attrs):
-        self.print_debug("Encountered a start tag:", tag)
+        self.print_debug(f"Encountered a start tag: '{tag}' with attributes {attrs}", "")
 
     def handle_endtag(self, tag):
         self.print_debug("Encountered an end tag :", tag)
