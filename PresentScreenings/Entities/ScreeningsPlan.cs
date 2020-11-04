@@ -41,17 +41,15 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
-        public ScreeningsPlan(string festival, string FestivalYear)
+        public ScreeningsPlan(string documentsFolder)
         {
             // Initialize file names.
-            string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-            string directory = homeFolder + $"/Documents/Film/{festival}/{festival}{FestivalYear}/FestivalPlan";
-            string screensFile = Path.Combine(directory, "screens.csv");
-            string filmsFile = Path.Combine(directory, "films.csv");
-            string screeningsFile = Path.Combine(directory, "screenings.csv");
-            string screeningInfoFile = Path.Combine(directory, "screeninginfo.csv");
-            string ratingsFile = Path.Combine(directory, "ratings.csv");
-            string filmInfoFile = Path.Combine(directory, "filminfo.xml");
+            string screensFile = Path.Combine(documentsFolder, "screens.csv");
+            string filmsFile = Path.Combine(documentsFolder, "films.csv");
+            string screeningsFile = Path.Combine(documentsFolder, "screenings.csv");
+            string screeningInfoFile = Path.Combine(documentsFolder, "screeninginfo.csv");
+            string ratingsFile = Path.Combine(documentsFolder, "ratings.csv");
+            string filmInfoFile = Path.Combine(documentsFolder, "filminfo.xml");
 
             // Read screens.
             Screens = new Screen().ReadListFromFile(screensFile, line => new Screen(line));
