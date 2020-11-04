@@ -19,6 +19,7 @@ namespace PresentScreenings.TableView
         #region Static Properties
         public static string Festival { get; private set; }
         public static string FestivalYear { get; private set; }
+        public static string DocumentsFolder => GetDocumentsPath();
         #endregion
 
         #region Properties
@@ -44,6 +45,14 @@ namespace PresentScreenings.TableView
             FilmRatingDialogController.OnlyFilmsWithScreenings = true;
             FilmRatingDialogController.MinimalDuration = new TimeSpan(0, 35, 0);
             ScreeningControl.UseCoreGraphics = false;
+        }
+        #endregion
+
+        #region Private Methods
+        private static string GetDocumentsPath()
+        {
+            string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            return homeFolder + $"/Documents/Film/{Festival}/{Festival}{FestivalYear}/FestivalPlan";
         }
         #endregion
 

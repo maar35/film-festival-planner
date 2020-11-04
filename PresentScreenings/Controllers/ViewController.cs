@@ -82,7 +82,7 @@ namespace PresentScreenings.TableView
             DisposeColorLabels();
 
             // Create the screenings plan.
-            _plan = new ScreeningsPlan(AppDelegate.Festival, AppDelegate.FestivalYear);
+            _plan = new ScreeningsPlan(AppDelegate.DocumentsFolder);
 
             // Create the screenings table view and draw the headers.
             _mainView = new ScreeningsTableView(this, ScreensColumn, ScreeningsColumn);
