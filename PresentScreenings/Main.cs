@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Text;
 using AppKit;
-using AVFoundation;
 using Foundation;
 
 namespace PresentScreenings.TableView
