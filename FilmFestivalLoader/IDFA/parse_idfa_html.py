@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Load films, film information, screens and screenings from the IDFA 2020
+website.
+
 Created on Wed Nov  4 20:36:18 2020
 
 @author: maarten
@@ -54,8 +57,8 @@ def main():
     films_loader.get_films(idfa_data)
     
     comment("Parsing film pages.")
-    screenings_loader = ScreeningsLoader()
-    screenings_loader.get_screenings(idfa_data)
+    film_detals_loader = FilmDetailsLoader()
+    film_detals_loader.get_film_details(idfa_data)
     
     if(Globals.error_collector.error_count() > 0):
         comment("Encountered some errors:")
@@ -100,12 +103,12 @@ class FilmsLoader:
             parser.feed(az_data)
 
 
-class ScreeningsLoader:
+class FilmDetailsLoader:
 
     def __init__(self):
         pass
 
-    def get_screenings(self, idfa_data):
+    def get_film_details(self, idfa_data):
         for film in idfa_data.films:
             film_data = None
             film_file = film_file_format.format(film.filmid)
@@ -172,6 +175,29 @@ class AzPageParser(HtmlPageParser):
         self.in_duration = False
         self.in_description = False
 
+    def add_film(self):
+        self.film = self.idfa_data.create_film(self.title, self.url)
+        if self.duration == None:
+            try:
+                minutes = self.last_data[3]
+                self.print_debug("--", f"Unrecognized DURATION, {minutes} used")
+                print(f"-- Unrecognized DURATION, {minutes} used")
+                self.duration = datetime.timedelta(minutes=int(minutes))
+            except IndexError as e:
+                Globals.error_collector.add(str(e), f"Can't reconstruct a duration for {self.title}")
+                self.duration = datetime.timedelta(minutes=0)
+        try:
+            self.film.medium_category = 'films'
+            self.film.duration = self.duration
+            print(f"Adding FILM: {self.title}")
+            self.idfa_data.films.append(self.film)
+            if self.description is not None:
+                filminfo = planner.FilmInfo(self.film.filmid, self.description, '')
+                self.idfa_data.filminfos.append(filminfo)
+        except AttributeError as e:
+            print(f"Error: {e}")
+            Globals.error_collector.add(str(e), f"{self.title}")
+
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
         if tag == "article":
@@ -199,27 +225,7 @@ class AzPageParser(HtmlPageParser):
         if self.in_duration and tag == 'ul':
             self.in_duration = False
         if tag == "article":
-            self.film = self.idfa_data.create_film(self.title, self.url)
-            if self.duration == None:
-                try:
-                    minutes = self.last_data[3]
-                    self.print_debug("--", f"Unrecognized DURATION, {minutes} used")
-                    print(f"-- Unrecognized DURATION, {minutes} used")
-                    self.duration = datetime.timedelta(minutes=int(minutes))
-                except IndexError as ie:
-                    Globals.error_collector.add(str(ie), f"Not enough data cashed to reconstruct a duration for {self.title}")
-                    self.duration = datetime.timedelta(minutes=0)
-            try:
-                self.film.medium_category = 'films'
-                self.film.duration = self.duration
-                print(f"Adding FILM: {self.title}")
-                self.idfa_data.films.append(self.film)
-                if self.description is not None:
-                    filminfo = planner.FilmInfo(self.film.filmid, self.description, '')
-                    self.idfa_data.filminfos.append(filminfo)
-            except AttributeError as e:
-                print(f"Error: {e}")
-                Globals.error_collector.add(str(e), f"{self.title}")
+            self.add_film()
  
     def handle_data(self, data):
         HtmlPageParser.handle_data(self, data)
