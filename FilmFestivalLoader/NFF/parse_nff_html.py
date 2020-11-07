@@ -506,6 +506,7 @@ class ScreeningsLoader():
         
         main()
 
+
 class HtmlPageParser(HTMLParser):
     
     def __init__(self, film, nff_data):
@@ -786,8 +787,9 @@ class NffData(planner.FestivalData):
     url_by_title['Teledoc Campus - When You Hear the Divine Call'] = 'https://www.filmfestival.nl/en/films/teledoc-campus-a-divine-call'
     url_by_title['The Undercurrent'] = 'https://www.filmfestival.nl/en/films/-1'
 
-    def _init__(self, plandata_dir):
+    def __init__(self, plandata_dir):
         planner.FestivalData.__init__(self, plandata_dir)
+        self.nff_films = []
 
     def __repr__(self):
         return "\n".join([str(film) for film in self.nff_films])

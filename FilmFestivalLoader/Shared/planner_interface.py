@@ -7,6 +7,7 @@ Created on Sat Oct 10 18:13:42 2020
 """
 
 import os
+import xml.etree.ElementTree as ET
 
 interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 ucode_file = os.path.join(interface_dir, "unicodemap.txt")
@@ -88,6 +89,17 @@ class Film:
         minutes = Film.duration_to_minutes(self.duration)
         return str(minutes) + "′"
 
+
+class FilmInfo():
+
+    def __init__(self, filmid, description, article):
+        self.filmid = filmid
+        self.description = description
+        self.article = article
+
+    def __str__(self):
+        return '\n'.join([str(self.filmid), self.description, self.article]) + '\n'
+
 class Screen():
 
     type_by_onlocation = {}
@@ -159,15 +171,54 @@ class FestivalData:
     curr_screen_id = None
 
     def __init__(self, plandata_dir):
-        self.nff_films = []
         self.films = []
+        self.filminfos = []
         self.screenings = []
         self.filmid_by_url = {}
+        self.filmid_by_title = {}
         self.screen_by_location = {}
         self.films_file = os.path.join(plandata_dir, "films.csv")
+        self.filminfo_file = os.path.join(plandata_dir, "filminfo.xml")
         self.screens_file = os.path.join(plandata_dir, "screens.csv")
         self.screenings_file = os.path.join(plandata_dir, "screenings.csv")
+        self.curr_film_id = None
+        self.film_seqnr = 0
         self.read_screens()
+        self.read_filmids()
+
+    def create_film(self, title, url):
+        filmid = self.new_film_id(title)
+        if not filmid in [f.filmid for f in self.films]:
+            self.film_seqnr += 1
+            return Film(self.film_seqnr, filmid, title, url)
+        else:
+            return None
+
+    def new_film_id(self, title):
+        try:
+            filmid = self.filmid_by_title[title]
+        except KeyError:
+            self.curr_film_id += 1
+            filmid = self.curr_film_id
+            self.filmid_by_title[title] = filmid
+        return filmid
+
+    def read_filmids(self):
+        try:
+            with open(self.films_file, 'r') as f:
+                records = [self.splitrec(line, ';') for line in f]
+            for record in records[1:]:
+                filmid = int(record[1])
+                title = record[3]
+                url = record[8]
+                self.filmid_by_url[url] = filmid
+                self.filmid_by_title[title] = filmid
+        except OSError:
+            pass
+        try:
+            self.curr_film_id = max(self.filmid_by_title.values())
+        except ValueError:
+            self.curr_film_id = 0
 
     def get_screen(self, city, name):
         screen_key = (city, name)
@@ -207,21 +258,6 @@ class FestivalData:
             self.curr_screen_id = max([screen.screen_id for screen in self.screen_by_location.values()])
         except ValueError:
             self.curr_screen_id = 0
-
-    def read_filmids(self):
-        try:
-            with open(self.films_file, 'r') as f:
-                records = [self.splitrec(line, ';') for line in f]
-            for record in records[1:]:
-                filmid = int(record[1]);
-                url = record[8]
-                self.filmid_by_url[url] = filmid
-        except OSError:
-            pass
-        try:
-            self.curr_film_id = max(self.filmid_by_url.values())
-        except ValueError:
-            self.curr_film_id = 0
  
     def write_screens(self):
         with open(self.screens_file, 'w') as f:
@@ -236,6 +272,20 @@ class FestivalData:
                 for film in self.films:
                     f.write(repr(film))
         print(f"Done writing {len(self.films)} records to {self.films_file}.")
+
+    def write_filminfo(self):
+        info_count = 0
+        filminfos = ET.Element('FilmInfos')
+        for filminfo in self.filminfos:
+            info_count += 1
+            id = str(filminfo.filmid)
+            article = filminfo.article
+            descr = filminfo.description
+            filminfo = ET.SubElement(filminfos, 'FilmInfo', FilmId=id, FilmArticle=article, FilmDescription=descr, InfoStatus='Complete')
+            _ = ET.SubElement(filminfo, 'ScreenedFilms')
+        tree = ET.ElementTree(filminfos)
+        tree.write(self.filminfo_file, encoding='utf-8', xml_declaration=True)
+        print(f"Done writing {info_count} records to {self.filminfo_file}.")
 
     def write_screenings(self):
         if len(self.screenings):

@@ -39,12 +39,15 @@ namespace PresentScreenings.TableView
         public AppDelegate()
 		{
             // Preferences.
-            Festival = "NFF";
+            Festival = "IDFA";
             FestivalYear = "2020";
             Screening.TravelTime = new TimeSpan(0, 30, 0);
-            FilmRatingDialogController.OnlyFilmsWithScreenings = true;
+            FilmRatingDialogController.OnlyFilmsWithScreenings = false;
             FilmRatingDialogController.MinimalDuration = new TimeSpan(0, 35, 0);
             ScreeningControl.UseCoreGraphics = false;
+
+            // Make sure the documents directory exists.
+            _ = Directory.CreateDirectory(DocumentsFolder);
         }
         #endregion
 

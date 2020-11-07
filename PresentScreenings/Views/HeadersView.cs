@@ -31,7 +31,7 @@ namespace PresentScreenings.TableView
 
 		#region Draw mehods
 		public void DrawCurrDay(ScreeningsPlan plan)
-		{
+        {
 			_screensColumn.Title = Screening.DayString(plan.CurrDay);
 		}
 

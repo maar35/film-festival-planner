@@ -22,6 +22,9 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
+        #region Constants
+        private const string _hhmmDuration = "hh\\:mm";
+        #endregion
         #region Properties
         public int SequenceNumber { get; private set; }
         public int FilmId { get; private set; }
@@ -34,7 +37,6 @@ namespace PresentScreenings.TableView
         public FilmRating Rating => ViewController.GetFilmFanFilmRating(this, ScreeningInfo.Me);
         public WebUtility.MediumCategory Category { get; private set; }
         public FilmInfoStatus InfoStatus => ViewController.GetFilmInfoStatus(FilmId);
-
         public FilmRating MaxRating => ViewController.GetMaxRating(this);
         public List<IFilmOutlinable> FilmOutlinables { get; private set; } = new List<IFilmOutlinable> { };
         #endregion
@@ -82,7 +84,7 @@ namespace PresentScreenings.TableView
             List<string> fields = new List<string> { };
 
             fields.Add(ToString());
-            fields.Add(Duration.ToString(Screening._durationFormat));
+            fields.Add(Duration.ToString(_hhmmDuration));
             fields.Add(Rating.ToString());
             fields.Add(ViewController.GetFilmFanFilmRating(this, "Adrienne").ToString());
             var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == FilmId);
@@ -102,7 +104,7 @@ namespace PresentScreenings.TableView
 
         void IFilmOutlinable.SetTitle(NSTextField view)
         {
-            view.StringValue = Duration.ToString("hh\\:mm") + " - " + Title;
+            view.StringValue = Duration.ToString(_hhmmDuration) + " - " + Title;
             view.LineBreakMode = NSLineBreakMode.TruncatingMiddle;
             view.Selectable = false;
         }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using AppKit;
 using Foundation;
 
 namespace PresentScreenings.TableView
@@ -34,7 +35,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public List<T> ReadListFromFile<T>(string fileName, Func<string, T> lineConstructor) where T : ListStreamer
+        public virtual List<T> ReadListFromFile<T>(string fileName, Func<string, T> lineConstructor) where T : ListStreamer
         {
             var resultList = new List<T> { };
 			using (var streamReader = GetStreamReader(fileName))
@@ -94,7 +95,8 @@ namespace PresentScreenings.TableView
             {
                 if (ListFileIsMandatory())
                 {
-                    throw new FileNotFoundException();
+                    string informativeText = $"We really need file {url}, but it's missing.";
+                    AlertRaiser.QuitWithAlert("Read Error", informativeText);
                 }
                 return null;
             }

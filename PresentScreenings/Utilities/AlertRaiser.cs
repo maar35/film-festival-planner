@@ -25,6 +25,18 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
+        public static void QuitWithAlert(string messageText, string informativeText)
+        {
+            var alert = new NSAlert()
+            {
+                AlertStyle = NSAlertStyle.Critical,
+                MessageText = messageText,
+                InformativeText = informativeText
+            };
+            alert.RunModal();
+            NSApplication.SharedApplication.Terminate(NSApplication.SharedApplication);
+        }
+
         public static void LandApplication(Exception ex)
         {
             WriteToErrorlog(ex);
@@ -49,6 +61,17 @@ namespace PresentScreenings.TableView
                 WriteToErrorlog(ex, ex2);
                 RaiseNotification(ex);
             }
+        }
+
+        public static void RunInformationalAlert(string messageText, string informativeText)
+        {
+            var alert = new NSAlert()
+            {
+                AlertStyle = NSAlertStyle.Informational,
+                MessageText = messageText,
+                InformativeText = informativeText
+            };
+            alert.RunModal();
         }
 
         public static void WriteToErrorlog(Exception ex, Exception ex2 = null)
