@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Text;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using AppKit;
 using CoreGraphics;
@@ -19,8 +19,8 @@ namespace PresentScreenings.TableView
         #region Constant Private Members
         private const string _dateFormat = "yyyy-MM-dd";
         private const string _timeFormat = "HH:mm";
-        public const string _durationFormat = "hh\\:mm";
         private const string _dayOfWeekFormat = "dddd d MMMM";
+        private const string _durationFormat = "hh\\:mm";
         #endregion
 
         #region Private Members
@@ -129,10 +129,29 @@ namespace PresentScreenings.TableView
         {
             return string.Format("{0}\n{1} {2} {3} {4} {5}", ScreeningTitle, DayString(StartTime), FromTillString(), Screen, DurationString(), Rating);
         }
+
+        public override bool ListFileIsMandatory()
+        {
+            // Even if FilmRatingDialogController.OnlyFilmsWithScreenings is set
+            // to false, we do need at least one screening to fill the day plan.
+            return true;
+        }
+
         public override string WriteHeader()
         {
             string headerFmt = "weekday;date;{0};screen;starttime;endtime;title;filmsinscreening;extra;qanda;url;mainfilmdescription";
             return string.Format(headerFmt, ScreeningInfo.FilmFansString().Replace(',', ';'));
+        }
+
+        public override List<T> ReadListFromFile<T>(string fileName, Func<string, T> lineConstructor)
+        {
+            var screenings = base.ReadListFromFile(fileName, lineConstructor);
+            if (screenings.Count() == 0)
+            {
+                string informativeText = $"We really need screenings, but {fileName} is empty.";
+                AlertRaiser.QuitWithAlert("Data Error", informativeText);
+            }
+            return screenings;
         }
 
         public override string Serialize()

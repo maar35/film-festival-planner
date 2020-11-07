@@ -21,9 +21,6 @@ namespace PresentScreenings.TableView
         public static List<FilmInfo> FilmInfos { get; private set; }
         #endregion
 
-        #region Read Only Members
-        #endregion
-
         #region Private Members
         private Dictionary<DateTime, List<Screen>> _dayScreens;
         private int _currDayNumber;

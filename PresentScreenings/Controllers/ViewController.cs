@@ -424,20 +424,10 @@ namespace PresentScreenings.TableView
             }
             catch (IllegalRatingException ex)
             {
-                RunRatingNotChangedAlert(filmId, filmFan, oldRatingString, ex.Message);
+                string informativeText = $"'{ex.Message}' is not a valid rating.\n{filmFan}'s rating of '{GetFilmById(filmId)}' remains {oldRatingString}.";
+                AlertRaiser.RunInformationalAlert("Rating Not Changed", informativeText);
                 newRatingString = oldRatingString;
             }
-        }
-
-        public static void RunRatingNotChangedAlert(int filmId, string filmFan, string oldRatingString, string newRatingString)
-        {
-            var alert = new NSAlert()
-            {
-                AlertStyle = NSAlertStyle.Informational,
-                InformativeText = $"'{newRatingString}' is not a valid rating.\n{filmFan}'s rating of '{GetFilmById(filmId)}' remains {oldRatingString}.",
-                MessageText = $"Rating Not Changed",
-            };
-            alert.RunModal();
         }
 
         public static FilmRating GetMaxRating(Film film)
