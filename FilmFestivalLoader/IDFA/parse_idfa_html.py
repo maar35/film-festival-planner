@@ -13,7 +13,7 @@ import os
 import sys
 import re
 import datetime
-from html.parser import HTMLParser
+import html.parser
 
 sys.path.insert(0, "/Users/maarten/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 import planner_interface as planner
@@ -124,10 +124,10 @@ class FilmDetailsLoader:
                 parser = FilmPageParser(idfa_data, film)
                 parser.feed(film_data)
 
-class HtmlPageParser(HTMLParser):
+class HtmlPageParser(html.parser.HTMLParser):
     
     def __init__(self, idfa_data, debug_prefix):
-        HTMLParser.__init__(self)
+        html.parser.HTMLParser.__init__(self)
         self.idfa_data = idfa_data
         self.debug_prefix = debug_prefix
         self.debugging = False

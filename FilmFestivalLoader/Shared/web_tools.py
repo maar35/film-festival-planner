@@ -6,14 +6,14 @@ Created on Mon Nov  2 18:27:20 2020
 @author: maarten
 """
 
-from html.parser import HTMLParser
+import html.parser
 import urllib.request
 import urllib.error
-from urllib.parse import quote                                                                                                                                                                
+import urllib.parse
 
 
 def uripath_to_iripath(path):
-    return quote(path)
+    return urllib.parse.quote(path)
 
 def get_charset(file):
     with open(file, 'r') as f:
@@ -23,17 +23,17 @@ def get_charset(file):
     return str(pre_parser)
 
 
-class HtmlCharsetParser(HTMLParser):
+class HtmlCharsetParser(html.parser.HTMLParser):
     
     def __init__(self):
-        HTMLParser.__init__(self)
+        html.parser.HTMLParser.__init__(self)
         self.charset = None
 
     def __str__(self):
         return self.charset if self.charset is not None else 'ascii'
            
     def handle_starttag(self, tag, attrs):
-        HTMLParser.handle_starttag(self, tag, attrs)
+        html.parser.HTMLParser.handle_starttag(self, tag, attrs)
         if tag == 'meta':
             for attr in attrs:
                 if attr[0] == 'charset':
