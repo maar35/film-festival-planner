@@ -175,7 +175,7 @@ class FestivalData:
         self.filminfos = []
         self.screenings = []
         self.filmid_by_url = {}
-        self.filmid_by_title = {}
+        self.filmid_by_key = {}
         self.screen_by_location = {}
         self.films_file = os.path.join(plandata_dir, "films.csv")
         self.filminfo_file = os.path.join(plandata_dir, "filminfo.xml")
@@ -186,21 +186,25 @@ class FestivalData:
         self.read_screens()
         self.read_filmids()
 
+    def _filmkey(self, title, url):
+        return title
+
     def create_film(self, title, url):
-        filmid = self.new_film_id(title)
+        filmid = self.new_film_id(self._filmkey(title, url))
         if not filmid in [f.filmid for f in self.films]:
             self.film_seqnr += 1
             return Film(self.film_seqnr, filmid, title, url)
         else:
             return None
 
-    def new_film_id(self, title):
+    def new_film_id(self, key):
         try:
-            filmid = self.filmid_by_title[title]
+#            filmid = self.filmid_by_key[title]
+            filmid = self.filmid_by_key[key]
         except KeyError:
             self.curr_film_id += 1
             filmid = self.curr_film_id
-            self.filmid_by_title[title] = filmid
+            self.filmid_by_key[key] = filmid
         return filmid
 
     def read_filmids(self):
@@ -212,11 +216,12 @@ class FestivalData:
                 title = record[3]
                 url = record[8]
                 self.filmid_by_url[url] = filmid
-                self.filmid_by_title[title] = filmid
+#                self.filmid_by_key[title] = filmid
+                self.filmid_by_key[self._filmkey(title, url)] = filmid
         except OSError:
             pass
         try:
-            self.curr_film_id = max(self.filmid_by_title.values())
+            self.curr_film_id = max(self.filmid_by_key.values())
         except ValueError:
             self.curr_film_id = 0
 
@@ -232,7 +237,7 @@ class FestivalData:
             self.screen_by_location[screen_key] =  Screen(screen_id, city, name, abbr)
             screen = self.screen_by_location[screen_key]
         return screen
-            
+           
     def splitrec(self, line, sep):
         end = sep + '\r\n'
         return line.rstrip(end).split(sep)

@@ -15,7 +15,8 @@ import re
 import datetime
 import html.parser
 
-sys.path.insert(0, "/Users/maarten/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
+shared_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
+sys.path.insert(0, shared_dir)
 import planner_interface as planner
 import application_tools as app_tools
 import web_tools
@@ -123,6 +124,7 @@ class FilmDetailsLoader:
             if film_data is not None:
                 parser = FilmPageParser(idfa_data, film)
                 parser.feed(film_data)
+
 
 class HtmlPageParser(html.parser.HTMLParser):
     

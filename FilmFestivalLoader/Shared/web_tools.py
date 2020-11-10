@@ -15,9 +15,9 @@ import urllib.parse
 def uripath_to_iripath(path):
     return urllib.parse.quote(path)
 
-def get_charset(file):
+def get_charset(file, byte_count=512):
     with open(file, 'r') as f:
-        pre_text = f.read(512)
+        pre_text = f.read(byte_count)
     pre_parser = HtmlCharsetParser()
     pre_parser.feed(pre_text)
     return str(pre_parser)
@@ -41,6 +41,38 @@ class HtmlCharsetParser(html.parser.HTMLParser):
                     break
 
 
+class HtmlPageParser(html.parser.HTMLParser):
+    
+    def __init__(self, debug_recorder, debug_prefix):
+        html.parser.HTMLParser.__init__(self)
+        self.debug_recorder = debug_recorder
+        self.debug_prefix = debug_prefix
+
+    def print_debug(self, str1, str2):
+        if self.debugging:
+            self.debug_recorder.add(self.debug_prefix + ' ' + str(str1) + ' ' + str(str2))
+
+    def handle_starttag(self, tag, attrs):
+        if len(attrs) > 0:
+            sep = f'\n{self.debug_prefix}   '
+            extra = sep + sep.join([f'attr:  {attr}' for attr in attrs])
+        else:
+            extra = ''
+        self.print_debug(f'Encountered a start tag: \'{tag}\'', extra)
+
+    def handle_endtag(self, tag):
+        self.print_debug('Encountered an end tag :', f'\'{tag}\'')
+
+    def handle_data(self, data):
+        self.print_debug('Encountered some data  :', f'\'{data}\'')
+
+    def handle_comment(self, data):
+        self.print_debug('Comment  :', data)
+
+    def handle_decl(self, data):
+        self.print_debug('Decl     :', data)
+
+
 class UrlReader:
 
     def __init__(self, error_collector):
@@ -58,11 +90,11 @@ class UrlReader:
             self.error_collector.add(str(e), f'reading URL: {url}')
         except urllib.error.URLError as e:
             extra_info = f'{url}'
-            if hasattr(e, 'reason'):
-                extra_info += f' - Reason: {e.reason}'
-            elif hasattr(e, 'code'):
-                extra_info += f' - Error code: {e.code}'
-            self.eror_collector.add(str(e), extra_info)
+#            if hasattr(e, 'reason'):
+#                extra_info += f' - Reason: {e.reason}'
+#            elif hasattr(e, 'code'):
+#                extra_info += f' - Error code: {e.code}'
+            self.error_collector.add(str(e), extra_info)
         return html
 
     def load_url(self, url, target_file):
