@@ -29,10 +29,13 @@ class UnicodeMapper:
 
 class Film:
 
+    category_films = "Films"
+    category_combinations = "CombinedProgrammes"
+    category_events = "Events"
     filmcategory_by_string = {}
-    filmcategory_by_string["films"] = "Films"
-    filmcategory_by_string["verzamelprogrammas"] = "CombinedProgrammes"
-    filmcategory_by_string["events"] = "Events"
+    filmcategory_by_string["films"] = category_films
+    filmcategory_by_string["verzamelprogrammas"] = category_combinations
+    filmcategory_by_string["events"] = category_events
     mapper = UnicodeMapper()
 
     def __init__(self, seqnr, filmid, title, url):
@@ -126,13 +129,14 @@ class Screen():
 
 class Screening:
 
-    def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience):
+    def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, combination_program = None):
         self.film = film
         self.screen = screen
         self.start_datetime = start_datetime
         self.end_datetime = end_datetime
         self.extra = extra
         self.films_in_screening = 1 if len(extra) == 0 else 2
+        self.combination_program = combination_program
         self.q_and_a = qa
         self.audience = audience
 
@@ -144,6 +148,7 @@ class Screening:
             "starttime",
             "endtime",
             "filmsinscreening",
+            "combinationid",
             "extra",
             "qanda"
         ])
@@ -160,6 +165,7 @@ class Screening:
             start_time.isoformat(timespec='minutes'),
             end_time.isoformat(timespec='minutes'),
             (str)(self.films_in_screening),
+#            (str)(self.combination_program.filmid if self.combination_program is not None else ''),
             self.extra,
             self.q_and_a
         ])
@@ -288,12 +294,14 @@ class FestivalData:
         print(f"Done writing {info_count} records to {self.filminfo_file}.")
 
     def write_screenings(self):
+        public_screenings = []
         if len(self.screenings):
+            public_screenings = [s for s in self.screenings if s.audience == "publiek" and s.combination_program is None]
             with open(self.screenings_file, 'w') as f:
                 f.write(self.screenings[0].screening_repr_csv_head())
-                for screening in [s for s in self.screenings if s.audience == "publiek"]:
+                for screening in public_screenings:
                     f.write(repr(screening))
-        print(f"Done writing {len(self.screenings)} records to {self.screenings_file}.")
+        print(f"Done writing {len(public_screenings)} of {len(self.screenings)} records to {self.screenings_file}.")
 
 
 if __name__ == "__main__":
