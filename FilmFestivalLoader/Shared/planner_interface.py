@@ -9,21 +9,22 @@ Created on Sat Oct 10 18:13:42 2020
 import os
 import xml.etree.ElementTree as ET
 
-interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
+# interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
+interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/film-festival-planner.git/film-festival-planner/FilmFestivalLoader/Shared/")
 ucode_file = os.path.join(interface_dir, "unicodemap.txt")
 
 
 class UnicodeMapper:
-    
+
     def __init__(self):
         with open(ucode_file) as f:
             self.umap_keys = f.readline().rstrip("\n").split(";")
             self.umap_values = f.readline().rstrip("\n").split(";")
-        
-    def toascii(self, s):            
+
+    def toascii(self, s):
         for (u, a) in zip(self.umap_keys, self.umap_values):
             s = s.replace(u, a)
-    
+
         return s
 
 
@@ -84,7 +85,7 @@ class Film:
 
     def lower(self, s):
         return self.mapper.toascii(s).lower()
- 
+
     def duration_to_minutes(duration):
         return int(duration.total_seconds() / 60)
 
@@ -103,12 +104,13 @@ class FilmInfo():
     def __str__(self):
         return '\n'.join([str(self.filmid), self.description, self.article]) + '\n'
 
+
 class Screen():
 
     type_by_onlocation = {}
-    type_by_onlocation[True]= "Location"
+    type_by_onlocation[True] = "Location"
     type_by_onlocation[False] = "OnLine"
-    
+
     def __init__(self, screen_id, city, name, abbr, on_location=True):
         self.screen_id = screen_id
         self.city = city
@@ -129,7 +131,7 @@ class Screen():
 
 class Screening:
 
-    def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, combination_program = None):
+    def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, combination_program=None):
         self.film = film
         self.screen = screen
         self.start_datetime = start_datetime
@@ -165,12 +167,12 @@ class Screening:
             start_time.isoformat(timespec='minutes'),
             end_time.isoformat(timespec='minutes'),
             (str)(self.films_in_screening),
-#            (str)(self.combination_program.filmid if self.combination_program is not None else ''),
+            # (str)(self.combination_program.filmid if self.combination_program is not None else ''),
             self.extra,
             self.q_and_a
         ])
         return "{}\n".format(text)
-   
+
 
 class FestivalData:
 
@@ -194,7 +196,7 @@ class FestivalData:
 
     def create_film(self, title, url):
         filmid = self.new_film_id(title)
-        if not filmid in [f.filmid for f in self.films]:
+        if filmid not in [f.filmid for f in self.films]:
             self.film_seqnr += 1
             return Film(self.film_seqnr, filmid, title, url)
         else:
@@ -235,10 +237,10 @@ class FestivalData:
             screen_id = self.curr_screen_id
             abbr = name.replace(" ", "").lower()
             print(f"NEW LOCATION:  '{city} {name}' => {abbr}")
-            self.screen_by_location[screen_key] =  Screen(screen_id, city, name, abbr)
+            self.screen_by_location[screen_key] = Screen(screen_id, city, name, abbr)
             screen = self.screen_by_location[screen_key]
         return screen
-            
+
     def splitrec(self, line, sep):
         end = sep + '\r\n'
         return line.rstrip(end).split(sep)
@@ -264,7 +266,7 @@ class FestivalData:
             self.curr_screen_id = max([screen.screen_id for screen in self.screen_by_location.values()])
         except ValueError:
             self.curr_screen_id = 0
- 
+
     def write_screens(self):
         with open(self.screens_file, 'w') as f:
             for screen in self.screen_by_location.values():

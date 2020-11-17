@@ -90,7 +90,7 @@ namespace PresentScreenings.TableView
             var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == FilmId);
             var filmInfo = filmInfoList.Count() == 1 ? filmInfoList.First() : null;
             fields.Add(filmInfo != null ? filmInfo.Url : "");
-            fields.Add(filmInfo != null ? Screening.HtmlDecode(filmInfo.FilmDescription) : "");
+            fields.Add(filmInfo != null ? Screening.HtmlDecode(filmInfo.FilmDescription.Replace("\n", " ")) : "");
 
             return string.Join(";", fields);
         }
