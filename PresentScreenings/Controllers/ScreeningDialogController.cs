@@ -124,7 +124,7 @@ namespace PresentScreenings.TableView
             _senderControl.Selected = true;
 
             // Populate the labels.
-            _labelTitle.StringValue = _screening.FilmTitle;
+            _labelTitle.StringValue = $"{_screening.FilmTitle} ({_screening.Film.Duration.TotalMinutes}′)";
             if (_screening.Extra != string.Empty)
             {
                 _labelTitle.StringValue += " (+ " + _screening.Extra + ")";

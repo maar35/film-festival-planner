@@ -31,6 +31,7 @@
     <PlatformTarget>x86</PlatformTarget>
     <AOTMode>None</AOTMode>
     <PackageSigningKey>3rd Party Mac Developer Installer</PackageSigningKey>
+    <LinkMode>None</LinkMode>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <DebugType>pdbonly</DebugType>
@@ -185,7 +186,7 @@
       <Properties>
         <Policies>
           <VersionControlPolicy>
-            <CommitMessageStyle FirstFilePrefix="" FileSeparator=":&#xA;" LastFilePostfix=":&#xA;" LineAlign="0" IncludeDirectoryPaths="True" Wrap="False" />
+            <CommitMessageStyle FirstFilePrefix="" FileSeparator=", " LastFilePostfix=":&#xA;" LineAlign="0" IncludeDirectoryPaths="True" Wrap="False" />
           </VersionControlPolicy>
         </Policies>
       </Properties>

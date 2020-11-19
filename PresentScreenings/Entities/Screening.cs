@@ -37,6 +37,7 @@ namespace PresentScreenings.TableView
         public DateTime EndTime { get; }
         public TimeSpan Duration => EndTime - StartTime;
         public int FilmsInScreening { get; }
+        public int? CombinationProgramId { get; }
         public string Extra { get; }
         public string QAndA { get; }
         public FilmRating Rating => Film.Rating;
@@ -93,8 +94,9 @@ namespace PresentScreenings.TableView
             string startTime = fields[3];
             string endTime = fields[4];
             int filmsInScreening = int.Parse(fields[5]);
-            string extra = fields[6];
-            string qAndA = fields[7];            //string screeningStatus = fields[0];
+            string combinationIdStr = fields[6];
+            string extra = fields[7];
+            string qAndA = fields[8];            //string screeningStatus = fields[0];
 
             // Assign properties that need calculation.
             DateTime startDate = DateTimeFromParsedData(date, startTime);
@@ -109,6 +111,7 @@ namespace PresentScreenings.TableView
             StartTime = startDate;
             EndTime = endDate;
             FilmsInScreening = filmsInScreening;
+            CombinationProgramId = int.TryParse(combinationIdStr, out int outcome) ? (int?)outcome : null;
             Extra = extra;
             QAndA = qAndA;
             var screeningInfos = ScreeningsPlan.ScreeningInfos.Where(s => s.FilmId == FilmId && s.Screen == Screen && s.StartTime == StartTime).ToList();
