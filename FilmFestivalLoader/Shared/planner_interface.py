@@ -167,7 +167,7 @@ class Screening:
             start_time.isoformat(timespec='minutes'),
             end_time.isoformat(timespec='minutes'),
             (str)(self.films_in_screening),
-            # (str)(self.combination_program.filmid if self.combination_program is not None else ''),
+            (str)(self.combination_program.filmid if self.combination_program is not None else ''),
             self.extra,
             self.q_and_a
         ])

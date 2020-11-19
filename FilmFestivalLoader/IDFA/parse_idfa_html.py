@@ -148,34 +148,34 @@ class CombinationProgramsLoader:
         pass
 
     def get_combination_details(self, idfa_data):
-        for url, film in idfa_data.compilation_by_url.items():
+        for url in idfa_data.compilation_by_url.keys():
             print(f'Getting COMBINATION PROGRAM DETAILS from: {url}')
-            film = self.get_details_of_one_compilation(idfa_data, url, film)
+            film = self.get_details_of_one_compilation(idfa_data, url)
             if film is not None:
                 idfa_data.compilation_by_url[url] = film
                 screenings = [s for s in idfa_data.screenings if s.combination_program_url == url]
                 for screening in screenings:
                     screening.combination_program = film
 
-    def get_details_of_one_compilation(self, idfa_data, url, film):
+    def get_details_of_one_compilation(self, idfa_data, url):
         compilation_data = None
-        if film is not None:
-            film_file = film_file_format.format(film.filmid)
-            if not os.path.isfile(film_file):
-                Globals.error_collector.add(f'{film_file} expected but not found', url)
-                return None
-            charset = web_tools.get_charset(film_file)
-            with open(film_file, 'r', encoding=charset) as f:
-                compilation_data = f.read()
-        else:
+        film = None
+        if url in idfa_data.filmid_by_url.keys():
+            filmid = idfa_data.filmid_by_url[url]
+            film_file = film_file_format.format(filmid)
+            if os.path.isfile(film_file):
+                charset = web_tools.get_charset(film_file)
+                with open(film_file, 'r', encoding=charset) as f:
+                    compilation_data = f.read()
+        if compilation_data is None:
             print(f'Downloading site of combination program: {url}')
             url_reader = web_tools.UrlReader(Globals.error_collector)
             compilation_data = url_reader.read_url(url)
         if compilation_data is not None:
-            print(f'Parsing FILM INFO of: {film.title if film is not None else url}')
+            print(f'Parsing FILM INFO from: {url}')
             film = CompilationPageParser(idfa_data, url, film).feed(compilation_data)
             if film is not None:
-                film_file = film_file_format.format(film.filmid)
+                film_file = film_file_format.format(filmid)
                 if not os.path.isfile(film_file):
                     print(f'Writing HTML data of: {film.title}')
                     with open(film_file, 'w') as f:
@@ -375,11 +375,6 @@ class ScreeningsParser(HtmlPageParser):
 
     def is_coinciding(self, screening):
 
-        # def crash():
-        #     none_by_key = {}
-        #     Globals.debug_recorder.write_debug()
-        #     none_by_key['666']
-
         def screening_summ(s):
             sep = self.debug_prefix + 2*' '
             nl = '\n'
@@ -393,20 +388,13 @@ class ScreeningsParser(HtmlPageParser):
             if dupl.film.filmid == screening.film.filmid and dupl.film.medium_category == 'films':
                 Globals.error_collector.add(f'Coinciding screenings of two {dupl.film.medium_category}', f'{dupl_summ}')
                 return True
-            elif screening.combination_program_url is not None:
+            if screening.combination_program_url is not None:
                 return False
-            elif dupl.combination_program_url is not None:
+            if dupl.combination_program_url is not None:
                 return False
-            elif dupl.film.medium_category != 'verzamelprogrammas' and screening.film.medium_category != 'verzamelprogrammas':
-                Globals.error_collector.add('Combining films as compilation not implemented', f'{dupl_summ}')
-                return True
-            elif dupl.film.medium_category == 'verzamelprogrammas' and screening.film.medium_category != 'verzamelprogrammas':
-                Globals.error_collector.add('Adding film to compilation not implemented', f'{dupl_summ}')
-                return True
-            elif dupl.film.medium_category != 'verzamelprogrammas' and screening.film.medium_category == 'verzamelprogrammas':
-                Globals.error_collector.add('Adding film to compilation not implemented', f'{dupl_summ}')
-                return True
-            # crash()
+            Globals.error_collector.add(f'Combining {dupl.film.medium_category} and {screening.film.medium_category} not implemented',
+                                        f'{dupl_summ}')
+        return False
 
     def add_compilation_url(self):
         print(f'Found COMPILATION URL {self.compilation_url}')
@@ -495,12 +483,6 @@ class FilmPageParser(HtmlPageParser):
             filminfo = planner.FilmInfo(self.film.filmid, '', article)
             self.idfa_data.filminfos.append(filminfo)
 
-    def get_datetimes(self):
-        start_datetime = datetime.datetime.combine(self.start_date, self.start_time)
-        end_date = self.start_date if self.end_time > self.start_time else self.start_date + datetime.timedelta(days=1)
-        end_datetime = datetime.datetime.combine(end_date, self.end_time)
-        return start_datetime, end_datetime
-
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
         if self.in_article and tag == 'meta':
@@ -544,8 +526,7 @@ class CompilationPageParser(FilmPageParser):
         pass
 
     def add_compilation(self):
-        print(f'Found COMPILATION  {self.compilation_url}')
-        self.print_debug('--', f'Found COMPILATION {self.compilation_url}')
+        self.print_debug('--', f'Creating COMPILATION {self.compilation_url}')
         if self.compilation_title:
             title = self.compilation_title
         else:
@@ -561,15 +542,16 @@ class CompilationPageParser(FilmPageParser):
             self.compilation = compilation
             self.compilation_by_title[title] = compilation
         else:
-            print(f'COMPILATION already exists in list {title} - {self.compilation_url}')
+            print(f'COMPILATION {title} already in list')
             categories = [f.medium_category for f in self.idfa_data.films if f.title == title]
-            if len(categories) > 0:
-                category = categories[0]
-                if category == 'films':
-                    self.print_debug('--PROBLEM', f'Compilation {title} has same title as an existing film')
-                else:
+            for category in categories:
+                if category == compilation.medium_category:
                     self.print_debug('--', f'ALREADY created COMPILATION {title}')
                     self.compilation = self.compilation_by_title[title]
+                else:
+                    message = f'New compilation {title} has same title as existing {category}'
+                    self.print_debug('--PROBLEM', message)
+                    Globals.error_collector.add('Duplicate title', message)
 
     def feed(self, data):
         html.parser.HTMLParser.feed(self, data)

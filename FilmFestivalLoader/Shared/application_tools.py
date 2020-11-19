@@ -44,8 +44,9 @@ class DebugRecorder:
 
     def write_debug(self):
         if len(self.debug_lines) > 0:
+            time_stamp = datetime.datetime.now().isoformat(' ') + '\n'
             with open(self.debug_file, 'w') as f:
-                f.write(str(self))
+                f.write(time_stamp + str(self))
             print(f"Debug text written to {self.debug_file}.")
         else:
             print(f"No debug text, nothing written to {self.debug_file}.")
