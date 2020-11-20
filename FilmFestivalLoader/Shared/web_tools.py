@@ -12,8 +12,9 @@ import urllib.error
 import urllib.parse
 
 
-def uripath_to_iripath(path):
+def iripath_to_uripath(path):
     return urllib.parse.quote(path)
+
 
 def get_charset(file, byte_count=512):
     with open(file, 'r') as f:
@@ -24,14 +25,14 @@ def get_charset(file, byte_count=512):
 
 
 class HtmlCharsetParser(html.parser.HTMLParser):
-    
+
     def __init__(self):
         html.parser.HTMLParser.__init__(self)
         self.charset = None
 
     def __str__(self):
         return self.charset if self.charset is not None else 'ascii'
-           
+
     def handle_starttag(self, tag, attrs):
         html.parser.HTMLParser.handle_starttag(self, tag, attrs)
         if tag == 'meta':

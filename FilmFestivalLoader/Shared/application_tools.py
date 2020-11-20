@@ -11,19 +11,21 @@ import inspect
 
 
 class ErrorCollector:
-    
+
     def __init__(self):
         self.errors = []
-        
+
     def __str__(self):
         return "\n".join(self.errors) + "\n"
-    
+
     def add(self, err, msg):
-        lineno = inspect.currentframe().f_back.f_lineno
-        error = f"{datetime.datetime.now()} - ERROR {err} at line {lineno} - {msg}"
+        frame = inspect.currentframe().f_back
+        lineno = frame.f_lineno
+        caller = frame.f_code.co_name if frame.f_code is not None else 'code'
+        error = f"{datetime.datetime.now()} - ERROR {err} in {caller} line {lineno} - {msg}"
         print(error)
         self.errors.append(error)
-        
+
     def error_count(self):
         return len(self.errors)
 
@@ -36,14 +38,15 @@ class DebugRecorder:
 
     def __str__(self):
         return "\n".join(self.debug_lines) + "\n"
-    
+
     def add(self, line):
         self.debug_lines.append(line)
-    
+
     def write_debug(self):
         if len(self.debug_lines) > 0:
+            time_stamp = datetime.datetime.now().isoformat(' ') + '\n'
             with open(self.debug_file, 'w') as f:
-                f.write(str(self))
+                f.write(time_stamp + str(self))
             print(f"Debug text written to {self.debug_file}.")
         else:
             print(f"No debug text, nothing written to {self.debug_file}.")
