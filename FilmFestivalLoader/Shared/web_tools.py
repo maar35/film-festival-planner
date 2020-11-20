@@ -91,10 +91,6 @@ class UrlReader:
             self.error_collector.add(str(e), f'reading URL: {url}')
         except urllib.error.URLError as e:
             extra_info = f'{url}'
-#            if hasattr(e, 'reason'):
-#                extra_info += f' - Reason: {e.reason}'
-#            elif hasattr(e, 'code'):
-#                extra_info += f' - Error code: {e.code}'
             self.error_collector.add(str(e), extra_info)
         return html
 
