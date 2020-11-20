@@ -18,6 +18,7 @@ import html.parser
 # shared_dir = "/Users/maarten/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared"
 prj_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/film-festival-planner.git")
 shared_dir = os.path.join(prj_dir, "film-festival-planner/FilmFestivalLoader/Shared")
+
 sys.path.insert(0, shared_dir)
 import planner_interface as planner
 import application_tools as app_tools
@@ -185,6 +186,7 @@ class CombinationProgramsLoader:
             else:
                 Globals.error_collector.add('Parsing of COPMBINATION PROGRAM site failed', url)
         return film
+
 
 
 class HtmlPageParser(html.parser.HTMLParser):
