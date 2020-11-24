@@ -9,7 +9,7 @@ namespace PresentScreenings.TableView
     /// Keeps information about a film and supports international sorting and personal rating.
     /// </summary>
 
-    public class Film : ListStreamer, IFilmOutlinable
+    public class Film : ListStreamer, IComparable, IFilmOutlinable
     {
         #region Public Members
         public enum FilmInfoStatus
@@ -97,6 +97,11 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Interface Implementations
+        public int CompareTo(object obj)
+        {
+            return SequenceNumber.CompareTo(((Film)obj).SequenceNumber);
+        }
+
         bool IFilmOutlinable.ContainsFilmOutlinables()
         {
             return FilmOutlinables.Count > 0;

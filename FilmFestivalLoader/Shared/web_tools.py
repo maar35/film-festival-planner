@@ -43,7 +43,7 @@ class HtmlCharsetParser(html.parser.HTMLParser):
 
 
 class HtmlPageParser(html.parser.HTMLParser):
-    
+
     def __init__(self, debug_recorder, debug_prefix):
         html.parser.HTMLParser.__init__(self)
         self.debug_recorder = debug_recorder

@@ -7,10 +7,12 @@ Created on Sat Oct 10 18:13:42 2020
 """
 
 import os
+import re
 import xml.etree.ElementTree as ET
 
 # interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/film-festival-planner.git/film-festival-planner/FilmFestivalLoader/Shared/")
+articles_file = os.path.join(interface_dir, "articles.txt")
 ucode_file = os.path.join(interface_dir, "unicodemap.txt")
 
 
@@ -28,6 +30,19 @@ class UnicodeMapper:
         return s
 
 
+class Article():
+
+    def __init__(self, language_articles_tuple):
+        self.language = language_articles_tuple[0]
+        self.articles = language_articles_tuple[1].split()
+
+    def _key(self):
+        return self.language
+
+    def isarticle(self, word):
+        return word.lower() in self.articles
+
+
 class Film:
 
     category_films = "Films"
@@ -38,22 +53,34 @@ class Film:
     filmcategory_by_string["verzamelprogrammas"] = category_combinations
     filmcategory_by_string["events"] = category_events
     mapper = UnicodeMapper()
+    articles_by_language = {}
+    language_by_title = {}
+    re_alpha = re.compile(r'^[a-zA-Z]')
 
     def __init__(self, seqnr, filmid, title, url):
         self.seqnr = seqnr
         self.filmid = filmid
-        self.sorted_title = title
-        self.sortstring = self.lower(self.sorted_title)
         self.title = title
-        self.title_language = ""
+        self.url = url
+        self.title_language = self.language()
         self.section = ""
         self.duration = None
-        self.url = url
         self.medium_category = url.split("/")[5]
         self.combination_url = ""
+        self.sorted_title = self.strip_article()
+        self.sortstring = self.lower(self.sorted_title)
 
     def __str__(self):
         return "; ".join([self.title, self.medium_category, self.combination_url])
+
+    def __lt__(self, other):
+        self_is_alpha = self.re_alpha.match(self.sortstring) is not None
+        other_is_alpha = self.re_alpha.match(other.sortstring) is not None
+        if self_is_alpha and not other_is_alpha:
+            return True
+        if not self_is_alpha and other_is_alpha:
+            return False
+        return self.sortstring < other.sortstring
 
     def film_repr_csv_head(self):
         text = ";".join([
@@ -93,16 +120,50 @@ class Film:
         minutes = Film.duration_to_minutes(self.duration)
         return str(minutes) + "′"
 
+    def language(self):
+        try:
+            language = Film.language_by_title[self.title]
+            return language
+        except KeyError:
+            return 'en'
+
+    def strip_article(self):
+        title = self.title
+        start = [i for i in [title.find(" "), title.find("'")] if i >= 0]
+        try:
+            i = min(start)
+        except ValueError:
+            return title
+        else:
+            if title[i] == "'":
+                i += 1
+            first = title[0:i]
+            rest = title[i:].lstrip()
+        if not self.articles_by_language[self.title_language].isarticle(first):
+            return title
+        return "{}, {}".format(rest, first)
+
+
+class ScreenedFilm:
+
+    def __init__(self, title, description):
+        self.title = title if title is not None else 'NO TILE??'
+        self.description = description if description is not None else ''
+
+    def __str__(self):
+        return self.title + '\n' + self.description
+
 
 class FilmInfo():
 
-    def __init__(self, filmid, description, article):
+    def __init__(self, filmid, description, article, screened_films=[]):
         self.filmid = filmid
         self.description = description
         self.article = article
+        self.screened_films = screened_films
 
     def __str__(self):
-        return '\n'.join([str(self.filmid), self.description, self.article]) + '\n'
+        return '\n'.join([str(self.filmid), self.description, self.article, '\n'.join([str(fi) for fi in self.screened_films])]) + '\n'
 
 
 class Screen():
@@ -191,6 +252,7 @@ class FestivalData:
         self.screenings_file = os.path.join(plandata_dir, "screenings.csv")
         self.curr_film_id = None
         self.film_seqnr = 0
+        self.read_articles()
         self.read_screens()
         self.read_filmids()
 
@@ -207,7 +269,7 @@ class FestivalData:
 
     def new_film_id(self, key):
         try:
-#            filmid = self.filmid_by_key[title]
+            # filmid = self.filmid_by_key[title]
             filmid = self.filmid_by_key[key]
         except KeyError:
             self.curr_film_id += 1
@@ -233,6 +295,15 @@ class FestivalData:
         except ValueError:
             self.curr_film_id = 0
 
+    def get_film_by_key(self, title, url):
+        # try:
+        filmid = self.filmid_by_key[self._filmkey(title, url)]
+        films = [film for film in self.films if film.filmid == filmid]
+        if len(films) > 0:
+            return films[0]
+        # except:
+        return None
+
     def get_screen(self, city, name):
         screen_key = (city, name)
         try:
@@ -249,6 +320,13 @@ class FestivalData:
     def splitrec(self, line, sep):
         end = sep + '\r\n'
         return line.rstrip(end).split(sep)
+
+    def read_articles(self):
+        with open(articles_file) as f:
+            articles = [Article(self.splitrec(line, ":")) for line in f]
+        Film.articles_by_language = dict([(a._key(), a) for a in articles])
+        # self.debugpr("{} article languages read", len(self.articles_by_language))
+        print(f'Articles loaded into dict: {Film.articles_by_language}')
 
     def read_screens(self):
         def create_screen(fields):
@@ -294,8 +372,10 @@ class FestivalData:
             id = str(filminfo.filmid)
             article = filminfo.article
             descr = filminfo.description
-            filminfo = ET.SubElement(filminfos, 'FilmInfo', FilmId=id, FilmArticle=article, FilmDescription=descr, InfoStatus='Complete')
-            _ = ET.SubElement(filminfo, 'ScreenedFilms')
+            info = ET.SubElement(filminfos, 'FilmInfo', FilmId=id, FilmArticle=article, FilmDescription=descr, InfoStatus='Complete')
+            screened_films = ET.SubElement(info, 'ScreenedFilms')
+            for screened_film in filminfo.screened_films:
+                _ = ET.SubElement(screened_films, 'ScreenedFilm', Title=screened_film.title, Description=screened_film.description)
         tree = ET.ElementTree(filminfos)
         tree.write(self.filminfo_file, encoding='utf-8', xml_declaration=True)
         print(f"Done writing {info_count} records to {self.filminfo_file}.")

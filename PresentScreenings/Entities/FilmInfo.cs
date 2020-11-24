@@ -56,7 +56,7 @@ namespace PresentScreenings.TableView
                 builder.AppendLine(Environment.NewLine + "Article");
                 builder.AppendLine(WebUtility.HtmlToText(FilmArticle));
             }
-            if (ScreenedFilms.Count > 1)
+            if (ScreenedFilms.Count > 0)
             {
                 builder.AppendLine(Environment.NewLine + "Screened films");
                 var space = Environment.NewLine + Environment.NewLine;

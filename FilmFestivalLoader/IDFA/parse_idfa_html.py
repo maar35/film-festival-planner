@@ -54,8 +54,11 @@ def main():
     Globals.error_collector = app_tools.ErrorCollector()
     Globals.debug_recorder = app_tools.DebugRecorder(debug_file)
 
-    # initialize a festival data object.
+    # Initialize a festival data object.
     idfa_data = IdfaData(plandata_dir)
+
+    # Store known title languages.
+    store_title_languages()
 
     comment("Parsing AZ pages.")
     films_loader = FilmsLoader(az_page_count)
@@ -74,6 +77,7 @@ def main():
         print(Globals.error_collector)
 
     comment("Done laoding IDFA data.")
+    idfa_data.sort_films()
     idfa_data.write_films()
     idfa_data.write_filminfo()
     idfa_data.write_screens()
@@ -83,6 +87,13 @@ def main():
 
 def comment(text):
     print(f"\n{datetime.datetime.now()}  - {text}")
+
+
+def store_title_languages():
+    planner.Film.language_by_title['El Sicario, Room 164'] = 'es'
+    planner.Film.language_by_title['Il mio corpo'] = 'it'
+    planner.Film.language_by_title['Le temps perdu'] = 'fr'
+    planner.Film.language_by_title['O arrais do mar'] = 'pt'
 
 
 class Globals:
@@ -188,34 +199,12 @@ class CombinationProgramsLoader:
         return film
 
 
-
-class HtmlPageParser(html.parser.HTMLParser):
+class HtmlPageParser(web_tools.HtmlPageParser):
 
     def __init__(self, idfa_data, debug_prefix):
-        html.parser.HTMLParser.__init__(self)
+        web_tools.HtmlPageParser.__init__(self, Globals.debug_recorder, debug_prefix)
         self.idfa_data = idfa_data
-        self.debug_prefix = debug_prefix
         self.debugging = False
-        self.debug_text = ""
-
-    def print_debug(self, str1, str2):
-        if self.debugging:
-            Globals.debug_recorder.add(self.debug_prefix + ' ' + str(str1) + ' ' + str(str2))
-
-    def handle_starttag(self, tag, attrs):
-        self.print_debug(f"Encountered a start tag: '{tag}' with attributes {attrs}", "")
-
-    def handle_endtag(self, tag):
-        self.print_debug("Encountered an end tag :", tag)
-
-    def handle_data(self, data):
-        self.print_debug("Encountered some data  :", data)
-
-    def handle_comment(self, data):
-        self.print_debug("Comment  :", data)
-
-    def handle_decl(self, data):
-        self.print_debug("Decl     :", data)
 
 
 class AzPageParser(HtmlPageParser):
@@ -249,9 +238,14 @@ class AzPageParser(HtmlPageParser):
             idfa_data.films.append(film)
         return film
 
-    def add_filminfo(idfa_data, film, description, article):
-        if description is not None or article is not None:
-            filminfo = planner.FilmInfo(film.filmid, description, article)
+    def add_filminfo(idfa_data, film, description, article, screened_films=[], print_debug=None):
+        if description is None and article is None:
+            if print_debug is not None:
+                print_debug('--', f'Can\'t add FILMINFO for: {film.title}')
+        else:
+            filminfo = planner.FilmInfo(film.filmid, description, article, screened_films)
+            if print_debug is not None:
+                print_debug('--', f'Adding FILMINFO {str(filminfo)}')
             idfa_data.filminfos.append(filminfo)
 
     def add_film_finding_duration(self):
@@ -515,14 +509,23 @@ class CompilationPageParser(FilmPageParser):
         FilmPageParser.__init__(self, idfa_data, film, 'CP')
         self.compilation_url = url
         self.debugging = True
-        self.screened_films = []
         self.duration = None
         self.film_description = None
         self.film_article = None
         self.screenings = []
-        self.in_compilation_title = None
+        self.screened_films = []
         self.compilation_title = None
         self.compilation = None
+        self.in_compilation_title = None
+        self.in_screened_films = None
+        self.times_shared = 0
+        self.init_screened_film()
+
+    def init_screened_film(self):
+        self.screened_title = None
+        self.screened_description = None
+        self.in_screened_title = False
+        self.in_screened_description = False
 
     def add_film_article(self, article):
         pass
@@ -540,7 +543,7 @@ class CompilationPageParser(FilmPageParser):
             self.print_debug('--', f'Adding new COMPILATION {title}')
             self.idfa_data.films.append(compilation)
             self.film_description = 'Verzamelprogramma'
-            AzPageParser.add_filminfo(self.idfa_data, compilation, self.film_description, self.film_article)
+            # AzPageParser.add_filminfo(self.idfa_data, compilation, self.film_description, self.film_article)
             self.compilation = compilation
             self.compilation_by_title[title] = compilation
         else:
@@ -555,7 +558,17 @@ class CompilationPageParser(FilmPageParser):
                     self.print_debug('--PROBLEM', message)
                     Globals.error_collector.add('Duplicate title', message)
 
+    def add_screened_film(self):
+        # film = self.idfa_data.get_film_by_key(self.screened_title, None)
+        screened_film = planner.ScreenedFilm(self.screened_title, self.screened_description)
+        self.screened_films.append(screened_film)
+
+    def add_compilation_filminfo(self):
+        AzPageParser.add_filminfo(self.idfa_data, self.compilation, self.film_description, self.film_article, self.screened_films, self.print_debug)
+
     def feed(self, data):
+        bar = 72 * '-'
+        self.print_debug(bar, self.compilation_url)
         html.parser.HTMLParser.feed(self, data)
         return self.compilation
 
@@ -566,6 +579,24 @@ class CompilationPageParser(FilmPageParser):
             if attr[0] == 'class' and attr[1].startswith('hero-module__title_'):
                 self.print_debug('--', 'Start looking for COMPILATION title')
                 self.in_compilation_title = True
+        elif tag == 'h2' and len(attrs) > 0:
+            attr = attrs[0]
+            if attr[0] == 'class':
+                if attr[1].startswith('contentpanel-module__sectionTitle___Z2ucG contentpanel-module__collectionTitle__'):
+                    self.in_screened_films = True
+                elif attr[1].startswith('collectionitem-module__title__'):
+                    self.in_screened_title = True
+        elif tag == 'p' and len(attrs) > 0:
+            attr = attrs[0]
+            if attr[0] == 'class' and attr[1].startswith('collectionitem-module__description__'):
+                self.in_screened_description = True
+        elif tag == 'g' and len(attrs) > 0:
+            attr = attrs[0]
+            if attr[0] == 'id' and attr[1] == 'Share':
+                self.times_shared += 1
+                if self.times_shared == 2:
+                    self.in_screened_films = False
+                    self.add_compilation_filminfo()
 
     def handle_endtag(self, tag):
         FilmPageParser.handle_endtag(self, tag)
@@ -577,10 +608,17 @@ class CompilationPageParser(FilmPageParser):
             self.compilation_title = data
             self.print_debug('--', f'Found COMPILATION TITLE: \'{data}\'')
             self.add_compilation()
+        elif self.in_screened_title:
+            self.in_screened_title = False
+            self.print_debug('--', f'Found SCREENED TITLE: \'{data}\'')
+            self.screened_title = data
+        elif self.in_screened_description:
+            self.in_screened_description = False
+            self.screened_description = data
+            self.add_screened_film()
 
 
 class Screening(planner.Screening):
-
     def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, combination_program_url):
         planner.Screening.__init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience)
         self.combination_program_url = combination_program_url
@@ -591,6 +629,13 @@ class IdfaData(planner.FestivalData):
     def __init__(self, plandata_dir):
         planner.FestivalData.__init__(self, plandata_dir)
         self.compilation_by_url = {}
+
+    def sort_films(self):
+        seqnr = 0
+        # for film in sorted(self.films, key=lambda film: film.sortstring):
+        for film in sorted(self.films):
+            seqnr += 1
+            film.seqnr = seqnr
 
 
 if __name__ == "__main__":

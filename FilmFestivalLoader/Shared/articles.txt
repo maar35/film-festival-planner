@@ -1,0 +1,7 @@
+de:das der die ein eine eines
+en:a an the
+es:el la las los un una
+fr: d' l' la le les un une
+it:il l' la le un una
+nl:de een het
+pt:a o um uma
