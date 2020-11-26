@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Provide unit tests for IDFA loader.
+
 Created on Tue Nov 24 16:18:02 2020
 
 @author: maartenroos
@@ -8,43 +10,23 @@ Created on Tue Nov 24 16:18:02 2020
 
 
 import datetime
+import sys
+import os
 import parse_idfa_html as idfa
+
+prj_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/film-festival-planner.git")
+shared_dir = os.path.join(prj_dir, "film-festival-planner/FilmFestivalLoader/Shared")
+sys.path.insert(0, shared_dir)
+import test_tools
 
 
 def main():
     tests = [compare_a0,
              compare_0a,
              compare_a_,
-             compare_00]
-    execute_tests(tests)
-
-
-def execute_tests(tests):
-    executed_count = 0
-    succeeded_count = 0
-    failed_count = 0
-    for test in tests:
-        executed_count += 1
-        if test():
-            succeeded_count += 1
-        else:
-            failed_count += 1
-    print('\nTest results:')
-    print('{:3d} tests executed.\n{:3d} tests succeeded.\n{:3d} tests failed.'.format(executed_count, succeeded_count, failed_count))
-
-
-def equity_decorator(test_func):
-    def add_result():
-        gotten_string, expected_string = test_func()
-        success = gotten_string == expected_string
-        if success:
-            print('Test {} succeeded!'.format(test_func.__name__))
-        else:
-            print('Test {} failed :-('.format(test_func.__name__))
-            print('Expected "{}"'.format(expected_string))
-            print('Gotten   "{}"\n'.format(gotten_string))
-        return success
-    return add_result
+             compare_00,
+             test_film_title_error]
+    test_tools.execute_tests(tests)
 
 
 class TestFilm:
@@ -82,7 +64,7 @@ class TestList:
         pass
 
 
-@equity_decorator
+@test_tools.equity_decorator
 def compare_a0():
     # Arrange.
     films = TestList.idfa_data.films
@@ -94,7 +76,7 @@ def compare_a0():
     return less, True
 
 
-@equity_decorator
+@test_tools.equity_decorator
 def compare_0a():
     # Arrange.
     films = TestList.idfa_data.films
@@ -106,7 +88,7 @@ def compare_0a():
     return greater, False
 
 
-@equity_decorator
+@test_tools.equity_decorator
 def compare_a_():
     # Arrange.
     films = TestList.idfa_data.films
@@ -118,7 +100,7 @@ def compare_a_():
     return less, True
 
 
-@equity_decorator
+@test_tools.equity_decorator
 def compare_00():
     # Arrange.
     films = TestList.idfa_data.films
@@ -128,6 +110,31 @@ def compare_00():
 
     # Assert.
     return less, True
+
+
+@test_tools.equity_decorator
+def test_film_title_error():
+    # Arrange.
+    screened_title = None
+    screened_description = """Boyi-biyo vertelt het verhaal van Shilo, die in de Centraal-Afrikaanse Republiek met zijn gezin maar net kan rondkomen van zijn werk als vleeskoerier. Ondanks vele obstakels blijft hij ondertussen dromen van een carrière als marathonloper."""
+    idfa_data = idfa.IdfaData(idfa.plandata_dir)
+    compilation_url = 'https://www.idfa.nl/nl/shows/82f713ed-7812-4e2f-a8f5-9de4ceba3daf/boyi-biyo-red-card'
+    compilation_title = 'Boyi-biyo @ Red Card'
+    parser = idfa.CompilationPageParser(idfa_data, compilation_url, compilation_title)
+    parser.screened_title = screened_title
+    parser.screened_description = screened_description
+
+    # Act.
+    correct_exceptioon = None
+    try:
+        parser.add_screened_film()
+    except idfa.planner.FilmTitleError:
+        correct_exceptioon = True
+    except Exception:
+        correct_exceptioon = False
+
+    # Assert.
+    return correct_exceptioon, True
 
 
 if __name__ == '__main__':

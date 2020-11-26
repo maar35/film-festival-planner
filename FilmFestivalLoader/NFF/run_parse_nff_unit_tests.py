@@ -1,58 +1,43 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Provide unit tests for NFF loader.
+
 Created on Wed Oct  7 15:13:21 2020
 
 @author: maarten
 """
 
 import datetime
+import sys
+import os
 import parse_nff_html
+
+prj_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/film-festival-planner.git")
+shared_dir = os.path.join(prj_dir, "film-festival-planner/FilmFestivalLoader/Shared")
+sys.path.insert(0, shared_dir)
+import test_tools
 
 
 def main():
     tests = [test_get_url,
              test_toascii]
-    execute_tests(tests)
+    test_tools.execute_tests(tests)
 
-def execute_tests(tests):
-    executed_count = 0
-    succeeded_count = 0
-    failed_count = 0
-    for test in tests:
-        executed_count += 1
-        if test():
-            succeeded_count += 1
-        else:
-            failed_count += 1
-    print('\nTest results:')
-    print('{:3d} tests executed.\n{:3d} tests succeeded.\n{:3d} tests failed.'.format(executed_count, succeeded_count, failed_count))
 
-def equity_decorator(test_func):
-    def add_result():
-        gotten_string, expected_string = test_func()
-        success = gotten_string == expected_string
-        if success:
-            print('Test {} succeeded!'.format(test_func.__name__))
-        else:
-            print('test {} failed :-('.format(test_func.__name__))
-            print('Expected "{}"'.format(expected_string))
-            print('Gotten   "{}"\n'.format(gotten_string))
-        return success
-    return add_result
-
-@equity_decorator
+@test_tools.equity_decorator
 def test_toascii():
     # Arrange.
     unicode_string = 'ñé²'
-    
+
     # Act.
     ascii_string = parse_nff_html.unicode_mapper.toascii(unicode_string)
-    
+
     # Assert.
     return ascii_string, 'ne²'
 
-@equity_decorator
+
+@test_tools.equity_decorator
 def test_get_url():
     # Arrange.
     title = 'More Moiré²'
@@ -63,10 +48,10 @@ t, sound and moving moiré patterns."""
     directors = 'Philip Vermeulen'
     competitions = 'Gouden Kalf Competitie'
     nff_film = parse_nff_html.NffFilm(title, duration, description, directors, competitions)
-    
+
     # Act.
     url = parse_nff_html.NffData("/tmp").get_url(nff_film.title)
-    
+
     # Assert.
     return url, 'https://www.filmfestival.nl/en/films/more-moire²'
 

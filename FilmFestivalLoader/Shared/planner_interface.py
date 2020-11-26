@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Provide all interfaces to the Planner Project, including shared tools.
+
 Created on Sat Oct 10 18:13:42 2020
 
 @author: maarten
@@ -67,8 +69,7 @@ class Film:
         self.duration = None
         self.medium_category = url.split("/")[5]
         self.combination_url = ""
-        self.sorted_title = self.strip_article()
-        self.sortstring = self.lower(self.sorted_title)
+        self.sortstring = self.lower(self.strip_article())
 
     def __str__(self):
         return "; ".join([self.title, self.medium_category, self.combination_url])
@@ -129,9 +130,9 @@ class Film:
 
     def strip_article(self):
         title = self.title
-        start = [i for i in [title.find(" "), title.find("'")] if i >= 0]
+        start_indices = [i for i in [title.find(" "), title.find("'")] if i >= 0]
         try:
-            i = min(start)
+            i = min(start_indices)
         except ValueError:
             return title
         else:
@@ -147,7 +148,9 @@ class Film:
 class ScreenedFilm:
 
     def __init__(self, title, description):
-        self.title = title if title is not None else 'NO TILE??'
+        if title is None or len(title) == 0:
+            raise FilmTitleError(description)
+        self.title = title
         self.description = description if description is not None else ''
 
     def __str__(self):
@@ -269,7 +272,6 @@ class FestivalData:
 
     def new_film_id(self, key):
         try:
-            # filmid = self.filmid_by_key[title]
             filmid = self.filmid_by_key[key]
         except KeyError:
             self.curr_film_id += 1
@@ -296,12 +298,10 @@ class FestivalData:
             self.curr_film_id = 0
 
     def get_film_by_key(self, title, url):
-        # try:
         filmid = self.filmid_by_key[self._filmkey(title, url)]
         films = [film for film in self.films if film.filmid == filmid]
         if len(films) > 0:
             return films[0]
-        # except:
         return None
 
     def get_screen(self, city, name):
@@ -325,8 +325,6 @@ class FestivalData:
         with open(articles_file) as f:
             articles = [Article(self.splitrec(line, ":")) for line in f]
         Film.articles_by_language = dict([(a._key(), a) for a in articles])
-        # self.debugpr("{} article languages read", len(self.articles_by_language))
-        print(f'Articles loaded into dict: {Film.articles_by_language}')
 
     def read_screens(self):
         def create_screen(fields):
@@ -389,6 +387,21 @@ class FestivalData:
                 for screening in public_screenings:
                     f.write(repr(screening))
         print(f"Done writing {len(public_screenings)} of {len(self.screenings)} records to {self.screenings_file}.")
+
+
+class Error(Exception):
+    """Base class for exceptions in this module."""
+    pass
+
+
+class FilmTitleError(Error):
+    """Exception raised when a film title is empty."""
+
+    def __init__(self, film_description):
+        self.film_description = film_description
+
+    def __str__(self):
+        return f'Film has no title. Description: {self.film_description}'
 
 
 if __name__ == "__main__":

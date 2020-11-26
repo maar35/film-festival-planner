@@ -238,14 +238,9 @@ class AzPageParser(HtmlPageParser):
             idfa_data.films.append(film)
         return film
 
-    def add_filminfo(idfa_data, film, description, article, screened_films=[], print_debug=None):
-        if description is None and article is None:
-            if print_debug is not None:
-                print_debug('--', f'Can\'t add FILMINFO for: {film.title}')
-        else:
+    def add_filminfo(idfa_data, film, description, article, screened_films=[]):
+        if description is not None or article is not None:
             filminfo = planner.FilmInfo(film.filmid, description, article, screened_films)
-            if print_debug is not None:
-                print_debug('--', f'Adding FILMINFO {str(filminfo)}')
             idfa_data.filminfos.append(filminfo)
 
     def add_film_finding_duration(self):
@@ -543,7 +538,6 @@ class CompilationPageParser(FilmPageParser):
             self.print_debug('--', f'Adding new COMPILATION {title}')
             self.idfa_data.films.append(compilation)
             self.film_description = 'Verzamelprogramma'
-            # AzPageParser.add_filminfo(self.idfa_data, compilation, self.film_description, self.film_article)
             self.compilation = compilation
             self.compilation_by_title[title] = compilation
         else:
@@ -564,7 +558,7 @@ class CompilationPageParser(FilmPageParser):
         self.screened_films.append(screened_film)
 
     def add_compilation_filminfo(self):
-        AzPageParser.add_filminfo(self.idfa_data, self.compilation, self.film_description, self.film_article, self.screened_films, self.print_debug)
+        AzPageParser.add_filminfo(self.idfa_data, self.compilation, self.film_description, self.film_article, self.screened_films)
 
     def feed(self, data):
         bar = 72 * '-'
@@ -632,7 +626,6 @@ class IdfaData(planner.FestivalData):
 
     def sort_films(self):
         seqnr = 0
-        # for film in sorted(self.films, key=lambda film: film.sortstring):
         for film in sorted(self.films):
             seqnr += 1
             film.seqnr = seqnr
