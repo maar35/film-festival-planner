@@ -14,8 +14,8 @@ import sys
 import os
 import parse_idfa_html as idfa
 
-prj_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/film-festival-planner.git")
-shared_dir = os.path.join(prj_dir, "film-festival-planner/FilmFestivalLoader/Shared")
+prj_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner")
+shared_dir = os.path.join(prj_dir, "FilmFestivalLoader/Shared")
 sys.path.insert(0, shared_dir)
 import test_tools
 

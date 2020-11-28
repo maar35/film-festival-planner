@@ -12,8 +12,7 @@ import os
 import re
 import xml.etree.ElementTree as ET
 
-# interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
-interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/film-festival-planner.git/film-festival-planner/FilmFestivalLoader/Shared/")
+interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 articles_file = os.path.join(interface_dir, "articles.txt")
 ucode_file = os.path.join(interface_dir, "unicodemap.txt")
 

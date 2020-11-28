@@ -15,10 +15,8 @@ import re
 import datetime
 import html.parser
 
-# shared_dir = "/Users/maarten/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared"
-prj_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/film-festival-planner.git")
-shared_dir = os.path.join(prj_dir, "film-festival-planner/FilmFestivalLoader/Shared")
-
+prj_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner")
+shared_dir = os.path.join(prj_dir, "FilmFestivalLoader/Shared")
 sys.path.insert(0, shared_dir)
 import planner_interface as planner
 import application_tools as app_tools
@@ -376,7 +374,7 @@ class ScreeningsParser(HtmlPageParser):
             print(f'DUPLICATE screening: {dupl.film.title} - {repr(dupl)}{dupl.film.url}\n{screening.film.url}')
             dupl_summ = f'\n{screening_summ(dupl)}{screening_summ(screening)}'
             self.print_debug('--', f'DUPLICATE screenings: {dupl_summ}')
-            if dupl.film.filmid == screening.film.filmid and dupl.film.medium_category == 'films':
+            if dupl.film.filmid == screening.film.filmid and dupl.film.medium_category == screening.film.medium_category:
                 Globals.error_collector.add(f'Coinciding screenings of two {dupl.film.medium_category}', f'{dupl_summ}')
                 return True
             if screening.combination_program_url is not None:
