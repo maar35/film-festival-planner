@@ -2,6 +2,7 @@
 *.DS_Store
 *.pyc
 .vs/
+mono_crash.*
 PresentScreenings/bin/
 PresentScreenings/obj/
 packages/

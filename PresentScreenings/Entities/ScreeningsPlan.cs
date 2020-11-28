@@ -56,6 +56,7 @@ namespace PresentScreenings.TableView
 
             // Read films.
             Films = new Film().ReadListFromFile(filmsFile, line => new Film(line));
+            Films.Sort();
 
             // Read film ratings.
             FilmFanFilmRatings = new FilmFanFilmRating().ReadListFromFile(ratingsFile, line => new FilmFanFilmRating(line));
