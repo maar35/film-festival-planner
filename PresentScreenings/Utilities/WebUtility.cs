@@ -211,7 +211,11 @@ namespace PresentScreenings.TableView
             var info = new FilmInfo(filmId, Film.FilmInfoStatus.Complete, filmDescription, article);
             foreach (string title in ScreenedFileDescriptionByTitle.Keys)
             {
-                info.AddScreenedFilm(title, ScreenedFileDescriptionByTitle[title]);
+                // TEMPORARILY Fake a film ID.
+                // This whole functionality is being moved to the loader.
+                int filmid = 0;
+
+                info.AddScreenedFilm(filmid, title, ScreenedFileDescriptionByTitle[title]);
             }
 
             return info;
