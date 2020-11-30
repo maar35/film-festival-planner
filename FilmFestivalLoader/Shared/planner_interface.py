@@ -146,14 +146,15 @@ class Film:
 
 class ScreenedFilm:
 
-    def __init__(self, title, description):
+    def __init__(self, filmid, title, description):
+        self.filmid = filmid
         if title is None or len(title) == 0:
             raise FilmTitleError(description)
         self.title = title
         self.description = description if description is not None else ''
 
     def __str__(self):
-        return self.title + '\n' + self.description
+        return '\n'.join([str(self.filmid), self.title, self.description])
 
 
 class FilmInfo():
@@ -372,7 +373,10 @@ class FestivalData:
             info = ET.SubElement(filminfos, 'FilmInfo', FilmId=id, FilmArticle=article, FilmDescription=descr, InfoStatus='Complete')
             screened_films = ET.SubElement(info, 'ScreenedFilms')
             for screened_film in filminfo.screened_films:
-                _ = ET.SubElement(screened_films, 'ScreenedFilm', Title=screened_film.title, Description=screened_film.description)
+                _ = ET.SubElement(screened_films, 'ScreenedFilm',
+                                  FilmId=str(screened_film.filmid),
+                                  Title=screened_film.title,
+                                  Description=screened_film.description)
         tree = ET.ElementTree(filminfos)
         tree.write(self.filminfo_file, encoding='utf-8', xml_declaration=True)
         print(f"Done writing {info_count} records to {self.filminfo_file}.")

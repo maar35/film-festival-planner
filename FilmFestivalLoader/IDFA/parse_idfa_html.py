@@ -551,8 +551,8 @@ class CompilationPageParser(FilmPageParser):
                     Globals.error_collector.add('Duplicate title', message)
 
     def add_screened_film(self):
-        # film = self.idfa_data.get_film_by_key(self.screened_title, None)
-        screened_film = planner.ScreenedFilm(self.screened_title, self.screened_description)
+        film = self.idfa_data.get_film_by_key(self.screened_title, None)
+        screened_film = planner.ScreenedFilm(film.filmid, self.screened_title, self.screened_description)
         self.screened_films.append(screened_film)
 
     def add_compilation_filminfo(self):

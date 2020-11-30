@@ -108,8 +108,8 @@ namespace PresentScreenings.TableView
             {
                 string directory = dlg.Directory;
 
-                // Write film info.
-                FilmInfo.SaveFilmInfoAsXml(ScreeningsPlan.FilmInfos, Path.Combine(directory, "filminfo.xml"));
+                //// Write film info.
+                //FilmInfo.SaveFilmInfoAsXml(ScreeningsPlan.FilmInfos, Path.Combine(directory, "filminfo.xml"));
 
                 // Write film ratings.
                 string ratingsPath = Path.Combine(directory, "ratings.csv");

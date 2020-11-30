@@ -33,6 +33,7 @@ namespace PresentScreenings.TableView
         public string TitleLanguage { get; private set; }
         public string Section { get; private set; }
         public TimeSpan Duration { get; private set; }
+        public string MinutesString => Duration.TotalMinutes + "′";
         public string Url { get; private set; }
         public FilmRating Rating => ViewController.GetFilmFanFilmRating(this, ScreeningInfo.Me);
         public WebUtility.MediumCategory Category { get; private set; }

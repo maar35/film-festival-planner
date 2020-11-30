@@ -16,7 +16,9 @@ namespace PresentScreenings.TableView
     public class ScreeningLabel : NSTextField
     {
         #region Private Variables
-        Screening _screening = null;
+        private Screening _screening = null;
+        //private NSTrackingArea _hoverArea;
+        //private NSCursor _cursor;
         #endregion
 
         #region Constructors
@@ -31,13 +33,34 @@ namespace PresentScreenings.TableView
             ColorView.SetScreeningColor(_screening, this);
             NeedsDisplay = true;
         }
-		#endregion
+        #endregion
 
         #region Override Methods
+        //public override void AwakeFromNib()
+        //{
+        //    base.AwakeFromNib();
+        //    _hoverArea = new NSTrackingArea(Bounds, NSTrackingAreaOptions.MouseEnteredAndExited | NSTrackingAreaOptions.ActiveAlways, this, null);
+        //    AddTrackingArea(_hoverArea);
+        //    _cursor = NSCursor.CurrentSystemCursor;
+        //}
+
         public override void MouseDown(NSEvent theEvent)
         {
             RaiseScreeningInfoAsked();
         }
+
+        //public override void MouseEntered(NSEvent theEvent)
+        //{
+        //    base.MouseEntered(theEvent);
+        //    _cursor = NSCursor.PointingHandCursor;
+        //    _cursor.Push();
+        //}
+
+        //public override void MouseExited(NSEvent theEvent)
+        //{
+        //    base.MouseExited(theEvent);
+        //    _cursor.Pop();
+        //}
         #endregion
 
         #region Private Methods
