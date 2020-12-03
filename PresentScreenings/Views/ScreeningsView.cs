@@ -27,7 +27,7 @@ namespace PresentScreenings.TableView
         #region Private Variables
         nfloat _labelLeft;
         nfloat _labelWidth;
-		ViewController _controller;
+        ViewController _controller;
         ScreeningsTableView _superView;
         #endregion
 
@@ -37,10 +37,10 @@ namespace PresentScreenings.TableView
 			_controller = controller;
             _superView = superView;
 		}
-		#endregion
+        #endregion
 
-		#region Public methods
-		public void DrawScreenings(NSClipView view, ScreeningsPlan plan, DateTime day, Screen screen)
+        #region Public methods
+        public void DrawScreenings(NSClipView view, ScreeningsPlan plan, DateTime day, Screen screen)
 		{
 			DisposeSubViews(view);
             var currScreening = plan.CurrScreening;
@@ -53,7 +53,7 @@ namespace PresentScreenings.TableView
                 var screeningControl = new ScreeningControl(rect, screening);
                 screeningControl.Selected = screening == currScreening;
                 screeningControl.ScreeningSelected += (s, e) => SegueToScreeningWindow((ScreeningControl)s);
-				view.AddSubview(screeningControl);
+                view.AddSubview(screeningControl);
                 _controller.AddScreeningControl(screening, screeningControl);
 			}
 		}

@@ -18,8 +18,10 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Variables
-        bool _selected = false;
-        Screening _screening = null;
+        private bool _selected = false;
+        private Screening _screening = null;
+        private NSTrackingArea _hoverArea;
+        private NSCursor _cursor;
         #endregion
 
         #region Properties
@@ -37,11 +39,16 @@ namespace PresentScreenings.TableView
         #region Constructors
         public FilmScreeningControl(CGRect controlRect, Screening screening) : base(controlRect)
         {
-            // Initialize control features
+            // Initialize control features.
             WantsLayer = true;
             LayerContentsRedrawPolicy = NSViewLayerContentsRedrawPolicy.OnSetNeedsDisplay;
+
+            // Initialize mouse hovering.
+            _hoverArea = new NSTrackingArea(Bounds, NSTrackingAreaOptions.MouseEnteredAndExited | NSTrackingAreaOptions.ActiveAlways, this, null);
+            AddTrackingArea(_hoverArea);
+            _cursor = NSCursor.CurrentSystemCursor;
 			
-			// Initialize custom features
+			// Initialize custom features.
             _screening = screening;
         }
         #endregion
@@ -50,7 +57,21 @@ namespace PresentScreenings.TableView
         public override void MouseDown(NSEvent theEvent)
         {
             base.MouseDown(theEvent);
+            _cursor.Pop();
             RaiseScreeningInfoAsked();
+        }
+
+        public override void MouseEntered(NSEvent theEvent)
+        {
+            base.MouseEntered(theEvent);
+            _cursor = NSCursor.PointingHandCursor;
+            _cursor.Push();
+        }
+
+        public override void MouseExited(NSEvent theEvent)
+        {
+            base.MouseExited(theEvent);
+            _cursor.Pop();
         }
 
         public override void DrawRect(CGRect dirtyRect)
