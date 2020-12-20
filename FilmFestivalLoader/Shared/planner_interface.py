@@ -374,7 +374,7 @@ class FestivalData:
             screened_films = ET.SubElement(info, 'ScreenedFilms')
             for screened_film in filminfo.screened_films:
                 _ = ET.SubElement(screened_films, 'ScreenedFilm',
-                                  FilmId=str(screened_film.filmid),
+                                  ScreenedFilmId=str(screened_film.filmid),
                                   Title=screened_film.title,
                                   Description=screened_film.description)
         tree = ET.ElementTree(filminfos)

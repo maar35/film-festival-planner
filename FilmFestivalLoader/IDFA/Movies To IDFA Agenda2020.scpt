@@ -109,3 +109,4 @@ repeat with calendarInfo in calendarInfoList
 	display dialog dlog_text buttons {"OK"} default button 1
 end repeat
 
+

@@ -19,7 +19,7 @@ namespace PresentScreenings.TableView
         public string FilmArticle { get; private set; }
         public struct ScreenedFilm
         {
-            public int FilmId;
+            public int ScreenedFilmId;
             public string Title;
             public string Description;
         }
@@ -61,7 +61,7 @@ namespace PresentScreenings.TableView
             {
                 string ScreenedFilmText(ScreenedFilm screenedFilm)
                 {
-                    Film film = ViewController.GetFilmById(screenedFilm.FilmId);
+                    Film film = ViewController.GetFilmById(screenedFilm.ScreenedFilmId);
                     string titleText = $"{screenedFilm.Title} ({film.MinutesString}) - {film.MaxRating}";
                     return titleText + Environment.NewLine + WebUtility.HtmlToText(screenedFilm.Description);
                 }
@@ -77,16 +77,16 @@ namespace PresentScreenings.TableView
         public void AddScreenedFilm(int filmid, string title, string description)
         {
             var screenedFilm = new ScreenedFilm();
-            screenedFilm.FilmId = filmid;
+            screenedFilm.ScreenedFilmId = filmid;
             screenedFilm.Title = title;
             screenedFilm.Description = description;
             ScreenedFilms.Add(screenedFilm);
         }
 
-        public static void AddNewFilmInfo(int filmId, Film.FilmInfoStatus infoStatus)
-        {
-            CheckAddToFilmInfos(new FilmInfo(filmId, infoStatus));
-        }
+        //public static void AddNewFilmInfo(int filmId, Film.FilmInfoStatus infoStatus)
+        //{
+        //    CheckAddToFilmInfos(new FilmInfo(filmId, infoStatus));
+        //}
 
         public static void CheckAddToFilmInfos(FilmInfo filmInfo)
         {
@@ -126,7 +126,7 @@ namespace PresentScreenings.TableView
                     from s in el.Element("ScreenedFilms").Elements("ScreenedFilm")
                     select
                     (
-                        (string)s.Attribute("FilmId"),
+                        (string)s.Attribute("ScreenedFilmId"),
                         (string)s.Attribute("Title"),
                         (string)s.Attribute("Description")
                     )

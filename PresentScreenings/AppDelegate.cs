@@ -20,6 +20,7 @@ namespace PresentScreenings.TableView
         public static string Festival { get; private set; }
         public static string FestivalYear { get; private set; }
         public static string DocumentsFolder => GetDocumentsPath();
+        //public static bool AllFilmInfoFromLoader => true;
         #endregion
 
         #region Properties
@@ -29,7 +30,7 @@ namespace PresentScreenings.TableView
         public CombineTitlesSheetController CombineTitleController { get; set; }
         public UncombineTitlesSheetController UncombineTitleController;
         public FilmInfoDialogController filmInfoController;
-        public DownloadFilmInfoController DownloadFilmInfoController;
+        //public DownloadFilmInfoController DownloadFilmInfoController;
         public PlannerDialogController PlannerDialogController;
         public ScreeningMenuDelegate ScreeningMenuDelegate => (ScreeningMenuDelegate)_screeningMenu.Delegate;
         public NSMenuItem ToggleTypeMatchMenuItem => _toggleTypeMatchMethod;
@@ -39,8 +40,8 @@ namespace PresentScreenings.TableView
         public AppDelegate()
 		{
             // Preferences.
-            Festival = "IDFA";
-            FestivalYear = "2020";
+            Festival = "IFFR";
+            FestivalYear = "2021";
             Screening.TravelTime = new TimeSpan(0, 30, 0);
             FilmRatingDialogController.OnlyFilmsWithScreenings = false;
             FilmRatingDialogController.MinimalDuration = new TimeSpan(0, 35, 0);
@@ -108,8 +109,13 @@ namespace PresentScreenings.TableView
             {
                 string directory = dlg.Directory;
 
-                //// Write film info.
-                //FilmInfo.SaveFilmInfoAsXml(ScreeningsPlan.FilmInfos, Path.Combine(directory, "filminfo.xml"));
+                //// Write film info if it's possible to change it in the planner.
+                //if (!AllFilmInfoFromLoader)
+                //{
+                //    FilmInfo.SaveFilmInfoAsXml(ScreeningsPlan.FilmInfos, Path.Combine(
+                //        directory,
+                //        "filminfo.xml"));
+                //}
 
                 // Write film ratings.
                 string ratingsPath = Path.Combine(directory, "ratings.csv");
@@ -125,7 +131,10 @@ namespace PresentScreenings.TableView
 
                 // Write ratings sheet.
                 string sheetPath = Path.Combine(directory, "RatingsSheet.csv");
-                new Film().WriteListToFile(sheetPath, ScreeningsPlan.Films.Where(f => f.Duration >= FilmRatingDialogController.MinimalDuration).ToList());
+                new Film().WriteListToFile(sheetPath, ScreeningsPlan.Films.Where(f =>
+                {
+                    return f.Duration >= FilmRatingDialogController.MinimalDuration;
+                }).ToList());
             });
 
         }

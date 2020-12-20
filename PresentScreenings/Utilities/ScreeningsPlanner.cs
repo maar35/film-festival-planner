@@ -17,9 +17,10 @@ namespace PresentScreenings.TableView
         #region Private Members
         private List<Screening> _plannedScreenings;
         private ViewController _controller;
-        private Func<string> _logTime = DownloadFilmInfoController.LogTimeString;
+        //private Func<string> LogTimeString = ScreeningsPlanner.LogTimeString;
         private Action<string> _displayResults;
         private StringBuilder _builder = new StringBuilder();
+        private const string _dateTimeFormat = "yyyy-MM-dd HH:mm:ss";
         #endregion
 
         #region Constructors
@@ -33,7 +34,7 @@ namespace PresentScreenings.TableView
         #region Public Methods
         public void MakeScreeningsPlan(string filmFan)
         {
-            _builder.AppendLine($"{_logTime()}  Started planning.");
+            _builder.AppendLine($"{LogTimeString()}  Started planning.");
             _builder.AppendLine();
             _plannedScreenings = new List<Screening> { };
             var rating = FilmRating.MaxRating;
@@ -82,7 +83,7 @@ namespace PresentScreenings.TableView
         {
             // Display that unplanning is started.
             _builder.AppendLine();
-            _builder.AppendLine($"{_logTime()}  Started unplanning.");
+            _builder.AppendLine($"{LogTimeString()}  Started unplanning.");
 
             // Select the automaticaly planned screenings.
             var screenings = ScreeningsPlan.Screenings.Where(s => s.AutomaticallyPlanned && s.FilmFanAttends(attendee));
@@ -97,11 +98,16 @@ namespace PresentScreenings.TableView
             _controller.ReloadScreeningsView();
 
             // Display that unplanning is done.
-            _builder.AppendLine($"{_logTime()}  All automatically planned screenings canceled for {attendee}.");
+            _builder.AppendLine($"{LogTimeString()}  All automatically planned screenings canceled for {attendee}.");
             _builder.AppendLine();
 
             // Call the display function with the result string.
             _displayResults(_builder.ToString());
+        }
+
+        public static string LogTimeString()
+        {
+            return $"{DateTime.Now.ToString(_dateTimeFormat)}";
         }
         #endregion
 
@@ -122,7 +128,7 @@ namespace PresentScreenings.TableView
             // Display summary for this rating.
             int highRatedFilmCount = films.Count;
             int plannedFilmCount = films.Where(f => HasAttendedScreening(f, filmFan)).Count();
-            _builder.Append($"{_logTime()}  {plannedFilmCount} out of {highRatedFilmCount} films with rating {rating} planned for {filmFan}.");
+            _builder.Append($"{LogTimeString()}  {plannedFilmCount} out of {highRatedFilmCount} films with rating {rating} planned for {filmFan}.");
 
             // Display films with this rating that weren't planned.
             if (highRatedFilmCount - plannedFilmCount > 0)
@@ -156,13 +162,13 @@ namespace PresentScreenings.TableView
             _builder.AppendLine();
             if (_plannedScreenings.Count > 0)
             {
-                _builder.AppendLine($"{_logTime()}  {_plannedScreenings.Count} screenings planned:");
+                _builder.AppendLine($"{LogTimeString()}  {_plannedScreenings.Count} screenings planned:");
                 _plannedScreenings.Sort();
                 _builder.AppendJoin(Environment.NewLine, _plannedScreenings.Select(s => s.ToPlannedScreeningString()));
             }
             else
             {
-                _builder.Append($"{_logTime()}  No new screenings planned.");
+                _builder.Append($"{LogTimeString()}  No new screenings planned.");
             }
             _builder.AppendLine();
         }

@@ -77,7 +77,7 @@ namespace PresentScreenings.TableView
             _combineTitlesButton.Action = new ObjCRuntime.Selector("SelectTitlesToCombine:");
             _uncombineTitleButton.Action = new ObjCRuntime.Selector("ShowTitlesToUncombine:");
             _goToScreeningButton.Action = new ObjCRuntime.Selector("ShowScreenings:");
-            _downloadFilmInfoButton.Action = new ObjCRuntime.Selector("OpenDownloadFilmInfo:");
+            //_downloadFilmInfoButton.Action = new ObjCRuntime.Selector("OpenDownloadFilmInfo:");
             DoneButton.KeyEquivalent = ControlsFactory.EscapeKey;
             DoneButton.StringValue = "Noot";
             SetTypeMatchMethodControlStates();
@@ -139,10 +139,10 @@ namespace PresentScreenings.TableView
                 case "GoToScreeningSegue":
                     FilmInfoDialogController.Presentor = this;
                     break;
-                case "DownloadFilmInfoSegue":
-                    var downloadFilmInfoController = segue.DestinationController as DownloadFilmInfoController;
-                    downloadFilmInfoController.Presentor = this;
-                    break;
+                //case "DownloadFilmInfoSegue":
+                //    var downloadFilmInfoController = segue.DestinationController as DownloadFilmInfoController;
+                //    downloadFilmInfoController.Presentor = this;
+                //    break;
             }
         }
 
@@ -353,7 +353,8 @@ namespace PresentScreenings.TableView
             _combineTitlesButton.Enabled = MultipleFilmsSelected() && !TextBeingEdited;
             _uncombineTitleButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             _goToScreeningButton.Enabled = OneFilmSelected() && !TextBeingEdited;
-            _downloadFilmInfoButton.Enabled = OneOrMoreFilmsSelected() && !TextBeingEdited;
+            //_downloadFilmInfoButton.Enabled = OneOrMoreFilmsSelected() && !TextBeingEdited;
+            _downloadFilmInfoButton.Enabled = false;
             DoneButton.Enabled = !TextBeingEdited;
         }
 
@@ -440,11 +441,11 @@ namespace PresentScreenings.TableView
             PerformSegue("GoToScreeningSegue", sender);
         }
 
-        [Action("OpenDownloadFilmInfo:")]
-        void OpenDownloadFilmInfo(NSObject sender)
-        {
-            PerformSegue("DownloadFilmInfoSegue", sender);
-        }
+        //[Action("OpenDownloadFilmInfo:")]
+        //void OpenDownloadFilmInfo(NSObject sender)
+        //{
+        //    PerformSegue("DownloadFilmInfoSegue", sender);
+        //}
         #endregion
     }
 }

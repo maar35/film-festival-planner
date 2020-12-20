@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Net;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace PresentScreenings.TableView
 {
@@ -18,24 +14,24 @@ namespace PresentScreenings.TableView
             Events
         }
 
-        public enum ParseInfoType
-        {
-            Description,
-            Article,
-            ScreenedFilms
-        }
+        //public enum ParseInfoType
+        //{
+        //    Description,
+        //    Article,
+        //    ScreenedFilms
+        //}
         #endregion
 
         #region Private Variables
-        struct ParseInfo
-        {
-            public ParseInfoType type;
-            public string description;
-            public Regex re;
-            public Regex filterRe;
-            public string filterReplacement;
-        }
-        static Dictionary<MediumCategory, List<ParseInfo>> _parseInfoByCategory;
+        //struct ParseInfo
+        //{
+        //    public ParseInfoType type;
+        //    public string description;
+        //    public Regex re;
+        //    public Regex filterRe;
+        //    public string filterReplacement;
+        //}
+        //static Dictionary<MediumCategory, List<ParseInfo>> _parseInfoByCategory;
         #endregion
 
         #region Properties
@@ -49,30 +45,30 @@ namespace PresentScreenings.TableView
             FolderByCategory[MediumCategory.Films] = "films";
             FolderByCategory[MediumCategory.CombinedProgrammes] = "verzamelprogrammas";
             FolderByCategory[MediumCategory.Events] = "events";
-            var descriptionParseInfo = new ParseInfo
-            {
-                type = ParseInfoType.Description,
-                description = "Description",
-                re = new Regex(@"\<meta name=""description"" content=""(.*)"" />")
-            };
-            var articleParseInfo = new ParseInfo
-            {
-                type = ParseInfoType.Article,
-                description = "Article",
-                re = new Regex(@"\<article.*?(\<p\>.*\</p\>)\s*\</div\>", RegexOptions.Singleline)
-            };
-            var screenedFilmsParseInfo = new ParseInfo
-            {
-                type = ParseInfoType.ScreenedFilms,
-                description = "Screened films",
-                re = new Regex(@"\<section class=""rectangle-column""\>\s*\<h2\>(.*?)\</h2\>\s*\<span class=""hover-info""\>.*?\<p class=""full-text""\>(.*?)\</p\>", RegexOptions.Singleline),
-                filterRe = new Regex(@"^(.*)(\<main.*\</main\>)(.*)$", RegexOptions.Singleline),
-                filterReplacement = @"$2"
-            };
-            _parseInfoByCategory = new Dictionary<MediumCategory, List<ParseInfo>> { };
-            _parseInfoByCategory[MediumCategory.Films] = new List<ParseInfo> { descriptionParseInfo, articleParseInfo };
-            _parseInfoByCategory[MediumCategory.Events] = new List<ParseInfo> { articleParseInfo };
-            _parseInfoByCategory[MediumCategory.CombinedProgrammes] = new List<ParseInfo> { articleParseInfo, screenedFilmsParseInfo };
+            //var descriptionParseInfo = new ParseInfo
+            //{
+            //    type = ParseInfoType.Description,
+            //    description = "Description",
+            //    re = new Regex(@"\<meta name=""description"" content=""(.*)"" />")
+            //};
+            //var articleParseInfo = new ParseInfo
+            //{
+            //    type = ParseInfoType.Article,
+            //    description = "Article",
+            //    re = new Regex(@"\<article.*?(\<p\>.*\</p\>)\s*\</div\>", RegexOptions.Singleline)
+            //};
+            //var screenedFilmsParseInfo = new ParseInfo
+            //{
+            //    type = ParseInfoType.ScreenedFilms,
+            //    description = "Screened films",
+            //    re = new Regex(@"\<section class=""rectangle-column""\>\s*\<h2\>(.*?)\</h2\>\s*\<span class=""hover-info""\>.*?\<p class=""full-text""\>(.*?)\</p\>", RegexOptions.Singleline),
+            //    filterRe = new Regex(@"^(.*)(\<main.*\</main\>)(.*)$", RegexOptions.Singleline),
+            //    filterReplacement = @"$2"
+            //};
+            //_parseInfoByCategory = new Dictionary<MediumCategory, List<ParseInfo>> { };
+            //_parseInfoByCategory[MediumCategory.Films] = new List<ParseInfo> { descriptionParseInfo, articleParseInfo };
+            //_parseInfoByCategory[MediumCategory.Events] = new List<ParseInfo> { articleParseInfo };
+            //_parseInfoByCategory[MediumCategory.CombinedProgrammes] = new List<ParseInfo> { articleParseInfo, screenedFilmsParseInfo };
         }
         #endregion
 
@@ -129,149 +125,149 @@ namespace PresentScreenings.TableView
             return result;
         }
 
-        public static FilmInfo TryParseUrlSummary(HttpWebRequest request, string url, MediumCategory category, int filmId)
-        {
-            // Get the website response.
-            var response = request.GetResponse() as HttpWebResponse;
+        //public static FilmInfo TryParseUrlSummary(HttpWebRequest request, string url, MediumCategory category, int filmId)
+        //{
+        //    // Get the website response.
+        //    var response = request.GetResponse() as HttpWebResponse;
 
-            // Get the wbsite text from the response.
-            var stream = new StreamReader(response.GetResponseStream());
-            var text = stream.ReadToEnd();
-            stream.Close();
+        //    // Get the wbsite text from the response.
+        //    var stream = new StreamReader(response.GetResponseStream());
+        //    var text = stream.ReadToEnd();
+        //    stream.Close();
 
-            // Parse the website text.
-            var filmInfo = TryParseText(text, category, filmId);
+        //    // Parse the website text.
+        //    var filmInfo = TryParseText(text, category, filmId);
 
-            return filmInfo;
-        }
+        //    return filmInfo;
+        //}
 
-        public static FilmInfo TryParseText(string text, MediumCategory category, int filmId)
-        {
-            var allParsesFailed = false;
-            var filmDescription = string.Empty;
-            var article = string.Empty;
-            var ScreenedFileDescriptionByTitle = new Dictionary<string, string> { };
+        //public static FilmInfo TryParseText(string text, MediumCategory category, int filmId)
+        //{
+        //    var allParsesFailed = false;
+        //    var filmDescription = string.Empty;
+        //    var article = string.Empty;
+        //    var ScreenedFileDescriptionByTitle = new Dictionary<string, string> { };
 
-            // Parse the different segments as expected with this category.
-            foreach (var parseInfo in _parseInfoByCategory[category])
-            {
-                var success = false;
+        //    // Parse the different segments as expected with this category.
+        //    foreach (var parseInfo in _parseInfoByCategory[category])
+        //    {
+        //        var success = false;
 
-                // Carry out text replacements when available for this kind of segment.
-                if (parseInfo.filterRe != null && parseInfo.filterReplacement != null)
-                {
-                    text = parseInfo.filterRe.Replace(text, parseInfo.filterReplacement);
-                }
+        //        // Carry out text replacements when available for this kind of segment.
+        //        if (parseInfo.filterRe != null && parseInfo.filterReplacement != null)
+        //        {
+        //            text = parseInfo.filterRe.Replace(text, parseInfo.filterReplacement);
+        //        }
 
-                // Match the regular expression for this kind of segment.
-                foreach (Match match in parseInfo.re.Matches(text))
-                {
-                    var groupCount = match.Groups.Count;
-                    string screenedFilmTitle = string.Empty;
-                    for (int groupNumber = 1; groupNumber < groupCount; groupNumber++)
-                    {
-                        var textUnit = match.Groups[groupNumber].Value;
-                        switch (parseInfo.type)
-                        {
-                            case ParseInfoType.Description:
-                                filmDescription = textUnit;
-                                break;
-                            case ParseInfoType.Article:
-                                article = textUnit;
-                                break;
-                            case ParseInfoType.ScreenedFilms:
-                                if (groupNumber % 2 == 1)
-                                {
-                                    screenedFilmTitle = textUnit;
-                                }
-                                else
-                                {
-                                    ScreenedFileDescriptionByTitle[screenedFilmTitle] = textUnit;
-                                }
-                                break;
-                        }
-                    }
-                    success = true;
-                }
+        //        // Match the regular expression for this kind of segment.
+        //        foreach (Match match in parseInfo.re.Matches(text))
+        //        {
+        //            var groupCount = match.Groups.Count;
+        //            string screenedFilmTitle = string.Empty;
+        //            for (int groupNumber = 1; groupNumber < groupCount; groupNumber++)
+        //            {
+        //                var textUnit = match.Groups[groupNumber].Value;
+        //                switch (parseInfo.type)
+        //                {
+        //                    case ParseInfoType.Description:
+        //                        filmDescription = textUnit;
+        //                        break;
+        //                    case ParseInfoType.Article:
+        //                        article = textUnit;
+        //                        break;
+        //                    case ParseInfoType.ScreenedFilms:
+        //                        if (groupNumber % 2 == 1)
+        //                        {
+        //                            screenedFilmTitle = textUnit;
+        //                        }
+        //                        else
+        //                        {
+        //                            ScreenedFileDescriptionByTitle[screenedFilmTitle] = textUnit;
+        //                        }
+        //                        break;
+        //                }
+        //            }
+        //            success = true;
+        //        }
 
-                // Assert if there were no matches for this segment.
-                if (!success)
-                {
-                    allParsesFailed = true;
-                }
-            }
+        //        // Assert if there were no matches for this segment.
+        //        if (!success)
+        //        {
+        //            allParsesFailed = true;
+        //        }
+        //    }
 
-            // Throw an exception if at least one of the expected segments didn't match.
-            if (allParsesFailed)
-            {
-                throw new UnparseblePageException(text);
-            }
+        //    // Throw an exception if at least one of the expected segments didn't match.
+        //    if (allParsesFailed)
+        //    {
+        //        throw new UnparseblePageException(text);
+        //    }
 
-            // Create a Film Info instance with the information found.
-            var info = new FilmInfo(filmId, Film.FilmInfoStatus.Complete, filmDescription, article);
-            foreach (string title in ScreenedFileDescriptionByTitle.Keys)
-            {
-                // TEMPORARILY Fake a film ID.
-                // This whole functionality is being moved to the loader.
-                int filmid = 0;
+        //    // Create a Film Info instance with the information found.
+        //    var info = new FilmInfo(filmId, Film.FilmInfoStatus.Complete, filmDescription, article);
+        //    foreach (string title in ScreenedFileDescriptionByTitle.Keys)
+        //    {
+        //        // TEMPORARILY Fake a film ID.
+        //        // This whole functionality is being moved to the loader.
+        //        int filmid = 0;
 
-                info.AddScreenedFilm(filmid, title, ScreenedFileDescriptionByTitle[title]);
-            }
+        //        info.AddScreenedFilm(filmid, title, ScreenedFileDescriptionByTitle[title]);
+        //    }
 
-            return info;
-        }
+        //    return info;
+        //}
 
-        public static async Task<bool> VisitUrl(Film film, CancellationToken cancellationToken)
-        {
-            MediumCategory category = film.Category;
-            string url = film.Url;
-            bool canceled = false;
-            bool webErrorOccurred = false;
-            WebClient httpClient = new WebClient();
-            string contents = string.Empty;
+        //public static async Task<bool> VisitUrl(Film film, CancellationToken cancellationToken)
+        //{
+        //    MediumCategory category = film.Category;
+        //    string url = film.Url;
+        //    bool canceled = false;
+        //    bool webErrorOccurred = false;
+        //    WebClient httpClient = new WebClient();
+        //    string contents = string.Empty;
 
-            // Read the website of the given film.
-            try
-            {
-                // Create a task to asynchronously read the website.
-                Task<string> contentsTask = httpClient.DownloadStringTaskAsync(url);
+        //    // Read the website of the given film.
+        //    try
+        //    {
+        //        // Create a task to asynchronously read the website.
+        //        Task<string> contentsTask = httpClient.DownloadStringTaskAsync(url);
 
-                // Return control to the calling code until the asynchronous
-                // task finishes on its own thread.
-                contents = await contentsTask;
+        //        // Return control to the calling code until the asynchronous
+        //        // task finishes on its own thread.
+        //        contents = await contentsTask;
 
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-            catch (OperationCanceledException)
-            {
-                canceled = true;
-            }
-            catch (WebException)
-            {
-                FilmInfo.AddNewFilmInfo(film.FilmId, Film.FilmInfoStatus.UrlError);
-                webErrorOccurred = true;
-            }
+        //        cancellationToken.ThrowIfCancellationRequested();
+        //    }
+        //    catch (OperationCanceledException)
+        //    {
+        //        canceled = true;
+        //    }
+        //    catch (WebException)
+        //    {
+        //        FilmInfo.AddNewFilmInfo(film.FilmId, Film.FilmInfoStatus.UrlError);
+        //        webErrorOccurred = true;
+        //    }
 
-            // Parse the website text if no error occurred.
-            if (!canceled && !webErrorOccurred)
-            {
-                try
-                {
-                    var filminfo = TryParseText(contents, category, film.FilmId);
-                    if (filminfo != null)
-                    {
-                        // Add the Film Info to the list of the Screenings Plan.
-                        filminfo.InfoStatus = Film.FilmInfoStatus.Complete;
-                    }
-                }
-                catch (UnparseblePageException)
-                {
-                    FilmInfo.AddNewFilmInfo(film.FilmId, Film.FilmInfoStatus.ParseError);
-                }
-            }
+        //    // Parse the website text if no error occurred.
+        //    if (!canceled && !webErrorOccurred)
+        //    {
+        //        try
+        //        {
+        //            var filminfo = TryParseText(contents, category, film.FilmId);
+        //            if (filminfo != null)
+        //            {
+        //                // Add the Film Info to the list of the Screenings Plan.
+        //                filminfo.InfoStatus = Film.FilmInfoStatus.Complete;
+        //            }
+        //        }
+        //        catch (UnparseblePageException)
+        //        {
+        //            FilmInfo.AddNewFilmInfo(film.FilmId, Film.FilmInfoStatus.ParseError);
+        //        }
+        //    }
 
-            return canceled;
-        }
+        //    return canceled;
+        //}
         #endregion
     }
 }
