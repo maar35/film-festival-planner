@@ -83,11 +83,6 @@ namespace PresentScreenings.TableView
             ScreenedFilms.Add(screenedFilm);
         }
 
-        //public static void AddNewFilmInfo(int filmId, Film.FilmInfoStatus infoStatus)
-        //{
-        //    CheckAddToFilmInfos(new FilmInfo(filmId, infoStatus));
-        //}
-
         public static void CheckAddToFilmInfos(FilmInfo filmInfo)
         {
             var filmInfos = ScreeningsPlan.FilmInfos;

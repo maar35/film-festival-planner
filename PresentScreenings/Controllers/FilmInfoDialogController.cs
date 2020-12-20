@@ -177,15 +177,12 @@ namespace PresentScreenings.TableView
         {
             _yCurr -= _buttonHeight;
             var rect = new CGRect(_xMargin, _yCurr, _contentWidth, _buttonHeight);
-            //_linkButton = ControlsFactory.NewStandardButton(rect);
             _linkButton = ControlsFactory.NewStandardLabel(rect);
             _linkButton.LineBreakMode = NSLineBreakMode.TruncatingMiddle;
-            //_linkButton.Title = _film.Url;
             _linkButton.StringValue = _film.Url;
             _linkButton.Editable = true;
             _linkButton.Enabled &= !FilmInfoIsAvailable();
             _linkButton.Tag = _film.FilmId;
-            //_linkButton.Action = new ObjCRuntime.Selector("VisitUrl:");
 
             //NSMutableAttributedString attrStr = new NSMutableAttributedString("Alpha Go hyperlink");
             //var range = new NSRange(8, 9); // Range for "hyperlink" word
@@ -277,55 +274,6 @@ namespace PresentScreenings.TableView
             return ViewController.FilmInfoIsAvailable(_filmInfo);
         }
 
-        //private void VisitUrl()
-        //{
-        //    string summary = string.Empty;
-        //    var category = _film.Category;
-        //    FilmInfo filmInfo;
-        //    var url = _film.Url;
-        //    _summaryScrollView.BackgroundColor = NSColor.WindowBackground;
-        //    var request = WebRequest.Create(url) as HttpWebRequest;
-        //    try
-        //    {
-        //        filmInfo = WebUtility.TryParseUrlSummary(request, url, category, _film.FilmId);
-        //        if (filmInfo != null)
-        //        {
-        //            _filmInfo = filmInfo;
-        //            _filmInfo.InfoStatus = Film.FilmInfoStatus.Complete;
-        //            summary = filmInfo.ToString();
-        //            _linkButton.Title = url;
-        //        }
-        //    }
-        //    catch (WebException ex)
-        //    {
-        //        FilmInfo.AddNewFilmInfo(_film.FilmId, Film.FilmInfoStatus.UrlError);
-        //        _summaryScrollView.BackgroundColor = NSColor.SystemPinkColor;
-        //        summary = $"Web exception in {url}\n\n" + ex.ToString();
-        //    }
-        //    catch (UnparseblePageException ex)
-        //    {
-        //        FilmInfo.AddNewFilmInfo(_film.FilmId, Film.FilmInfoStatus.ParseError);
-        //        _summaryScrollView.BackgroundColor = NSColor.SystemYellowColor;
-        //        var builder = new StringBuilder();
-        //        builder.AppendLine($"URL {url} could not be parsed.");
-        //        builder.AppendLine("===");
-        //        builder.Append(ex.Message);
-        //        summary = builder.ToString();
-        //    }
-        //    finally
-        //    {
-        //        SetSummaryFieldText(summary);
-        //        var fit = _summaryField.SizeThatFits(_summaryField.Frame.Size);
-        //        _summaryField.SetFrameSize(fit);
-        //    }
-        //    if (App.FilmsDialogController != null)
-        //    {
-        //        var controller = App.FilmsDialogController;
-        //        controller.FilmRatingTableView.ReloadData();
-        //        controller.SelectFilm(_film);
-        //    }
-        //}
-
         private void GoToScreening(Screening screening)
         {
             Presentor.GoToScreening(screening);
@@ -347,12 +295,6 @@ namespace PresentScreenings.TableView
         {
             ClosePopOver();
         }
-
-        //[Action("VisitUrl:")]
-        //void VisitUrl(NSObject sender)
-        //{
-        //    VisitUrl();
-        //}
         #endregion
     }
 }

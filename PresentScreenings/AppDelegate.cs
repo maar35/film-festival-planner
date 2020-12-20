@@ -20,7 +20,6 @@ namespace PresentScreenings.TableView
         public static string Festival { get; private set; }
         public static string FestivalYear { get; private set; }
         public static string DocumentsFolder => GetDocumentsPath();
-        //public static bool AllFilmInfoFromLoader => true;
         #endregion
 
         #region Properties
@@ -30,7 +29,6 @@ namespace PresentScreenings.TableView
         public CombineTitlesSheetController CombineTitleController { get; set; }
         public UncombineTitlesSheetController UncombineTitleController;
         public FilmInfoDialogController filmInfoController;
-        //public DownloadFilmInfoController DownloadFilmInfoController;
         public PlannerDialogController PlannerDialogController;
         public ScreeningMenuDelegate ScreeningMenuDelegate => (ScreeningMenuDelegate)_screeningMenu.Delegate;
         public NSMenuItem ToggleTypeMatchMenuItem => _toggleTypeMatchMethod;
@@ -108,14 +106,6 @@ namespace PresentScreenings.TableView
             dlg.BeginSheet(Controller.TableView.Window, (result) =>
             {
                 string directory = dlg.Directory;
-
-                //// Write film info if it's possible to change it in the planner.
-                //if (!AllFilmInfoFromLoader)
-                //{
-                //    FilmInfo.SaveFilmInfoAsXml(ScreeningsPlan.FilmInfos, Path.Combine(
-                //        directory,
-                //        "filminfo.xml"));
-                //}
 
                 // Write film ratings.
                 string ratingsPath = Path.Combine(directory, "ratings.csv");

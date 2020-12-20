@@ -115,10 +115,6 @@
     <Compile Include="Controllers\CombineTitlesSheetControler.designer.cs">
       <DependentUpon>CombineTitlesSheetControler.cs</DependentUpon>
     </Compile>
-    <Compile Include="Controllers\DownloadFilmInfoController.cs" />
-    <Compile Include="Controllers\DownloadFilmInfoController.designer.cs">
-      <DependentUpon>DownloadFilmInfoController.cs</DependentUpon>
-    </Compile>
     <Compile Include="Controllers\FilmInfoDialogController.cs" />
     <Compile Include="Controllers\FilmInfoDialogController.designer.cs">
       <DependentUpon>FilmInfoDialogController.cs</DependentUpon>
