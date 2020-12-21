@@ -116,10 +116,13 @@ def compare_00():
 def test_film_title_error():
     # Arrange.
     screened_title = None
-    screened_description = """Boyi-biyo vertelt het verhaal van Shilo, die in de Centraal-Afrikaanse Republiek met zijn gezin maar net kan rondkomen van zijn werk als vleeskoerier. Ondanks vele obstakels blijft hij ondertussen dromen van een carrière als marathonloper."""
+    screened_description = "Boyi-biyo vertelt het verhaal van Shilo, die in de Centraal-Afrikaanse Republiek"
+    screened_description += " met zijn gezin maar net kan rondkomen van zijn werk als vleeskoerier. Ondanks"
+    screened_description += " vele obstakels blijft hij ondertussen dromen van een carrière als marathonloper."
     idfa_data = idfa.IdfaData(idfa.plandata_dir)
     compilation_url = 'https://www.idfa.nl/nl/shows/82f713ed-7812-4e2f-a8f5-9de4ceba3daf/boyi-biyo-red-card'
     compilation_title = 'Boyi-biyo @ Red Card'
+    film = idfa.planner.Film(1, 1, compilation_title, compilation_url)
     parser = idfa.CompilationPageParser(idfa_data, compilation_url, compilation_title)
     parser.screened_title = screened_title
     parser.screened_description = screened_description
@@ -127,7 +130,7 @@ def test_film_title_error():
     # Act.
     correct_exceptioon = None
     try:
-        parser.add_screened_film()
+        _ = idfa.planner.ScreenedFilm(film.filmid, screened_title, screened_description)
     except idfa.planner.FilmTitleError:
         correct_exceptioon = True
     except Exception:

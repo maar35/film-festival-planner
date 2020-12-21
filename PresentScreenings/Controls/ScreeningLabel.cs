@@ -8,20 +8,18 @@ namespace PresentScreenings.TableView
     /// <summary>
     /// Screening label, a lable which is associated with a screening and
     /// displays need-to-know information of that screening.
-    ///
-    /// Ongoing attempt to make a label clickable as to raise a custum event.
     /// </summary>
 
-    [Register("ScreeningLabel")]
     public class ScreeningLabel : NSTextField
     {
         #region Private Variables
-        Screening _screening = null;
+        private Screening _screening = null;
         #endregion
 
         #region Constructors
         public ScreeningLabel(CGRect frame, Screening screening, bool withDay = false) : base(frame)
         {
+            Initialize();
             _screening = screening;
             Font = NSFont.BoldSystemFontOfSize(ScreeningControl.FontSize);
             Editable = false;
@@ -31,29 +29,18 @@ namespace PresentScreenings.TableView
             ColorView.SetScreeningColor(_screening, this);
             NeedsDisplay = true;
         }
-		#endregion
 
-        #region Override Methods
-        public override void MouseDown(NSEvent theEvent)
-        {
-            RaiseScreeningInfoAsked();
-        }
-        #endregion
-
-        #region Private Methods
         void Initialize()
         {
+            // Initialize control features.
             WantsLayer = true;
             LayerContentsRedrawPolicy = NSViewLayerContentsRedrawPolicy.OnSetNeedsDisplay;
         }
         #endregion
 
-        #region Events
-        public EventHandler ScreeningInfoAsked;
-
-        internal void RaiseScreeningInfoAsked()
+        #region Override Methods
+        public override void MouseDown(NSEvent theEvent)
         {
-            ScreeningInfoAsked?.Invoke(this, EventArgs.Empty);
         }
         #endregion
     }

@@ -23,6 +23,8 @@ namespace PresentScreenings.TableView
         private CGRect _screeningRect;
         private ScreeningLabel _label;
         private ScreeningButton _button;
+        private NSTrackingArea _hoverArea;
+        private NSCursor _cursor;
         #endregion
 
         #region Application Access
@@ -57,6 +59,7 @@ namespace PresentScreenings.TableView
                 NeedsDisplay = true;
             }
         }
+        public CGRect ClickableRect => new CGRect(0, 0, _xExtension - 2, Frame.Height);
         #endregion
 
         #region Constructors
@@ -87,8 +90,14 @@ namespace PresentScreenings.TableView
 
         void Initialize()
         {
+            // Initialize control features.
             WantsLayer = true;
             LayerContentsRedrawPolicy = NSViewLayerContentsRedrawPolicy.OnSetNeedsDisplay;
+
+            // Initialize mouse hovering.
+            _hoverArea = new NSTrackingArea(ClickableRect, NSTrackingAreaOptions.MouseEnteredAndExited | NSTrackingAreaOptions.ActiveAlways, this, null);
+            AddTrackingArea(_hoverArea);
+            _cursor = NSCursor.CurrentSystemCursor;
         }
         #endregion
 
@@ -102,7 +111,7 @@ namespace PresentScreenings.TableView
             using (CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
             {
                 // Define the clickable rect.
-                var clickableRect = new CGRect(0, 0, _xExtension - 2, side);
+                var clickableRect = ClickableRect;
 
                 // Draw the clickable rect.
                 DrawClickRect(context, clickableRect);
@@ -246,7 +255,21 @@ namespace PresentScreenings.TableView
         public override void MouseDown(NSEvent theEvent)
         {
             base.MouseDown(theEvent);
+            _cursor.Pop();
             RaiseScreeningSelected();
+        }
+
+        public override void MouseEntered(NSEvent theEvent)
+        {
+            base.MouseEntered(theEvent);
+            _cursor = NSCursor.PointingHandCursor;
+            _cursor.Push();
+        }
+
+        public override void MouseExited(NSEvent theEvent)
+        {
+            base.MouseExited(theEvent);
+            _cursor.Pop();
         }
 
         public override void MouseDragged(NSEvent theEvent)

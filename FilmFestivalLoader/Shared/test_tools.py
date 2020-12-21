@@ -9,6 +9,12 @@ Created on Wed Nov 25 23:51:46 2020
 """
 
 
+class TextColors:
+    green = '\u001b[32m'
+    red = ' \u001b[31m'
+    reset = '\u001b[0m'
+
+
 def execute_tests(tests):
     executed_count = 0
     succeeded_count = 0
@@ -20,7 +26,9 @@ def execute_tests(tests):
         else:
             failed_count += 1
     print('\nTest results:')
-    print('{:3d} tests executed.\n{:3d} tests succeeded.\n{:3d} tests failed.'.format(executed_count, succeeded_count, failed_count))
+    color = TextColors.green if failed_count == 0 else TextColors.red
+    roloc = TextColors.reset
+    print(f'{executed_count:3d} tests executed.\n{succeeded_count:3d} tests succeeded.\n{color}{failed_count:3d} tests failed{roloc}.')
 
 
 def equity_decorator(test_func):
@@ -28,9 +36,9 @@ def equity_decorator(test_func):
         gotten_string, expected_string = test_func()
         success = gotten_string == expected_string
         if success:
-            print('Test {} succeeded!'.format(test_func.__name__))
+            print(f'Test {test_func.__name__} {TextColors.green}succeeded{TextColors.reset}!')
         else:
-            print('Test {} failed :-('.format(test_func.__name__))
+            print(f'Test {test_func.__name__} {TextColors.red}failed{TextColors.reset} :-(')
             print('Expected "{}"'.format(expected_string))
             print('Gotten   "{}"\n'.format(gotten_string))
         return success

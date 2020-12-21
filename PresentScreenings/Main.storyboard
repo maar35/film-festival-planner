@@ -555,13 +555,13 @@
                 </viewController>
                 <customObject id="fCI-0K-nH7" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1102" y="-500"/>
+            <point key="canvasLocation" x="1433" y="-264"/>
         </scene>
         <!--Window Controller-->
         <scene sceneID="R2V-B0-nI4">
             <objects>
                 <windowController id="B8D-0N-5wS" sceneMemberID="viewController">
-                    <window key="window" title="IFFR 2020" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" visibleAtLaunch="NO" animationBehavior="default" id="IQv-IB-iLA">
+                    <window key="window" title="Festival Plan" allowsToolTipsWhenApplicationIsInactive="NO" autorecalculatesKeyViewLoop="NO" releasedWhenClosed="NO" visibleAtLaunch="NO" animationBehavior="default" id="IQv-IB-iLA">
                         <windowStyleMask key="styleMask" titled="YES" closable="YES" miniaturizable="YES" resizable="YES"/>
                         <windowCollectionBehavior key="collectionBehavior" fullScreenNone="YES"/>
                         <windowPositionMask key="initialPositionMask" leftStrut="YES" rightStrut="YES" topStrut="YES" bottomStrut="YES"/>
@@ -1231,25 +1231,11 @@ DQ
                         <segue destination="aXh-o3-u1V" kind="sheet" identifier="CombineSheetSegue" id="2pB-eh-aEj"/>
                         <segue destination="xwY-ys-qMS" kind="sheet" identifier="UncombineSheetSegue" id="sre-cp-yPh"/>
                         <segue destination="heZ-Uf-iae" kind="sheet" identifier="GoToScreeningSegue" id="Aco-xL-TKu"/>
-                        <segue destination="ulM-6Q-dxD" kind="modal" identifier="DownloadFilmInfoSegue" id="5KU-hY-2F8"/>
                     </connections>
                 </viewController>
                 <customObject id="Brq-Bq-Evi" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="553" y="674.5"/>
-        </scene>
-        <!--Download Film Info-->
-        <scene sceneID="PK0-3T-c0t">
-            <objects>
-                <viewController title="Download Film Info" id="ulM-6Q-dxD" customClass="DownloadFilmInfoController" sceneMemberID="viewController">
-                    <view key="view" id="lBf-Kw-cYz">
-                        <rect key="frame" x="0.0" y="0.0" width="450" height="300"/>
-                        <autoresizingMask key="autoresizingMask"/>
-                    </view>
-                </viewController>
-                <customObject id="gL8-Ho-Y8a" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
-            </objects>
-            <point key="canvasLocation" x="1307" y="921"/>
         </scene>
         <!--Combine Title View Controler-->
         <scene sceneID="bHF-hp-bF2">
@@ -1542,7 +1528,7 @@ Gw
                 </viewController>
                 <customObject id="jp2-L0-Ogz" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="2268" y="402"/>
+            <point key="canvasLocation" x="1704" y="643"/>
         </scene>
     </scenes>
     <resources>
@@ -1553,7 +1539,7 @@ Gw
         <sound name="Glass"/>
     </resources>
     <inferredMetricsTieBreakers>
-        <segue reference="GdS-O0-lhM"/>
-        <segue reference="MQZ-rL-cxz"/>
+        <segue reference="8rT-zS-dn2"/>
+        <segue reference="aIf-jF-vlz"/>
     </inferredMetricsTieBreakers>
 </document>

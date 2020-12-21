@@ -19,6 +19,7 @@ namespace PresentScreenings.TableView
         public string FilmArticle { get; private set; }
         public struct ScreenedFilm
         {
+            public int ScreenedFilmId;
             public string Title;
             public string Description;
         }
@@ -58,26 +59,28 @@ namespace PresentScreenings.TableView
             }
             if (ScreenedFilms.Count > 0)
             {
+                string ScreenedFilmText(ScreenedFilm screenedFilm)
+                {
+                    Film film = ViewController.GetFilmById(screenedFilm.ScreenedFilmId);
+                    string titleText = $"{screenedFilm.Title} ({film.MinutesString}) - {film.MaxRating}";
+                    return titleText + Environment.NewLine + WebUtility.HtmlToText(screenedFilm.Description);
+                }
                 builder.AppendLine(Environment.NewLine + "Screened films");
                 var space = Environment.NewLine + Environment.NewLine;
-                builder.AppendLine(string.Join(space, ScreenedFilms.Select(f => f.Title + Environment.NewLine + WebUtility.HtmlToText(f.Description))));
+                builder.AppendLine(string.Join(space, ScreenedFilms.Select(f => ScreenedFilmText(f))));
             }
             return builder.ToString();
         }
         #endregion
 
         #region Public Methods
-        public void AddScreenedFilm(string title, string description)
+        public void AddScreenedFilm(int filmid, string title, string description)
         {
             var screenedFilm = new ScreenedFilm();
+            screenedFilm.ScreenedFilmId = filmid;
             screenedFilm.Title = title;
             screenedFilm.Description = description;
             ScreenedFilms.Add(screenedFilm);
-        }
-
-        public static void AddNewFilmInfo(int filmId, Film.FilmInfoStatus infoStatus)
-        {
-            CheckAddToFilmInfos(new FilmInfo(filmId, infoStatus));
         }
 
         public static void CheckAddToFilmInfos(FilmInfo filmInfo)
@@ -118,6 +121,7 @@ namespace PresentScreenings.TableView
                     from s in el.Element("ScreenedFilms").Elements("ScreenedFilm")
                     select
                     (
+                        (string)s.Attribute("ScreenedFilmId"),
                         (string)s.Attribute("Title"),
                         (string)s.Attribute("Description")
                     )
@@ -133,43 +137,44 @@ namespace PresentScreenings.TableView
                 );
                 foreach (var screenedFilmAttribute in filmInfoElement.Item5)
                 {
-                    var title = screenedFilmAttribute.Item1;
-                    var description = screenedFilmAttribute.Item2;
-                    filmInfo.AddScreenedFilm(title, description);
+                    int filmid = Int32.Parse(screenedFilmAttribute.Item1);
+                    var title = screenedFilmAttribute.Item2;
+                    var description = screenedFilmAttribute.Item3;
+                    filmInfo.AddScreenedFilm(filmid, title, description);
                 }
                 filmInfos.Add(filmInfo);
             }
             return filmInfos;
         }
 
-        public static void SaveFilmInfoAsXml(List<FilmInfo> filmInfos, string path)
-        {
-            var xml = new XElement
-            (
-                "FilmInfos",
-                from filmInfo in filmInfos
-                select new XElement
-                (
-                    "FilmInfo",
-                    new XAttribute("FilmId", filmInfo.FilmId),
-                    new XAttribute("InfoStatus", filmInfo.InfoStatus),
-                    new XAttribute("FilmDescription", filmInfo.FilmDescription),
-                    new XAttribute("FilmArticle", filmInfo.FilmArticle),
-                    new XElement
-                    (
-                        "ScreenedFilms",
-                        from screenedFilm in filmInfo.ScreenedFilms
-                        select new XElement
-                        (
-                            "ScreenedFilm",
-                            new XAttribute("Title", screenedFilm.Title),
-                            new XAttribute("Description", screenedFilm.Description)
-                        )
-                    )
-                )
-            );
-            xml.Save(path);
-        }
+        //public static void SaveFilmInfoAsXml(List<FilmInfo> filmInfos, string path)
+        //{
+        //    var xml = new XElement
+        //    (
+        //        "FilmInfos",
+        //        from filmInfo in filmInfos
+        //        select new XElement
+        //        (
+        //            "FilmInfo",
+        //            new XAttribute("FilmId", filmInfo.FilmId),
+        //            new XAttribute("InfoStatus", filmInfo.InfoStatus),
+        //            new XAttribute("FilmDescription", filmInfo.FilmDescription),
+        //            new XAttribute("FilmArticle", filmInfo.FilmArticle),
+        //            new XElement
+        //            (
+        //                "ScreenedFilms",
+        //                from screenedFilm in filmInfo.ScreenedFilms
+        //                select new XElement
+        //                (
+        //                    "ScreenedFilm",
+        //                    new XAttribute("Title", screenedFilm.Title),
+        //                    new XAttribute("Description", screenedFilm.Description)
+        //                )
+        //            )
+        //        )
+        //    );
+        //    xml.Save(path);
+        //}
 
         public static string InfoString(Film film)
         {
