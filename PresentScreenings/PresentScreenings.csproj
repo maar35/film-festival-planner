@@ -159,7 +159,6 @@
     <Compile Include="Exceptions\IllegalRatingException.cs" />
     <Compile Include="Controls\RatingField.cs" />
     <Compile Include="Exceptions\IllegalFilmInfoCatagoryException.cs" />
-    <Compile Include="Exceptions\UnparseblePageException.cs" />
     <Compile Include="Interfaces\IFilmOutlinable.cs" />
     <Compile Include="Event Arguments\CombineTitlesEventArgs.cs" />
     <Compile Include="Event Arguments\UncombineTitlesEventArgs.cs" />
