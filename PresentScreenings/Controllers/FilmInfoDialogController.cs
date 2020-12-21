@@ -244,7 +244,6 @@ namespace PresentScreenings.TableView
             }
             else
             {
-                //const string text = "Please, hit the URL button above to get film information from the web site.";
                 const string text = "Sorry, the URL button above is under construction.";
                 SetSummaryFieldText(text, true);
             }

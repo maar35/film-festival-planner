@@ -17,7 +17,6 @@ namespace PresentScreenings.TableView
         #region Private Members
         private List<Screening> _plannedScreenings;
         private ViewController _controller;
-        //private Func<string> LogTimeString = ScreeningsPlanner.LogTimeString;
         private Action<string> _displayResults;
         private StringBuilder _builder = new StringBuilder();
         private const string _dateTimeFormat = "yyyy-MM-dd HH:mm:ss";

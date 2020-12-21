@@ -15,8 +15,6 @@ namespace PresentScreenings.TableView
         private const int _showFilmInfoMenuItemTag = 503;
         private const int _combineTitlesMenuItemTag = 504;
         private const int _uncombineTitleMenuItemTag = 505;
-        //private const int _downloadFilmInfoMenuItemTag = 506;
-        //private bool _initialized = false;
         private readonly AppDelegate _app;
         #endregion
 
@@ -34,13 +32,6 @@ namespace PresentScreenings.TableView
 
         public override void NeedsUpdate(NSMenu menu)
         {
-            //// Add the DownLoad Film Info menu item.
-            //if (!_initialized)
-            //{
-            //    AddDownloadMenuItem(menu);
-            //    _initialized = true;
-            //}
-
             // Process every item in the menu
             foreach (NSMenuItem item in menu.Items)
             {
@@ -70,10 +61,6 @@ namespace PresentScreenings.TableView
                     case _uncombineTitleMenuItemTag:
                         item.Enabled = controller != null && !controller.TextBeingEdited && controller.OneFilmSelected();
                         break;
-                    //case _downloadFilmInfoMenuItemTag:
-                    //    //item.Enabled = controller != null && !controller.TextBeingEdited && controller.OneOrMoreFilmsSelected();
-                    //    item.Enabled = false;
-                    //    break;
                     default:
                         item.Enabled = false;
                         break;
@@ -81,17 +68,5 @@ namespace PresentScreenings.TableView
             }
         }
         #endregion
-
-        //#region Private Methods
-        //private void AddDownloadMenuItem(NSMenu menu)
-        //{
-        //    var title = "Download Film Info";
-        //    var newItem = new NSMenuItem(title);
-        //    newItem.Action = new ObjCRuntime.Selector("OpenDownloadFilmInfo:");
-        //    newItem.Tag = _downloadFilmInfoMenuItemTag;
-        //    newItem.KeyEquivalent = "d";
-        //    menu.AddItem(newItem);
-        //}
-        //#endregion
     }
 }

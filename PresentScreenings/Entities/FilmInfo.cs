@@ -9,10 +9,6 @@ namespace PresentScreenings.TableView
 {
     public class FilmInfo
     {
-        #region Private Members
-        private Film.FilmInfoStatus _infoStatus;
-        #endregion
-
         #region Properties
         public int FilmId { get; }
         public string FilmDescription { get; private set; }
@@ -24,16 +20,16 @@ namespace PresentScreenings.TableView
             public string Description;
         }
         public List<ScreenedFilm> ScreenedFilms { get; private set; }
-        public WebUtility.MediumCategory MediumCategory { get => ViewController.GetFilmById(FilmId).Category; }
-        public string Url { get => ViewController.GetFilmById(FilmId).Url; }
-        public Film.FilmInfoStatus InfoStatus { get => _infoStatus; set => SetFilmInfoStatus(value); }
+        public WebUtility.MediumCategory MediumCategory => ViewController.GetFilmById(FilmId).Category;
+        public string Url => ViewController.GetFilmById(FilmId).Url;
+        public Film.FilmInfoStatus InfoStatus { get; }
         #endregion
 
         #region Constructors
         public FilmInfo(int filmId, Film.FilmInfoStatus infoStatus, string description, string article)
         {
             FilmId = filmId;
-            _infoStatus = infoStatus;
+            InfoStatus = infoStatus;
             FilmDescription = description;
             FilmArticle = article;
             ScreenedFilms = new List<ScreenedFilm> { };
@@ -81,17 +77,6 @@ namespace PresentScreenings.TableView
             screenedFilm.Title = title;
             screenedFilm.Description = description;
             ScreenedFilms.Add(screenedFilm);
-        }
-
-        public static void CheckAddToFilmInfos(FilmInfo filmInfo)
-        {
-            var filmInfos = ScreeningsPlan.FilmInfos;
-            var count = filmInfos.Count(i => i.FilmId == filmInfo.FilmId);
-            if (count > 0)
-            {
-                filmInfos.Remove(filmInfos.First(i => i.FilmId == filmInfo.FilmId));
-            }
-            filmInfos.Add(filmInfo);
         }
 
         public static List<FilmInfo> LoadFilmInfoFromXml(string path)
@@ -147,35 +132,6 @@ namespace PresentScreenings.TableView
             return filmInfos;
         }
 
-        //public static void SaveFilmInfoAsXml(List<FilmInfo> filmInfos, string path)
-        //{
-        //    var xml = new XElement
-        //    (
-        //        "FilmInfos",
-        //        from filmInfo in filmInfos
-        //        select new XElement
-        //        (
-        //            "FilmInfo",
-        //            new XAttribute("FilmId", filmInfo.FilmId),
-        //            new XAttribute("InfoStatus", filmInfo.InfoStatus),
-        //            new XAttribute("FilmDescription", filmInfo.FilmDescription),
-        //            new XAttribute("FilmArticle", filmInfo.FilmArticle),
-        //            new XElement
-        //            (
-        //                "ScreenedFilms",
-        //                from screenedFilm in filmInfo.ScreenedFilms
-        //                select new XElement
-        //                (
-        //                    "ScreenedFilm",
-        //                    new XAttribute("Title", screenedFilm.Title),
-        //                    new XAttribute("Description", screenedFilm.Description)
-        //                )
-        //            )
-        //        )
-        //    );
-        //    xml.Save(path);
-        //}
-
         public static string InfoString(Film film)
         {
             var filmInfo = ViewController.GetFilmInfo(film.FilmId);
@@ -203,12 +159,6 @@ namespace PresentScreenings.TableView
             {
                 throw new IllegalFilmInfoCategoryException($"'{name}' is not a valid FilmInfoCategory");
             }
-        }
-
-        private void SetFilmInfoStatus(Film.FilmInfoStatus status)
-        {
-            _infoStatus = status;
-            CheckAddToFilmInfos(this);
         }
         #endregion
     }

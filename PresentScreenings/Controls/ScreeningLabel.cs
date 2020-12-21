@@ -32,13 +32,20 @@ namespace PresentScreenings.TableView
 
         void Initialize()
         {
-            // Initialize control features.
+            // Initialize draw properties.
             WantsLayer = true;
             LayerContentsRedrawPolicy = NSViewLayerContentsRedrawPolicy.OnSetNeedsDisplay;
         }
         #endregion
 
         #region Override Methods
+        /// <summary>
+        /// Override the MouseDown event by a no-op to prevent undesired
+        /// behaviour when a Screening Label overlaps the clickable control
+        /// rectangle of another Screening Control.
+        /// </summary>
+        /// <param name="theEvent"></param>
+
         public override void MouseDown(NSEvent theEvent)
         {
         }
