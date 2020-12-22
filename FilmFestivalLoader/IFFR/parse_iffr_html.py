@@ -62,6 +62,10 @@ def main():
     except KeyboardInterrupt:
         comment("Interrupted from keyboard... exiting")
         write_other_lists = False
+    except Exception as e:
+        Globals.debug_recorder.write_debug()
+        comment('Debug info printed.')
+        raise e
     else:
         write_film_list = True
 
@@ -136,8 +140,8 @@ class FilmDetailsLoader:
 
     def get_film_details(self, iffr_data):
         for film in iffr_data.films:
-            if film.filmid not in [1, 18, 123, 124, 175, 438, 572, 659, 688, 692]:
-                continue
+            # if film.filmid not in [1, 18, 123, 124, 175, 438, 572, 659, 688, 692]:
+            #     continue
             html_data = None
             film_file = film_file_format.format(film.filmid)
             if os.path.isfile(film_file):
@@ -296,10 +300,15 @@ class FilmPageParser(HtmlPageParser):
 
     def add_screened_film(self):
         print(f'Found screened film: {self.screened_title}')
-        film = self.iffr_data.get_film_by_key(self.screened_title, self.screened_url)
-        screened_film = planner.ScreenedFilm(film.filmid, self.screened_title, self.screened_description)
-        self.screened_films.append(screened_film)
-        self.init_screened_film_data()
+        try:
+            film = self.iffr_data.get_film_by_key(self.screened_title, self.screened_url)
+        except KeyError:
+            Globals.error_collector.add('No screened URL found', f'{self.screened_title}')
+        else:
+            screened_film = planner.ScreenedFilm(film.filmid, self.screened_title, self.screened_description)
+            self.screened_films.append(screened_film)
+        finally:
+            self.init_screened_film_data()
 
     def add_screening(self):
         start_datetime = datetime.datetime.combine(self.start_date, self.start_time)
@@ -318,7 +327,10 @@ class FilmPageParser(HtmlPageParser):
         print(f"--  q and a:    {self.qa}")
         print(f"--  extra:      {self.extra}")
 
-        screening = planner.Screening(self.film, self.screen, start_datetime, end_datetime, self.qa, self.extra, self.audience)
+        program = None
+        if self.film.combination_url is not None:
+            program = self.iffr_data.get_film_by_key(None, self.film.combination_url)
+        screening = planner.Screening(self.film, self.screen, start_datetime, end_datetime, self.qa, self.extra, self.audience, program)
 
         self.iffr_data.screenings.append(screening)
         print("---SCREENING ADDED")
@@ -328,8 +340,8 @@ class FilmPageParser(HtmlPageParser):
     def ok_to_add_screening(self):
         if self.audience is None:
             return False
-        if len(self.film.combination_url) > 0:
-            return False
+        # if len(self.film.combination_url) > 0:
+        #     return False
         if self.extra == "Voorfilm: " + self.film.title:
             return False
         if not include_events and self.film.medium_category == "events":

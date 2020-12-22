@@ -38,8 +38,8 @@ namespace PresentScreenings.TableView
         public AppDelegate()
 		{
             // Preferences.
-            Festival = "IDFA";
-            FestivalYear = "2020";
+            Festival = "IFFR";
+            FestivalYear = "2021";
             Screening.TravelTime = new TimeSpan(0, 30, 0);
             FilmRatingDialogController.OnlyFilmsWithScreenings = false;
             FilmRatingDialogController.MinimalDuration = new TimeSpan(0, 35, 0);

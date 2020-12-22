@@ -106,7 +106,7 @@ namespace PresentScreenings.TableView
         public override void ViewDidAppear()
         {
             base.ViewDidAppear();
-            this.View.Window.Title = $"{AppDelegate.Festival} {AppDelegate.FestivalYear}";
+            View.Window.Title = $"{AppDelegate.Festival} {AppDelegate.FestivalYear}";
         }
 
         public override void PrepareForSegue(NSStoryboardSegue segue, NSObject sender)
