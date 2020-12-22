@@ -9,16 +9,19 @@ namespace PresentScreenings.TableView
 {
     public class FilmInfo
     {
-        #region Properties
-        public int FilmId { get; }
-        public string FilmDescription { get; private set; }
-        public string FilmArticle { get; private set; }
+        #region Public Structures.
         public struct ScreenedFilm
         {
             public int ScreenedFilmId;
             public string Title;
             public string Description;
         }
+        #endregion
+
+        #region Properties
+        public int FilmId { get; }
+        public string FilmDescription { get; private set; }
+        public string FilmArticle { get; private set; }
         public List<ScreenedFilm> ScreenedFilms { get; private set; }
         public WebUtility.MediumCategory MediumCategory => ViewController.GetFilmById(FilmId).Category;
         public string Url => ViewController.GetFilmById(FilmId).Url;
@@ -61,7 +64,8 @@ namespace PresentScreenings.TableView
                     string titleText = $"{screenedFilm.Title} ({film.MinutesString}) - {film.MaxRating}";
                     return titleText + Environment.NewLine + WebUtility.HtmlToText(screenedFilm.Description);
                 }
-                builder.AppendLine(Environment.NewLine + "Screened films");
+                string header = isCombinationProgram() ? "Screened films" : "Also screened";
+                builder.AppendLine(Environment.NewLine + header);
                 var space = Environment.NewLine + Environment.NewLine;
                 builder.AppendLine(string.Join(space, ScreenedFilms.Select(f => ScreenedFilmText(f))));
             }
@@ -159,6 +163,11 @@ namespace PresentScreenings.TableView
             {
                 throw new IllegalFilmInfoCategoryException($"'{name}' is not a valid FilmInfoCategory");
             }
+        }
+
+        private bool isCombinationProgram()
+        {
+            return MediumCategory == WebUtility.MediumCategory.CombinedProgrammes;
         }
         #endregion
     }

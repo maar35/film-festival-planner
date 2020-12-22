@@ -67,11 +67,11 @@ class Film:
         self.section = ""
         self.duration = None
         self.medium_category = url.split("/")[5]
-        self.combination_url = ""
+        self.combination_url = None
         self.sortstring = self.lower(self.strip_article())
 
     def __str__(self):
-        return "; ".join([self.title, self.medium_category, self.combination_url])
+        return "; ".join([self.title, self.medium_category, '' if self.combination_url is None else self.combination_url])
 
     def __lt__(self, other):
         self_is_alpha = self.re_alpha.match(self.sortstring) is not None
@@ -288,7 +288,6 @@ class FestivalData:
                 title = record[3]
                 url = record[8]
                 self.filmid_by_url[url] = filmid
-#                self.filmid_by_key[title] = filmid
                 self.filmid_by_key[self._filmkey(title, url)] = filmid
         except OSError:
             pass
@@ -384,7 +383,7 @@ class FestivalData:
     def write_screenings(self):
         public_screenings = []
         if len(self.screenings):
-            public_screenings = [s for s in self.screenings if s.audience == "publiek" and s.combination_program is None]
+            public_screenings = [s for s in self.screenings if s.audience == "publiek"]
             with open(self.screenings_file, 'w') as f:
                 f.write(self.screenings[0].screening_repr_csv_head())
                 for screening in public_screenings:
