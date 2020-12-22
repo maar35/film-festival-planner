@@ -140,8 +140,8 @@ class FilmDetailsLoader:
 
     def get_film_details(self, iffr_data):
         for film in iffr_data.films:
-            # if film.filmid not in [1, 18, 123, 124, 175, 438, 572, 659, 688, 692]:
-            #     continue
+            if film.filmid not in [1, 18, 123, 124, 175, 438, 572, 659, 688, 692]:
+                continue
             html_data = None
             film_file = film_file_format.format(film.filmid)
             if os.path.isfile(film_file):
@@ -340,8 +340,6 @@ class FilmPageParser(HtmlPageParser):
     def ok_to_add_screening(self):
         if self.audience is None:
             return False
-        # if len(self.film.combination_url) > 0:
-        #     return False
         if self.extra == "Voorfilm: " + self.film.title:
             return False
         if not include_events and self.film.medium_category == "events":

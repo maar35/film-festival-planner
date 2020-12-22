@@ -383,7 +383,6 @@ class FestivalData:
     def write_screenings(self):
         public_screenings = []
         if len(self.screenings):
-            # public_screenings = [s for s in self.screenings if s.audience == "publiek" and s.combination_program is None]
             public_screenings = [s for s in self.screenings if s.audience == "publiek"]
             with open(self.screenings_file, 'w') as f:
                 f.write(self.screenings[0].screening_repr_csv_head())
