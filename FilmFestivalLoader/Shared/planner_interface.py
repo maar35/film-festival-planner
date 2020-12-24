@@ -74,12 +74,6 @@ class Film:
         return "; ".join([self.title, self.medium_category, '' if self.combination_url is None else self.combination_url])
 
     def __lt__(self, other):
-        self_is_alpha = self.re_alpha.match(self.sortstring) is not None
-        other_is_alpha = self.re_alpha.match(other.sortstring) is not None
-        if self_is_alpha and not other_is_alpha:
-            return True
-        if not self_is_alpha and other_is_alpha:
-            return False
         return self.sortstring < other.sortstring
 
     def film_repr_csv_head(self):
@@ -352,6 +346,12 @@ class FestivalData:
             for screen in self.screen_by_location.values():
                 f.write(repr(screen))
         print(f"Done writing {len(self.screen_by_location)} records to {self.screens_file}.")
+
+    def sort_films(self):
+        seqnr = 0
+        for film in sorted(self.films):
+            seqnr += 1
+            film.seqnr = seqnr
 
     def write_films(self):
         if len(self.films):
