@@ -31,15 +31,18 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public static NSTextField NewStandardLabel(CGRect frame)
+        public static NSTextField NewStandardLabel(CGRect frame, bool keepWindowsBackgroundCoplor = false)
         {
             var label = new NSTextField(frame)
             {
                 Editable = false,
-                BackgroundColor = NSColor.WindowBackground,
                 Bordered = false,
                 LineBreakMode = NSLineBreakMode.TruncatingMiddle
             };
+            if (keepWindowsBackgroundCoplor)
+            {
+                label.BackgroundColor = NSColor.WindowBackground;
+            }
             return label;
         }
 

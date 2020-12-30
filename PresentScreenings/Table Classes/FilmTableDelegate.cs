@@ -11,7 +11,8 @@ namespace PresentScreenings.TableView
 
     public class FilmTableDelegate : NSTableViewDelegate
     {
-        #region Constants 
+        #region Constants
+        private const float _titleWidth = 260;
         private const string _cellIdentifier = "FilmCell";
         #endregion
 
@@ -86,6 +87,7 @@ namespace PresentScreenings.TableView
                     NSTextField filmLabel = (NSTextField)view;
                     PopulateFilm(ref filmLabel);
                     filmLabel.StringValue = film.Title;
+                    tableColumn.Width = _titleWidth;
                     return filmLabel;
                 case "Description":
                     NSTextField descriptionLabel = (NSTextField)view;

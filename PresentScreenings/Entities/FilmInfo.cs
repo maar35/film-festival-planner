@@ -22,6 +22,7 @@ namespace PresentScreenings.TableView
         public int FilmId { get; }
         public string FilmDescription { get; private set; }
         public string FilmArticle { get; private set; }
+        public int? CombinationProgramId { get; private set; }
         public List<ScreenedFilm> ScreenedFilms { get; private set; }
         public WebUtility.MediumCategory MediumCategory => ViewController.GetFilmById(FilmId).Category;
         public string Url => ViewController.GetFilmById(FilmId).Url;
@@ -29,17 +30,15 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
-        public FilmInfo(int filmId, Film.FilmInfoStatus infoStatus, string description, string article)
+        public FilmInfo(int filmId, Film.FilmInfoStatus infoStatus, string description, string article, int? combinationId)
         {
             FilmId = filmId;
             InfoStatus = infoStatus;
             FilmDescription = description;
             FilmArticle = article;
+            CombinationProgramId = combinationId;
             ScreenedFilms = new List<ScreenedFilm> { };
         }
-
-        public FilmInfo(int filmId, Film.FilmInfoStatus infoStatus)
-            : this(filmId, infoStatus, string.Empty, string.Empty) { }
         #endregion
 
         #region Override Methods
@@ -64,7 +63,17 @@ namespace PresentScreenings.TableView
                     string titleText = $"{screenedFilm.Title} ({film.MinutesString}) - {film.MaxRating}";
                     return titleText + Environment.NewLine + WebUtility.HtmlToText(screenedFilm.Description);
                 }
-                string header = isCombinationProgram() ? "Screened films" : "Also screened";
+                string header = "Screened films";
+                if (!isCombinationProgram())
+                {
+                    int CombinationId;
+                    try
+                    {
+                        CombinationId = (int)CombinationProgramId;
+                        header = $"Also screened in {ViewController.GetFilmById(CombinationId)}:";
+                    }
+                    catch (InvalidOperationException) { }
+                }
                 builder.AppendLine(Environment.NewLine + header);
                 var space = Environment.NewLine + Environment.NewLine;
                 builder.AppendLine(string.Join(space, ScreenedFilms.Select(f => ScreenedFilmText(f))));
@@ -107,6 +116,7 @@ namespace PresentScreenings.TableView
                     (string)el.Attribute("InfoStatus"),
                     (string)el.Attribute("FilmDescription"),
                     (string)el.Attribute("FilmArticle"),
+                    (string)el.Attribute("CombinationProgramId"),
                     from s in el.Element("ScreenedFilms").Elements("ScreenedFilm")
                     select
                     (
@@ -122,9 +132,10 @@ namespace PresentScreenings.TableView
                     filmInfoElement.Item1,
                     StringToFilmInfoStatus(filmInfoElement.Item2),
                     filmInfoElement.Item3,
-                    filmInfoElement.Item4
+                    filmInfoElement.Item4,
+                    int.TryParse(filmInfoElement.Item5, out int outcome) ? (int?)outcome : null
                 );
-                foreach (var screenedFilmAttribute in filmInfoElement.Item5)
+                foreach (var screenedFilmAttribute in filmInfoElement.Item6)
                 {
                     int filmid = Int32.Parse(screenedFilmAttribute.Item1);
                     var title = screenedFilmAttribute.Item2;

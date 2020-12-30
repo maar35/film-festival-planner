@@ -98,6 +98,7 @@ namespace PresentScreenings.TableView
                     var filmInfoModal = segue.DestinationController as FilmInfoDialogController;
                     FilmInfoDialogController.Presentor = this;
                     filmInfoModal.BehaveAsPopover = true;
+                    filmInfoModal.UseTitleBackground = true;
                     break;
             }
         }

@@ -68,6 +68,7 @@ class Film:
         self.duration = None
         self.medium_category = url.split("/")[5]
         self.combination_url = None
+        self.combination_program = None
         self.sortstring = self.lower(self.strip_article())
 
     def __str__(self):
@@ -153,10 +154,11 @@ class ScreenedFilm:
 
 class FilmInfo():
 
-    def __init__(self, filmid, description, article, screened_films=[]):
+    def __init__(self, filmid, description, article, combination_url=None, screened_films=[]):
         self.filmid = filmid
         self.description = description
         self.article = article
+        self.combination_url = combination_url
         self.screened_films = screened_films
 
     def __str__(self):
@@ -358,8 +360,14 @@ class FestivalData:
             with open(self.films_file, 'w') as f:
                 f.write(self.films[0].film_repr_csv_head())
                 for film in self.films:
+                    # self.get_combination_id(film)
                     f.write(repr(film))
         print(f"Done writing {len(self.films)} records to {self.films_file}.")
+
+    def get_combination_id(self, filminfo):
+        if filminfo.combination_url is not None:
+            return self.get_film_by_key(None, filminfo.combination_url).filmid
+        return ''
 
     def write_filminfo(self):
         info_count = 0
@@ -369,7 +377,9 @@ class FestivalData:
             id = str(filminfo.filmid)
             article = filminfo.article
             descr = filminfo.description
-            info = ET.SubElement(filminfos, 'FilmInfo', FilmId=id, FilmArticle=article, FilmDescription=descr, InfoStatus='Complete')
+            combination_id = self.get_combination_id(filminfo)
+            info = ET.SubElement(filminfos, 'FilmInfo', FilmId=id, FilmArticle=article, FilmDescription=descr,
+                                 InfoStatus='Complete', CombinationProgramId=str(combination_id))
             screened_films = ET.SubElement(info, 'ScreenedFilms')
             for screened_film in filminfo.screened_films:
                 _ = ET.SubElement(screened_films, 'ScreenedFilm',
