@@ -27,10 +27,10 @@ webdata_dir = os.path.join(documents_dir, "_website_data")
 plandata_dir = os.path.join(documents_dir, "_planner_data")
 
 # Filename formats.
-az_file_format = os.path.join(webdata_dir, "azpage_{:02d}.html")
 film_file_format = os.path.join(webdata_dir, "filmpage_{:03d}.html")
 
 # Files.
+az_file = os.path.join(webdata_dir, "azpage_01.html")
 films_file = os.path.join(plandata_dir, "films.csv")
 screens_file = os.path.join(plandata_dir, "screens.csv")
 screenings_file = os.path.join(plandata_dir, "screenings.csv")
@@ -38,7 +38,7 @@ debug_file = os.path.join(plandata_dir, "debug.txt")
 
 # URL information.
 iffr_hostname = "https://iffr.com"
-az_url_format = "/nl/programma/" + str(year) + "/a-z{}"
+az_url_path = "/nl/programma/" + str(year) + "/a-z"
 
 
 def main():
@@ -115,23 +115,15 @@ class FilmsLoader:
         self.page_count = az_page_count
 
     def get_films(self, iffr_data):
-        for page_number in range(1, self.page_count + 1):
-            az_html = None
-            az_file = az_file_format.format(page_number)
-            if os.path.isfile(az_file):
-                charset = web_tools.get_charset(az_file)
-                with open(az_file, 'r', encoding=charset) as f:
-                    az_html = f.read()
-            else:
-                az_url_leave = ''
-                if page_number > 1:
-                    az_url_leave = r'#page={}'.format(page_number)
-                az_page = iffr_hostname + az_url_format.format(az_url_leave)
-                url_reader = web_tools.UrlReader(Globals.error_collector)
-                az_html = url_reader.load_url(az_page, az_file)
-            if az_html is not None:
-                az_page_parser = AzPageParser(iffr_data)
-                az_page_parser.feed(az_html)
+        if os.path.isfile(az_file):
+            charset = web_tools.get_charset(az_file)
+            with open(az_file, 'r', encoding=charset) as f:
+                az_html = f.read()
+        else:
+            az_url = iffr_hostname + az_url_path
+            az_html = web_tools.UrlReader(Globals.error_collector).load_url(az_url, az_file)
+        if az_html is not None:
+            AzPageParser(iffr_data).feed(az_html)
 
 
 class FilmDetailsLoader:
@@ -149,8 +141,7 @@ class FilmDetailsLoader:
                     html_data = f.read()
             else:
                 print(f"Downloading site of {film.title}: {film.url}")
-                url_reader = web_tools.UrlReader(Globals.error_collector)
-                html_data = url_reader.load_url(film.url, film_file)
+                html_data = web_tools.UrlReader(Globals.error_collector).load_url(film.url, film_file)
             if html_data is not None:
                 print(f"Analysing html file {film.filmid} of {film.title} {film.url}")
                 FilmPageParser(iffr_data, film).feed(html_data)
@@ -186,15 +177,13 @@ class AzPageParser(HtmlPageParser):
         self.init_film_data()
 
     def parse_props(self, data):
-        for g in self.props_re.findall(data):
-            self.title = g[0]
-            self.url = iffr_hostname + web_tools.iripath_to_uripath(g[1])
-            # grid_description = g[2]
-            self.description = g[3]
-            self.sorted_title = g[4].lower()
-            minutes = 0
-            if len(g) > 5 and len(g[5]) > 0:
-                minutes = int(g[5])
+        for g in [m.groupdict() for m in self.props_re.finditer(data)]:
+            self.title = g['title']
+            self.url = iffr_hostname + web_tools.iripath_to_uripath(g['url'])
+            self.description = g['list_desc']
+            self.sorted_title = g['sorted_title'].lower()
+            minutes_str = g['duration']
+            minutes = 0 if minutes_str is None else int(minutes_str)
             self.duration = datetime.timedelta(minutes=minutes)
             self.add_film()
             if self.film is not None:
@@ -243,7 +232,7 @@ class FilmPageParser(HtmlPageParser):
         self.article_paragraphs = []
         self.paragraph = None
         self.article = None
-        self.combination_url = None
+        self.combination_urls = []
         self.debugging = True
         self.await_article = False
         self.in_article = False
@@ -299,7 +288,7 @@ class FilmPageParser(HtmlPageParser):
             else:
                 Globals().error_collector.add('Article is empty string', f'{self.film} {self.film.duration_str()}')
                 filminfo.article = ''
-            filminfo.combination_url = self.combination_url
+            filminfo.combination_urls = self.combination_urls
             filminfo.screened_films = self.screened_films
             self.print_debug(f'FILMINFO of {self.film.title} updated', f'ARTICLE: {filminfo.article}')
         else:
@@ -337,8 +326,6 @@ class FilmPageParser(HtmlPageParser):
         print(f"--  extra:      {self.extra}")
 
         program = None
-        if self.film.combination_url is not None:
-            program = self.iffr_data.get_film_by_key(None, self.film.combination_url)
         screening = planner.Screening(self.film, self.screen, start_datetime, end_datetime, self.qa, self.extra, self.audience, program)
 
         self.iffr_data.screenings.append(screening)
@@ -358,16 +345,17 @@ class FilmPageParser(HtmlPageParser):
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
 
-        # Get data for fim info.
+        # Get data for film info.
         if tag == 'a' and len(attrs) > 0:
             attr = attrs[0]
             if attr[0] == 'href':
                 combine_attr = f'/nl/{year}/events/'
                 if attr[1].startswith(combine_attr):
                     url_path = web_tools.iripath_to_uripath(attr[1])
-                    self.combination_url = f'{iffr_hostname}{url_path}'
-                    print(f'Part of COMBINATION: {self.combination_url}')
-                    self.print_debug('Found COMBINATION url', self.combination_url)
+                    combination_url = f'{iffr_hostname}{url_path}'
+                    print(f'Part of COMBINATION: {combination_url}')
+                    self.print_debug('Found COMBINATION url', combination_url)
+                    self.combination_urls.append(combination_url)
         if self.await_article and tag == 'div' and len(attrs) > 0:
             if attrs[0] == ('class', 'grid__Grid-enb6co-0 ejdVvQ'):
                 self.await_article = False
@@ -385,8 +373,9 @@ class FilmPageParser(HtmlPageParser):
         elif not self.in_screened_films and tag == 'h3' and len(attrs) > 0:
             attr = attrs[0]
             if attr == ('class', 'typography__H3-sc-1jflaau-4 eqGgqi'):
-                self.in_screened_films = True
-                self.print_debug('Entering SCREENED FILMS section', f'{self.film.title}')
+                if self.film.medium_category != 'films':
+                    self.in_screened_films = True
+                    self.print_debug('Entering SCREENED FILMS section', f'{self.film.title}')
         elif self.in_screened_films and tag == 'article':
             self.in_screened_film = True
         elif self.in_screened_film and tag == 'a' and len(attrs) > 0:
@@ -432,7 +421,7 @@ class FilmPageParser(HtmlPageParser):
     def handle_endtag(self, tag):
         HtmlPageParser.handle_endtag(self, tag)
 
-        # Get data for fim info.
+        # Get data for film info.
         if self.in_screened_film and tag == 'article':
             self.in_screened_film = False
         elif self.in_paragraph and tag == 'p':
@@ -460,7 +449,7 @@ class FilmPageParser(HtmlPageParser):
     def handle_data(self, data):
         HtmlPageParser.handle_data(self, data)
 
-        # Get data for fim info.
+        # Get data for film info.
         if data == 'Toevoegen aan favorieten' or data == 'Add to favourites':
             self.await_article = True
         if self.in_paragraph:

@@ -31,7 +31,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public static NSTextField NewStandardLabel(CGRect frame, bool keepWindowsBackgroundCoplor = false)
+        public static NSTextField NewStandardLabel(CGRect frame, bool useWindowsBackgroundCoplor = false)
         {
             var label = new NSTextField(frame)
             {
@@ -39,7 +39,7 @@ namespace PresentScreenings.TableView
                 Bordered = false,
                 LineBreakMode = NSLineBreakMode.TruncatingMiddle
             };
-            if (keepWindowsBackgroundCoplor)
+            if (useWindowsBackgroundCoplor)
             {
                 label.BackgroundColor = NSColor.WindowBackground;
             }

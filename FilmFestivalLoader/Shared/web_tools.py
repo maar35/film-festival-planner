@@ -37,7 +37,6 @@ class HtmlCharsetParser(html.parser.HTMLParser):
         html.parser.HTMLParser.handle_starttag(self, tag, attrs)
         if tag == 'meta':
             for attr in attrs:
-                # if attr[0] == 'charset' or attr[0] == 'charSet':
                 if attr[0] == 'charset':
                     self.charset = attr[1]
                     break
@@ -85,13 +84,8 @@ class UrlReader:
         headers = {'User-Agent': user_agent}
         req = urllib.request.Request(url, headers=headers)
         html = None
-        try:
-            with urllib.request.urlopen(req) as response:
-                html = response.read().decode()
-        except UnicodeEncodeError as e:
-            self.error_collector.add(str(e), f'reading URL: {url}')
-        except urllib.error.URLError as e:
-            self.error_collector.add(str(e), f'reading URL: {url}')
+        with urllib.request.urlopen(req) as response:
+            html = response.read().decode()
         return html
 
     def load_url(self, url, target_file):

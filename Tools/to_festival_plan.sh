@@ -3,7 +3,7 @@
 declare -r festival_year=$(basename $(dirname $(pwd)))
 declare -r festival=${festival_year:0:4}
 declare -r year=${festival_year:4:4}
-declare -r festival_dir=/Users/maartenroos/Documents/Film/$festival/${festival}${year}
+declare -r festival_dir=~/Documents/Film/$festival/${festival}${year}
 declare -r source_dir=$festival_dir/_planner_data
 declare -r source_files="$source_dir/*.csv $source_dir/*.xml"
 declare -r target_dir=$festival_dir/FestivalPlan
