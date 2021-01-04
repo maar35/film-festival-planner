@@ -67,19 +67,12 @@ class Film:
         self.section = ""
         self.duration = None
         self.medium_category = url.split("/")[5]
-        self.combination_url = None
         self.sortstring = self.lower(self.strip_article())
 
     def __str__(self):
-        return "; ".join([self.title, self.medium_category, '' if self.combination_url is None else self.combination_url])
+        return "; ".join([self.title, self.medium_category])
 
     def __lt__(self, other):
-        self_is_alpha = self.re_alpha.match(self.sortstring) is not None
-        other_is_alpha = self.re_alpha.match(other.sortstring) is not None
-        if self_is_alpha and not other_is_alpha:
-            return True
-        if not self_is_alpha and other_is_alpha:
-            return False
         return self.sortstring < other.sortstring
 
     def film_repr_csv_head(self):
@@ -159,10 +152,11 @@ class ScreenedFilm:
 
 class FilmInfo():
 
-    def __init__(self, filmid, description, article, screened_films=[]):
+    def __init__(self, filmid, description, article, combination_urls=[], screened_films=[]):
         self.filmid = filmid
         self.description = description
         self.article = article
+        self.combination_urls = combination_urls
         self.screened_films = screened_films
 
     def __str__(self):
@@ -353,6 +347,12 @@ class FestivalData:
                 f.write(repr(screen))
         print(f"Done writing {len(self.screen_by_location)} records to {self.screens_file}.")
 
+    def sort_films(self):
+        seqnr = 0
+        for film in sorted(self.films):
+            seqnr += 1
+            film.seqnr = seqnr
+
     def write_films(self):
         if len(self.films):
             with open(self.films_file, 'w') as f:
@@ -360,6 +360,9 @@ class FestivalData:
                 for film in self.films:
                     f.write(repr(film))
         print(f"Done writing {len(self.films)} records to {self.films_file}.")
+
+    def get_filmid(self, url):
+        return self.get_film_by_key(None, url).filmid
 
     def write_filminfo(self):
         info_count = 0
@@ -369,7 +372,15 @@ class FestivalData:
             id = str(filminfo.filmid)
             article = filminfo.article
             descr = filminfo.description
-            info = ET.SubElement(filminfos, 'FilmInfo', FilmId=id, FilmArticle=article, FilmDescription=descr, InfoStatus='Complete')
+            info = ET.SubElement(filminfos, 'FilmInfo',
+                                 FilmId=id,
+                                 FilmArticle=article,
+                                 FilmDescription=descr,
+                                 InfoStatus='Complete')
+            combination_programs = ET.SubElement(info, 'CombinationPrograms')
+            for combination_url in filminfo.combination_urls:
+                _ = ET.SubElement(combination_programs, 'CombinationProgram',
+                                  CombinationProgramId=str(self.get_filmid(combination_url)))
             screened_films = ET.SubElement(info, 'ScreenedFilms')
             for screened_film in filminfo.screened_films:
                 _ = ET.SubElement(screened_films, 'ScreenedFilm',

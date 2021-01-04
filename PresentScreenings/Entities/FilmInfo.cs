@@ -9,19 +9,34 @@ namespace PresentScreenings.TableView
 {
     public class FilmInfo
     {
-        #region Public Structures.
-        public struct ScreenedFilm
+        #region Public Sub-classes.
+        public class ScreenedFilm
         {
-            public int ScreenedFilmId;
-            public string Title;
-            public string Description;
+            public int ScreenedFilmId { get; }
+            public string Title { get; }
+            public string Description { get; }
+
+            public ScreenedFilm(int screenedFilmId, string title, string description)
+            {
+                ScreenedFilmId = screenedFilmId;
+                Title = title;
+                Description = description;
+            }
+
+            public override string ToString()
+            {
+                Film film = ViewController.GetFilmById(ScreenedFilmId);
+                string titleText = $"{Title} ({film.MinutesString}) - {film.MaxRating}";
+                return titleText + Environment.NewLine + WebUtility.HtmlToText(Description);
+            }
         }
         #endregion
 
         #region Properties
         public int FilmId { get; }
-        public string FilmDescription { get; private set; }
-        public string FilmArticle { get; private set; }
+        public string FilmDescription { get; }
+        public string FilmArticle { get; }
+        public List<int> CombinationProgramIds { get; private set; }
         public List<ScreenedFilm> ScreenedFilms { get; private set; }
         public WebUtility.MediumCategory MediumCategory => ViewController.GetFilmById(FilmId).Category;
         public string Url => ViewController.GetFilmById(FilmId).Url;
@@ -35,11 +50,9 @@ namespace PresentScreenings.TableView
             InfoStatus = infoStatus;
             FilmDescription = description;
             FilmArticle = article;
+            CombinationProgramIds = new List<int> { };
             ScreenedFilms = new List<ScreenedFilm> { };
         }
-
-        public FilmInfo(int filmId, Film.FilmInfoStatus infoStatus)
-            : this(filmId, infoStatus, string.Empty, string.Empty) { }
         #endregion
 
         #region Override Methods
@@ -56,18 +69,19 @@ namespace PresentScreenings.TableView
                 builder.AppendLine(Environment.NewLine + "Article");
                 builder.AppendLine(WebUtility.HtmlToText(FilmArticle));
             }
+            if (CombinationProgramIds.Count > 0)
+            {
+                builder.AppendLine(Environment.NewLine + "Screened as part of:");
+                builder.AppendJoin(Environment.NewLine, (
+                    from int filmId in CombinationProgramIds
+                    select ViewController.GetFilmById(filmId)
+                ));
+            }
             if (ScreenedFilms.Count > 0)
             {
-                string ScreenedFilmText(ScreenedFilm screenedFilm)
-                {
-                    Film film = ViewController.GetFilmById(screenedFilm.ScreenedFilmId);
-                    string titleText = $"{screenedFilm.Title} ({film.MinutesString}) - {film.MaxRating}";
-                    return titleText + Environment.NewLine + WebUtility.HtmlToText(screenedFilm.Description);
-                }
-                string header = isCombinationProgram() ? "Screened films" : "Also screened";
-                builder.AppendLine(Environment.NewLine + header);
+                builder.AppendLine(Environment.NewLine + "Screened films");
                 var space = Environment.NewLine + Environment.NewLine;
-                builder.AppendLine(string.Join(space, ScreenedFilms.Select(f => ScreenedFilmText(f))));
+                builder.AppendLine(string.Join(space, ScreenedFilms.Select(f => f.ToString())));
             }
             return builder.ToString();
         }
@@ -76,10 +90,7 @@ namespace PresentScreenings.TableView
         #region Public Methods
         public void AddScreenedFilm(int filmid, string title, string description)
         {
-            var screenedFilm = new ScreenedFilm();
-            screenedFilm.ScreenedFilmId = filmid;
-            screenedFilm.Title = title;
-            screenedFilm.Description = description;
+            var screenedFilm = new ScreenedFilm(filmid, title, description);
             ScreenedFilms.Add(screenedFilm);
         }
 
@@ -107,6 +118,11 @@ namespace PresentScreenings.TableView
                     (string)el.Attribute("InfoStatus"),
                     (string)el.Attribute("FilmDescription"),
                     (string)el.Attribute("FilmArticle"),
+                    from c in el.Element("CombinationPrograms").Elements("CombinationProgram")
+                    select
+                    (
+                        (int)c.Attribute("CombinationProgramId")
+                    ),
                     from s in el.Element("ScreenedFilms").Elements("ScreenedFilm")
                     select
                     (
@@ -124,9 +140,13 @@ namespace PresentScreenings.TableView
                     filmInfoElement.Item3,
                     filmInfoElement.Item4
                 );
-                foreach (var screenedFilmAttribute in filmInfoElement.Item5)
+                foreach (var compilationProgramAttribute in filmInfoElement.Item5)
                 {
-                    int filmid = Int32.Parse(screenedFilmAttribute.Item1);
+                    filmInfo.CombinationProgramIds.Add(compilationProgramAttribute);
+                }
+                foreach (var screenedFilmAttribute in filmInfoElement.Item6)
+                {
+                    int filmid = int.Parse(screenedFilmAttribute.Item1);
                     var title = screenedFilmAttribute.Item2;
                     var description = screenedFilmAttribute.Item3;
                     filmInfo.AddScreenedFilm(filmid, title, description);

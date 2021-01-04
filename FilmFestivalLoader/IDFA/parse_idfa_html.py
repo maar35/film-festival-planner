@@ -610,6 +610,21 @@ class CompilationPageParser(FilmPageParser):
             self.add_screened_film()
 
 
+class Film(planner.Film):
+
+    def __init__(self, film):
+        planner.Film.__init__(self, film.seqnr, film.filmid, film.title, film.url)
+
+    def __lt__(self, other):
+        self_is_alpha = self.re_alpha.match(self.sortstring) is not None
+        other_is_alpha = self.re_alpha.match(other.sortstring) is not None
+        if self_is_alpha and not other_is_alpha:
+            return True
+        if not self_is_alpha and other_is_alpha:
+            return False
+        return self.sortstring < other.sortstring
+
+
 class Screening(planner.Screening):
     def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, combination_program_url):
         planner.Screening.__init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience)
@@ -622,11 +637,8 @@ class IdfaData(planner.FestivalData):
         planner.FestivalData.__init__(self, plandata_dir)
         self.compilation_by_url = {}
 
-    def sort_films(self):
-        seqnr = 0
-        for film in sorted(self.films):
-            seqnr += 1
-            film.seqnr = seqnr
+    def create_film(self, title, url):
+        return Film(planner.FestivalData.create_film(self, title, url))
 
 
 if __name__ == "__main__":

@@ -49,6 +49,7 @@ namespace PresentScreenings.TableView
         public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
         public static GoToScreeningDialog Presentor { get; set; }
         public bool BehaveAsPopover { get; set; } = false;
+        public bool UseTitleBackground { get; set; } = false;
         public bool DialogShouldClose { get; set; } = false;
         #endregion
 
@@ -140,7 +141,7 @@ namespace PresentScreenings.TableView
         {
             _yCurr -= _labelHeight;
             var rect = new CGRect(_xMargin, _yCurr, _contentWidth, _labelHeight);
-            var filmTitleLabel = ControlsFactory.NewStandardLabel(rect);
+            var filmTitleLabel = ControlsFactory.NewStandardLabel(rect, UseTitleBackground);
             filmTitleLabel.StringValue = _film.Title;
             filmTitleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
             View.AddSubview(filmTitleLabel);
