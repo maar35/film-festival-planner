@@ -372,7 +372,6 @@ class FestivalData:
             id = str(filminfo.filmid)
             article = filminfo.article
             descr = filminfo.description
-            # combination_id = self.get_filmid(filminfo)
             info = ET.SubElement(filminfos, 'FilmInfo',
                                  FilmId=id,
                                  FilmArticle=article,
