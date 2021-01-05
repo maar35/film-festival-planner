@@ -168,6 +168,10 @@
     <Compile Include="Utilities\WebUtility.cs" />
     <Compile Include="Table Classes\FilmOutlineLevel.cs" />
     <Compile Include="Utilities\AlertRaiser.cs" />
+    <Compile Include="AvailabilityDialogControler.cs" />
+    <Compile Include="AvailabilityDialogControler.designer.cs">
+      <DependentUpon>AvailabilityDialogControler.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

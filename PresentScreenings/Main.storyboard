@@ -1,11 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="14460.31" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
     <dependencies>
-        <deployment identifier="macosx"/>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="14460.31"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
+        <!--Fan Availability-->
+        <scene sceneID="hEX-Do-Ri4">
+            <objects>
+                <viewController title="Fan Availability" id="hQB-Y3-Qo2" customClass="AvailabilityDialogControler" sceneMemberID="viewController">
+                    <view key="view" id="F08-Fz-aNd">
+                        <rect key="frame" x="0.0" y="0.0" width="450" height="300"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                    </view>
+                </viewController>
+                <customObject id="CyK-YT-t13" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="848" y="-447"/>
+        </scene>
         <!--Application-->
         <scene sceneID="JPo-4y-FX3">
             <objects>
@@ -430,6 +442,12 @@
                                             <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
                                             <connections>
                                                 <segue destination="2J9-kI-94e" kind="modal" id="503-hk-Pu3"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Fan Availability" tag="603" keyEquivalent="f" id="Yml-iL-gya">
+                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                            <connections>
+                                                <segue destination="hQB-Y3-Qo2" kind="modal" identifier="AvailabilitySegue" id="VkV-OX-jE9"/>
                                             </connections>
                                         </menuItem>
                                     </items>
@@ -1539,7 +1557,7 @@ Gw
         <sound name="Glass"/>
     </resources>
     <inferredMetricsTieBreakers>
-        <segue reference="8rT-zS-dn2"/>
+        <segue reference="Aco-xL-TKu"/>
         <segue reference="aIf-jF-vlz"/>
     </inferredMetricsTieBreakers>
 </document>
