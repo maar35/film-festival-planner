@@ -13,6 +13,7 @@ namespace PresentScreenings.TableView
         #region Private Members
         const int _plannerMenuItemTag = 601;
         const int _analyserMenuItemTag = 602;
+        const int _availabilityMenuItemTag = 603;
         private readonly AppDelegate _app;
         private readonly ViewController _controller;
         #endregion
@@ -49,6 +50,9 @@ namespace PresentScreenings.TableView
                         item.Enabled = true;
                         break;
                     case _analyserMenuItemTag:
+                        item.Enabled = true;
+                        break;
+                    case _availabilityMenuItemTag:
                         item.Enabled = true;
                         break;
                     default:
