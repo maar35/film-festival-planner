@@ -30,6 +30,7 @@ namespace PresentScreenings.TableView
         public UncombineTitlesSheetController UncombineTitleController;
         public FilmInfoDialogController filmInfoController;
         public PlannerDialogController PlannerDialogController;
+        public AvailabilityDialogControler AvailabilityDialogControler { get; set; }
         public ScreeningMenuDelegate ScreeningMenuDelegate => (ScreeningMenuDelegate)_screeningMenu.Delegate;
         public NSMenuItem ToggleTypeMatchMenuItem => _toggleTypeMatchMethod;
         #endregion
@@ -106,6 +107,10 @@ namespace PresentScreenings.TableView
             dlg.BeginSheet(Controller.TableView.Window, (result) =>
             {
                 string directory = dlg.Directory;
+
+                // Write film fan availability.
+                string availabilityPath = Path.Combine(directory, "availability.csv");
+                new FilmFanAvailability().WriteListToFile(availabilityPath, ScreeningsPlan.Availabilities);
 
                 // Write film ratings.
                 string ratingsPath = Path.Combine(directory, "ratings.csv");

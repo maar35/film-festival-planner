@@ -91,10 +91,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Main.cs" />
-    <Compile Include="AppDelegate.cs" />
-    <Compile Include="AppDelegate.designer.cs">
-      <DependentUpon>AppDelegate.cs</DependentUpon>
-    </Compile>
     <Compile Include="Menu Delegates\FilmsMenuDelegate.cs" />
     <Compile Include="Menu Delegates\NavigateMenuDelegate.cs" />
     <Compile Include="Menu Delegates\ScreeningMenuDelegate.cs" />
@@ -168,10 +164,15 @@
     <Compile Include="Utilities\WebUtility.cs" />
     <Compile Include="Table Classes\FilmOutlineLevel.cs" />
     <Compile Include="Utilities\AlertRaiser.cs" />
-    <Compile Include="AvailabilityDialogControler.cs" />
-    <Compile Include="AvailabilityDialogControler.designer.cs">
+    <Compile Include="Controllers\AvailabilityDialogControler.cs" />
+    <Compile Include="Controllers\AvailabilityDialogControler.designer.cs">
       <DependentUpon>AvailabilityDialogControler.cs</DependentUpon>
     </Compile>
+    <Compile Include="AppDelegate.cs" />
+    <Compile Include="AppDelegate.designer.cs">
+      <DependentUpon>AppDelegate.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Entities\FilmFanAvailability.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

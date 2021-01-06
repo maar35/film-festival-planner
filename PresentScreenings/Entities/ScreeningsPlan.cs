@@ -13,6 +13,7 @@ namespace PresentScreenings.TableView
     public class ScreeningsPlan
     {
         #region Static Properties
+        public static List<FilmFanAvailability> Availabilities { get; private set; }
         public static List<Screen> Screens { get; private set; }
         public static List<Film> Films { get; private set; }
         public static List<Screening> Screenings { get; private set; }
@@ -41,12 +42,16 @@ namespace PresentScreenings.TableView
         public ScreeningsPlan(string documentsFolder)
         {
             // Initialize file names.
+            string availabiliyFile = Path.Combine(documentsFolder, "availability.csv");
             string screensFile = Path.Combine(documentsFolder, "screens.csv");
             string filmsFile = Path.Combine(documentsFolder, "films.csv");
             string screeningsFile = Path.Combine(documentsFolder, "screenings.csv");
             string screeningInfoFile = Path.Combine(documentsFolder, "screeninginfo.csv");
             string ratingsFile = Path.Combine(documentsFolder, "ratings.csv");
             string filmInfoFile = Path.Combine(documentsFolder, "filminfo.xml");
+
+            // Read availability.
+            Availabilities = new FilmFanAvailability().ReadListFromFile(availabiliyFile, line => new FilmFanAvailability(line));
 
             // Read screens.
             Screens = new Screen().ReadListFromFile(screensFile, line => new Screen(line));
