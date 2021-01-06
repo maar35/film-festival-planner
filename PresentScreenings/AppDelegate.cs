@@ -109,8 +109,8 @@ namespace PresentScreenings.TableView
                 string directory = dlg.Directory;
 
                 // Write film fan availability.
-                string availabilityPath = Path.Combine(directory, "availability.csv");
-                new FilmFanAvailability().WriteListToFile(availabilityPath, ScreeningsPlan.Availabilities);
+                string availabilitiesPath = Path.Combine(directory, "availabilities.csv");
+                new FilmFanAvailability().WriteListToFile(availabilitiesPath, ScreeningsPlan.Availabilities);
 
                 // Write film ratings.
                 string ratingsPath = Path.Combine(directory, "ratings.csv");

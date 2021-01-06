@@ -42,7 +42,7 @@ namespace PresentScreenings.TableView
         public ScreeningsPlan(string documentsFolder)
         {
             // Initialize file names.
-            string availabiliyFile = Path.Combine(documentsFolder, "availability.csv");
+            string availabilitiesFile = Path.Combine(documentsFolder, "availabilities.csv");
             string screensFile = Path.Combine(documentsFolder, "screens.csv");
             string filmsFile = Path.Combine(documentsFolder, "films.csv");
             string screeningsFile = Path.Combine(documentsFolder, "screenings.csv");
@@ -51,7 +51,7 @@ namespace PresentScreenings.TableView
             string filmInfoFile = Path.Combine(documentsFolder, "filminfo.xml");
 
             // Read availability.
-            Availabilities = new FilmFanAvailability().ReadListFromFile(availabiliyFile, line => new FilmFanAvailability(line));
+            Availabilities = new FilmFanAvailability().ReadListFromFile(availabilitiesFile, line => new FilmFanAvailability(line));
 
             // Read screens.
             Screens = new Screen().ReadListFromFile(screensFile, line => new Screen(line));

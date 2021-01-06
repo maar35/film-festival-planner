@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="14460.31" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
     <dependencies>
+        <deployment identifier="macosx"/>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="14460.31"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -432,20 +433,20 @@
                                 <menu key="submenu" title="Program" id="9ki-Rb-e0w">
                                     <items>
                                         <menuItem title="Planner" tag="601" keyEquivalent="p" id="1oz-bg-aQu" userLabel="Planner">
-                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
                                             <connections>
                                                 <action selector="StartPlanner:" target="Voe-Tx-rLC" id="TUV-WZ-5xt"/>
                                                 <segue destination="IND-Z6-9M5" kind="modal" identifier="PlannerSegue" id="GE9-J9-x89"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem title="Analyser" tag="602" keyEquivalent="a" id="PcA-wG-doO">
-                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
                                             <connections>
                                                 <segue destination="2J9-kI-94e" kind="modal" id="503-hk-Pu3"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem title="Fan Availability" tag="603" keyEquivalent="f" id="Yml-iL-gya">
-                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
                                             <connections>
                                                 <segue destination="hQB-Y3-Qo2" kind="modal" identifier="AvailabilitySegue" id="VkV-OX-jE9"/>
                                             </connections>
@@ -1558,6 +1559,6 @@ Gw
     </resources>
     <inferredMetricsTieBreakers>
         <segue reference="Aco-xL-TKu"/>
-        <segue reference="aIf-jF-vlz"/>
+        <segue reference="MQZ-rL-cxz"/>
     </inferredMetricsTieBreakers>
 </document>
