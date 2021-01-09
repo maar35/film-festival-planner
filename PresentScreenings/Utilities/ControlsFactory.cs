@@ -19,7 +19,9 @@ namespace PresentScreenings.TableView
         public const float VerticalPixelsBetweenViews = 12;
         public const float StandardButtonWidth = 94;
         public const float StandardButtonHeight = 32;
+        public const float StandardLabelWidth = 128;
         public const float StandardLabelHeight = 19;
+        public const float SmallControlWidth = 64;
         public const string EscapeKey = "\x1b";
         public const string EnterKey = "\r";
         #endregion
@@ -63,6 +65,13 @@ namespace PresentScreenings.TableView
             cancelButton.Title = "Cancel";
             cancelButton.KeyEquivalent = EscapeKey;
             return cancelButton;
+        }
+
+        public static NSButton NewCheckbox(CGRect frame)
+        {
+            var box = NewStandardButton(frame);
+            box.SetButtonType(NSButtonType.Switch);
+            return box;
         }
 
         public static NSComboBox NewRatingComboBox(CGRect frame, NSFont font)

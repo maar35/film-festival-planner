@@ -109,8 +109,7 @@ namespace PresentScreenings.TableView
                 string directory = dlg.Directory;
 
                 // Write film fan availability.
-                string availabilitiesPath = Path.Combine(directory, "availabilities.csv");
-                new FilmFanAvailability().WriteListToFile(availabilitiesPath, ScreeningsPlan.Availabilities);
+                WriteFilmFanAvailabilities(directory);
 
                 // Write film ratings.
                 string ratingsPath = Path.Combine(directory, "ratings.csv");
@@ -132,6 +131,16 @@ namespace PresentScreenings.TableView
                 }).ToList());
             });
 
+        }
+
+        public void WriteFilmFanAvailabilities(string directory = null)
+        {
+            if (directory == null)
+            {
+                directory = DocumentsFolder;
+            }
+            string availabilitiesPath = Path.Combine(directory, "availabilities.csv");
+            new FilmFanAvailability().WriteListToFile(availabilitiesPath, ScreeningsPlan.Availabilities);
         }
 
         partial void ToggleClickableLabels(Foundation.NSObject sender)

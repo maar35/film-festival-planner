@@ -9,6 +9,10 @@ namespace PresentScreenings.TableView
 
     public class FilmFanAvailability : ListStreamer
     {
+        #region Contant Private Members
+        private const string _dtFormat = "yyyy-MM-dd HH:mm";
+        #endregion
+
         #region Properties
         public string FilmFan { get; }
         public DateTime AvailabilityStart { get; set; }
@@ -47,7 +51,14 @@ namespace PresentScreenings.TableView
 
         public override string Serialize()
         {
-            return string.Join(";", FilmFan, AvailabilityStart.ToString(), AvailabilityEnd.ToString());
+            return string.Join(";", FilmFan, AvailabilityStart.ToString(_dtFormat), AvailabilityEnd.ToString(_dtFormat));
+        }
+        #endregion
+
+        #region Public Methods
+        public bool Equals(string fan, DateTime day)
+        {
+            return fan == FilmFan && day >= AvailabilityStart && day + new TimeSpan(1, 0, 0, 0) <= AvailabilityEnd;
         }
         #endregion
     }

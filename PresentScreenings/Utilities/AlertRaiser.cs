@@ -93,6 +93,21 @@ namespace PresentScreenings.TableView
             };
             NSUserNotificationCenter.DefaultUserNotificationCenter.DeliverNotification(notification);
         }
+
+        public static void RaiseNotification(string title, string text)
+        {
+            // Trigger a local notification.
+            // Configure the notification style in System Preferences.
+            var notification = new NSUserNotification
+            {
+                Title = title,
+                InformativeText = text,
+                SoundName = NSUserNotification.NSUserNotificationDefaultSoundName,
+                HasActionButton = false,
+                HasReplyButton = false
+            };
+            NSUserNotificationCenter.DefaultUserNotificationCenter.DeliverNotification(notification);
+        }
         #endregion
 
         #region Private Methods
