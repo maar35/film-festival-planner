@@ -12,15 +12,6 @@ namespace PresentScreenings.TableView
 
     public class ScreeningsPlan
     {
-        #region Static Properties
-        public static List<Screen> Screens { get; private set; }
-        public static List<Film> Films { get; private set; }
-        public static List<Screening> Screenings { get; private set; }
-        public static List<ScreeningInfo> ScreeningInfos { get; private set; }
-        public static List<FilmFanFilmRating> FilmFanFilmRatings { get; private set; }
-        public static List<FilmInfo> FilmInfos { get; private set; }
-        #endregion
-
         #region Private Members
         private Dictionary<DateTime, List<Screen>> _dayScreens;
         private int _currDayNumber;
@@ -28,11 +19,21 @@ namespace PresentScreenings.TableView
         private int _currScreenScreeningNumber;
         #endregion
 
+        #region Static Properties
+        public static List<FilmFanAvailability> Availabilities { get; private set; }
+        public static List<Screen> Screens { get; private set; }
+        public static List<Film> Films { get; private set; }
+        public static List<Screening> Screenings { get; private set; }
+        public static List<ScreeningInfo> ScreeningInfos { get; private set; }
+        public static List<FilmFanFilmRating> FilmFanFilmRatings { get; private set; }
+        public static List<FilmInfo> FilmInfos { get; private set; }
+        public static List<DateTime> FestivalDays { get; private set; }
+        #endregion
+
         #region Properties
         public Dictionary<DateTime, Dictionary<Screen, List<Screening>>> ScreenScreenings { get; private set; }
         public Screen CurrScreen => _dayScreens[CurrDay][_currScreenNumber];
         public Screening CurrScreening => ScreenScreenings[CurrDay][CurrScreen][_currScreenScreeningNumber];
-        public List<DateTime> FestivalDays { get; private set; }
         public List<Screen> CurrDayScreens => _dayScreens[CurrDay];
         public DateTime CurrDay => FestivalDays[_currDayNumber];
         #endregion
@@ -41,12 +42,16 @@ namespace PresentScreenings.TableView
         public ScreeningsPlan(string documentsFolder)
         {
             // Initialize file names.
+            string availabilitiesFile = Path.Combine(documentsFolder, "availabilities.csv");
             string screensFile = Path.Combine(documentsFolder, "screens.csv");
             string filmsFile = Path.Combine(documentsFolder, "films.csv");
             string screeningsFile = Path.Combine(documentsFolder, "screenings.csv");
             string screeningInfoFile = Path.Combine(documentsFolder, "screeninginfo.csv");
             string ratingsFile = Path.Combine(documentsFolder, "ratings.csv");
             string filmInfoFile = Path.Combine(documentsFolder, "filminfo.xml");
+
+            // Read availability.
+            Availabilities = new FilmFanAvailability().ReadListFromFile(availabilitiesFile, line => new FilmFanAvailability(line));
 
             // Read screens.
             Screens = new Screen().ReadListFromFile(screensFile, line => new Screen(line));

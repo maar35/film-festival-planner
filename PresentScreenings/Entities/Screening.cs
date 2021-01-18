@@ -426,15 +426,15 @@ namespace PresentScreenings.TableView
             }
             return string.Format($" - {ScreeningTitle}");
         }
-        #endregion
 
-        #region Private Methods
-        private DateTime DateTimeFromParsedData(DateTime date, string time)
+        public static DateTime DateTimeFromParsedData(DateTime date, string time)
         {
             string parseString = string.Format("{0} {1}", date.ToShortDateString(), time);
             return DateTime.Parse(parseString);
         }
+        #endregion
 
+        #region Private Methods
         private string FromTillString()
         {
             return string.Format("{0}-{1}", StartTime.ToString(_timeFormat), EndTime.ToString(_timeFormat));

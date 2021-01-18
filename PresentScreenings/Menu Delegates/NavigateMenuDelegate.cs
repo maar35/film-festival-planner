@@ -89,7 +89,7 @@ namespace PresentScreenings.TableView
 
             // Loop through the festival days
             var plan = _controller.Plan;
-            foreach (var day in plan.FestivalDays)
+            foreach (var day in ScreeningsPlan.FestivalDays)
             {
                 NSMenuItem item = new NSMenuItem(ItemTitle(day));
                 item.Tag = _ItemCountStart + menu.Count;
@@ -100,7 +100,8 @@ namespace PresentScreenings.TableView
             _festivalDaysMenuItemsInitialized = true;
         }
 
-        string ItemTitle(DateTime day){
+        string ItemTitle(DateTime day)
+        {
             return Screening.LongDayString(day);
         }
         #endregion

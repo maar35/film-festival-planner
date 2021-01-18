@@ -25,6 +25,7 @@ namespace PresentScreenings.TableView
         #region Constants
         private const string _hhmmDuration = "hh\\:mm";
         #endregion
+
         #region Properties
         public int SequenceNumber { get; private set; }
         public int FilmId { get; private set; }
