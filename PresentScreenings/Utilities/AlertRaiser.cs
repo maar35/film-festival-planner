@@ -59,7 +59,9 @@ namespace PresentScreenings.TableView
             catch (Exception ex2)
             {
                 WriteToErrorlog(ex, ex2);
-                RaiseNotification(ex);
+                string title = $"Error in {ProgramName}";
+                string text = $"See {ErrorFile}.";
+                RaiseNotification(title, text);
             }
         }
 
@@ -77,21 +79,6 @@ namespace PresentScreenings.TableView
         public static void WriteToErrorlog(Exception ex, Exception ex2 = null)
         {
             System.IO.File.WriteAllText(ErrorFile, ErrorString(ex, ex2));
-        }
-
-        public static void RaiseNotification(Exception ex)
-        {
-            // Trigger a local notification.
-            // Configure the notification style in System Preferences.
-            var notification = new NSUserNotification
-            {
-                Title = $"Error in {ProgramName}.",
-                InformativeText = $"See {ErrorFile}.",
-                SoundName = NSUserNotification.NSUserNotificationDefaultSoundName,
-                HasActionButton = false,
-                HasReplyButton = false
-            };
-            NSUserNotificationCenter.DefaultUserNotificationCenter.DeliverNotification(notification);
         }
 
         public static void RaiseNotification(string title, string text)

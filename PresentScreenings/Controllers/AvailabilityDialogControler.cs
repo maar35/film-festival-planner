@@ -48,15 +48,14 @@ namespace PresentScreenings.TableView
         public TimeSpan DayTimeSpan => new TimeSpan(1, 0, 0, 0);
         public DateTime FestivalStartTime => FestivalDays.First();
         public DateTime FestivalEndTime => FestivalDays.Last() + DayTimeSpan;
-
         #endregion
 
         #region Constructors
-        public AvailabilityDialogControler (IntPtr handle) : base (handle)
-		{
+        public AvailabilityDialogControler(IntPtr handle) : base(handle)
+        {
             _titleByChanged.Add(true, "Save");
             _titleByChanged.Add(false, "Done");
-		}
+        }
         #endregion
 
         #region Override Methods
@@ -114,12 +113,11 @@ namespace PresentScreenings.TableView
         #region Private Methods workiong wioth visual elements.
         private void PopulateDialogView()
         {
-            // Set the basis dimensions.
-            var n = ScreeningInfo.FilmFans.Count;
-            var frame = View.Window.Frame;
-            frame.Width = 2 * _xMargin + _labelWidth + n * (_xBetweenControls + _controlWidth);
+            // Adapt the window width to the number of film fans.
+            AdaptWindowSize();
+
+            // Initialize the current vertical position.
             _yCurr = (float)View.Frame.Height;
-            View.Window.SetFrame(frame, true);
 
             // Create the instructions label.
             _yCurr -= _yMargin;
@@ -144,6 +142,14 @@ namespace PresentScreenings.TableView
             UpdateControls();
         }
 
+        private void AdaptWindowSize()
+        {
+            var n = ScreeningInfo.FilmFans.Count;
+            var frame = View.Window.Frame;
+            frame.Width = 2 * _xMargin + _labelWidth + n * (_xBetweenControls + _controlWidth);
+            View.Window.SetFrame(frame, true);
+        }
+
         private void CreateInstructionsLabel()
         {
             var labelHeight = 2 * _labelHeight + 2;
@@ -159,14 +165,15 @@ namespace PresentScreenings.TableView
         {
             _yCurr -= _labelHeight;
             var xCurr = _xMargin + _labelWidth + _xBetweenControls;
+            var rect = new CGRect(xCurr, _yCurr, _labelWidth, _labelHeight);
             foreach (var fan in ScreeningInfo.FilmFans)
             {
-                var rect = new CGRect(xCurr, _yCurr, _labelWidth, _labelHeight);
                 var fanLabel = ControlsFactory.NewStandardLabel(rect, true);
                 fanLabel.StringValue = fan;
                 fanLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
                 View.AddSubview(fanLabel);
                 xCurr += _controlWidth + _xBetweenControls;
+                rect.X = xCurr;
             }
         }
 
@@ -174,7 +181,8 @@ namespace PresentScreenings.TableView
         {
             _yCurr -= _labelHeight;
 
-            // Create the day indicating label.
+            // Create a label indicating that the checkboxes in this row apply
+            // to all festival days.
             var labelRect = new CGRect(_xMargin, _yCurr, _labelWidth, _labelHeight);
             var label = ControlsFactory.NewStandardLabel(labelRect, true);
             label.StringValue = $"All {FestivalDays.Count} days";
