@@ -87,12 +87,19 @@ namespace PresentScreenings.TableView
             _dayScreens = new Dictionary<DateTime, List<Screen>> { };
             ScreenScreenings = new Dictionary<DateTime, Dictionary<Screen, List<Screening>>> { };
 
-            // Fill the dictionaries based on on-location screenings.
+            // Select on-location screenings.
             var onLocationScreenings = (
                 from Screening s in Screenings
                 where s.Location
                 select s
             ).ToList();
+            if (onLocationScreenings.Count() == 0)
+            {
+                string informativeText = $"We really need on-location screenings, but all {Screenings.Count} screenings are OnLine.";
+                AlertRaiser.QuitWithAlert("Only OnLine Screenings", informativeText);
+            }
+
+            // Fill the dictionaries based on on-location screenings.
             foreach (Screening screening in onLocationScreenings)
             {
                 DateTime day = screening.StartDate;

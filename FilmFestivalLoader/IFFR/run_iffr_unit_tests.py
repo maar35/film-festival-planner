@@ -19,7 +19,11 @@ import test_tools
 
 
 def main():
-    tests = [compare_a0,
+    tests = [test_new_name_first,
+             test_new_name_not,
+             test_new_name_gap,
+             test_new_name_next,
+             compare_a0,
              compare_0a,
              compare_a_,
              compare_00]
@@ -66,8 +70,65 @@ class TestList:
         parser.sorted_title = film.title
         parser.add_film()
 
-    def __init(self):
-        pass
+
+@test_tools.equity_decorator
+def test_new_name_first():
+
+    # Arrange.
+    screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
+    testname = 'offline'
+    names = ['offline']
+
+    # Act.
+    newname = screen_splitter.new_name(testname, names)
+
+    # Assert.
+    return newname, 'offline2'
+
+
+@test_tools.equity_decorator
+def test_new_name_not():
+
+    # Arrange.
+    screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
+    testname = 'offline'
+    names = []
+
+    # Act.
+    newname = screen_splitter.new_name(testname, names)
+
+    # Assert.
+    return newname, 'offline'
+
+
+@test_tools.equity_decorator
+def test_new_name_gap():
+
+    # Arrange.
+    screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
+    testname = 'offline'
+    names = ['offline', 'offline3']
+
+    # Act.
+    newname = screen_splitter.new_name(testname, names)
+
+    # Assert.
+    return newname, 'offline2'
+
+
+@test_tools.equity_decorator
+def test_new_name_next():
+
+    # Arrange.
+    screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
+    testname = 'offline199'
+    names = ['offline199', 'offline200']
+
+    # Act.
+    newname = screen_splitter.new_name(testname, names)
+
+    # Assert.
+    return newname, 'offline201'
 
 
 @test_tools.equity_decorator

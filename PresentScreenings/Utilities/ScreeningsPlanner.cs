@@ -40,7 +40,9 @@ namespace PresentScreenings.TableView
             while (rating.IsGreaterOrEqual(FilmRating.LowestSuperRating))
             {
                 // Select films with this rating.
-                var films = ScreeningsPlan.Films.Where(f => ViewController.GetMaxRating(f).Equals(rating)).ToList();
+                var films = ScreeningsPlan.Films
+                    .Where(f => ViewController.GetMaxRating(f).Equals(rating) && ViewController.FilmScreenings(f.FilmId).Count > 0)
+                    .ToList();
 
                 // Select free screenings of the selected films.
                 var screenings = ScreeningsPlan.Screenings
@@ -114,7 +116,7 @@ namespace PresentScreenings.TableView
         private bool IsPlannable(Screening screening, List<Film> films)
         {
             var inSelectedFilms = films.Any(f => f.FilmId == screening.FilmId);
-            return screening.IsPlannable && inSelectedFilms;
+            return screening.IsPlannable && inSelectedFilms && screening.Location;
         }
 
         private bool HasAttendedScreening(Film film, string filmFan)

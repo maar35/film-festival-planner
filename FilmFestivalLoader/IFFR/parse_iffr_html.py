@@ -7,6 +7,7 @@ import urllib.request
 import urllib.error
 import re
 import datetime
+from enum import Enum, auto
 
 shared_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 sys.path.insert(0, shared_dir)
@@ -17,7 +18,7 @@ import web_tools
 # Parameters.
 festival = 'IFFR'
 year = 2021
-city = "Rotterdam"
+city = 'Rotterdam'
 az_page_count = 1
 include_events = True
 
@@ -53,15 +54,18 @@ def main():
     write_film_list = False
     write_other_lists = True
     try:
-        comment("Parsing AZ pages.")
+        comment('Parsing AZ pages.')
         films_loader = FilmsLoader(az_page_count)
         films_loader.get_films(iffr_data)
 
-        comment("Parsing film pages.")
+        comment('Parsing film pages.')
         film_detals_loader = FilmDetailsLoader()
         film_detals_loader.get_film_details(iffr_data)
+
+        comment('Resolving overlapping screenings')
+        ScreenSplitter(iffr_data).solve_overlapping_screenings()
     except KeyboardInterrupt:
-        comment("Interrupted from keyboard... exiting")
+        comment('Interrupted from keyboard... exiting')
         write_other_lists = False
     except Exception as e:
         Globals.debug_recorder.write_debug()
@@ -72,11 +76,11 @@ def main():
 
     # Display error when found.
     if Globals.error_collector.error_count() > 0:
-        comment("Encountered some errors:")
+        comment('Encountered some errors:')
         print(Globals.error_collector)
 
     # Write parsed information.
-    comment("Done laoding IFFR data.")
+    comment('Done laoding IFFR data.')
     write_lists(iffr_data, write_film_list, write_other_lists)
     Globals.debug_recorder.write_debug()
 
@@ -162,7 +166,7 @@ class AzPageParser(HtmlPageParser):
 
     props_re = re.compile(
         r"""
-            "bookings":\[\],"title":"(?P<title>[^"]+)                 # Title
+            "bookings":\[[^]]*?\],"title":"(?P<title>[^"]+)           # Title
             .*?"url\(\{\\"language\\":\\"nl\\"\}\)":"(?P<url>[^"]+)"  # URL
             ,"description\(\{.*?\}\)":"(?P<grid_desc>[^"]+)"          # Grid description
             ,"description\(\{.*?\}\)":"(?P<list_desc>[^"]+)"          # List description
@@ -226,14 +230,56 @@ class AzPageParser(HtmlPageParser):
 
 class FilmPageParser(HtmlPageParser):
 
+    class ScreeningsParseState(Enum):
+        AWAITING_OD = auto()
+        IN_ON_DEMAND = auto()
+        IN_OD_STARTTIME = auto()
+        BETWEEN_OD_TIMES = auto()
+        IN_OD_ENDTIME = auto()
+        AFTER_ON_DEMAND = auto()
+        AWAITING_S = auto()
+        IN_SCREENINGS = auto()
+        IN_S_TIMES = auto()
+        IN_S_LOCATION = auto()
+        IN_S_INFO = auto()
+        AFTER_SCREENING = auto()
+        DONE = auto()
+
+    class StateStack:
+
+        def __init__(self, print_debug, state):
+            self.print_debug = print_debug
+            self.stack = [state]
+
+        def push(self, state):
+            self.stack.append(state)
+            self.print_debug(f'Screenings parsing state after PUSH is {state}', '')
+            return state
+
+        def pop(self):
+            self.stack[-1:] = []
+            self.print_debug(f'Screenings parsing state after POP is {self.stack[-1]}', '')
+            return self.stack[-1]
+
+        def change(self, state):
+            self.stack[-1] = state
+            return state
+
+    on_demand_location = "OnDemand"
+    nl_month_by_name = {}
+    nl_month_by_name['januari'] = 1
+    nl_month_by_name['februari'] = 2
+
     def __init__(self, iffr_data, film):
         HtmlPageParser.__init__(self, iffr_data, "F")
         self.film = film
+        self.debugging = False
         self.article_paragraphs = []
         self.paragraph = None
         self.article = None
         self.combination_urls = []
-        self.debugging = True
+        self.state = None
+        self.stateStack = self.StateStack(self.print_debug, self.state)
         self.await_article = False
         self.in_article = False
         self.await_paragraph = False
@@ -245,12 +291,7 @@ class FilmPageParser(HtmlPageParser):
         self.in_screened_films = False
 
         self.init_screening_data()
-        self.await_screenings = True
-        self.in_screenings = False
-        self.in_location = False
-        self.in_time = False
-        self.in_extra_or_qa = False
-        self.matching_attr_value = ""
+        self.set_screening_state(self.ScreeningsParseState.AWAITING_OD)
 
     def init_screened_film_data(self):
         self.screened_url = None
@@ -263,13 +304,16 @@ class FilmPageParser(HtmlPageParser):
         self.in_screened_description = False
 
     def init_screening_data(self):
-        self.screen = None
-        self.start_date = None
-        self.start_time = None
-        self.end_time = None
-        self.audience = None
+        self.audience = 'publiek'
         self.qa = ""
         self.extra = ""
+        self.screen = None
+        self.start_dt = None
+        self.end_dt = None
+        self.start_date = None
+        self.times = None
+        self.start_time = None
+        self.end_time = None
 
     def create_article(self):
         if len(self.article) == 0:
@@ -303,16 +347,34 @@ class FilmPageParser(HtmlPageParser):
         except KeyError:
             Globals.error_collector.add('No screened URL found', f'{self.screened_title}')
         else:
-            screened_film = planner.ScreenedFilm(film.filmid, self.screened_title, self.screened_description)
-            self.screened_films.append(screened_film)
+            if film is not None:
+                screened_film = planner.ScreenedFilm(film.filmid, self.screened_title, self.screened_description)
+                self.screened_films.append(screened_film)
+            else:
+                Globals.error_collector.add(f"{self.screened_title} not found as film", self.screened_url)
         finally:
             self.init_screened_film_data()
 
+    def add_on_demand_screening(self):
+        self.screen = self.iffr_data.get_screen(city, self.on_demand_location)
+        self.add_screening()
+
+    def add_on_location_screening(self):
+        self.screen = self.iffr_data.get_screen(city, self.location)
+        self.add_screening()
+
     def add_screening(self):
-        start_datetime = datetime.datetime.combine(self.start_date, self.start_time)
-        end_date = self.start_date if self.end_time > self.start_time else self.start_date + datetime.timedelta(days=1)
-        end_datetime = datetime.datetime.combine(end_date, self.end_time)
-        self.print_debug("--- ", f"START TIME = {start_datetime}, END TIME = {end_datetime}")
+        if self.start_date is not None:
+            start_datetime = datetime.datetime.combine(self.start_date, self.start_time)
+            end_date = self.start_date if self.end_time > self.start_time else self.start_date + datetime.timedelta(days=1)
+            end_datetime = datetime.datetime.combine(end_date, self.end_time)
+        else:
+            start_datetime = self.start_dt
+            end_datetime = self.end_dt
+
+        if self.film.title.startswith('GLR '):
+            self.audience = 'GLR'
+        self.print_debug("--- ", f"SCREEN={self.screen}, START TIME={start_datetime}, END TIME={end_datetime}, AUDIENCE={self.audience}")
 
         print()
         print(f"---SCREENING OF {self.film.title}")
@@ -330,7 +392,6 @@ class FilmPageParser(HtmlPageParser):
 
         self.iffr_data.screenings.append(screening)
         print("---SCREENING ADDED")
-        self.in_extra_or_qa = False
         self.init_screening_data()
 
     def ok_to_add_screening(self):
@@ -341,6 +402,41 @@ class FilmPageParser(HtmlPageParser):
         if not include_events and self.film.medium_category == "events":
             return False
         return True
+
+    def set_screening_state(self, state):
+        self.state = self.stateStack.change(state)
+        self.print_debug(f'Entered a new SCREENING STATE {state}', f'{self.film.title} {self.film.url}')
+
+    def parse_datetime(self, data):
+        items = data.split()  # zaterdag 06 februari 13:00
+        day = int(items[1])
+        month = self.nl_month_by_name[items[2]]
+        time = items[3].split(':')
+        hours = int(time[0])
+        minutes = int(time[1])
+        return datetime.datetime(year, month, day, hours, minutes)
+
+    def parse_date(self, data):
+        items = data.split()  # woensdag 03 februari 2021
+        day = int(items[1])
+        month = self.nl_month_by_name[items[2]]
+        year = int(items[3])
+        return datetime.date(year, month, day)
+
+    def set_screening_times(self, data):
+        items = data.split()  # 13:00 - 15:26
+        self.start_time = datetime.time.fromisoformat(items[0])
+        self.end_time = datetime.time.fromisoformat(items[2])
+
+    def set_screening_info(self, data):
+        self.print_debug('Found SCREENING info', data)
+        if 'professionals' in data:
+            self.audience = 'Industry'
+        if 'Q&A' in data:
+            self.qa = data
+        if 'Ondertiteld' in data:
+            self.extra = data
+            self.print_debug('Found sub-titled screening', f'Info text: {data}')
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -390,33 +486,31 @@ class FilmPageParser(HtmlPageParser):
                 self.print_debug('Leaving SCREENED FILMS section', f'{self.film.title}')
             self.in_screened_films = False
             self.in_screened_film = False
+            self.set_screening_state(self.ScreeningsParseState.DONE)
+            self.print_debug('Done finding SREENINGS', f'Attribute name: {attrs[0][0]}')
             self.update_filminfo()
 
         # Get data for screenings.
-        for attr in attrs:
-            self.print_debug("Handling attr:      ", attr)
-            if tag == "section" and attr == ("class", "film-screenings-wrapper"):
-                self.in_screenings = True
-                self.await_screenings = False
-                self.print_debug("--  ", "ENTERING SCREENINGS SECTION")
-            if self.in_screenings:
-                if tag == "span" and attr == ("class", "location"):
-                    self.in_location = True
-                    self.print_debug("-- ", "ENTERING LOCATION")
-                if tag == "a" and attr[0] == "data-audience":
-                    self.audience = attr[1]
-                if tag == "small" and attr[1] == "film-label voorfilm-qa":
-                    self.in_extra_or_qa = True
-                if tag == "a" and attr[0] == "data-date":
-                    start_datetime = datetime.datetime.fromisoformat(attr[1])
-                    self.start_date = start_datetime.date()
-                    if self.ok_to_add_screening():
-                        self.add_screening()
-                        self.print_debug("-- ", "ADDING SCREENING")
-
-        if self.in_screenings:
-            if tag == "time":
-                self.in_time = True
+        if self.state == self.ScreeningsParseState.IN_ON_DEMAND and tag == 'span':
+            if attrs[0][1] == 'bookingtable-on-demand__date-value':
+                self.set_screening_state(self.ScreeningsParseState.IN_OD_STARTTIME)
+        elif self.state == self.ScreeningsParseState.BETWEEN_OD_TIMES and tag == 'span':
+            if attrs[0][1] == 'bookingtable-on-demand__date-value':
+                self.set_screening_state(self.ScreeningsParseState.IN_OD_ENDTIME)
+        elif tag == 'div' and len(attrs) > 0:
+            if attrs[0][1] == 'styles__FunctionalLabelWrapper-sc-12mea6v-0 iWNHmD':
+                self.state = self.stateStack.push(self.ScreeningsParseState.IN_S_INFO)
+            elif attrs[0] == ('class', 'bookingtable__date-wrapper'):
+                if self.state == self.ScreeningsParseState.AFTER_SCREENING:
+                    self.add_on_location_screening()
+                self.set_screening_state(self.ScreeningsParseState.IN_SCREENINGS)
+        if self.state == self.ScreeningsParseState.IN_SCREENINGS and tag == 'time':
+            if attrs[0] == ('class', 'bookingtable__time'):
+                self.set_screening_state(self.ScreeningsParseState.IN_S_TIMES)
+                self.times = ''
+        elif self.state == self.ScreeningsParseState.IN_S_TIMES and tag == 'div':
+            if attrs[0] == ('class', 'booking__table__location'):
+                self.set_screening_state(self.ScreeningsParseState.IN_S_LOCATION)
 
     def handle_endtag(self, tag):
         HtmlPageParser.handle_endtag(self, tag)
@@ -433,18 +527,18 @@ class FilmPageParser(HtmlPageParser):
             self.in_article = False
             self.await_paragraph = False
             self.print_debug('Leaving ARTICLE section', f'{self.film.title}')
+            self.set_screening_state(self.ScreeningsParseState.IN_ON_DEMAND)
             self.create_article()
 
         # Get data for screenings.
-        self.in_location = False
-        if self.in_screenings:
-            if tag == "section":
-                self.in_screenings = False
-                self.print_debug("--  ", "LEAVING SCREENINGS SECTION")
-            if tag == "small":
-                self.in_extra_or_qa = False
-            if tag == "time":
-                self.in_time = False
+        if self.state == self.ScreeningsParseState.IN_S_TIMES and tag == 'time':
+            self.set_screening_times(self.times)
+        elif self.state == self.ScreeningsParseState.AFTER_ON_DEMAND and tag == 'section':
+            self.add_on_demand_screening()
+            self.set_screening_state(self.ScreeningsParseState.AWAITING_S)
+        elif self.state == self.ScreeningsParseState.AFTER_SCREENING and tag == 'section':
+            self.add_on_location_screening()
+            self.set_screening_state(self.ScreeningsParseState.DONE)
 
     def handle_data(self, data):
         HtmlPageParser.handle_data(self, data)
@@ -466,24 +560,69 @@ class FilmPageParser(HtmlPageParser):
             self.add_screened_film()
 
         # Get data for screenings.
-        if self.in_location:
-            self.in_location = False
-            location = data.strip()
-            print(f"--  LOCATION:   {location}   CATEGORY: {self.film.medium_category}")
-            self.print_debug("LOCATION", location)
-            self.screen = self.iffr_data.get_screen(city, location)
-            self.print_debug("-- ", "LEAVING LOCATION")
-        if self.in_extra_or_qa:
-            if data == "Met Q&A":
-                self.qa = "QA"
-                self.print_debug("-- ", "FOUND QA")
-            else:
-                self.extra = data
-                self.print_debug("-- FOUND EXTRA:", self.extra)
-        if self.in_time:
-            times = data.strip()
-            self.start_time = datetime.time.fromisoformat(times.split()[0])
-            self.end_time = datetime.time.fromisoformat(times.split()[2])
+        if self.state == self.ScreeningsParseState.IN_OD_STARTTIME:
+            self.set_screening_state(self.ScreeningsParseState.BETWEEN_OD_TIMES)
+            self.start_dt = self.parse_datetime(data)
+        elif self.state == self.ScreeningsParseState.IN_OD_ENDTIME:
+            self.set_screening_state(self.ScreeningsParseState.AFTER_ON_DEMAND)
+            self.end_dt = self.parse_datetime(data)
+        elif self.state == self.ScreeningsParseState.IN_SCREENINGS:
+            self.start_date = self.parse_date(data)
+        elif self.state == self.ScreeningsParseState.IN_S_TIMES:
+            self.times += data
+        elif self.state == self.ScreeningsParseState.IN_S_LOCATION:
+            self.set_screening_state(self.ScreeningsParseState.AFTER_SCREENING)
+            self.location = data
+        elif self.state == self.ScreeningsParseState.IN_S_INFO:
+            self.state = self.stateStack.pop()
+            self.set_screening_info(data)
+
+
+class ScreenSplitter:
+
+    screen_re = re.compile(r'^(?P<base>.*?)(?P<version>\d*)?$')
+    travel_time = datetime.timedelta(minutes=30)
+
+    def __init__(self, iffr_data):
+        self.iffr_data = iffr_data
+
+    def new_screen(self, screen, used_screens):
+        newname = self.new_name(screen.name, [s.name for s in used_screens])
+        return self.iffr_data.get_screen(city, newname)
+
+    def new_name(self, name, names):
+        newname = name
+        while newname in names:
+            newname = self.next_name(newname)
+        return newname
+
+    def next_name(self, name):
+        m = self.screen_re.match(name)
+        base = m.group('base')
+        version = m.group('version')
+        if len(version) == 0:
+            return base + '2'
+        version = str(int(version) + 1)
+        return base + version
+
+    def coinciding_screenings(self, screening, day_screenings):
+        other_screenings = [s for s in day_screenings if s != screening]
+        return [s for s in other_screenings if s.coincides(screening)]
+
+    def solve_overlapping_screenings(self):
+        location_screenings = [s for s in self.iffr_data.screenings
+                               if s.screen.type == 'Location'
+                               and not s.film.is_part_of_combination(self.iffr_data)]
+        festival_days = set([s.start_datetime.date() for s in location_screenings])
+        for day in festival_days:
+            day_screenings = [s for s in location_screenings if s.start_datetime.date() == day]
+            todo_screenings = day_screenings[1:]
+            for screening in todo_screenings:
+                coinciders = self.coinciding_screenings(screening, day_screenings)
+                if len(coinciders) > 0:
+                    overlappers = [s for s in day_screenings if s != screening and s.overlaps(screening, self.travel_time)]
+                    used_screens = set([s.screen for s in overlappers])
+                    screening.screen = self.new_screen(screening.screen, used_screens)
 
 
 class IffrData(planner.FestivalData):

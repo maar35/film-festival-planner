@@ -11,6 +11,7 @@ Created on Sat Oct 10 18:13:42 2020
 import os
 import re
 import xml.etree.ElementTree as ET
+import datetime
 
 interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 articles_file = os.path.join(interface_dir, "articles.txt")
@@ -120,6 +121,13 @@ class Film:
         except KeyError:
             return 'en'
 
+    def film_info(self, festival_data):
+        infos = [i for i in festival_data.filminfos if i.filmid == self.filmid]
+        return infos[0]
+
+    def is_part_of_combination(self, festival_data):
+        return len(self.film_info(festival_data).combination_urls) > 0
+
     def strip_article(self):
         title = self.title
         start_indices = [i for i in [title.find(" "), title.find("'")] if i >= 0]
@@ -200,6 +208,11 @@ class Screening:
         self.q_and_a = qa
         self.audience = audience
 
+    def __str__(self):
+        starttime = self.start_datetime.isoformat(sep=" ", timespec="minutes")
+        endtime = self.end_datetime.time().isoformat()
+        return f'{starttime} - {endtime}, {self.screen.abbr}, {self.film.title}'
+
     def screening_repr_csv_head(self):
         text = ";".join([
             "filmid",
@@ -215,21 +228,23 @@ class Screening:
         return "{}\n".format(text)
 
     def __repr__(self):
-        start_date = self.start_datetime.date()
-        start_time = self.start_datetime.time()
-        end_time = self.end_datetime.time()
         text = ";".join([
             (str)(self.film.filmid),
-            start_date.isoformat(),
             self.screen.abbr,
-            start_time.isoformat(timespec='minutes'),
-            end_time.isoformat(timespec='minutes'),
+            self.start_datetime.isoformat(sep=' '),
+            self.end_datetime.isoformat(sep=' '),
             (str)(self.films_in_screening),
             (str)(self.combination_program.filmid if self.combination_program is not None else ''),
             self.extra,
             self.q_and_a
         ])
         return "{}\n".format(text)
+
+    def overlaps(self, other, travel_time=datetime.timedelta(minutes=0)):
+        return self.start_datetime <= other.end_datetime + travel_time and self.end_datetime >= other.start_datetime - travel_time
+
+    def coincides(self, other):
+        return self.screen == other.screen and self.overlaps(other)
 
 
 class FestivalData:
@@ -289,6 +304,7 @@ class FestivalData:
             self.curr_film_id = max(self.filmid_by_key.values())
         except ValueError:
             self.curr_film_id = 0
+        print(f"Done reading {len(self.filmid_by_url)} records from {self.films_file}.")
 
     def get_film_by_key(self, title, url):
         filmid = self.filmid_by_key[self._filmkey(title, url)]
@@ -394,7 +410,7 @@ class FestivalData:
     def write_screenings(self):
         public_screenings = []
         if len(self.screenings):
-            public_screenings = [s for s in self.screenings if s.audience == "publiek"]
+            public_screenings = [s for s in self.screenings if s.audience == "publiek" and not s.film.is_part_of_combination(self)]
             with open(self.screenings_file, 'w') as f:
                 f.write(self.screenings[0].screening_repr_csv_head())
                 for screening in public_screenings:

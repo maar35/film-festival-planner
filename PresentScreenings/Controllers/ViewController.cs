@@ -106,7 +106,7 @@ namespace PresentScreenings.TableView
         public override void ViewDidAppear()
         {
             base.ViewDidAppear();
-            View.Window.Title = $"{AppDelegate.Festival} {AppDelegate.FestivalYear}";
+            SetWindowTitle();
         }
 
         public override void PrepareForSegue(NSStoryboardSegue segue, NSObject sender)
@@ -175,6 +175,7 @@ namespace PresentScreenings.TableView
         private void DisplayScreeningsView()
         {
             _mainView.HeadersView.DrawCurrDay(_plan);
+            SetWindowTitle();
             InitializeScreeningControls();
             ReloadScreeningsView();
         }
@@ -182,6 +183,11 @@ namespace PresentScreenings.TableView
         private void InitializeScreeningControls()
         {
             _controlByScreening = new Dictionary<Screening, ScreeningControl> { };
+        }
+
+        private void SetWindowTitle()
+        {
+            View.Window.Title = $"{AppDelegate.Festival} {AppDelegate.FestivalYear} - {Plan.CurrDay:ddd d MMM}";
         }
 
         private void DisposeColorLabels()
