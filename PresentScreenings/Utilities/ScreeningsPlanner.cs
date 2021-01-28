@@ -41,7 +41,7 @@ namespace PresentScreenings.TableView
             {
                 // Select films with this rating.
                 var films = ScreeningsPlan.Films
-                    .Where(f => ViewController.GetMaxRating(f).Equals(rating) && ViewController.FilmScreenings(f.FilmId).Count > 0)
+                    .Where(f => ViewController.GetMaxRating(f).Equals(rating) && f.FilmScreenings.Count > 0)
                     .ToList();
 
                 // Select free screenings of the selected films.
@@ -121,7 +121,7 @@ namespace PresentScreenings.TableView
 
         private bool HasAttendedScreening(Film film, string filmFan)
         {
-            return ViewController.FilmScreenings(film.FilmId).Any(s => s.FilmFanAttends(filmFan));
+            return film.FilmScreenings.Any(s => s.FilmFanAttends(filmFan));
         }
 
         private void DisplayResultsOfRating(FilmRating rating, string filmFan, List<Film> films, List<Screening> screenings)

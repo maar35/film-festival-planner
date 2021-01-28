@@ -104,6 +104,14 @@ class Film:
         ])
         return "{}\n".format(text)
 
+    def filmid_repr(self):
+        text = ";".join([
+            (str)(self.filmid),
+            self.title.replace(";", ".,"),
+            self.url
+        ])
+        return f'{text}\n'
+
     def lower(self, s):
         return self.mapper.toascii(s).lower()
 
@@ -127,6 +135,9 @@ class Film:
 
     def is_part_of_combination(self, festival_data):
         return len(self.film_info(festival_data).combination_urls) > 0
+
+    def screened_films(self, festival_data):
+        return self.film_info(festival_data).screened_films
 
     def strip_article(self):
         title = self.title
@@ -197,13 +208,14 @@ class Screen():
 
 class Screening:
 
-    def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, combination_program=None):
+    def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, combination_program=None, subtitles=None):
         self.film = film
         self.screen = screen
         self.start_datetime = start_datetime
         self.end_datetime = end_datetime
         self.extra = extra
         self.films_in_screening = 1 if len(extra) == 0 else 2
+        self.subtitles = subtitles
         self.combination_program = combination_program
         self.q_and_a = qa
         self.audience = audience
@@ -233,10 +245,10 @@ class Screening:
             self.screen.abbr,
             self.start_datetime.isoformat(sep=' '),
             self.end_datetime.isoformat(sep=' '),
-            (str)(self.films_in_screening),
             (str)(self.combination_program.filmid if self.combination_program is not None else ''),
-            self.extra,
-            self.q_and_a
+            self.subtitles,
+            self.q_and_a,
+            self.extra
         ])
         return "{}\n".format(text)
 
@@ -259,6 +271,7 @@ class FestivalData:
         self.filmid_by_key = {}
         self.screen_by_location = {}
         self.films_file = os.path.join(plandata_dir, "films.csv")
+        self.filmids_file = os.path.join(plandata_dir, "filmids.txt")
         self.filminfo_file = os.path.join(plandata_dir, "filminfo.xml")
         self.screens_file = os.path.join(plandata_dir, "screens.csv")
         self.screenings_file = os.path.join(plandata_dir, "screenings.csv")
@@ -290,12 +303,12 @@ class FestivalData:
 
     def read_filmids(self):
         try:
-            with open(self.films_file, 'r') as f:
+            with open(self.filmids_file, 'r') as f:
                 records = [self.splitrec(line, ';') for line in f]
-            for record in records[1:]:
-                filmid = int(record[1])
-                title = record[3]
-                url = record[8]
+            for record in records:
+                filmid = int(record[0])
+                title = record[1]
+                url = record[2]
                 self.filmid_by_url[url] = filmid
                 self.filmid_by_key[self._filmkey(title, url)] = filmid
         except OSError:
@@ -304,7 +317,7 @@ class FestivalData:
             self.curr_film_id = max(self.filmid_by_key.values())
         except ValueError:
             self.curr_film_id = 0
-        print(f"Done reading {len(self.filmid_by_url)} records from {self.films_file}.")
+        print(f"Done reading {len(self.filmid_by_url)} records from {self.filmids_file}.")
 
     def get_film_by_key(self, title, url):
         filmid = self.filmid_by_key[self._filmkey(title, url)]
@@ -369,13 +382,22 @@ class FestivalData:
             seqnr += 1
             film.seqnr = seqnr
 
+    def has_public_screenings(self, filmid):
+        return len([s for s in self.screenings if s.film.filmid == filmid and s.audience == 'publiek']) > 0
+
     def write_films(self):
+        public_films = [f for f in self.films if self.has_public_screenings(f.filmid)]
         if len(self.films):
             with open(self.films_file, 'w') as f:
                 f.write(self.films[0].film_repr_csv_head())
-                for film in self.films:
+                for film in public_films:
                     f.write(repr(film))
-        print(f"Done writing {len(self.films)} records to {self.films_file}.")
+        print(f'Done writing {len(public_films)} of {len(self.films)} records to {self.films_file}.')
+        if len(self.films):
+            with open(self.filmids_file, 'w') as f:
+                for film in self.films:
+                    f.write(film.filmid_repr())
+        print(f'Done writing {len(self.films)} records to {self.filmids_file}.')
 
     def get_filmid(self, url):
         return self.get_film_by_key(None, url).filmid
@@ -383,7 +405,7 @@ class FestivalData:
     def write_filminfo(self):
         info_count = 0
         filminfos = ET.Element('FilmInfos')
-        for filminfo in self.filminfos:
+        for filminfo in [i for i in self.filminfos if self.has_public_screenings(i.filmid)]:
             info_count += 1
             id = str(filminfo.filmid)
             article = filminfo.article

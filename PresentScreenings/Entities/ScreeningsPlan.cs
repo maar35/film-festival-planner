@@ -93,6 +93,8 @@ namespace PresentScreenings.TableView
                 where s.Location
                 select s
             ).ToList();
+
+            // Bail out when no screenings remain to display.
             if (onLocationScreenings.Count() == 0)
             {
                 string informativeText = $"We really need on-location screenings, but all {Screenings.Count} screenings are OnLine.";

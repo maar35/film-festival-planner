@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using AppKit;
 using CoreGraphics;
+using static PresentScreenings.TableView.FilmInfo;
 
 namespace PresentScreenings.TableView
 {
@@ -34,10 +35,10 @@ namespace PresentScreenings.TableView
         public Screen Screen { get; }
         public DateTime StartTime { get; }
         public DateTime EndTime { get; }
-        public int FilmsInScreening { get; }
         public int? CombinationProgramId { get; }
-        public string Extra { get; }
+        public string Subtitles { get; }
         public string QAndA { get; }
+        public string Extra { get; }
         #endregion
 
         #region Calculated Properties
@@ -59,7 +60,9 @@ namespace PresentScreenings.TableView
         public bool Location => ScreenType == Screen.ScreenType.Location;
         public int TimesIAttendFilm => ScreeningsPlan.Screenings.Count(s => s.FilmId == FilmId && s.IAttend);
         public bool IsPlannable => TimesIAttendFilm == 0 && !HasNoTravelTime && !SoldOut;
-        public int FilmScreeningCount => ViewController.FilmScreenings(FilmId).Count;
+        public int FilmScreeningCount => Film.FilmScreenings.Count;
+        public List<ScreenedFilm> ScreenedFilms => Film.FilmInfo.ScreenedFilms;
+        public int FilmsInScreening => ScreenedFilms.Count > 0 ? ScreenedFilms.Count : 1;
         public bool AutomaticallyPlanned { get => _screeningInfo.AutomaticallyPlanned; set => _screeningInfo.AutomaticallyPlanned = value; }
         public ScreeningInfo.TicketsStatus TicketStatus => ScreeningInfo.GetTicketStatus(IAttend, TicketsBought);
         public ScreeningInfo.ScreeningStatus Status { get => _screeningInfo.Status; set => _screeningInfo.Status = value; }
@@ -83,9 +86,9 @@ namespace PresentScreenings.TableView
             Screen = screening.Screen;
             StartTime = DateTimeFromParsedData(day.Date, "09:00");
             EndTime = DateTimeFromParsedData(day.Date, "23:59");
-            FilmsInScreening = 1;
-            Extra = screening.Extra;
+            Subtitles = string.Empty;
             QAndA = screening.QAndA;
+            Extra = screening.Extra;
             _screeningInfo = screening._screeningInfo;
         }
 
@@ -97,12 +100,12 @@ namespace PresentScreenings.TableView
             string screen = fields[1];
             string startTime = fields[2];
             string endTime = fields[3];
-            int filmsInScreening = int.Parse(fields[4]);
-            string combinationIdStr = fields[5];
-            string extra = fields[6];
-            string qAndA = fields[7];
+            string combinationIdStr = fields[4];
+            string subtitles = fields[5];
+            string qAndA = fields[6];
+            string extra = fields[7];
 
-            // Assign properties that need calculation.
+            // Assign properties.
             DateTime startDate = DateTime.Parse(startTime);
             DateTime endDate = DateTime.Parse(endTime);
             if (endDate < startDate)
@@ -114,10 +117,10 @@ namespace PresentScreenings.TableView
             Screen = (from Screen s in ScreeningsPlan.Screens where s.ToString() == screen select s).First();
             StartTime = startDate;
             EndTime = endDate;
-            FilmsInScreening = filmsInScreening;
             CombinationProgramId = int.TryParse(combinationIdStr, out int outcome) ? (int?)outcome : null;
-            Extra = extra;
+            Subtitles = subtitles;
             QAndA = qAndA;
+            Extra = extra;
             var screeningInfos = ScreeningsPlan.ScreeningInfos.Where(s => s.FilmId == FilmId && s.Screen == Screen && s.StartTime == StartTime).ToList();
             if (screeningInfos.Count == 0)
             {

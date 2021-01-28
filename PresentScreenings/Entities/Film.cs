@@ -36,8 +36,10 @@ namespace PresentScreenings.TableView
         public TimeSpan Duration { get; private set; }
         public string MinutesString => Duration.TotalMinutes + "′";
         public string Url { get; private set; }
+        public List<Screening> FilmScreenings => ViewController.FilmScreenings(FilmId);
         public FilmRating Rating => ViewController.GetFilmFanFilmRating(this, ScreeningInfo.Me);
         public WebUtility.MediumCategory Category { get; private set; }
+        public FilmInfo FilmInfo => ViewController.GetFilmInfo(FilmId);
         public FilmInfoStatus InfoStatus => ViewController.GetFilmInfoStatus(FilmId);
         public FilmRating MaxRating => ViewController.GetMaxRating(this);
         public List<IFilmOutlinable> FilmOutlinables { get; private set; } = new List<IFilmOutlinable> { };
@@ -138,12 +140,11 @@ namespace PresentScreenings.TableView
         #region Public Methods
         public void SetScreenings()
         {
-            var filmScreenings = ViewController.FilmScreenings(FilmId);
             if (FilmOutlinables.Count == 0)
             {
-                FilmOutlinables.AddRange(filmScreenings);
+                FilmOutlinables.AddRange(FilmScreenings);
             }
-            foreach (var filmScreening in filmScreenings)
+            foreach (var filmScreening in FilmScreenings)
             {
                 filmScreening.SetOverlappingScreenings();
             }
