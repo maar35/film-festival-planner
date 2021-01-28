@@ -298,7 +298,6 @@ class FilmPageParser(HtmlPageParser):
     def init_screening_data(self):
         self.audience = 'publiek'
         self.qa = ''
-        # self.extra = ''
         self.subtitles = ''
         self.location = None
         self.screen = None

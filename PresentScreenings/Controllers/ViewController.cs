@@ -56,7 +56,7 @@ namespace PresentScreenings.TableView
 
         #region Interface Implementation Properties
         public Screening CurrentScreening => _plan.CurrScreening;
-        public List<Screening> Screenings => _plan.CurrScreening.Film.FilmScreenings;
+        public List<Screening> Screenings => _plan.CurrScreening.FilmScreenings;
         public Film CurrentFilm => GetFilmById(CurrentScreening.FilmId);
         #endregion
 

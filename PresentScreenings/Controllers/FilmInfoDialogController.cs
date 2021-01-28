@@ -163,8 +163,11 @@ namespace PresentScreenings.TableView
             }
             else
             {
-                var program = ViewController.GetFilmById(programIds.First());
-                screenings = program.FilmScreenings;
+                foreach (var programId in programIds)
+                {
+                    var program = ViewController.GetFilmById(programId);
+                    screenings.AddRange(program.FilmScreenings);
+                }
             }
 
             // Create the screenings view.

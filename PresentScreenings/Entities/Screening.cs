@@ -60,7 +60,8 @@ namespace PresentScreenings.TableView
         public bool Location => ScreenType == Screen.ScreenType.Location;
         public int TimesIAttendFilm => ScreeningsPlan.Screenings.Count(s => s.FilmId == FilmId && s.IAttend);
         public bool IsPlannable => TimesIAttendFilm == 0 && !HasNoTravelTime && !SoldOut;
-        public int FilmScreeningCount => Film.FilmScreenings.Count;
+        public List<Screening> FilmScreenings => ViewController.FilmScreenings(FilmId);
+        public int FilmScreeningCount => FilmScreenings.Count;
         public List<ScreenedFilm> ScreenedFilms => Film.FilmInfo.ScreenedFilms;
         public int FilmsInScreening => ScreenedFilms.Count > 0 ? ScreenedFilms.Count : 1;
         public bool AutomaticallyPlanned { get => _screeningInfo.AutomaticallyPlanned; set => _screeningInfo.AutomaticallyPlanned = value; }
