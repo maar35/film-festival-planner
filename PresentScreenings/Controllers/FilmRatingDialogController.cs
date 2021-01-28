@@ -135,7 +135,7 @@ namespace PresentScreenings.TableView
                     uncombineSheet.SheetAccepted += (s, e) => UncombineScreeningTitles((UncombineTitlesEventArgs)e);
                     uncombineSheet.Presentor = this;
                     break;
-                case "RatingsToFilmInfo":
+                case "GoToScreeningSegue":
                     FilmInfoDialogController.Presentor = this;
                     break;
             }
@@ -434,7 +434,7 @@ namespace PresentScreenings.TableView
         [Action("ShowScreenings:")]
         void ShowScreenings(NSObject sender)
         {
-            PerformSegue("RatingsToFilmInfo", sender);
+            PerformSegue("GoToScreeningSegue", sender);
         }
         #endregion
     }
