@@ -1253,7 +1253,7 @@ DQ
                         <outlet property="_uncombineTitleButton" destination="Wfn-Xt-Gfg" id="oO0-bx-oS5"/>
                         <segue destination="aXh-o3-u1V" kind="sheet" identifier="CombineSheetSegue" id="2pB-eh-aEj"/>
                         <segue destination="xwY-ys-qMS" kind="sheet" identifier="UncombineSheetSegue" id="sre-cp-yPh"/>
-                        <segue destination="heZ-Uf-iae" kind="sheet" identifier="GoToScreeningSegue" id="Aco-xL-TKu"/>
+                        <segue destination="heZ-Uf-iae" kind="modal" identifier="RatingsToFilmInfo" id="Aco-xL-TKu"/>
                     </connections>
                 </viewController>
                 <customObject id="Brq-Bq-Evi" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>

@@ -125,7 +125,6 @@ namespace PresentScreenings.TableView
                     break;
                 case "ScreeningsToFilmInfo":
                     var filmInfoDialog = segue.DestinationController as FilmInfoDialogController;
-                    filmInfoDialog.DialogShouldClose = true;
                     filmInfoDialog.UseTitleBackground = true;
                     FilmInfoDialogController.Presentor = this;
                     break;
