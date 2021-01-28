@@ -15,7 +15,6 @@ namespace PresentScreenings.TableView
         private const int _showFilmInfoMenuItemTag = 503;
         private const int _combineTitlesMenuItemTag = 504;
         private const int _uncombineTitleMenuItemTag = 505;
-        private bool _initialized = false;
         private readonly AppDelegate _app;
         #endregion
 
@@ -54,11 +53,6 @@ namespace PresentScreenings.TableView
                         item.Enabled = controller != null;
                         break;
                     case _showFilmInfoMenuItemTag:
-                        if (!_initialized)
-                        {
-                            item.KeyEquivalent = ControlsFactory.EnterKey;
-                            _initialized = true;
-                        }
                         item.Enabled = controller != null && !controller.TextBeingEdited && controller.OneFilmSelected();
                         break;
                     case _combineTitlesMenuItemTag:
