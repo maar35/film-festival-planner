@@ -63,7 +63,7 @@ namespace PresentScreenings.TableView
             var highRatedFilms = ScreeningsPlan.Films.Where(f => FilterHighRatedFilms(f));
             foreach (var highRatedFilm in highRatedFilms)
             {
-                var screenings = ViewController.FilmScreenings(highRatedFilm.FilmId);
+                var screenings = highRatedFilm.FilmScreenings;
                 if (screenings.Count == 0)
                 {
                     continue;
@@ -169,7 +169,7 @@ namespace PresentScreenings.TableView
             var film = GetSelectedFilm();
             if (film != null)
             {
-                return ViewController.FilmScreenings(film.FilmId);
+                return film.FilmScreenings;
             }
             return new List<Screening> { };
         }

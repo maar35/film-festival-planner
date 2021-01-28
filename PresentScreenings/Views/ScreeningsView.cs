@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using AppKit;
 using CoreGraphics;
 
@@ -44,7 +45,9 @@ namespace PresentScreenings.TableView
 		{
 			DisposeSubViews(view);
             var currScreening = plan.CurrScreening;
-            foreach (var screening in plan.ScreenScreenings[day][screen])
+            var elegableScreenings = plan.ScreenScreenings[day][screen]
+                .Where(s => s.Film.FilmInfo.CombinationProgramIds.Count == 0);
+            foreach (var screening in elegableScreenings)
             {
                 _controller.UpdateWarning(screening);
                 _labelLeft = _superView.NumberOfPixelsFromTime(screening.StartTime);

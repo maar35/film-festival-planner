@@ -208,7 +208,9 @@ namespace PresentScreenings.TableView
             List<Film> films = ScreeningsPlan.Films;
             if (OnlyFilmsWithScreenings)
             {
-                _filmTableDataSource.Films = films.Where(f => GetScreeningsByFilmId(f.FilmId).Count > 0).ToList();
+                _filmTableDataSource.Films = films
+                    .Where(f => f.FilmScreenings.Count > 0)
+                    .ToList();
             }
             else
             {
@@ -321,7 +323,7 @@ namespace PresentScreenings.TableView
             var screeningList = new List<Screening> { };
             if (OneFilmSelected())
             {
-                screeningList = GetScreeningsByFilmId(GetSelectedFilm().FilmId);
+                screeningList = GetSelectedFilm().FilmScreenings;
             }
             return screeningList;
         }

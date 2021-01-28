@@ -47,7 +47,7 @@ namespace PresentScreenings.TableView
 
         #region Interface Implementation Properties
         public Screening CurrentScreening => Presentor.Plan.CurrScreening;
-        public List<Screening> Screenings => ViewController.FilmScreenings(Presentor.Plan.CurrScreening.FilmId);
+        public List<Screening> Screenings => Presentor.Plan.CurrScreening.FilmScreenings;
         public Film CurrentFilm => ViewController.GetFilmById(CurrentScreening.FilmId);
         #endregion
 
@@ -68,7 +68,7 @@ namespace PresentScreenings.TableView
             _presentor.RunningPopupsCount += 1;
 
             // Initialize the list of screenings.
-            _filmScreenings = ViewController.FilmScreenings(_screening.FilmId);
+            _filmScreenings = _screening.FilmScreenings;
 
             // Populate the controls.
             SetControlValues();

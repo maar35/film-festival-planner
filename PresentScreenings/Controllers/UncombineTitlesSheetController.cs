@@ -71,7 +71,7 @@ namespace PresentScreenings.TableView
             // Populate the screenings list.
             nuint filmIndex = (nuint)Presentor.FilmRatingTableView.SelectedRow;
             Film film = Presentor.GetFilmByIndex(filmIndex);
-            _screenings = ViewController.FilmScreenings(film.FilmId);
+            _screenings = film.FilmScreenings;
 
             // Populate the distinct titles list.
             _distinctTitles = _screenings.Select(s => s.ScreeningTitle).Distinct().ToList();

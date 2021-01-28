@@ -391,7 +391,11 @@
                                         <menuItem isSeparatorItem="YES" id="Og0-Cw-Lcf"/>
                                         <menuItem title="Type-match Entire Title" state="on" tag="502" keyEquivalent="m" id="KqO-tN-phd"/>
                                         <menuItem isSeparatorItem="YES" id="JhT-4n-HFB"/>
-                                        <menuItem title="Show Film Info" tag="503" keyEquivalent="I" id="bxj-2G-YmV"/>
+                                        <menuItem title="Show Film Info" tag="503" id="bxj-2G-YmV">
+                                            <string key="keyEquivalent" base64-UTF8="YES">
+DQ
+</string>
+                                        </menuItem>
                                         <menuItem title="Combine Titles" tag="504" keyEquivalent="k" id="sG4-4A-cBU"/>
                                         <menuItem title="Uncombine Title" tag="505" keyEquivalent="K" id="NR9-b1-rZW"/>
                                         <menuItem isSeparatorItem="YES" id="2qy-BY-Op3"/>
