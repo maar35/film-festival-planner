@@ -52,7 +52,6 @@ namespace PresentScreenings.TableView
         public static GoToScreeningDialog Presentor { get; set; }
         public bool BehaveAsPopover { get; set; } = false;
         public bool UseTitleBackground { get; set; } = false;
-        public bool DialogShouldClose { get; set; } = false;
         #endregion
 
         #region Constructors
@@ -292,13 +291,10 @@ namespace PresentScreenings.TableView
         private void GoToScreening(Screening screening)
         {
             Presentor.GoToScreening(screening);
-            if (DialogShouldClose)
-            {
-                ClosePopOver();
-            }
+            CloseDialog();
         }
 
-        private void ClosePopOver()
+        private void CloseDialog()
         {
             Presentor.DismissViewController(this);
         }
@@ -308,7 +304,7 @@ namespace PresentScreenings.TableView
         [Action("CancelGotoScreening:")]
         void CancelGotoScreening(NSObject sender)
         {
-            ClosePopOver();
+            CloseDialog();
         }
         #endregion
     }
