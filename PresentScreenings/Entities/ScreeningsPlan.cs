@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace PresentScreenings.TableView
 {
@@ -70,8 +71,12 @@ namespace PresentScreenings.TableView
             ScreeningInfos = new ScreeningInfo().ReadListFromFile(screeningInfoFile, line => new ScreeningInfo(line));
 
             // Read screenings.
-            Screenings = new Screening().ReadListFromFile(screeningsFile, line => new Screening(line));
+            Screenings = new Screening().ReadListFromFile(screeningsFile, line => PickScreening(line));
 
+            // Create virtual ondemand screens.
+            AssignDisplayScreens();
+
+            // Imitialize the day schemes.
             InitializeDays();
             _currDayNumber = 0;
             _currScreenNumber = 0;
@@ -80,6 +85,13 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
+        private Screening PickScreening(string line)
+        {
+            string[] fields = line.Split(';');
+            string screen = fields[1];
+            return screen == "ondemand" ? new OnDemandScreening(line) : new Screening(line);
+        }
+
         private void InitializeDays()
         {
             // Initialize the days, screens and screens per day dictionaries.
@@ -90,7 +102,7 @@ namespace PresentScreenings.TableView
             // Select on-location screenings.
             var onLocationScreenings = (
                 from Screening s in Screenings
-                where s.Location
+                //where s.Location
                 select s
             ).ToList();
 
@@ -112,7 +124,7 @@ namespace PresentScreenings.TableView
                     ScreenScreenings.Add(day, new Dictionary<Screen, List<Screening>> { });
                 }
 
-                Screen screen = screening.Screen;
+                Screen screen = DisplayScreen(screening);
                 if (!_dayScreens[day].Contains(screen))
                 {
                     _dayScreens[day].Add(screen);
@@ -130,12 +142,53 @@ namespace PresentScreenings.TableView
                 }
             }
         }
+
+        private Screen DisplayScreen(Screening screening)
+        {
+            if (screening is OnDemandScreening onDemandScreening)
+            {
+                return onDemandScreening.DisplayScreen;
+            }
+            return screening.Screen;
+        }
+
+        private void AssignDisplayScreens()
+        {
+            const string screenPattern = @"\D+(\d*)";
+            var screenRegex = new Regex(screenPattern);
+            var displayScreenByAbbreviation = new Dictionary<string, Screen> { };
+
+            foreach (var screening in Screenings)
+            {
+                if (screening is OnDemandScreening onDemandScreening)
+                {
+                    int filmId = onDemandScreening.FilmId;
+                    int screenId = onDemandScreening.Screen.ScreenId;
+                    string odAbbreviation = onDemandScreening.Screen.Abbreviation;
+                    Screening LocalScreening = Screenings
+                        .Where(s => s.FilmId == filmId && s.Screen.ScreenId != screenId)
+                        .First();
+                    Match match = screenRegex.Match(LocalScreening.Screen.Abbreviation);
+                    if (match != null)
+                    {
+                        string version = match.Groups[1].Value;
+                        string newAbbreviation = odAbbreviation + version;
+                        if (!displayScreenByAbbreviation.ContainsKey(newAbbreviation))
+                        {
+                            displayScreenByAbbreviation.Add(newAbbreviation, new Screen(onDemandScreening.DisplayScreen, newAbbreviation));
+                        }
+                        onDemandScreening.DisplayScreen = displayScreenByAbbreviation[newAbbreviation];
+                    }
+                    onDemandScreening.SetEndTime(LocalScreening);
+                }
+            }
+        }
         #endregion
 
         #region Public methods
         public Screening AddOnlineScreening(Screening screening)
         {
-            Screen screen = screening.Screen;
+            Screen screen = DisplayScreen(screening);
             DateTime day = CurrDay;
             Screening tempScreening = new Screening(screening, day);
             _dayScreens[day].Add(screen);
@@ -200,7 +253,7 @@ namespace PresentScreenings.TableView
         public void SetCurrScreening(Screening screening)
         {
             SetNextDay((screening.StartDate - CurrDay).Days);
-            _currScreenNumber = CurrDayScreens.IndexOf(screening.Screen);
+            _currScreenNumber = CurrDayScreens.IndexOf(DisplayScreen(screening));
             var screenScreenings = ScreenScreenings[CurrDay][CurrScreen];
             Screening newCurrScreening = (
                 from Screening s in screenScreenings

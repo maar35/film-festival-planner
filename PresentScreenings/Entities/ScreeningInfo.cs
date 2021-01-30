@@ -50,22 +50,25 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public static string Me => "Maarten";
-        public static List<string> FilmFans => new List<string> { Me, "Adrienne", "Manfred", "Piggel", "Rijk" };
-        public static List<string> MyFriends => FilmFans.Skip(1).ToList();
-        public static Dictionary<string, bool> StringToBool { get; private set; }
-        public static Dictionary<bool, string> BoolToString { get; private set; }
         public int FilmId { get; private set; }
         public Screen Screen { get; private set; }
         public DateTime StartTime { get; private set; }
         public string ScreeningTitle { get; set; }
+        public bool AutomaticallyPlanned { get; set; } = false;
+        public ScreeningStatus Status { get; set; }
         public List<string> Attendees { get; set; }
-        public bool IAttend { get => Attendees.Contains(Me); }
-        public List<string> AttendingFriends { get => Attendees.Where(f => f != Me).ToList(); }
         public bool TicketsBought { get; set; }
         public bool SoldOut { get; set; }
-        public ScreeningStatus Status { get; set; }
-        public bool AutomaticallyPlanned { get; set; } = false;
+        #endregion
+
+        #region Calculated Properties
+        public static string Me => "Maarten";
+        public static List<string> FilmFans => new List<string> { Me, "Adrienne", "Manfred", "Piggel", "Rijk" };
+        public static List<string> MyFriends => FilmFans.Skip(1).ToList();
+        public bool IAttend { get => Attendees.Contains(Me); }
+        public List<string> AttendingFriends { get => Attendees.Where(f => f != Me).ToList(); }
+        public static Dictionary<string, bool> StringToBool { get; private set; }
+        public static Dictionary<bool, string> BoolToString { get; private set; }
         #endregion
 
         #region Constructors

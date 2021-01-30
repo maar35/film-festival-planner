@@ -12,6 +12,7 @@ namespace PresentScreenings.TableView
         public enum ScreenType
         {
             Location,
+            OnDemand,
             OnLine
         }
         #endregion
@@ -41,6 +42,15 @@ namespace PresentScreenings.TableView
             ScreenId = int.Parse(screenId);
             Type = (ScreenType)Enum.Parse(typeof(ScreenType), screenType);
         }
+
+        public Screen(Screen screen, string abbreviation)
+        {
+            ScreenId = screen.ScreenId;
+            City = screen.City;
+            ParseName = screen.ParseName;
+            Abbreviation = abbreviation;
+            Type = screen.Type;
+        }
         #endregion
 
         #region Override Methods
@@ -48,6 +58,11 @@ namespace PresentScreenings.TableView
         {
             return false;
         }
+
+        public override string ToString()
+		{
+			return Abbreviation;
+		}
         #endregion
 
         #region Interface Implementations
@@ -58,10 +73,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public override string ToString()
-		{
-			return Abbreviation;
-		}
         #endregion
     }
 }

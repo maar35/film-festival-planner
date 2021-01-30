@@ -21,20 +21,20 @@ namespace PresentScreenings.TableView
         private const string _dateFormat = "yyyy-MM-dd";
         private const string _timeFormat = "HH:mm";
         private const string _onlineTimeFormat = "HH:mm ddd d-M";
-        private const string _dtFormat = "ddd dd:MM HH:mm";
+        protected const string _dtFormat = "ddd dd:MM HH:mm";
         private const string _dayOfWeekFormat = "dddd d MMMM";
         private const string _durationFormat = "hh\\:mm";
         #endregion
 
         #region Private Members
-        private readonly ScreeningInfo _screeningInfo;
+        protected ScreeningInfo _screeningInfo;
         #endregion
 
         #region Properties
         public int FilmId { get; set; }
         public Screen Screen { get; }
-        public DateTime StartTime { get; }
-        public DateTime EndTime { get; }
+        public DateTime StartTime { get; protected set; }
+        public DateTime EndTime { get; protected set; }
         public int? CombinationProgramId { get; }
         public string Subtitles { get; }
         public string QAndA { get; }
@@ -57,6 +57,7 @@ namespace PresentScreenings.TableView
         public bool HasNoTravelTime => ViewController.OverlappingAttendedScreenings(this, true).Any();
         private Screen.ScreenType ScreenType => Screen.Type;
         public bool OnLine => ScreenType == Screen.ScreenType.OnLine;
+        public bool OnDemand => ScreenType == Screen.ScreenType.OnDemand;
         public bool Location => ScreenType == Screen.ScreenType.Location;
         public int TimesIAttendFilm => ScreeningsPlan.Screenings.Count(s => s.FilmId == FilmId && s.IAttend);
         public bool IsPlannable => TimesIAttendFilm == 0 && !HasNoTravelTime && !SoldOut;
@@ -318,13 +319,9 @@ namespace PresentScreenings.TableView
             return $"{DayString(StartTime)} {Screen} {StartTime.ToString(_timeFormat)} {ExtraTimeSymbolsString()}";
         }
 
-        public string ToFilmScreeningLabelString()
+        public virtual string ToFilmScreeningLabelString()
         {
-            if (Location)
-            {
-                return string.Format("{0} {1}{2}", ToMenuItemString(), ShortAttendingFriendsString(), ScreeningTitleIfDifferent());
-            }
-            return $"{DayString(StartTime)} {Screen} {StartTime.ToString(_dtFormat)}-{EndTime.ToString(_dtFormat)} {ExtraTimeSymbolsString()} {ShortAttendingFriendsString()}{ScreeningTitleIfDifferent()}";
+            return string.Format("{0} {1}{2}", ToMenuItemString(), ShortAttendingFriendsString(), ScreeningTitleIfDifferent());
         }
 
         public string ToScreeningLabelString(bool withDay = false)
