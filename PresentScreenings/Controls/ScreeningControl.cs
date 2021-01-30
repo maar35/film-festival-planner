@@ -189,7 +189,7 @@ namespace PresentScreenings.TableView
         {
             var gpath = new CGPath();
             gpath.AddRect(clickRect);
-            ColorView.ClickPadBackgroundColor(Selected).SetFill();
+            ColorView.ClickPadBackgroundColor(Selected, Screening).SetFill();
             gpath.CloseSubpath();
             context.AddPath(gpath);
             context.DrawPath(CGPathDrawingMode.Fill);

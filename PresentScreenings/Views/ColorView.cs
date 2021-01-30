@@ -36,9 +36,12 @@ namespace PresentScreenings.TableView
         static readonly Dictionary<ScreeningInfo.ScreeningStatus, NSColor> BgColorByScreeningStatus;
         static readonly Dictionary<ScreeningInfo.TicketsStatus, NSColor> ColorByTicketStatus;
         static readonly NSColor ClickPadColorBlue = NSColor.FromRgba(0, 0, 255, 207);
+        static readonly NSColor ClickPadColorGreen = NSColor.FromRgba(0, 127, 0, 207);
         static readonly NSColor ClickPadColorGrey = NSColor.FromRgba(127, 127, 127, 119);
+        static readonly NSColor ClickPadColorPeach = NSColor.FromRgba(255, 217, 176, 207);
         static readonly NSColor ClickPadTextColorSelected = NSColor.White;
         static readonly NSColor ClickPadTextColorUnselected = NSColor.Red;
+        static readonly Dictionary<Tuple<bool, bool>, NSColor> clickPadColorByVodSelected;
         static readonly NSColor soldOutColorSelected = NSColor.FromRgb(219, 176, 38);
         static readonly NSColor soldOutColorUnselected = NSColor.FromRgb(176, 79, 38);
         #endregion
@@ -46,6 +49,12 @@ namespace PresentScreenings.TableView
         #region Constructors
         static ColorView()
         {
+            clickPadColorByVodSelected = new Dictionary<Tuple<bool, bool>, NSColor> { };
+            clickPadColorByVodSelected[new Tuple<bool, bool>(false, false)] = ClickPadColorGrey;
+            clickPadColorByVodSelected[new Tuple<bool, bool>(false, true)] = ClickPadColorBlue;
+            clickPadColorByVodSelected[new Tuple<bool, bool>(true, false)] = ClickPadColorPeach;
+            clickPadColorByVodSelected[new Tuple<bool, bool>(true, true)] = ClickPadColorGreen;
+
             TextColorByScreeningStatus = new Dictionary<ScreeningInfo.ScreeningStatus, NSColor> { };
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Free, screeningTextColorBlack);
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.NeedingTickets, screeningTextColorPurple);
@@ -112,9 +121,10 @@ namespace PresentScreenings.TableView
             context.SetStrokeColor(color.CGColor);
         }
 
-        public static NSColor ClickPadBackgroundColor(bool selected)
+        public static NSColor ClickPadBackgroundColor(bool selected, Screening screening)
         {
-            return selected ? ClickPadColorBlue : ClickPadColorGrey;
+            bool vod = screening is OnDemandScreening;
+            return clickPadColorByVodSelected[new Tuple<bool, bool>(vod, selected)];
         }
 
         public static NSColor ClickPadTextColor(bool selected)
