@@ -32,8 +32,6 @@ namespace PresentScreenings.TableView
         #region Properties
         public int FilmId { get; set; }
         public Screen Screen { get; }
-        public DateTime StartTime { get; protected set; }
-        public DateTime EndTime { get; protected set; }
         public int? CombinationProgramId { get; }
         public string Subtitles { get; }
         public string QAndA { get; }
@@ -43,6 +41,8 @@ namespace PresentScreenings.TableView
         #region Calculated Properties
         public Film Film { get => ViewController.GetFilmById(FilmId); set => FilmId = value.FilmId; }
         public string FilmTitle => Film.Title;
+        public DateTime StartTime { get => _screeningInfo.MovableStartTime; protected set => _screeningInfo.MovableStartTime = value; }
+        public DateTime EndTime { get => _screeningInfo.MovableEndTime; protected set => _screeningInfo.MovableEndTime = value; }
         public DateTime StartDate => StartTime.Date;
         public TimeSpan Duration => EndTime - StartTime;
         public FilmRating Rating => Film.Rating;
@@ -85,12 +85,12 @@ namespace PresentScreenings.TableView
             FilmId = screening.Film.FilmId;
             Film = screening.Film;
             Screen = screening.Screen;
-            StartTime = DateTimeFromParsedData(day.Date, "09:00");
-            EndTime = DateTimeFromParsedData(day.Date, "23:59");
             Subtitles = string.Empty;
             QAndA = screening.QAndA;
             Extra = screening.Extra;
             _screeningInfo = screening._screeningInfo;
+            StartTime = DateTimeFromParsedData(day.Date, "09:00");
+            EndTime = DateTimeFromParsedData(day.Date, "23:59");
         }
 
         public Screening(string screeningText)
@@ -99,39 +99,39 @@ namespace PresentScreenings.TableView
             string[] fields = screeningText.Split(';');
             int filmId = int.Parse(fields[0]);
             string screen = fields[1];
-            string startTime = fields[2];
-            string endTime = fields[3];
+            string startTimeString = fields[2];
+            string endTimeString = fields[3];
             string combinationIdStr = fields[4];
             string subtitles = fields[5];
             string qAndA = fields[6];
             string extra = fields[7];
 
-            // Assign properties.
-            DateTime startDate = DateTime.Parse(startTime);
-            DateTime endDate = DateTime.Parse(endTime);
-            if (endDate < startDate)
-            {
-                endDate = endDate.AddDays(1);
-            }
+            // Assign key properties.
             FilmId = filmId;
-            Film = (from Film film in ScreeningsPlan.Films where film.FilmId == filmId select film).First();
             Screen = (from Screen s in ScreeningsPlan.Screens where s.ToString() == screen select s).First();
-            StartTime = startDate;
-            EndTime = endDate;
-            CombinationProgramId = int.TryParse(combinationIdStr, out int outcome) ? (int?)outcome : null;
-            Subtitles = subtitles;
-            QAndA = qAndA;
-            Extra = extra;
-            var screeningInfos = ScreeningsPlan.ScreeningInfos.Where(s => s.FilmId == FilmId && s.Screen == Screen && s.StartTime == StartTime).ToList();
+            DateTime startTime = DateTime.Parse(startTimeString);
+            DateTime endTime = DateTime.Parse(endTimeString);
+
+            // Get screening info.
+            var screeningInfos = ScreeningsPlan.ScreeningInfos.Where(s => s.FilmId == FilmId && s.Screen == Screen && s.StartTime == startTime).ToList();
             if (screeningInfos.Count == 0)
             {
-                _screeningInfo = new ScreeningInfo(FilmId, Screen, StartTime);
+                _screeningInfo = new ScreeningInfo(FilmId, Screen, startTime);
+                StartTime = startTime;
+                EndTime = endTime;
                 ScreeningsPlan.ScreeningInfos.Add(_screeningInfo);
             }
             else
             {
                 _screeningInfo = screeningInfos.First();
             }
+
+            // Assign other properties.
+            Film = (from Film film in ScreeningsPlan.Films where film.FilmId == filmId select film).First();
+            CombinationProgramId = int.TryParse(combinationIdStr, out int outcome) ? (int?)outcome : null;
+            Subtitles = subtitles;
+            QAndA = qAndA;
+            Extra = extra;
         }
         #endregion
 

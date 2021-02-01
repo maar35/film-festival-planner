@@ -52,8 +52,10 @@ namespace PresentScreenings.TableView
         #region Properties
         public int FilmId { get; private set; }
         public Screen Screen { get; private set; }
-        public DateTime StartTime { get; private set; }
+        public DateTime StartTime { get; }
         public string ScreeningTitle { get; set; }
+        public DateTime MovableStartTime { get; set; }
+        public DateTime MovableEndTime { get; set; }
         public bool AutomaticallyPlanned { get; set; } = false;
         public ScreeningStatus Status { get; set; }
         public List<string> Attendees { get; set; }
@@ -105,12 +107,14 @@ namespace PresentScreenings.TableView
             FilmId = int.Parse(fields[0]);
             string screen = fields[1];
             StartTime = DateTime.Parse(fields[2]);
-            ScreeningTitle = fields[3];
-            string automaticallyPlanned = fields[4];
-            string screeningStatus = fields[5];
-            var attendanceStrings = new List<string>(fields[6].Split(','));
-            string ticketsBought = fields[7];
-            string soldOut = fields[8];
+            MovableStartTime = DateTime.Parse(fields[3]);
+            MovableEndTime = DateTime.Parse(fields[4]);
+            ScreeningTitle = fields[5];
+            string automaticallyPlanned = fields[6];
+            string screeningStatus = fields[7];
+            var attendanceStrings = new List<string>(fields[8].Split(','));
+            string ticketsBought = fields[9];
+            string soldOut = fields[10];
 
             // Assign members.
             Screen = ScreeningsPlan.Screens.First(s => s.ToString() == screen);
@@ -149,7 +153,7 @@ namespace PresentScreenings.TableView
 
         public override string WriteHeader()
         {
-            string headerFmt = "filmid;screen;starttime;screeningtitle;autoplanned;blocked;{0};ticketsbought;soldout";
+            string headerFmt = "filmid;screen;starttime;movablestarttime,movableendtime,screeningtitle;autoplanned;blocked;{0};ticketsbought;soldout";
             return string.Format(headerFmt, FilmFansString());
         }
 
@@ -160,6 +164,8 @@ namespace PresentScreenings.TableView
                 FilmId,
                 Screen,
                 StartTime.ToString(_dateTimeFormat),
+                MovableStartTime.ToString(_dateTimeFormat),
+                MovableEndTime.ToString(_dateTimeFormat),
                 ScreeningTitle,
                 BoolToString[AutomaticallyPlanned],
                 _stringByScreeningStatus[Status],

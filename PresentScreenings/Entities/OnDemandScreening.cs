@@ -24,8 +24,12 @@ namespace PresentScreenings.TableView
         #region Constructors
         public OnDemandScreening(string screeningText) : base(screeningText)
         {
-            WindowStartTime = base.StartTime;
-            WindowEndTime = base.EndTime;
+            // Parse the relevant part of the input string.
+            string[] fields = screeningText.Split(';');
+            WindowStartTime = DateTime.Parse(fields[2]);
+            WindowEndTime = DateTime.Parse(fields[3]);
+
+            // Assign other properties.
             EndTime = StartTime + Film.Duration;
             _duration = EndTime - StartTime;
             DisplayScreen = Screen;
