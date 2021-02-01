@@ -20,7 +20,6 @@ namespace PresentScreenings.TableView
         #region Constant Private Members
         private const string _dateFormat = "yyyy-MM-dd";
         private const string _timeFormat = "HH:mm";
-        private const string _onlineTimeFormat = "HH:mm ddd d-M";
         protected const string _dtFormat = "ddd dd:MM HH:mm";
         private const string _dayOfWeekFormat = "dddd d MMMM";
         private const string _durationFormat = "hh\\:mm";
@@ -44,7 +43,7 @@ namespace PresentScreenings.TableView
         #region Calculated Properties
         public Film Film { get => ViewController.GetFilmById(FilmId); set => FilmId = value.FilmId; }
         public string FilmTitle => Film.Title;
-        public DateTime StartDate => DateTime.Parse(string.Format("{0}", StartTime.ToShortDateString()));
+        public DateTime StartDate => StartTime.Date;
         public TimeSpan Duration => EndTime - StartTime;
         public FilmRating Rating => Film.Rating;
         public string ScreeningTitle { get => _screeningInfo.ScreeningTitle; set => _screeningInfo.ScreeningTitle = value; }
@@ -179,7 +178,7 @@ namespace PresentScreenings.TableView
             }
             fields.Add(Screen.ToString());
             fields.Add(StartTime.ToString(_timeFormat));
-            fields.Add(EndTime.ToString(Location ? _timeFormat : _onlineTimeFormat));
+            fields.Add(EndTimeString());
             fields.Add($"{Film} ({Film.MinutesString})");
             fields.Add(FilmsInScreening.ToString());
             fields.Add(Extra);
@@ -190,6 +189,13 @@ namespace PresentScreenings.TableView
             fields.Add(filmInfo != null ? HtmlDecode(filmInfo.FilmDescription) : "");
 
             return string.Join(";", fields);
+        }
+        #endregion
+
+        #region Vitual Methods
+        protected virtual string EndTimeString()
+        {
+            return EndTime.ToString(_timeFormat);
         }
         #endregion
 

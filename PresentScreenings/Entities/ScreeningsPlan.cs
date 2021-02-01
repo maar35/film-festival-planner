@@ -92,7 +92,8 @@ namespace PresentScreenings.TableView
             return screen == "ondemand" ? new OnDemandScreening(line) : new Screening(line);
         }
 
-        private void InitializeDays()
+        //private void InitializeDays()
+        public void InitializeDays()
         {
             // Initialize the days, screens and screens per day dictionaries.
             FestivalDays = new List<DateTime> { };
@@ -132,6 +133,8 @@ namespace PresentScreenings.TableView
                 }
                 ScreenScreenings[day][screen].Add(screening);
             }
+
+            // Sort the different lists.
             FestivalDays.Sort();
             foreach (var day in FestivalDays)
             {
@@ -143,7 +146,7 @@ namespace PresentScreenings.TableView
             }
         }
 
-        private Screen DisplayScreen(Screening screening)
+        public Screen DisplayScreen(Screening screening)
         {
             if (screening is OnDemandScreening onDemandScreening)
             {
@@ -154,8 +157,7 @@ namespace PresentScreenings.TableView
 
         private void AssignDisplayScreens()
         {
-            const string screenPattern = @"\D+(\d*)";
-            var screenRegex = new Regex(screenPattern);
+            var screenRegex = new Regex(@"\D+(\d*)");
             var displayScreenByAbbreviation = new Dictionary<string, Screen> { };
 
             foreach (var screening in Screenings)

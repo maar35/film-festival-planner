@@ -20,6 +20,7 @@ namespace PresentScreenings.TableView
         public static string Festival { get; private set; }
         public static string FestivalYear { get; private set; }
         public static string DocumentsFolder => GetDocumentsPath();
+        public static TimeSpan DaySpan => new TimeSpan(24, 0, 0);
         #endregion
 
         #region Properties
@@ -218,6 +219,30 @@ namespace PresentScreenings.TableView
         {
             string filmFan = ((NSMenuItem)sender).Title;
             Controller.ToggleAttendance(filmFan);
+        }
+
+        [Action("MoveBackward:")]
+        internal void MoveBackward(NSObject sender)
+        {
+            Controller.MoveScreening(false);
+        }
+
+        [Action("MoveForward:")]
+        internal void MoveForward(NSObject sender)
+        {
+            Controller.MoveScreening(true);
+        }
+
+        [Action("MoveToPreviousDay:")]
+        internal void MoveToPreviousDay(NSObject sender)
+        {
+            Controller.MoveTimeSpan(Controller.Plan.CurrScreening, -DaySpan);
+        }
+
+        [Action("MoveToNextDay:")]
+        internal void MoveToNextDay(NSObject sender)
+        {
+            Controller.MoveTimeSpan(Controller.Plan.CurrScreening, DaySpan);
         }
         #endregion
     }

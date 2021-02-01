@@ -270,6 +270,20 @@ namespace PresentScreenings.TableView
             }
             return comboBoxString;
         }
+
+        private void TryShowFilmInfo(NSObject sender)
+        {
+            var film = _screening.Film;
+            if (ViewController.FilmInfoIsAvailable(film))
+            {
+                PerformSegue("ScreeningToFilmInfo", sender);
+            }
+            else
+            {
+                Presentor.PerformSegue("ScreeningsToFilmInfo", sender);
+                CloseDialog();
+            }
+        }
         #endregion
 
         #region Public Methods
@@ -297,20 +311,6 @@ namespace PresentScreenings.TableView
             UpdateAttendances();
             var attendanceState = AttendanceCheckbox.GetAttendanceState(_screening.FilmFanAttends(filmFan));
             _attendanceCheckboxByFilmFan[filmFan].State = attendanceState;
-        }
-
-        private void TryShowFilmInfo(NSObject sender)
-        {
-            var film = _screening.Film;
-            if (ViewController.FilmInfoIsAvailable(film))
-            {
-                PerformSegue("ScreeningToFilmInfo", sender);
-            }
-            else
-            {
-                Presentor.PerformSegue("ScreeningsToFilmInfo", sender);
-                CloseDialog();
-            }
         }
         #endregion
 

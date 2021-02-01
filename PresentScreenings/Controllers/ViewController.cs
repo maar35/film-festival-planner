@@ -14,6 +14,7 @@ namespace PresentScreenings.TableView
     public partial class ViewController : GoToScreeningDialog, IScreeningProvider
     {
         #region Private Members
+        private TimeSpan _pause = new TimeSpan(0, 30, 0);
         ScreeningsPlan _plan = null;
         ScreeningsTableView _mainView = null;
         Dictionary<Screening, ScreeningControl> _controlByScreening;
@@ -280,6 +281,14 @@ namespace PresentScreenings.TableView
             return overlappingAttendedScreenings;
         }
 
+        public List<Screening> DayScreenings()
+        {
+            var dayScreenings = ScreeningsPlan.Screenings
+                .Where(s => s.StartDate == Plan.CurrDay)
+                .ToList();
+            return dayScreenings;
+        }
+
         public bool ViewIsActive()
         {
             return RunningPopupsCount == 0;
@@ -474,6 +483,17 @@ namespace PresentScreenings.TableView
             }
         }
 
+        public void UpdateDayAttendanceStatus(Screening screening)
+        {
+            UpdateOneAttendanceStatus(screening);
+
+            var dayScreenings = DayScreenings();
+            foreach (Screening dayScreening in dayScreenings)
+            {
+                UpdateOneAttendanceStatus(dayScreening);
+            }
+        }
+
         public void UpdateWarning(Screening screening)
         {
             if (screening.TimesIAttendFilm > 1)
@@ -488,6 +508,116 @@ namespace PresentScreenings.TableView
             {
                 screening.Warning = ScreeningInfo.Warning.NoWarning;
             }
+        }
+        #endregion
+
+        #region Public Methods working with moving screenings
+        private TimeSpan GetNextSpanToFit(OnDemandScreening screening)
+        {
+            // Find attended screenings that end later than the given one.
+            var currDay = Plan.CurrDay;
+            var attendedScreenings = DayScreenings()
+                .Where(s => s.StartDate == currDay && s.EndTime > screening.StartTime && s.IAttend)
+                .OrderBy(s => s.EndTime)
+                .ToList();
+            attendedScreenings.Remove(screening);
+
+            // Find the first space where the given screening fits.
+            var otherScreenings = new List<Screening> { };
+            otherScreenings.AddRange(attendedScreenings);
+            foreach (var attendedScreening in attendedScreenings)
+            {
+                otherScreenings.Remove(attendedScreening);
+                if (otherScreenings.Count == 0)
+                {
+                    return attendedScreening.EndTime - screening.StartTime + _pause;
+                }
+                var nextScreening = otherScreenings[0];
+                if (nextScreening.StartTime > attendedScreening.EndTime + screening.Duration + 2 * _pause)
+                {
+                    return attendedScreening.EndTime - screening.StartTime + _pause;
+                }
+            }
+            return _pause;
+        }
+
+        private TimeSpan GetPreviousSpanToFit(OnDemandScreening screening)
+        {
+            // Find attended screenings that start earlier than the given one.
+            var currDay = Plan.CurrDay;
+            var attendedScreenings = DayScreenings()
+                .Where(s => s.StartDate == currDay && s.StartTime < screening.EndTime && s.IAttend)
+                .OrderByDescending(s => s.EndTime)
+                .ToList();
+            attendedScreenings.Remove(screening);
+
+            // Find the first space where the given screening fits.
+            var otherScreenings = new List<Screening> { };
+            otherScreenings.AddRange(attendedScreenings);
+            foreach (var attendedScreening in attendedScreenings)
+            {
+                otherScreenings.Remove(attendedScreening);
+                if (otherScreenings.Count == 0)
+                {
+                    return attendedScreening.StartTime - screening.EndTime - _pause;
+                }
+                var nextScreening = otherScreenings[0];
+                if (attendedScreening.StartTime > nextScreening.EndTime + screening.Duration + 2 * _pause)
+                {
+                    return attendedScreening.StartTime - screening.EndTime - _pause;
+                }
+            }
+            return -_pause;
+        }
+
+        public void MoveTimeSpan(Screening screening, TimeSpan span)
+        {
+            if (screening is OnDemandScreening onDemandScreening)
+            {
+                onDemandScreening.MoveStartTime(span);
+                Plan.InitializeDays();
+                GoToDay(onDemandScreening.StartTime.Date);
+                //_mainView.HeadersView.DrawCurrDay(_plan);
+                //UpdateDayAttendanceStatus(screening);
+                //ReloadScreeningsView();
+                SetCurrScreening(screening);
+            }
+        }
+
+        public static bool MoveForwardAllowed(Screening screening, bool withinDay = false)
+        {
+            if (screening == null)
+            {
+                return false;
+            }
+            if (screening is OnDemandScreening onDemandScreening)
+            {
+                bool allowed = onDemandScreening.EndTime < onDemandScreening.WindowEndTime;
+                if (allowed && withinDay)
+                {
+                    allowed = screening.StartTime.TimeOfDay < new TimeSpan(23, 59, 0);
+                }
+                return allowed;
+            }
+            return false;
+        }
+
+        public static bool MoveBackwardAllowed(Screening screening, bool withinDay = false)
+        {
+            if (screening == null)
+            {
+                return false;
+            }
+            if (screening is OnDemandScreening onDemandScreening)
+            {
+                bool allowed = onDemandScreening.StartTime > onDemandScreening.WindowStartTime;
+                if (allowed && withinDay)
+                {
+                    allowed = screening.StartTime.TimeOfDay > new TimeSpan(9, 0, 0);
+                }
+                return allowed;
+            }
+            return false;
         }
         #endregion
 
@@ -560,6 +690,35 @@ namespace PresentScreenings.TableView
             Screening screening = _plan.CurrScreening;
             screening.ToggleFilmFanAttendance(filmfan);
             UpdateAttendanceStatus(screening);
+            ReloadScreeningsView();
+        }
+
+        public void MoveScreening(bool forward)
+        {
+            Screening screening = Plan.CurrScreening;
+            if (screening is OnDemandScreening onDemandScreening)
+            {
+                TimeSpan span;
+                if (forward)
+                {
+                    span = GetNextSpanToFit(onDemandScreening);
+                }
+                else
+                {
+                    span = GetPreviousSpanToFit(onDemandScreening);
+                }
+                onDemandScreening.MoveStartTime(span);
+            }
+            _mainView.HeadersView.DrawCurrDay(_plan);
+            UpdateDayAttendanceStatus(screening);
+
+            // Sort the screenings on the current screen.
+            var day = Plan.CurrDay;
+            var screen = Plan.DisplayScreen(screening);
+            var screenings = Plan.ScreenScreenings[day];
+            screenings[screen].Sort();
+            SetCurrScreening(screening);
+
             ReloadScreeningsView();
         }
 
