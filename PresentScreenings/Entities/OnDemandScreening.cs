@@ -5,8 +5,7 @@ namespace PresentScreenings.TableView
     public class OnDemandScreening : Screening
     {
         #region Private Variables
-        private const string _timeFormat = "HH:mm";
-        private const string _lastDayFormat = "ddd d-M";
+        private const string _expireTimeFormat = "ddd d-M HH:mm";
         private TimeSpan _duration;
         #endregion
 
@@ -42,9 +41,9 @@ namespace PresentScreenings.TableView
             return $"{DayString(WindowStartTime)} {Screen} {WindowStartTime.ToString(_dtFormat)}-{WindowEndTime.ToString(_dtFormat)} {ExtraTimeSymbolsString()} {ShortAttendingFriendsString()}{ScreeningTitleIfDifferent()}";
         }
 
-        protected override string EndTimeString()
+        protected override string AvailableTillString()
         {
-            return $"{EndTime.ToString(_timeFormat)} {WindowEndTime.ToString(_lastDayFormat)}";
+            return $"{WindowEndTime.ToString(_expireTimeFormat)}";
         }
         #endregion
 

@@ -150,7 +150,7 @@ namespace PresentScreenings.TableView
 
         public override string WriteHeader()
         {
-            string headerFmt = "weekday;date;{0};screen;starttime;endtime;title;filmsinscreening;extra;qanda;url;mainfilmdescription";
+            string headerFmt = "weekday;date;{0};screen;starttime;endtime;vod till;title;duration;filmsinscreening;extra;qanda;subtitles;url;mainfilmdescription";
             return string.Format(headerFmt, ScreeningInfo.FilmFansString().Replace(',', ';'));
         }
 
@@ -178,11 +178,14 @@ namespace PresentScreenings.TableView
             }
             fields.Add(Screen.ToString());
             fields.Add(StartTime.ToString(_timeFormat));
-            fields.Add(EndTimeString());
-            fields.Add($"{Film} ({Film.MinutesString})");
+            fields.Add(EndTime.ToString(_timeFormat));
+            fields.Add(AvailableTillString());
+            fields.Add($"{Film}");
+            fields.Add($"{Film.MinutesString}");
             fields.Add(FilmsInScreening.ToString());
             fields.Add(Extra);
             fields.Add(QAndA);
+            fields.Add(Subtitles);
             var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == FilmId);
             var filmInfo = filmInfoList.Count() == 1 ? filmInfoList.First() : null;
             fields.Add(filmInfo != null ? filmInfo.Url : "");
@@ -192,10 +195,10 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Vitual Methods
-        protected virtual string EndTimeString()
+        #region Virtual Methods
+        protected virtual string AvailableTillString()
         {
-            return EndTime.ToString(_timeFormat);
+            return string.Empty;
         }
         #endregion
 
