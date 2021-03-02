@@ -20,9 +20,7 @@ namespace PresentScreenings.TableView
             AttendingFilm,
             TimeOverlap,
             NoTravelTime,
-            NeedingTickets,
-            OnLine,
-            SeeOnLine
+            NeedingTickets
         }
         public enum Warning
         {
@@ -83,8 +81,6 @@ namespace PresentScreenings.TableView
             _screeningStatusByString.Add("TIJD", ScreeningStatus.TimeOverlap);
             _screeningStatusByString.Add("REISTIJD", ScreeningStatus.NoTravelTime);
             _screeningStatusByString.Add("TICKETSNODIG", ScreeningStatus.NeedingTickets);
-            _screeningStatusByString.Add("ONLINE", ScreeningStatus.OnLine);
-            _screeningStatusByString.Add("ONLINEZIEN", ScreeningStatus.SeeOnLine);
             _stringByScreeningStatus = _screeningStatusByString.ToDictionary(x => x.Value, x => x.Key);
             _stringByScreeningStatus.Add(ScreeningStatus.AttendedByFriend, "ONWAAR");
             _ticketStatusByAttendBought = new Dictionary<Tuple<bool, bool>, TicketsStatus> { };
@@ -134,14 +130,7 @@ namespace PresentScreenings.TableView
             Attendees = new List<string>{ };
             TicketsBought = false;
             SoldOut = false;
-            if (Screen.Type == Screen.ScreenType.OnLine)
-            {
-                Status = ScreeningStatus.OnLine;
-            }
-            else
-            {
-                Status = ScreeningStatus.Free;
-            }
+            Status = ScreeningStatus.Free;
         }
         #endregion
 
@@ -153,7 +142,7 @@ namespace PresentScreenings.TableView
 
         public override string WriteHeader()
         {
-            string headerFmt = "filmid;screen;starttime;movablestarttime,movableendtime,screeningtitle;autoplanned;blocked;{0};ticketsbought;soldout";
+            string headerFmt = "filmid;screen;starttime;movablestarttime;movableendtime;screeningtitle;autoplanned;blocked;{0};ticketsbought;soldout";
             return string.Format(headerFmt, FilmFansString());
         }
 

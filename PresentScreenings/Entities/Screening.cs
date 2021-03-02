@@ -20,7 +20,7 @@ namespace PresentScreenings.TableView
         #region Constant Private Members
         private const string _dateFormat = "yyyy-MM-dd";
         private const string _timeFormat = "HH:mm";
-        protected const string _dtFormat = "ddd dd:MM HH:mm";
+        protected const string _dtFormat = "ddd dd-MM HH:mm";
         private const string _dayOfWeekFormat = "dddd d MMMM";
         private const string _durationFormat = "hh\\:mm";
         #endregion
@@ -41,6 +41,7 @@ namespace PresentScreenings.TableView
         #region Calculated Properties
         public Film Film { get => ViewController.GetFilmById(FilmId); set => FilmId = value.FilmId; }
         public string FilmTitle => Film.Title;
+        public Screen DisplayScreen { get => GetDisplayScreen(); set => SetDisplayScreen(value); }
         public DateTime StartTime { get => _screeningInfo.MovableStartTime; protected set => _screeningInfo.MovableStartTime = value; }
         public DateTime EndTime { get => _screeningInfo.MovableEndTime; protected set => _screeningInfo.MovableEndTime = value; }
         public DateTime StartDate => StartTime.Date;
@@ -75,36 +76,39 @@ namespace PresentScreenings.TableView
         public static Action<Screening> GoToScreening { get; set; }
         public static TimeSpan TravelTime { get; set; }
         public static bool InOutliningOverlaps { get; set; } = false;
+        public static Dictionary<string, int> IndexByName { get; }
         #endregion
 
         #region Constructors
-        public Screening() { }
-
-        public Screening(Screening screening, DateTime day)
+        static Screening()
         {
-            FilmId = screening.Film.FilmId;
-            Film = screening.Film;
-            Screen = screening.Screen;
-            Subtitles = string.Empty;
-            QAndA = screening.QAndA;
-            Extra = screening.Extra;
-            _screeningInfo = screening._screeningInfo;
-            StartTime = DateTimeFromParsedData(day.Date, "09:00");
-            EndTime = DateTimeFromParsedData(day.Date, "23:59");
+            // Initialize the index by name dictionary.
+            IndexByName = new Dictionary<string, int> { };
+            int n = 0;
+            IndexByName.Add("FilmId", n);
+            IndexByName.Add("Screen", ++n);
+            IndexByName.Add("StartTime", ++n);
+            IndexByName.Add("EndTime", ++n);
+            IndexByName.Add("CombinationProgramId", ++n);
+            IndexByName.Add("Subtitles", ++n);
+            IndexByName.Add("QAndA", ++n);
+            IndexByName.Add("Extra", ++n);
         }
+
+        public Screening() { }
 
         public Screening(string screeningText)
         {
             // Assign the fields of the input string.
             string[] fields = screeningText.Split(';');
-            int filmId = int.Parse(fields[0]);
-            string screen = fields[1];
-            string startTimeString = fields[2];
-            string endTimeString = fields[3];
-            string combinationIdStr = fields[4];
-            string subtitles = fields[5];
-            string qAndA = fields[6];
-            string extra = fields[7];
+            int filmId = int.Parse(fields[IndexByName["FilmId"]]);
+            string screen = fields[IndexByName["Screen"]];
+            string startTimeString = fields[IndexByName["StartTime"]];
+            string endTimeString = fields[IndexByName["EndTime"]];
+            string combinationIdStr = fields[IndexByName["CombinationProgramId"]];
+            string subtitles = fields[IndexByName["Subtitles"]];
+            string qAndA = fields[IndexByName["QAndA"]];
+            string extra = fields[IndexByName["Extra"]];
 
             // Assign key properties.
             FilmId = filmId;
@@ -196,9 +200,24 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Virtual Methods
+        protected virtual Screen GetDisplayScreen()
+        {
+            return Screen;
+        }
+
+        protected virtual void SetDisplayScreen(Screen screen)
+        {
+            throw new AccessViolationException("Display screen of an on-location screening can't be changed.");
+        }
+
         protected virtual string AvailableTillString()
         {
             return string.Empty;
+        }
+
+        public virtual string ToFilmScreeningLabelString()
+        {
+            return string.Format("{0} {1}{2}", ToMenuItemString(), ShortAttendingFriendsString(), ScreeningTitleIfDifferent());
         }
         #endregion
 
@@ -280,10 +299,6 @@ namespace PresentScreenings.TableView
 
         public bool Overlaps(Screening otherScreening, bool useTravelTime = false)
         {
-            if (OnLine || otherScreening.OnLine)
-            {
-                return false;
-            }
             var travelTime = useTravelTime ? TravelTime : TimeSpan.Zero;
             return otherScreening.StartTime <= EndTime + travelTime
                 && otherScreening.EndTime >= StartTime - travelTime;
@@ -326,11 +341,6 @@ namespace PresentScreenings.TableView
         public string ToMenuItemString()
         {
             return $"{DayString(StartTime)} {Screen} {StartTime.ToString(_timeFormat)} {ExtraTimeSymbolsString()}";
-        }
-
-        public virtual string ToFilmScreeningLabelString()
-        {
-            return string.Format("{0} {1}{2}", ToMenuItemString(), ShortAttendingFriendsString(), ScreeningTitleIfDifferent());
         }
 
         public string ToScreeningLabelString(bool withDay = false)
@@ -414,8 +424,7 @@ namespace PresentScreenings.TableView
         {
             var screeningFilmRatings = ScreeningsPlan.FilmFanFilmRatings.Where(f => f.FilmId == FilmId);
             var builder = new StringBuilder();
-            var friends = ScreeningInfo.MyFriends;
-            foreach (string friend in friends)
+            foreach (string friend in ScreeningInfo.MyFriends)
             {
                 var friendRatings = screeningFilmRatings.Where(f => f.FilmFan == friend);
                 bool friendHasRated = friendRatings.Any();

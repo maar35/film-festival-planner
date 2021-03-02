@@ -106,7 +106,7 @@ namespace PresentScreenings.TableView
         public override void GoToScreening(Screening screening)
         {
             _presentor.GoToScreening(screening);
-            CloseDialog(false);
+            CloseDialog();
         }
         #endregion
 
@@ -231,12 +231,8 @@ namespace PresentScreenings.TableView
             _screeningInfoControl.ReDraw();
         }
 
-        private void CloseDialog(bool toDayScheme = true)
+        private void CloseDialog()
         {
-            if (_screening.OnLine)
-            {
-                _presentor.RemoveTempOnlineScreening(toDayScheme);
-            }
             _presentor.DismissViewController(this);
         }
 

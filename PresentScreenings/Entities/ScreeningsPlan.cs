@@ -18,6 +18,9 @@ namespace PresentScreenings.TableView
         private int _currDayNumber;
         private int _currScreenNumber;
         private int _currScreenScreeningNumber;
+        private readonly Regex _screenRegex = new Regex(@"(\D+)(\d*)");
+        private Dictionary<string, Screen> _displayScreenByAbbreviation;
+
         #endregion
 
         #region Static Properties
@@ -73,9 +76,6 @@ namespace PresentScreenings.TableView
             // Read screenings.
             Screenings = new Screening().ReadListFromFile(screeningsFile, line => PickScreening(line));
 
-            // Create virtual ondemand screens.
-            AssignDisplayScreens();
-
             // Imitialize the day schemes.
             InitializeDays();
             _currDayNumber = 0;
@@ -84,39 +84,22 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Private Methods
-        private Screening PickScreening(string line)
-        {
-            string[] fields = line.Split(';');
-            string screen = fields[1];
-            return screen == "ondemand" ? new OnDemandScreening(line) : new Screening(line);
-        }
-
-        //private void InitializeDays()
+        #region Public Methods
         public void InitializeDays()
         {
             // Initialize the days, screens and screens per day dictionaries.
             FestivalDays = new List<DateTime> { };
             _dayScreens = new Dictionary<DateTime, List<Screen>> { };
             ScreenScreenings = new Dictionary<DateTime, Dictionary<Screen, List<Screening>>> { };
+            InitializeDisplayScreenByAbbreviation();
 
-            // Select on-location screenings.
-            var onLocationScreenings = (
-                from Screening s in Screenings
-                //where s.Location
-                select s
-            ).ToList();
-
-            // Bail out when no screenings remain to display.
-            if (onLocationScreenings.Count() == 0)
+            // Fill the dictionaries based on the screenings.
+            foreach (Screening screening in Screenings)
             {
-                string informativeText = $"We really need on-location screenings, but all {Screenings.Count} screenings are OnLine.";
-                AlertRaiser.QuitWithAlert("Only OnLine Screenings", informativeText);
-            }
+                // Initialialize on-demand features when applicable.
+                InitializeOnDemandScreening(screening);
 
-            // Fill the dictionaries based on on-location screenings.
-            foreach (Screening screening in onLocationScreenings)
-            {
+                // Initialize day lists when a new day is encountered.
                 DateTime day = screening.StartDate;
                 if (!FestivalDays.Contains(day))
                 {
@@ -125,7 +108,8 @@ namespace PresentScreenings.TableView
                     ScreenScreenings.Add(day, new Dictionary<Screen, List<Screening>> { });
                 }
 
-                Screen screen = DisplayScreen(screening);
+                // Initializes screen lists when a new screen is encountered.
+                Screen screen = screening.DisplayScreen;
                 if (!_dayScreens[day].Contains(screen))
                 {
                     _dayScreens[day].Add(screen);
@@ -144,68 +128,6 @@ namespace PresentScreenings.TableView
                     ScreenScreenings[day][screen].Sort();
                 }
             }
-        }
-
-        public Screen DisplayScreen(Screening screening)
-        {
-            if (screening is OnDemandScreening onDemandScreening)
-            {
-                return onDemandScreening.DisplayScreen;
-            }
-            return screening.Screen;
-        }
-
-        private void AssignDisplayScreens()
-        {
-            var screenRegex = new Regex(@"\D+(\d*)");
-            var displayScreenByAbbreviation = new Dictionary<string, Screen> { };
-
-            foreach (var screening in Screenings)
-            {
-                if (screening is OnDemandScreening onDemandScreening)
-                {
-                    int filmId = onDemandScreening.FilmId;
-                    int screenId = onDemandScreening.Screen.ScreenId;
-                    string odAbbreviation = onDemandScreening.Screen.Abbreviation;
-                    Screening LocalScreening = Screenings
-                        .Where(s => s.FilmId == filmId && s.Screen.ScreenId != screenId)
-                        .First();
-                    Match match = screenRegex.Match(LocalScreening.Screen.Abbreviation);
-                    if (match != null)
-                    {
-                        string version = match.Groups[1].Value;
-                        string newAbbreviation = odAbbreviation + version;
-                        if (!displayScreenByAbbreviation.ContainsKey(newAbbreviation))
-                        {
-                            displayScreenByAbbreviation.Add(newAbbreviation, new Screen(onDemandScreening.DisplayScreen, newAbbreviation));
-                        }
-                        onDemandScreening.DisplayScreen = displayScreenByAbbreviation[newAbbreviation];
-                    }
-                    onDemandScreening.SetEndTime(LocalScreening);
-                }
-            }
-        }
-        #endregion
-
-        #region Public methods
-        public Screening AddOnlineScreening(Screening screening)
-        {
-            Screen screen = DisplayScreen(screening);
-            DateTime day = CurrDay;
-            Screening tempScreening = new Screening(screening, day);
-            _dayScreens[day].Add(screen);
-            ScreenScreenings[day].Add(screen, new List<Screening> { });
-            ScreenScreenings[day][screen].Add(tempScreening);
-            return tempScreening;
-        }
-
-        public void RemoveOnlineScreening(Screening oldScreening)
-        {
-            Screen screen = oldScreening.Screen;
-            DateTime day = oldScreening.StartDate;
-            ScreenScreenings[day][screen].Remove(oldScreening);
-            ScreenScreenings[day].Remove(screen);
-            _dayScreens[day].Remove(screen);
         }
 
         public void SetNextDay(int numberOfDays = 1)
@@ -255,7 +177,7 @@ namespace PresentScreenings.TableView
         public void SetCurrScreening(Screening screening)
         {
             SetNextDay((screening.StartDate - CurrDay).Days);
-            _currScreenNumber = CurrDayScreens.IndexOf(DisplayScreen(screening));
+            _currScreenNumber = CurrDayScreens.IndexOf(screening.DisplayScreen);
             var screenScreenings = ScreenScreenings[CurrDay][CurrScreen];
             Screening newCurrScreening = (
                 from Screening s in screenScreenings
@@ -302,6 +224,99 @@ namespace PresentScreenings.TableView
                 select s
             ).ToList();
             return attendedScreenings;
+        }
+        #endregion
+
+        #region Private methods
+        private Screening PickScreening(string line)
+        {
+            string[] fields = line.Split(';');
+            string screenString = fields[Screening.IndexByName["Screen"]];
+            Screen screen = Screens
+                .Where(s => s.Abbreviation == screenString)
+                .First();
+            return screen.Type == Screen.ScreenType.OnDemand ? new OnDemandScreening(line) : new Screening(line);
+        }
+
+        private void InitializeDisplayScreenByAbbreviation()
+        {
+            _displayScreenByAbbreviation = new Dictionary<string, Screen> { };
+            foreach (var screen in Screens.Where(s => s.Type == Screen.ScreenType.OnDemand))
+            {
+                _displayScreenByAbbreviation.Add(screen.Abbreviation, screen);
+            }
+        }
+
+        private void InitializeOnDemandScreening(Screening screening)
+        {
+            if (screening is OnDemandScreening onDemandScreening)
+            {
+                // Fix IFFR zero length on-demand event.
+                int filmId = onDemandScreening.FilmId;
+                int screenId = onDemandScreening.Screen.ScreenId;
+                string odAbbreviation = onDemandScreening.Screen.Abbreviation;
+                List<Screening> localScreenings = Screenings
+                    .Where(s => s.FilmId == filmId && s.Screen.ScreenId != screenId)
+                    .ToList();
+                if (localScreenings.Count > 0)
+                {
+                    Screening localScreening = localScreenings[0];
+                    onDemandScreening.SetEndTime(localScreening);
+                }
+
+                // Place film that is available from midnight in day scheme.
+                TimeSpan timeOfDay = onDemandScreening.StartTime.TimeOfDay;
+                if (timeOfDay < ViewController.EarliestTime)
+                {
+                    onDemandScreening.MoveStartTime(ViewController.EarliestTime - timeOfDay);
+                }
+
+                // Fix overlapping on-line and on-demand screenings on the smae "screen".
+                FixOverlappingScreenings(onDemandScreening);
+            }
+        }
+
+        private void FixOverlappingScreenings(OnDemandScreening onDemandScreening)
+        {
+            var overlappers = Screenings
+                .Where(s => s != onDemandScreening && s.Overlaps(onDemandScreening, true) && s is OnDemandScreening);
+            var coinciders = overlappers
+                .Where(s => s.Screen == onDemandScreening.Screen);
+            if (coinciders.Count() == 0)
+            {
+                onDemandScreening.DisplayScreen = onDemandScreening.Screen;
+                return;
+            }
+            var abbreviations = overlappers
+                .Select(s => s.DisplayScreen.Abbreviation)
+                .Distinct();
+
+            string abbreviation = onDemandScreening.Screen.Abbreviation;
+            while (abbreviations.Contains(abbreviation))
+            {
+                abbreviation = nextAbbreviation(abbreviation);
+            }
+            if (!_displayScreenByAbbreviation.ContainsKey(abbreviation))
+            {
+                _displayScreenByAbbreviation.Add(abbreviation, new Screen(onDemandScreening.DisplayScreen, abbreviation));
+            }
+            onDemandScreening.DisplayScreen = _displayScreenByAbbreviation[abbreviation];
+        }
+
+        string nextAbbreviation(string currAbbreviation)
+        {
+            Match match = _screenRegex.Match(currAbbreviation);
+            if (match != null)
+            {
+                string root = match.Groups[1].Value;
+                if (currAbbreviation == root)
+                {
+                    return currAbbreviation + "2";
+                }
+                int version = int.Parse(match.Groups[2].Value);
+                return $"{root}{version + 1}";
+            }
+            return "";
         }
         #endregion
 

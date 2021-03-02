@@ -227,7 +227,7 @@ namespace PresentScreenings.TableView
                 KeyEquivalent = "]",
             });
 
-            // Move the "move over day" menu items.
+            // Add the "move over day" menu items.
             var altMask = NSEventModifierMask.AlternateKeyMask | NSEventModifierMask.CommandKeyMask;
             _screeningMenu.AddItem(new NSMenuItem("Move to previous day")
             {

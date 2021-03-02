@@ -7,12 +7,12 @@ namespace PresentScreenings.TableView
         #region Private Variables
         private const string _expireTimeFormat = "ddd d-M HH:mm";
         private TimeSpan _duration;
+        private Screen _displayScreen;
         #endregion
 
         #region Properties
         public DateTime WindowStartTime { get; }
         public DateTime WindowEndTime { get; }
-        public Screen DisplayScreen { get; set; }
         #endregion
 
         #region Calculated Properties
@@ -25,8 +25,8 @@ namespace PresentScreenings.TableView
         {
             // Parse the relevant part of the input string.
             string[] fields = screeningText.Split(';');
-            WindowStartTime = DateTime.Parse(fields[2]);
-            WindowEndTime = DateTime.Parse(fields[3]);
+            WindowStartTime = DateTime.Parse(fields[IndexByName["StartTime"]]);
+            WindowEndTime = DateTime.Parse(fields[IndexByName["EndTime"]]);
 
             // Assign other properties.
             EndTime = StartTime + Film.Duration;
@@ -36,6 +36,16 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Override Methods
+        protected override Screen GetDisplayScreen()
+        {
+            return _displayScreen;
+        }
+
+        protected override void SetDisplayScreen(Screen screen)
+        {
+            _displayScreen = screen;
+        }
+
         public override string ToFilmScreeningLabelString()
         {
             return $"{DayString(WindowStartTime)} {Screen} {WindowStartTime.ToString(_dtFormat)}-{WindowEndTime.ToString(_dtFormat)} {ExtraTimeSymbolsString()} {ShortAttendingFriendsString()}{ScreeningTitleIfDifferent()}";

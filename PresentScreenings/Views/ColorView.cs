@@ -24,10 +24,6 @@ namespace PresentScreenings.TableView
         static readonly NSColor screeningTextColorBlue = NSColor.FromRgb(255, 255, 255);
         static readonly NSColor screeningBgColorRed = NSColor.FromRgb(176, 0, 38);
         static readonly NSColor screeningTextColorRed = NSColor.White;
-        static readonly NSColor screeningBgColorBrightRed = NSColor.FromRgb(255, 38, 0);
-        static readonly NSColor screeningTextColorBrightRed = NSColor.FromRgb(0, 217, 255);
-        static readonly NSColor screeningBgColorGreen = NSColor.FromRgb(0, 255, 38);
-        static readonly NSColor screeningTextColorGreen = NSColor.FromRgb(255, 0, 217);
         static readonly NSColor screeningBgColorPurple = NSColor.FromRgb(176, 0, 176);
         static readonly NSColor screeningTextColorPurple = NSColor.White;
         static readonly NSColor screeningBgColorAqua = NSColor.FromRgb(38, 255, 176);
@@ -63,8 +59,6 @@ namespace PresentScreenings.TableView
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.AttendingFilm, screeningTextColorGrey);
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.TimeOverlap, screeningTextColorGrey);
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.NoTravelTime, screeningTextColorDarkGrey);
-            TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.OnLine, screeningTextColorBrightRed);
-            TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.SeeOnLine, screeningTextColorGreen);
 
             BgColorByScreeningStatus = new Dictionary<ScreeningInfo.ScreeningStatus, NSColor> { };
             BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Free, screeningBgColorBlack);
@@ -74,8 +68,6 @@ namespace PresentScreenings.TableView
             BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.AttendingFilm, NSColor.Yellow);
             BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.TimeOverlap, screeningBgColorGrey);
             BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.NoTravelTime, screeningBgColorDarkGrey);
-            BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.OnLine, screeningBgColorBrightRed);
-            BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.SeeOnLine, screeningBgColorGreen);
 
             ColorByTicketStatus = new Dictionary<ScreeningInfo.TicketsStatus, NSColor> { };
             ColorByTicketStatus.Add(ScreeningInfo.TicketsStatus.TicketsArranged, screeningBgColorRed);
