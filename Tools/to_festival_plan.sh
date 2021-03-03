@@ -1,8 +1,8 @@
 #!/bin/bash
 
 declare -r festival_year=$(basename $(dirname $(pwd)))
-declare -r festival=${festival_year:0:4}
-declare -r year=${festival_year:4:4}
+declare -r festival=${festival_year%%[0-9][0-9][0-9][0-9]}
+declare -r year=${festival_year##${festival}}
 declare -r festival_dir=~/Documents/Film/$festival/${festival}${year}
 declare -r source_dir=$festival_dir/_planner_data
 declare -r source_files="$source_dir/*.csv $source_dir/*.xml"

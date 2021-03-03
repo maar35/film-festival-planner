@@ -13,39 +13,28 @@ namespace PresentScreenings.TableView
 
     public class ScreeningsTableView
     {
-        #region Private Members
-        static nfloat _xHourDefault = 120;
-        nfloat _xHour;
-        static nfloat _xHourStart = ScreeningsView.HorizontalScreeningControlExtensionPixels;
-        static int _firstDisplayedHour = 9;
-        static int _lastDisplayedHour = 24;
-        ScreeningsView _screeningsView;
-        HeadersView _headersView;
-        #endregion
-
         #region Properties
-        public nfloat HorzPixelsPerHour => _xHour;
-        public static int FirstDisplayedHour => _firstDisplayedHour;
-        public static int LastDisplayedHour => _lastDisplayedHour;
-        public static nfloat XHourStart => _xHourStart;
-        public ScreeningsView ScreeningsView => _screeningsView;
-        public HeadersView HeadersView => _headersView;
+        public nfloat HorzPixelsPerHour { get; } = 120;
+        public static int FirstDisplayedHour { get; } = 9;
+        public static int LastDisplayedHour { get; } = 24;
+        public static nfloat XHourStart { get; } = ScreeningsView.HorizontalScreeningControlExtensionPixels;
+        public ScreeningsView ScreeningsView { get; }
+        public HeadersView HeadersView { get; }
         #endregion
 
         #region Contructors
         public ScreeningsTableView(ViewController controller, NSTableColumn screensColumn, NSTableColumn screeningsColumn)
         {
-            _screeningsView = new ScreeningsView(controller, this);
-            _headersView = new HeadersView(screensColumn, screeningsColumn, this);
-            _xHour = _xHourDefault;
+            ScreeningsView = new ScreeningsView(controller, this);
+            HeadersView = new HeadersView(screensColumn, screeningsColumn, this);
         }
         #endregion
 
         #region Public Methods
         public void DrawHeaders(ScreeningsPlan plan)
         {
-            _headersView.DrawCurrDay(plan);
-            _headersView.DrawHours();
+            HeadersView.DrawCurrDay(plan);
+            HeadersView.DrawHours();
         }
 
         public nfloat NumberOfPixelsFromTime(DateTime start)
@@ -62,7 +51,7 @@ namespace PresentScreenings.TableView
 		#region Private Methods
 		static DateTime FirstDisplayedTime(DateTime date)
 		{
-			return DateTime.Parse(string.Format("{0} {1}:00", date.ToShortDateString(), _firstDisplayedHour));
+			return DateTime.Parse(string.Format("{0} {1}:00", date.ToShortDateString(), FirstDisplayedHour));
 		}
 		#endregion
 	}

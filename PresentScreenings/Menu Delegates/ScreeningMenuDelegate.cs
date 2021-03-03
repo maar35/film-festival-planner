@@ -18,6 +18,10 @@ namespace PresentScreenings.TableView
         private const int _soldOutMenuItemTag = 203;
         private const int _ticketsBoughtMenuItemTag = 204;
         private const int _myAttendanceMenuItemTag = 210;
+        private const int _moveBackwardMenuItemTag = 231;
+        private const int _moveForwardMenuItemTag = 232;
+        private const int _moveToPreviousDayMenuItemTag = 233;
+        private const int _moveToNextDayMenuItemTag = 234;
         private const int _filmMenuHeaderItemTag = 400;
         #endregion
 
@@ -48,6 +52,7 @@ namespace PresentScreenings.TableView
             _filmFanByTag = new Dictionary<nint, string> { };
             _filmScreeningByMenuItemTitle = new Dictionary<string, Screening> { };
             PopulateAttendanceMenuItems();
+            PopulateMoveMenuItems();
             InitializeFilmMenuItems();
         }
         #endregion
@@ -94,17 +99,17 @@ namespace PresentScreenings.TableView
                 bool itemHandled = false;
                 if (!itemHandled)
                 {
-                    // Take action based on the menu tag and the film screenings dictionary.
+                    // Take action based on the menu item tag and the film screenings dictionary.
                     itemHandled = FilmScreeningItemIsHandled(item);
                 }
                 if (!itemHandled)
                 {
-                    // Take action on the menu tag and the film fan by tag dictionary.
+                    // Take action on the menu item tag and the film fan by tag dictionary.
                     itemHandled = AttendanceItemIsHandled(item);
                 }
                 if (!itemHandled)
                 {
-                    // Take action based on the menu tag.
+                    // Take action based on the menu item tag.
                     itemHandled = ItemIsHandledByTag(item);
                 }
                 if (!itemHandled)
@@ -169,6 +174,18 @@ namespace PresentScreenings.TableView
                     item.Title = _film != null ? _film.Title : "No screening selected";
                     item.Enabled = false;
                     break;
+                case _moveBackwardMenuItemTag:
+                    item.Enabled = ViewController.MoveBackwardAllowed(Screening, true);
+                    break;
+                case _moveForwardMenuItemTag:
+                    item.Enabled = ViewController.MoveForwardAllowed(Screening, true);
+                    break;
+                case _moveToPreviousDayMenuItemTag:
+                    item.Enabled = ViewController.MoveBackwardAllowed(Screening);
+                    break;
+                case _moveToNextDayMenuItemTag:
+                    item.Enabled = ViewController.MoveForwardAllowed(Screening);
+                    break;
                 default:
                     itemHandled = false;
                     break;
@@ -190,6 +207,42 @@ namespace PresentScreenings.TableView
                 _screeningMenu.AddItem(item);
                 _filmFanByTag.Add(item.Tag, filmFan);
             }
+        }
+
+        private void PopulateMoveMenuItems()
+        {
+            _screeningMenu.AddItem(NSMenuItem.SeparatorItem);
+
+            // Add the "move within day" menu items.
+            _screeningMenu.AddItem(new NSMenuItem("Move backward")
+            {
+                Action = new Selector("MoveBackward:"),
+                Tag = _moveBackwardMenuItemTag,
+                KeyEquivalent = "[",
+            });
+            _screeningMenu.AddItem(new NSMenuItem("Move forward")
+            {
+                Action = new Selector("MoveForward:"),
+                Tag = _moveForwardMenuItemTag,
+                KeyEquivalent = "]",
+            });
+
+            // Add the "move over day" menu items.
+            var altMask = NSEventModifierMask.AlternateKeyMask | NSEventModifierMask.CommandKeyMask;
+            _screeningMenu.AddItem(new NSMenuItem("Move to previous day")
+            {
+                Action = new Selector("MoveToPreviousDay:"),
+                Tag = _moveToPreviousDayMenuItemTag,
+                KeyEquivalent = "[",
+                KeyEquivalentModifierMask = altMask,
+            });
+            _screeningMenu.AddItem(new NSMenuItem("Move to next day")
+            {
+                Action = new Selector("MoveToNextDay:"),
+                Tag = _moveToNextDayMenuItemTag,
+                KeyEquivalent = "]",
+                KeyEquivalentModifierMask = altMask,
+            });
         }
 
         private void InitializeFilmMenuItems()

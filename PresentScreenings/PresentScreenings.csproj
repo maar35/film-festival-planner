@@ -173,6 +173,7 @@
       <DependentUpon>AppDelegate.cs</DependentUpon>
     </Compile>
     <Compile Include="Entities\FilmFanAvailability.cs" />
+    <Compile Include="Entities\OnDemandScreening.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

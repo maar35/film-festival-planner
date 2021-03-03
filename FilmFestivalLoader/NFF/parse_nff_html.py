@@ -13,9 +13,9 @@ import re
 import os
 import datetime
 from html.parser import HTMLParser
-import xml.etree.ElementTree as ET
 
-sys.path.insert(0, "/Users/maarten/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
+shared_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
+sys.path.insert(0, shared_dir)
 import planner_interface as planner
 import application_tools as tools
 import web_tools
@@ -73,6 +73,7 @@ def main():
     comment("Done laoding NFF data.")
     nff_data.write_screens()
     nff_data.write_screenings()
+    nff_data.write_films()
     nff_data.write_filminfo()
     Globals.debug_recorder.write_debug()
 
@@ -525,6 +526,8 @@ class HtmlPageParser(HTMLParser):
         self.en_month_by_abbr["Oct"] = 10
         self.en_month_by_abbr["September"] = 9
         self.en_month_by_abbr["October"] = 10
+        self.en_month_by_abbr['November'] = 11
+        self.en_month_by_abbr['December'] = 12
         self.nl_month_by_name = {}
         self.nl_month_by_name["september"] = 9
         self.nl_month_by_name["oktober"] = 10
@@ -538,6 +541,8 @@ class HtmlPageParser(HTMLParser):
         self.screen = None
         self.start_time = None
         self.end_time = None
+        self.start_dt = None
+        self.end_dt = None
         self.audience = "publiek"
         self.qa = ""
         self.extra = ""
@@ -557,7 +562,10 @@ class HtmlPageParser(HTMLParser):
         print(f"--  q and a:    {self.qa}")
         print(f"--  extra:      {self.extra}")
         start_datetime = datetime.datetime.combine(self.start_date, self.start_time)
-        if self.end_time is None:
+        if self.start_dt is not None and self.end_dt is not None:
+            start_datetime = self.start_dt
+            end_datetime = self.end_dt
+        elif self.end_time is None:
             end_datetime = start_datetime + self.film.duration
             self.end_time = datetime.time(end_datetime.hour, end_datetime.minute)
         else:
@@ -740,8 +748,13 @@ class FilmPageParser(HtmlPageParser):
                 start_time = m.group('start_time')
                 self.start_date = datetime.date(festival_year, start_month, start_day)
                 self.start_time = datetime.time.fromisoformat(start_time)
+                end_day = int(m.group('end_day'))
+                end_month = self.en_month_by_abbr[m.group('end_month')]
                 end_time = m.group('end_time')
+                end_date = datetime.date(festival_year, end_month, end_day)
                 self.end_time = datetime.time.fromisoformat(end_time)
+                self.start_dt = datetime.datetime.combine(self.start_date, self.start_time)
+                self.end_dt = datetime.datetime.combine(end_date, self.end_time)
                 self.set_screen('', 'On-Line')
                 self.add_screening()
             else:
@@ -778,7 +791,7 @@ class FilmPageParser(HtmlPageParser):
 
 
 class NffData(planner.FestivalData):
-    
+
     # Dictionary for unconstructable URL's.
     url_by_title = {}
     url_by_title['Flodder'] = 'https://www.filmfestival.nl/en/films/flodder-5'
@@ -805,16 +818,17 @@ class NffData(planner.FestivalData):
             film.medium_category = "films"
             film.duration = nff_film.duration
             self.films.append(film)
-            
+            self.add_filminfo(filmid, nff_film.description)
+
     def get_url(self, title):
         if title in self.url_by_title.keys():
             return self.url_by_title[title]
         lower = title.lower()
         ascii_string = unicode_mapper.toascii(lower)
-        disquoted = re.sub("['\"]+", "", ascii_string)
-        connected = re.sub("\W+", "-", disquoted)
-        frontstripped = re.sub("^\W+", "", connected)
-        stripped = re.sub("\W+$", "", frontstripped)
+        disquoted = re.sub(r'["\']+', '', ascii_string)
+        connected = re.sub(r'\W+', '-', disquoted)
+        frontstripped = re.sub(r'^\W+', '', connected)
+        stripped = re.sub(r'\W+$', '', frontstripped)
         url = films_webroot + stripped
         return url
 
@@ -824,19 +838,9 @@ class NffData(planner.FestivalData):
             f.write(text)
         print(f"\nDone writing {len(self.nff_films)} records to {filmdata_file}.\n")
 
-    def write_filminfo(self):
-        info_count = 0
-        filminfos = ET.Element('FilmInfos')
-        for nff_film in self.nff_films:
-            ids = [film.filmid for film in self.films if film.title == nff_film.title]
-            if len(ids) == 1:
-                info_count += 1
-                id = str(ids[0])
-                filminfo = ET.SubElement(filminfos, 'FilmInfo', FilmId=id, FilmArticle='', FilmDescription=nff_film.description, InfoStatus='Complete')
-                _ = ET.SubElement(filminfo, 'ScreenedFilms')
-        tree = ET.ElementTree(filminfos)
-        tree.write(filminfo_file, encoding='utf-8', xml_declaration=True)
-        print(f"Done writing {info_count} records to {filminfo_file}.")
+    def add_filminfo(self, filmid, description):
+        filminfo = planner.FilmInfo(filmid, description, '')
+        self.filminfos.append(filminfo)
 
 
 if __name__ == "__main__":

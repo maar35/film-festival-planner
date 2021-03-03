@@ -32,9 +32,6 @@ namespace PresentScreenings.TableView
         {
             return string.Empty;
         }
-        #endregion
-
-        #region Public Methods
         public virtual List<T> ReadListFromFile<T>(string fileName, Func<string, T> lineConstructor) where T : ListStreamer
         {
             var resultList = new List<T> { };
@@ -64,7 +61,9 @@ namespace PresentScreenings.TableView
             }
 			return resultList;
 		}
+        #endregion
 
+        #region Public Methods
         public void WriteListToFile<T>(string fileName, List<T> list) where T : ListStreamer
         {
             using (var streamWriter = GetStreamWriter(fileName))

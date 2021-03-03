@@ -131,7 +131,10 @@ class Film:
 
     def film_info(self, festival_data):
         infos = [i for i in festival_data.filminfos if i.filmid == self.filmid]
-        return infos[0]
+        try:
+            return infos[0]
+        except IndexError:
+            return FilmInfo(None, '', '')
 
     def is_part_of_combination(self, festival_data):
         return len(self.film_info(festival_data).combination_urls) > 0
@@ -186,7 +189,7 @@ class Screen():
 
     type_by_onlocation = {}
     type_by_onlocation[True] = "Location"
-    type_by_onlocation[False] = "OnLine"
+    type_by_onlocation[False] = "OnDemand"
 
     def __init__(self, screen_id, city, name, abbr, on_location=True):
         self.screen_id = screen_id
@@ -208,7 +211,7 @@ class Screen():
 
 class Screening:
 
-    def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, combination_program=None, subtitles=None):
+    def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, combination_program=None, subtitles=''):
         self.film = film
         self.screen = screen
         self.start_datetime = start_datetime

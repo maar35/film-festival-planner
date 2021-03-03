@@ -20,21 +20,18 @@ namespace PresentScreenings.TableView
         #region Constant Private Members
         private const string _dateFormat = "yyyy-MM-dd";
         private const string _timeFormat = "HH:mm";
-        private const string _onlineTimeFormat = "HH:mm ddd d-M";
-        private const string _dtFormat = "ddd dd:MM HH:mm";
+        protected const string _dtFormat = "ddd dd-MM HH:mm";
         private const string _dayOfWeekFormat = "dddd d MMMM";
         private const string _durationFormat = "hh\\:mm";
         #endregion
 
         #region Private Members
-        private readonly ScreeningInfo _screeningInfo;
+        protected ScreeningInfo _screeningInfo;
         #endregion
 
         #region Properties
         public int FilmId { get; set; }
         public Screen Screen { get; }
-        public DateTime StartTime { get; }
-        public DateTime EndTime { get; }
         public int? CombinationProgramId { get; }
         public string Subtitles { get; }
         public string QAndA { get; }
@@ -44,7 +41,10 @@ namespace PresentScreenings.TableView
         #region Calculated Properties
         public Film Film { get => ViewController.GetFilmById(FilmId); set => FilmId = value.FilmId; }
         public string FilmTitle => Film.Title;
-        public DateTime StartDate => DateTime.Parse(string.Format("{0}", StartTime.ToShortDateString()));
+        public Screen DisplayScreen { get => GetDisplayScreen(); set => SetDisplayScreen(value); }
+        public DateTime StartTime { get => _screeningInfo.MovableStartTime; protected set => _screeningInfo.MovableStartTime = value; }
+        public DateTime EndTime { get => _screeningInfo.MovableEndTime; protected set => _screeningInfo.MovableEndTime = value; }
+        public DateTime StartDate => StartTime.Date;
         public TimeSpan Duration => EndTime - StartTime;
         public FilmRating Rating => Film.Rating;
         public string ScreeningTitle { get => _screeningInfo.ScreeningTitle; set => _screeningInfo.ScreeningTitle = value; }
@@ -57,6 +57,7 @@ namespace PresentScreenings.TableView
         public bool HasNoTravelTime => ViewController.OverlappingAttendedScreenings(this, true).Any();
         private Screen.ScreenType ScreenType => Screen.Type;
         public bool OnLine => ScreenType == Screen.ScreenType.OnLine;
+        public bool OnDemand => ScreenType == Screen.ScreenType.OnDemand;
         public bool Location => ScreenType == Screen.ScreenType.Location;
         public int TimesIAttendFilm => ScreeningsPlan.Screenings.Count(s => s.FilmId == FilmId && s.IAttend);
         public bool IsPlannable => TimesIAttendFilm == 0 && !HasNoTravelTime && !SoldOut;
@@ -75,63 +76,66 @@ namespace PresentScreenings.TableView
         public static Action<Screening> GoToScreening { get; set; }
         public static TimeSpan TravelTime { get; set; }
         public static bool InOutliningOverlaps { get; set; } = false;
+        public static Dictionary<string, int> IndexByName { get; }
         #endregion
 
         #region Constructors
-        public Screening() { }
-
-        public Screening(Screening screening, DateTime day)
+        static Screening()
         {
-            FilmId = screening.Film.FilmId;
-            Film = screening.Film;
-            Screen = screening.Screen;
-            StartTime = DateTimeFromParsedData(day.Date, "09:00");
-            EndTime = DateTimeFromParsedData(day.Date, "23:59");
-            Subtitles = string.Empty;
-            QAndA = screening.QAndA;
-            Extra = screening.Extra;
-            _screeningInfo = screening._screeningInfo;
+            // Initialize the index by name dictionary.
+            IndexByName = new Dictionary<string, int> { };
+            int n = 0;
+            IndexByName.Add("FilmId", n);
+            IndexByName.Add("Screen", ++n);
+            IndexByName.Add("StartTime", ++n);
+            IndexByName.Add("EndTime", ++n);
+            IndexByName.Add("CombinationProgramId", ++n);
+            IndexByName.Add("Subtitles", ++n);
+            IndexByName.Add("QAndA", ++n);
+            IndexByName.Add("Extra", ++n);
         }
+
+        public Screening() { }
 
         public Screening(string screeningText)
         {
             // Assign the fields of the input string.
             string[] fields = screeningText.Split(';');
-            int filmId = int.Parse(fields[0]);
-            string screen = fields[1];
-            string startTime = fields[2];
-            string endTime = fields[3];
-            string combinationIdStr = fields[4];
-            string subtitles = fields[5];
-            string qAndA = fields[6];
-            string extra = fields[7];
+            int filmId = int.Parse(fields[IndexByName["FilmId"]]);
+            string screen = fields[IndexByName["Screen"]];
+            string startTimeString = fields[IndexByName["StartTime"]];
+            string endTimeString = fields[IndexByName["EndTime"]];
+            string combinationIdStr = fields[IndexByName["CombinationProgramId"]];
+            string subtitles = fields[IndexByName["Subtitles"]];
+            string qAndA = fields[IndexByName["QAndA"]];
+            string extra = fields[IndexByName["Extra"]];
 
-            // Assign properties.
-            DateTime startDate = DateTime.Parse(startTime);
-            DateTime endDate = DateTime.Parse(endTime);
-            if (endDate < startDate)
-            {
-                endDate = endDate.AddDays(1);
-            }
+            // Assign key properties.
             FilmId = filmId;
-            Film = (from Film film in ScreeningsPlan.Films where film.FilmId == filmId select film).First();
             Screen = (from Screen s in ScreeningsPlan.Screens where s.ToString() == screen select s).First();
-            StartTime = startDate;
-            EndTime = endDate;
-            CombinationProgramId = int.TryParse(combinationIdStr, out int outcome) ? (int?)outcome : null;
-            Subtitles = subtitles;
-            QAndA = qAndA;
-            Extra = extra;
-            var screeningInfos = ScreeningsPlan.ScreeningInfos.Where(s => s.FilmId == FilmId && s.Screen == Screen && s.StartTime == StartTime).ToList();
+            DateTime startTime = DateTime.Parse(startTimeString);
+            DateTime endTime = DateTime.Parse(endTimeString);
+
+            // Get screening info.
+            var screeningInfos = ScreeningsPlan.ScreeningInfos.Where(s => s.FilmId == FilmId && s.Screen == Screen && s.StartTime == startTime).ToList();
             if (screeningInfos.Count == 0)
             {
-                _screeningInfo = new ScreeningInfo(FilmId, Screen, StartTime);
+                _screeningInfo = new ScreeningInfo(FilmId, Screen, startTime);
+                StartTime = startTime;
+                EndTime = endTime;
                 ScreeningsPlan.ScreeningInfos.Add(_screeningInfo);
             }
             else
             {
                 _screeningInfo = screeningInfos.First();
             }
+
+            // Assign other properties.
+            Film = (from Film film in ScreeningsPlan.Films where film.FilmId == filmId select film).First();
+            CombinationProgramId = int.TryParse(combinationIdStr, out int outcome) ? (int?)outcome : null;
+            Subtitles = subtitles;
+            QAndA = qAndA;
+            Extra = extra;
         }
         #endregion
 
@@ -150,7 +154,7 @@ namespace PresentScreenings.TableView
 
         public override string WriteHeader()
         {
-            string headerFmt = "weekday;date;{0};screen;starttime;endtime;title;filmsinscreening;extra;qanda;url;mainfilmdescription";
+            string headerFmt = "weekday;date;{0};screen;starttime;endtime;vod till;title;duration;filmsinscreening;extra;qanda;subtitles;url;mainfilmdescription";
             return string.Format(headerFmt, ScreeningInfo.FilmFansString().Replace(',', ';'));
         }
 
@@ -178,17 +182,42 @@ namespace PresentScreenings.TableView
             }
             fields.Add(Screen.ToString());
             fields.Add(StartTime.ToString(_timeFormat));
-            fields.Add(EndTime.ToString(Location ? _timeFormat : _onlineTimeFormat));
-            fields.Add($"{Film} ({Film.MinutesString})");
+            fields.Add(EndTime.ToString(_timeFormat));
+            fields.Add(AvailableTillString());
+            fields.Add($"{Film}");
+            fields.Add($"{Film.MinutesString}");
             fields.Add(FilmsInScreening.ToString());
             fields.Add(Extra);
             fields.Add(QAndA);
+            fields.Add(Subtitles);
             var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == FilmId);
             var filmInfo = filmInfoList.Count() == 1 ? filmInfoList.First() : null;
             fields.Add(filmInfo != null ? filmInfo.Url : "");
             fields.Add(filmInfo != null ? HtmlDecode(filmInfo.FilmDescription) : "");
 
             return string.Join(";", fields);
+        }
+        #endregion
+
+        #region Virtual Methods
+        protected virtual Screen GetDisplayScreen()
+        {
+            return Screen;
+        }
+
+        protected virtual void SetDisplayScreen(Screen screen)
+        {
+            throw new AccessViolationException("Display screen of an on-location screening can't be changed.");
+        }
+
+        protected virtual string AvailableTillString()
+        {
+            return string.Empty;
+        }
+
+        public virtual string ToFilmScreeningLabelString()
+        {
+            return string.Format("{0} {1}{2}", ToMenuItemString(), ShortAttendingFriendsString(), ScreeningTitleIfDifferent());
         }
         #endregion
 
@@ -270,10 +299,6 @@ namespace PresentScreenings.TableView
 
         public bool Overlaps(Screening otherScreening, bool useTravelTime = false)
         {
-            if (OnLine || otherScreening.OnLine)
-            {
-                return false;
-            }
             var travelTime = useTravelTime ? TravelTime : TimeSpan.Zero;
             return otherScreening.StartTime <= EndTime + travelTime
                 && otherScreening.EndTime >= StartTime - travelTime;
@@ -316,15 +341,6 @@ namespace PresentScreenings.TableView
         public string ToMenuItemString()
         {
             return $"{DayString(StartTime)} {Screen} {StartTime.ToString(_timeFormat)} {ExtraTimeSymbolsString()}";
-        }
-
-        public string ToFilmScreeningLabelString()
-        {
-            if (Location)
-            {
-                return string.Format("{0} {1}{2}", ToMenuItemString(), ShortAttendingFriendsString(), ScreeningTitleIfDifferent());
-            }
-            return $"{DayString(StartTime)} {Screen} {StartTime.ToString(_dtFormat)}-{EndTime.ToString(_dtFormat)} {ExtraTimeSymbolsString()} {ShortAttendingFriendsString()}{ScreeningTitleIfDifferent()}";
         }
 
         public string ToScreeningLabelString(bool withDay = false)
@@ -408,8 +424,7 @@ namespace PresentScreenings.TableView
         {
             var screeningFilmRatings = ScreeningsPlan.FilmFanFilmRatings.Where(f => f.FilmId == FilmId);
             var builder = new StringBuilder();
-            var friends = ScreeningInfo.MyFriends;
-            foreach (string friend in friends)
+            foreach (string friend in ScreeningInfo.MyFriends)
             {
                 var friendRatings = screeningFilmRatings.Where(f => f.FilmFan == friend);
                 bool friendHasRated = friendRatings.Any();

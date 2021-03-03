@@ -20,6 +20,8 @@ namespace PresentScreenings.TableView
         public static string Festival { get; private set; }
         public static string FestivalYear { get; private set; }
         public static string DocumentsFolder => GetDocumentsPath();
+        public static TimeSpan PauseBetweenOnDemandScreenings { get; private set; }
+        public static TimeSpan DaySpan => new TimeSpan(24, 0, 0);
         #endregion
 
         #region Properties
@@ -41,6 +43,7 @@ namespace PresentScreenings.TableView
             // Preferences.
             Festival = "IFFR";
             FestivalYear = "2021";
+            PauseBetweenOnDemandScreenings = new TimeSpan(0, 30, 0);
             Screening.TravelTime = new TimeSpan(0, 30, 0);
             FilmRatingDialogController.OnlyFilmsWithScreenings = false;
             FilmRatingDialogController.MinimalDuration = new TimeSpan(0, 35, 0);
@@ -153,11 +156,6 @@ namespace PresentScreenings.TableView
             Controller.ShowScreeningInfo();
         }
 
-        partial void ShowFilmRatings(Foundation.NSObject sender)
-        {
-            Controller.PerformSegue("FilmRatingSegue", sender);
-        }
-
         partial void ToggleTicketsBought(Foundation.NSObject sender)
         {
             Controller.ToggleTicketsBought();
@@ -218,6 +216,30 @@ namespace PresentScreenings.TableView
         {
             string filmFan = ((NSMenuItem)sender).Title;
             Controller.ToggleAttendance(filmFan);
+        }
+
+        [Action("MoveBackward:")]
+        internal void MoveBackward(NSObject sender)
+        {
+            Controller.MoveScreening(false);
+        }
+
+        [Action("MoveForward:")]
+        internal void MoveForward(NSObject sender)
+        {
+            Controller.MoveScreening(true);
+        }
+
+        [Action("MoveToPreviousDay:")]
+        internal void MoveToPreviousDay(NSObject sender)
+        {
+            Controller.MoveScreening24Hours(false);
+        }
+
+        [Action("MoveToNextDay:")]
+        internal void MoveToNextDay(NSObject sender)
+        {
+            Controller.MoveScreening24Hours(true);
         }
         #endregion
     }

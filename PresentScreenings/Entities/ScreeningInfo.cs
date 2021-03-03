@@ -20,9 +20,7 @@ namespace PresentScreenings.TableView
             AttendingFilm,
             TimeOverlap,
             NoTravelTime,
-            NeedingTickets,
-            OnLine,
-            SeeOnLine
+            NeedingTickets
         }
         public enum Warning
         {
@@ -50,22 +48,27 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
+        public int FilmId { get; private set; }
+        public Screen Screen { get; private set; }
+        public DateTime StartTime { get; }
+        public string ScreeningTitle { get; set; }
+        public DateTime MovableStartTime { get; set; }
+        public DateTime MovableEndTime { get; set; }
+        public bool AutomaticallyPlanned { get; set; } = false;
+        public ScreeningStatus Status { get; set; }
+        public List<string> Attendees { get; set; }
+        public bool TicketsBought { get; set; }
+        public bool SoldOut { get; set; }
+        #endregion
+
+        #region Calculated Properties
         public static string Me => "Maarten";
         public static List<string> FilmFans => new List<string> { Me, "Adrienne", "Manfred", "Piggel", "Rijk" };
         public static List<string> MyFriends => FilmFans.Skip(1).ToList();
-        public static Dictionary<string, bool> StringToBool { get; private set; }
-        public static Dictionary<bool, string> BoolToString { get; private set; }
-        public int FilmId { get; private set; }
-        public Screen Screen { get; private set; }
-        public DateTime StartTime { get; private set; }
-        public string ScreeningTitle { get; set; }
-        public List<string> Attendees { get; set; }
         public bool IAttend { get => Attendees.Contains(Me); }
         public List<string> AttendingFriends { get => Attendees.Where(f => f != Me).ToList(); }
-        public bool TicketsBought { get; set; }
-        public bool SoldOut { get; set; }
-        public ScreeningStatus Status { get; set; }
-        public bool AutomaticallyPlanned { get; set; } = false;
+        public static Dictionary<string, bool> StringToBool { get; private set; }
+        public static Dictionary<bool, string> BoolToString { get; private set; }
         #endregion
 
         #region Constructors
@@ -78,8 +81,6 @@ namespace PresentScreenings.TableView
             _screeningStatusByString.Add("TIJD", ScreeningStatus.TimeOverlap);
             _screeningStatusByString.Add("REISTIJD", ScreeningStatus.NoTravelTime);
             _screeningStatusByString.Add("TICKETSNODIG", ScreeningStatus.NeedingTickets);
-            _screeningStatusByString.Add("ONLINE", ScreeningStatus.OnLine);
-            _screeningStatusByString.Add("ONLINEZIEN", ScreeningStatus.SeeOnLine);
             _stringByScreeningStatus = _screeningStatusByString.ToDictionary(x => x.Value, x => x.Key);
             _stringByScreeningStatus.Add(ScreeningStatus.AttendedByFriend, "ONWAAR");
             _ticketStatusByAttendBought = new Dictionary<Tuple<bool, bool>, TicketsStatus> { };
@@ -102,12 +103,14 @@ namespace PresentScreenings.TableView
             FilmId = int.Parse(fields[0]);
             string screen = fields[1];
             StartTime = DateTime.Parse(fields[2]);
-            ScreeningTitle = fields[3];
-            string automaticallyPlanned = fields[4];
-            string screeningStatus = fields[5];
-            var attendanceStrings = new List<string>(fields[6].Split(','));
-            string ticketsBought = fields[7];
-            string soldOut = fields[8];
+            MovableStartTime = DateTime.Parse(fields[3]);
+            MovableEndTime = DateTime.Parse(fields[4]);
+            ScreeningTitle = fields[5];
+            string automaticallyPlanned = fields[6];
+            string screeningStatus = fields[7];
+            var attendanceStrings = new List<string>(fields[8].Split(','));
+            string ticketsBought = fields[9];
+            string soldOut = fields[10];
 
             // Assign members.
             Screen = ScreeningsPlan.Screens.First(s => s.ToString() == screen);
@@ -127,14 +130,7 @@ namespace PresentScreenings.TableView
             Attendees = new List<string>{ };
             TicketsBought = false;
             SoldOut = false;
-            if (Screen.Type == Screen.ScreenType.OnLine)
-            {
-                Status = ScreeningStatus.OnLine;
-            }
-            else
-            {
-                Status = ScreeningStatus.Free;
-            }
+            Status = ScreeningStatus.Free;
         }
         #endregion
 
@@ -146,7 +142,7 @@ namespace PresentScreenings.TableView
 
         public override string WriteHeader()
         {
-            string headerFmt = "filmid;screen;starttime;screeningtitle;autoplanned;blocked;{0};ticketsbought;soldout";
+            string headerFmt = "filmid;screen;starttime;movablestarttime;movableendtime;screeningtitle;autoplanned;blocked;{0};ticketsbought;soldout";
             return string.Format(headerFmt, FilmFansString());
         }
 
@@ -157,6 +153,8 @@ namespace PresentScreenings.TableView
                 FilmId,
                 Screen,
                 StartTime.ToString(_dateTimeFormat),
+                MovableStartTime.ToString(_dateTimeFormat),
+                MovableEndTime.ToString(_dateTimeFormat),
                 ScreeningTitle,
                 BoolToString[AutomaticallyPlanned],
                 _stringByScreeningStatus[Status],

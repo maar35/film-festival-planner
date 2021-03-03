@@ -106,7 +106,7 @@ namespace PresentScreenings.TableView
         public override void GoToScreening(Screening screening)
         {
             _presentor.GoToScreening(screening);
-            CloseDialog(false);
+            CloseDialog();
         }
         #endregion
 
@@ -231,12 +231,8 @@ namespace PresentScreenings.TableView
             _screeningInfoControl.ReDraw();
         }
 
-        private void CloseDialog(bool toDayScheme = true)
+        private void CloseDialog()
         {
-            if (_screening.OnLine)
-            {
-                _presentor.RemoveTempOnlineScreening(toDayScheme);
-            }
             _presentor.DismissViewController(this);
         }
 
@@ -270,6 +266,20 @@ namespace PresentScreenings.TableView
             }
             return comboBoxString;
         }
+
+        private void TryShowFilmInfo(NSObject sender)
+        {
+            var film = _screening.Film;
+            if (ViewController.FilmInfoIsAvailable(film))
+            {
+                PerformSegue("ScreeningToFilmInfo", sender);
+            }
+            else
+            {
+                Presentor.PerformSegue("ScreeningsToFilmInfo", sender);
+                CloseDialog();
+            }
+        }
         #endregion
 
         #region Public Methods
@@ -297,20 +307,6 @@ namespace PresentScreenings.TableView
             UpdateAttendances();
             var attendanceState = AttendanceCheckbox.GetAttendanceState(_screening.FilmFanAttends(filmFan));
             _attendanceCheckboxByFilmFan[filmFan].State = attendanceState;
-        }
-
-        private void TryShowFilmInfo(NSObject sender)
-        {
-            var film = _screening.Film;
-            if (ViewController.FilmInfoIsAvailable(film))
-            {
-                PerformSegue("ScreeningToFilmInfo", sender);
-            }
-            else
-            {
-                Presentor.PerformSegue("ScreeningsToFilmInfo", sender);
-                CloseDialog();
-            }
         }
         #endregion
 
