@@ -20,7 +20,6 @@ namespace PresentScreenings.TableView
         private int _currScreenScreeningNumber;
         private readonly Regex _screenRegex = new Regex(@"(\D+)(\d*)");
         private Dictionary<string, Screen> _displayScreenByAbbreviation;
-
         #endregion
 
         #region Static Properties
