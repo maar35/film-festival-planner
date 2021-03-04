@@ -15,7 +15,6 @@ namespace PresentScreenings.TableView
     {
         #region Private Members
         private TimeSpan _pause = AppDelegate.PauseBetweenOnDemandScreenings;
-        private TimeSpan _daySpan = new TimeSpan(24, 0, 0);
         private ScreeningsPlan _plan = null;
         private ScreeningsTableView _mainView = null;
         private Dictionary<Screening, ScreeningControl> _controlByScreening;
@@ -30,6 +29,7 @@ namespace PresentScreenings.TableView
         public ScreeningsPlan Plan => _plan;
         public NSTableView TableView => ScreeningsTable;
         internal int RunningPopupsCount { get; set; } = 0;
+        public static TimeSpan DaySpan => new TimeSpan(24, 0, 0);
         public static TimeSpan EarliestTime => new TimeSpan(ScreeningsTableView.FirstDisplayedHour, 0, 0);
         public static TimeSpan LatestTime => new TimeSpan(ScreeningsTableView.LastDisplayedHour - 1, 59, 0);
         #endregion
@@ -648,35 +648,27 @@ namespace PresentScreenings.TableView
 
         public void MoveScreening(bool forward)
         {
-            // Move the current screening to the nearest unattended space.
+            // Move the current screening to the nearest unattended space within the day.
             Screening screening = Plan.CurrScreening;
             if (screening is OnDemandScreening onDemandScreening)
             {
                 onDemandScreening.MoveStartTime(GetSpanToFit(onDemandScreening, forward));
-
-                // Sort the screenings on the current screen.
-                var day = Plan.CurrDay;
-                var screen = onDemandScreening.DisplayScreen;
-                var screenings = Plan.ScreenScreenings[day];
-                screenings[screen].Sort();
-
-                // Refresh the view.
-                UpdateDayAttendanceStatus(onDemandScreening);
+                Plan.InitializeDays();
                 SetCurrScreening(onDemandScreening);
-                //ReloadScreeningsView();
             }
         }
 
         public void MoveScreening24Hours(bool forward)
         {
-            TimeSpan span = forward ? _daySpan : -_daySpan;
+            // Move the current screening one day into the given direction.
             Screening screening = Plan.CurrScreening;
             if (screening is OnDemandScreening onDemandScreening)
             {
+                TimeSpan span = forward ? DaySpan : -DaySpan;
                 onDemandScreening.MoveStartTime(span);
                 Plan.InitializeDays();
                 GoToDay(onDemandScreening.StartTime.Date);
-                SetCurrScreening(screening);
+                SetCurrScreening(onDemandScreening);
             }
         }
 

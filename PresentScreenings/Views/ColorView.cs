@@ -14,43 +14,36 @@ namespace PresentScreenings.TableView
     public static class ColorView
     {
         #region Private members
-        static readonly NSColor screeningBgColorBlack = NSColor.FromRgb(0, 0, 0);
-        static readonly NSColor screeningTextColorBlack = NSColor.White;
-        static readonly NSColor screeningBgColorGrey = NSColor.FromRgb(219, 219, 219);
-        static readonly NSColor screeningTextColorGrey = NSColor.FromRgb(0, 0, 0);
-        static readonly NSColor screeningBgColorDarkGrey = NSColor.FromRgb(176, 176, 176);
-        static readonly NSColor screeningTextColorDarkGrey = NSColor.FromRgb(0, 0, 0);
-        static readonly NSColor screeningBgColorBlue = NSColor.FromRgb(0, 38, 176);
-        static readonly NSColor screeningTextColorBlue = NSColor.FromRgb(255, 255, 255);
-        static readonly NSColor screeningBgColorRed = NSColor.FromRgb(176, 0, 38);
-        static readonly NSColor screeningTextColorRed = NSColor.White;
-        static readonly NSColor screeningBgColorPurple = NSColor.FromRgb(176, 0, 176);
-        static readonly NSColor screeningTextColorPurple = NSColor.White;
-        static readonly NSColor screeningBgColorAqua = NSColor.FromRgb(38, 255, 176);
-        static readonly NSColor screeningTextColorAqua = NSColor.Black;
-        static readonly Dictionary<ScreeningInfo.ScreeningStatus, NSColor> TextColorByScreeningStatus;
-        static readonly Dictionary<ScreeningInfo.ScreeningStatus, NSColor> BgColorByScreeningStatus;
-        static readonly Dictionary<ScreeningInfo.TicketsStatus, NSColor> ColorByTicketStatus;
-        static readonly NSColor ClickPadColorBlue = NSColor.FromRgba(0, 0, 255, 207);
-        static readonly NSColor ClickPadColorGreen = NSColor.FromRgba(0, 127, 0, 207);
-        static readonly NSColor ClickPadColorGrey = NSColor.FromRgba(127, 127, 127, 119);
-        static readonly NSColor ClickPadColorPeach = NSColor.FromRgba(255, 217, 176, 207);
-        static readonly NSColor ClickPadTextColorSelected = NSColor.White;
-        static readonly NSColor ClickPadTextColorUnselected = NSColor.Red;
-        static readonly Dictionary<Tuple<bool, bool>, NSColor> clickPadColorByVodSelected;
-        static readonly NSColor soldOutColorSelected = NSColor.FromRgb(219, 176, 38);
-        static readonly NSColor soldOutColorUnselected = NSColor.FromRgb(176, 79, 38);
+        private static readonly NSColor screeningBgColorBlack = NSColor.FromRgb(0, 0, 0);
+        private static readonly NSColor screeningTextColorBlack = NSColor.White;
+        private static readonly NSColor screeningBgColorGrey = NSColor.FromRgb(219, 219, 219);
+        private static readonly NSColor screeningTextColorGrey = NSColor.FromRgb(0, 0, 0);
+        private static readonly NSColor screeningBgColorDarkGrey = NSColor.FromRgb(176, 176, 176);
+        private static readonly NSColor screeningTextColorDarkGrey = NSColor.FromRgb(0, 0, 0);
+        private static readonly NSColor screeningBgColorBlue = NSColor.FromRgb(0, 38, 176);
+        private static readonly NSColor screeningTextColorBlue = NSColor.FromRgb(255, 255, 255);
+        private static readonly NSColor screeningBgColorRed = NSColor.FromRgb(176, 0, 38);
+        private static readonly NSColor screeningTextColorRed = NSColor.White;
+        private static readonly NSColor screeningBgColorPurple = NSColor.FromRgb(176, 0, 176);
+        private static readonly NSColor screeningTextColorPurple = NSColor.White;
+        private static readonly NSColor screeningBgColorAqua = NSColor.FromRgb(38, 255, 176);
+        private static readonly NSColor screeningTextColorAqua = NSColor.Black;
+        private static readonly Dictionary<ScreeningInfo.ScreeningStatus, NSColor> TextColorByScreeningStatus;
+        private static readonly Dictionary<ScreeningInfo.ScreeningStatus, NSColor> BgColorByScreeningStatus;
+        private static readonly Dictionary<ScreeningInfo.TicketsStatus, NSColor> ColorByTicketStatus;
+        private static readonly NSColor ClickPadColorBlue = NSColor.FromRgba(0, 0, 255, 207);
+        private static readonly NSColor ClickPadColorGrey = NSColor.FromRgba(127, 127, 127, 119);
+        private static readonly NSColor ClickPadBgColorSelected = ClickPadColorBlue;
+        private static readonly NSColor ClickPadBgColorUnselected = ClickPadColorGrey;
+        private static readonly NSColor ClickPadTextColorSelected = NSColor.White;
+        private static readonly NSColor ClickPadTextColorUnselected = NSColor.Red;
+        private static readonly NSColor soldOutColorSelected = NSColor.FromRgb(219, 176, 38);
+        private static readonly NSColor soldOutColorUnselected = NSColor.FromRgb(176, 79, 38);
         #endregion
 
         #region Constructors
         static ColorView()
         {
-            clickPadColorByVodSelected = new Dictionary<Tuple<bool, bool>, NSColor> { };
-            clickPadColorByVodSelected[new Tuple<bool, bool>(false, false)] = ClickPadColorGrey;
-            clickPadColorByVodSelected[new Tuple<bool, bool>(false, true)] = ClickPadColorBlue;
-            clickPadColorByVodSelected[new Tuple<bool, bool>(true, false)] = ClickPadColorPeach;
-            clickPadColorByVodSelected[new Tuple<bool, bool>(true, true)] = ClickPadColorGreen;
-
             TextColorByScreeningStatus = new Dictionary<ScreeningInfo.ScreeningStatus, NSColor> { };
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Free, screeningTextColorBlack);
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.NeedingTickets, screeningTextColorPurple);
@@ -113,10 +106,9 @@ namespace PresentScreenings.TableView
             context.SetStrokeColor(color.CGColor);
         }
 
-        public static NSColor ClickPadBackgroundColor(bool selected, Screening screening)
+        public static NSColor ClickPadBackgroundColor(bool selected)
         {
-            bool vod = screening is OnDemandScreening;
-            return clickPadColorByVodSelected[new Tuple<bool, bool>(vod, selected)];
+            return selected ? ClickPadBgColorSelected : ClickPadBgColorUnselected;
         }
 
         public static NSColor ClickPadTextColor(bool selected)
@@ -175,6 +167,67 @@ namespace PresentScreenings.TableView
         public static void DrawTicketAvalabilityFrame(CGContext g, Screening screening, nfloat side)
         {
             DrawTicketAvalabilityFrame(g, screening, new CGRect(0, 0, side, side));
+        }
+
+        public static void DrawOnDemandAvailabilityStatus(CGContext g, OnDemandScreening screening, CGRect rect, bool selected)
+        {
+            // Establish some base dimensions.
+            const int maxDaysInRuler = 5;
+            const int margin = 2;
+            nfloat w = rect.Width - 2 * margin;
+            nfloat h = rect.Height - 2 * margin;
+            nfloat x = rect.X + margin;
+            nfloat y = rect.Y + margin;
+            var windowSeconds = (screening.WindowEndTime - screening.WindowStartTime).TotalSeconds;
+            var passedSeconds = (screening.StartTime - screening.WindowStartTime).TotalSeconds;
+            nfloat wPassed = w * (nfloat)passedSeconds / (nfloat)windowSeconds;
+            nfloat wLeft = w - wPassed;
+
+            // Initlialize core graphics settings.
+            g.SetStrokeColor(ClickPadTextColor(selected).CGColor);
+            g.SetLineWidth(1);
+
+            // Draw the passed time part of the progres bar.
+            using (var passedPath = new CGPath())
+            {
+                g.SetFillColor(ClickPadTextColor(selected).CGColor);
+                passedPath.AddRect(new CGRect(x, y + h * 1 / 16, wPassed, h * 2 / 16));
+                passedPath.CloseSubpath();
+                g.AddPath(passedPath);
+            }
+            g.DrawPath(CGPathDrawingMode.FillStroke);
+
+            // Draw the left time part of the progress bar.
+            using (var leftPath = new CGPath())
+            {
+                g.SetFillColor((selected ? ClickPadBackgroundColor(selected) : NSColor.White).CGColor);
+                leftPath.AddRect(new CGRect(x + wPassed, y + h * 1 / 16, wLeft, h * 2 / 16));
+                leftPath.CloseSubpath();
+                g.AddPath(leftPath);
+            }
+            g.DrawPath(CGPathDrawingMode.FillStroke);
+
+            // Draw verticle needle lines to indicate availability days.
+            //var daySeconds = new TimeSpan(1, 0, 0, 0).TotalSeconds;
+            var daySeconds = ViewController.DaySpan.TotalSeconds;
+            nfloat days = (nfloat)windowSeconds / (nfloat)daySeconds;
+            nfloat wPeriod = w / days;
+            if (days <= maxDaysInRuler)
+            {
+                using (var needlePath = new CGPath())
+                {
+                    for (int i = 1; i < days; i++)
+                    {
+                        needlePath.AddLines(new CGPoint[]
+                        {
+                    new CGPoint(i*wPeriod, y + h*1/16),
+                    new CGPoint(i*wPeriod, y + h*3/16)
+                        });
+                    }
+                    g.AddPath(needlePath);
+                }
+            }
+            g.DrawPath(CGPathDrawingMode.FillStroke);
         }
         #endregion
     }
