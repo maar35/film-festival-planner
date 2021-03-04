@@ -169,7 +169,7 @@ namespace PresentScreenings.TableView
             DrawTicketAvalabilityFrame(g, screening, new CGRect(0, 0, side, side));
         }
 
-        public static void DrawOnDemandAvailabilityStatus(CGContext g, OnDemandScreening screening, CGRect rect, bool selected)
+        public static void DrawOnDemandAvailabilityStatus(CGContext context, OnDemandScreening screening, CGRect rect, bool selected)
         {
             // Establish some base dimensions.
             const int maxDaysInRuler = 5;
@@ -184,31 +184,30 @@ namespace PresentScreenings.TableView
             nfloat wLeft = w - wPassed;
 
             // Initlialize core graphics settings.
-            g.SetStrokeColor(ClickPadTextColor(selected).CGColor);
-            g.SetLineWidth(1);
+            context.SetStrokeColor(ClickPadTextColor(selected).CGColor);
+            context.SetLineWidth(1);
 
             // Draw the passed time part of the progres bar.
             using (var passedPath = new CGPath())
             {
-                g.SetFillColor(ClickPadTextColor(selected).CGColor);
+                context.SetFillColor(ClickPadTextColor(selected).CGColor);
                 passedPath.AddRect(new CGRect(x, y + h * 1 / 16, wPassed, h * 2 / 16));
                 passedPath.CloseSubpath();
-                g.AddPath(passedPath);
+                context.AddPath(passedPath);
             }
-            g.DrawPath(CGPathDrawingMode.FillStroke);
+            context.DrawPath(CGPathDrawingMode.FillStroke);
 
             // Draw the left time part of the progress bar.
             using (var leftPath = new CGPath())
             {
-                g.SetFillColor((selected ? ClickPadBackgroundColor(selected) : NSColor.White).CGColor);
+                context.SetFillColor((selected ? ClickPadBackgroundColor(selected) : NSColor.White).CGColor);
                 leftPath.AddRect(new CGRect(x + wPassed, y + h * 1 / 16, wLeft, h * 2 / 16));
                 leftPath.CloseSubpath();
-                g.AddPath(leftPath);
+                context.AddPath(leftPath);
             }
-            g.DrawPath(CGPathDrawingMode.FillStroke);
+            context.DrawPath(CGPathDrawingMode.FillStroke);
 
             // Draw verticle needle lines to indicate availability days.
-            //var daySeconds = new TimeSpan(1, 0, 0, 0).TotalSeconds;
             var daySeconds = ViewController.DaySpan.TotalSeconds;
             nfloat days = (nfloat)windowSeconds / (nfloat)daySeconds;
             nfloat wPeriod = w / days;
@@ -224,10 +223,10 @@ namespace PresentScreenings.TableView
                     new CGPoint(i*wPeriod, y + h*3/16)
                         });
                     }
-                    g.AddPath(needlePath);
+                    context.AddPath(needlePath);
                 }
             }
-            g.DrawPath(CGPathDrawingMode.FillStroke);
+            context.DrawPath(CGPathDrawingMode.FillStroke);
         }
         #endregion
     }
