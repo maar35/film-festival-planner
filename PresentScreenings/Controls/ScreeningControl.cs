@@ -122,6 +122,12 @@ namespace PresentScreenings.TableView
                     ColorView.DrawTicketAvalabilityFrame(context, Screening, side);
                 }
 
+                // Draw a progress bar if the screening is on-demand.
+                if (Screening is OnDemandScreening onDemandScreening)
+                {
+                    ColorView.DrawOnDemandAvailabilityStatus(context, onDemandScreening, clickableRect, Selected);
+                }
+
                 // Draw Sold Out symbol.
                 if(Screening.SoldOut)
                 {
@@ -189,7 +195,7 @@ namespace PresentScreenings.TableView
         {
             var gpath = new CGPath();
             gpath.AddRect(clickRect);
-            ColorView.ClickPadBackgroundColor(Selected, Screening).SetFill();
+            ColorView.ClickPadBackgroundColor(Selected).SetFill();
             gpath.CloseSubpath();
             context.AddPath(gpath);
             context.DrawPath(CGPathDrawingMode.Fill);

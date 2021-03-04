@@ -117,7 +117,7 @@ namespace PresentScreenings.TableView
             nfloat w = Frame.Width;
             nfloat h = Frame.Height;
             path.AddRect(new CGRect(0, 0, w, h));
-            ColorView.ClickPadBackgroundColor(Selected, _screening).SetFill();
+            ColorView.ClickPadBackgroundColor(Selected).SetFill();
             path.CloseSubpath();
             g.AddPath(path);
             g.DrawPath(CGPathDrawingMode.Fill);
