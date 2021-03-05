@@ -584,8 +584,8 @@ namespace PresentScreenings.TableView
 
         public void GoToDay(DateTime day)
         {
-            int numberOfDaysFromCurrent = (day - _plan.CurrDay).Days;
-            SetNextDay(numberOfDaysFromCurrent);
+            _plan.SetDay(day);
+            DisplayScreeningsView();
         }
 
         public void SetNextDay(int days)

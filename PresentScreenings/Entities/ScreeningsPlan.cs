@@ -129,6 +129,14 @@ namespace PresentScreenings.TableView
             }
         }
 
+        public void SetDay(DateTime day)
+        {
+            var index = FestivalDays.IndexOf(day.Date);
+            _currDayNumber = index;
+            _currScreenNumber = 0;
+            _currScreenScreeningNumber = 0;
+        }
+
         public void SetNextDay(int numberOfDays = 1)
         {
             if (NextDayExists(numberOfDays))
@@ -175,14 +183,12 @@ namespace PresentScreenings.TableView
 
         public void SetCurrScreening(Screening screening)
         {
-            SetNextDay((screening.StartDate - CurrDay).Days);
+            SetDay(screening.StartDate);
             _currScreenNumber = CurrDayScreens.IndexOf(screening.DisplayScreen);
             var screenScreenings = ScreenScreenings[CurrDay][CurrScreen];
-            Screening newCurrScreening = (
-                from Screening s in screenScreenings
-                where s.FilmId.Equals(screening.FilmId)
-                select s
-            ).First();
+            Screening newCurrScreening = screenScreenings
+                .Where(s => s.FilmId == screening.FilmId && s.StartTime == screening.StartTime)
+                .First();
             _currScreenScreeningNumber = screenScreenings.IndexOf(screening);
         }
 
