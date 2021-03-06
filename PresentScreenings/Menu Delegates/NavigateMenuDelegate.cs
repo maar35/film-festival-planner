@@ -18,7 +18,7 @@ namespace PresentScreenings.TableView
         private const int _nextScreenMenuItemTag = 104;
         private const int _previousScreeningMenuItemTag = 105;
         private const int _nextScreeningMenuItemTag = 106;
-        private readonly nint _itemCountStart = 110;
+        private const int _FirstFestivalDaysMenuItemTag = 110;
         private readonly ViewController _controller;
         private List<NSMenuItem> _dayItems;
         #endregion
@@ -92,11 +92,11 @@ namespace PresentScreenings.TableView
             // Loop through the festival days
             _dayItems = new List<NSMenuItem> { };
             var plan = _controller.Plan;
-            var itemNumber = _itemCountStart;
+            var tag = _FirstFestivalDaysMenuItemTag;
             foreach (var day in ScreeningsPlan.FestivalDays)
             {
-                NSMenuItem item = new NSMenuItem(ItemTitle(day));
-                item.Tag = itemNumber++;
+                var item = new NSMenuItem(ItemTitle(day));
+                item.Tag = tag++;
                 item.Enabled = day != plan.CurrDay;
                 item.Activated += (sender, e) => _controller.GoToDay(day);
                 menu.AddItem(item);
