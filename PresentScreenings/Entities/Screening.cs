@@ -18,11 +18,11 @@ namespace PresentScreenings.TableView
     public class Screening : ListStreamer, IComparable, IFilmOutlinable
     {
         #region Constant Private Members
-        private const string _dateFormat = "yyyy-MM-dd";
-        private const string _timeFormat = "HH:mm";
+        protected const string _dateFormat = "yyyy-MM-dd";
+        protected const string _timeFormat = "HH:mm";
         protected const string _dtFormat = "ddd dd-MM HH:mm";
-        private const string _dayOfWeekFormat = "dddd d MMMM";
-        private const string _durationFormat = "hh\\:mm";
+        protected const string _dayOfWeekFormat = "dddd d MMMM";
+        protected const string _durationFormat = "hh\\:mm";
         #endregion
 
         #region Private Members
@@ -326,6 +326,11 @@ namespace PresentScreenings.TableView
         public static string DayString(DateTime date)
         {
             return string.Format("{0}{1}", date.DayOfWeek.ToString().Remove(3), date.Day.ToString());
+        }
+
+        public static string DateTimeString(DateTime dateTime)
+        {
+            return $"{DayString(dateTime)} {dateTime.ToString(_timeFormat)}";
         }
 
         public static string LongDayString(DateTime date)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using AppKit;
 
 namespace PresentScreenings.TableView
@@ -11,21 +12,22 @@ namespace PresentScreenings.TableView
     public class NavigateMenuDelegate : NSMenuDelegate
     {
         #region Private Members
-        static nint _ItemCountStart = 100;
-        const int _previousDayMenuItemTag = 101;
-        const int _nextDayMenuItemTag = 102;
-        const int _previousScreenMenuItemTag = 103;
-        const int _nextScreenMenuItemTag = 104;
-        const int _previousScreeningMenuItemTag = 105;
-        const int _nextScreeningMenuItemTag = 106;
-        bool _festivalDaysMenuItemsInitialized = false;
-        ViewController _controller;
+        private const int _previousDayMenuItemTag = 101;
+        private const int _nextDayMenuItemTag = 102;
+        private const int _previousScreenMenuItemTag = 103;
+        private const int _nextScreenMenuItemTag = 104;
+        private const int _previousScreeningMenuItemTag = 105;
+        private const int _nextScreeningMenuItemTag = 106;
+        private const int _FirstFestivalDaysMenuItemTag = 110;
+        private readonly ViewController _controller;
+        private List<NSMenuItem> _dayItems;
         #endregion
 
         #region Constructors
         public NavigateMenuDelegate(NSMenu menu, ViewController controller)
         {
             _controller = controller;
+            _dayItems = new List<NSMenuItem> { };
         }
         #endregion
 
@@ -79,28 +81,30 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Members
-        void PopulateFestivalDaysMenu(NSMenu menu)
+        private void PopulateFestivalDaysMenu(NSMenu menu)
         {
-            // Check if the menu items need to be initialized.
-            if(_festivalDaysMenuItemsInitialized)
+            // Delete existing festival day menu items.
+            foreach (var menuItem in _dayItems)
             {
-                return;
+                menu.RemoveItem(menuItem);
             }
 
             // Loop through the festival days
+            _dayItems = new List<NSMenuItem> { };
             var plan = _controller.Plan;
+            var tag = _FirstFestivalDaysMenuItemTag;
             foreach (var day in ScreeningsPlan.FestivalDays)
             {
-                NSMenuItem item = new NSMenuItem(ItemTitle(day));
-                item.Tag = _ItemCountStart + menu.Count;
-				item.Enabled = day != plan.CurrDay;
+                var item = new NSMenuItem(ItemTitle(day));
+                item.Tag = tag++;
+                item.Enabled = day != plan.CurrDay;
                 item.Activated += (sender, e) => _controller.GoToDay(day);
                 menu.AddItem(item);
+                _dayItems.Add(item);
             }
-            _festivalDaysMenuItemsInitialized = true;
         }
 
-        string ItemTitle(DateTime day)
+        private string ItemTitle(DateTime day)
         {
             return Screening.LongDayString(day);
         }

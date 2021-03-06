@@ -44,7 +44,7 @@ namespace PresentScreenings.TableView
             }
         }
 
-        bool ScreeningSelected
+        private bool ScreeningSelected
         {
             set => _controlByScreening[_plan.CurrScreening].Selected = value;
         }
@@ -584,8 +584,8 @@ namespace PresentScreenings.TableView
 
         public void GoToDay(DateTime day)
         {
-            int numberOfDaysFromCurrent = (day - _plan.CurrDay).Days;
-            SetNextDay(numberOfDaysFromCurrent);
+            _plan.CurrDay = day;
+            DisplayScreeningsView();
         }
 
         public void SetNextDay(int days)
