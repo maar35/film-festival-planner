@@ -38,7 +38,7 @@ namespace PresentScreenings.TableView
         public Screen CurrScreen => _dayScreens[CurrDay][_currScreenNumber];
         public Screening CurrScreening => ScreenScreenings[CurrDay][CurrScreen][_currScreenScreeningNumber];
         public List<Screen> CurrDayScreens => _dayScreens[CurrDay];
-        public DateTime CurrDay => FestivalDays[_currDayNumber];
+        public DateTime CurrDay { get => FestivalDays[_currDayNumber]; set => SetDay(value); }
         #endregion
 
         #region Constructors
@@ -129,14 +129,6 @@ namespace PresentScreenings.TableView
             }
         }
 
-        public void SetDay(DateTime day)
-        {
-            var index = FestivalDays.IndexOf(day.Date);
-            _currDayNumber = index;
-            _currScreenNumber = 0;
-            _currScreenScreeningNumber = 0;
-        }
-
         public void SetNextDay(int numberOfDays = 1)
         {
             if (NextDayExists(numberOfDays))
@@ -183,7 +175,7 @@ namespace PresentScreenings.TableView
 
         public void SetCurrScreening(Screening screening)
         {
-            SetDay(screening.StartDate);
+            CurrDay = screening.StartDate;
             _currScreenNumber = CurrDayScreens.IndexOf(screening.DisplayScreen);
             var screenScreenings = ScreenScreenings[CurrDay][CurrScreen];
             Screening newCurrScreening = screenScreenings
@@ -306,6 +298,14 @@ namespace PresentScreenings.TableView
                 _displayScreenByAbbreviation.Add(abbreviation, new Screen(onDemandScreening.DisplayScreen, abbreviation));
             }
             onDemandScreening.DisplayScreen = _displayScreenByAbbreviation[abbreviation];
+        }
+
+        private void SetDay(DateTime day)
+        {
+            var index = FestivalDays.IndexOf(day.Date);
+            _currDayNumber = index;
+            _currScreenNumber = 0;
+            _currScreenScreeningNumber = 0;
         }
 
         string nextAbbreviation(string currAbbreviation)

@@ -48,7 +48,7 @@ namespace PresentScreenings.TableView
 
         public override string ToFilmScreeningLabelString()
         {
-            return $"{DayString(WindowStartTime)} {Screen} {WindowStartTime.ToString(_dtFormat)}-{WindowEndTime.ToString(_dtFormat)} {ExtraTimeSymbolsString()} {ShortAttendingFriendsString()}{ScreeningTitleIfDifferent()}";
+            return $"{DayString(StartTime)} {Screen} {StartTime.ToString(_timeFormat)} {DateTimeString(WindowStartTime)}-{DateTimeString(WindowEndTime)} {ExtraTimeSymbolsString()} {ShortAttendingFriendsString()}{ScreeningTitleIfDifferent()}";
         }
 
         protected override string AvailableTillString()
