@@ -2,12 +2,11 @@
 
 namespace PresentScreenings.TableView
 {
-    public class OnDemandScreening : Screening
+    public class OnDemandScreening : OnLineScreening
     {
         #region Private Variables
         private const string _expireTimeFormat = "ddd d-M HH:mm";
         private TimeSpan _duration;
-        private Screen _displayScreen;
         #endregion
 
         #region Properties
@@ -31,21 +30,10 @@ namespace PresentScreenings.TableView
             // Assign other properties.
             EndTime = StartTime + Film.Duration;
             _duration = EndTime - StartTime;
-            DisplayScreen = Screen;
         }
         #endregion
 
         #region Override Methods
-        protected override Screen GetDisplayScreen()
-        {
-            return _displayScreen;
-        }
-
-        protected override void SetDisplayScreen(Screen screen)
-        {
-            _displayScreen = screen;
-        }
-
         public override string ToFilmScreeningLabelString()
         {
             return $"{DayString(StartTime)} {Screen} {StartTime.ToString(_timeFormat)} {DateTimeString(WindowStartTime)}-{DateTimeString(WindowEndTime)} {ExtraTimeSymbolsString()} {ShortAttendingFriendsString()}{ScreeningTitleIfDifferent()}";

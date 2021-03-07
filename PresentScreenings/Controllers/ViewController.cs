@@ -654,6 +654,7 @@ namespace PresentScreenings.TableView
             {
                 onDemandScreening.MoveStartTime(GetSpanToFit(onDemandScreening, forward));
                 Plan.InitializeDays();
+                UpdateAttendanceStatus(onDemandScreening);
                 SetCurrScreening(onDemandScreening);
             }
         }
@@ -668,6 +669,7 @@ namespace PresentScreenings.TableView
                 onDemandScreening.MoveStartTime(span);
                 Plan.InitializeDays();
                 GoToDay(onDemandScreening.StartTime.Date);
+                UpdateAttendanceStatus(onDemandScreening);
                 SetCurrScreening(onDemandScreening);
             }
         }
