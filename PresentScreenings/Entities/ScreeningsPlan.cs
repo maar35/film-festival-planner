@@ -308,7 +308,7 @@ namespace PresentScreenings.TableView
             string abbreviation = onLineScreening.Screen.Abbreviation;
             while (abbreviations.Contains(abbreviation))
             {
-                abbreviation = nextAbbreviation(abbreviation);
+                abbreviation = NextAbbreviation(abbreviation);
             }
 
             // Create a new screen with the new screen abbreviation if none already exists.
@@ -329,7 +329,7 @@ namespace PresentScreenings.TableView
             _currScreenScreeningNumber = 0;
         }
 
-        string nextAbbreviation(string currAbbreviation)
+        string NextAbbreviation(string currAbbreviation)
         {
             Match match = _screenRegex.Match(currAbbreviation);
             if (match != null)
