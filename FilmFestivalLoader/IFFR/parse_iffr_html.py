@@ -77,9 +77,6 @@ def parse_iffr_sites(iffr_data):
     film_detals_loader = FilmDetailsLoader()
     film_detals_loader.get_film_details(iffr_data)
 
-    comment('Resolving overlapping screenings')
-    ScreenSplitter(iffr_data).solve_overlapping_screenings()
-
 
 def comment(text):
     print(f"\n{datetime.datetime.now()}  - {text}")
@@ -574,49 +571,6 @@ class FilmPageParser(HtmlPageParser):
         elif self.stateStack.state_is(self.ScreeningsParseState.IN_S_INFO):
             self.stateStack.pop()
             self.set_screening_info(data)
-
-
-class ScreenSplitter:
-
-    screen_re = re.compile(r'^(?P<base>.*?)(?P<version>\d*)?$')
-    travel_time = datetime.timedelta(minutes=30)
-
-    def __init__(self, iffr_data):
-        self.iffr_data = iffr_data
-
-    def new_screen(self, screen, used_screens):
-        newname = self.new_name(screen.name, [s.name for s in used_screens])
-        return self.iffr_data.get_screen(city, newname)
-
-    def new_name(self, name, names):
-        newname = name
-        while newname in names:
-            newname = self.next_name(newname)
-        return newname
-
-    def next_name(self, name):
-        m = self.screen_re.match(name)
-        base = m.group('base')
-        version = m.group('version')
-        if len(version) == 0:
-            return base + '2'
-        version = str(int(version) + 1)
-        return base + version
-
-    def solve_overlapping_screenings(self):
-        location_screenings = [s for s in self.iffr_data.screenings
-                               if s.screen.type == 'Location'
-                               and not s.film.is_part_of_combination(self.iffr_data)]
-        festival_days = set([s.start_datetime.date() for s in location_screenings])
-        for day in festival_days:
-            day_screenings = [s for s in location_screenings if s.start_datetime.date() == day]
-            todo_screenings = day_screenings[1:]
-            for screening in todo_screenings:
-                coinciders = [s for s in day_screenings if s != screening and s.coincides(screening)]
-                if len(coinciders) > 0:
-                    overlappers = [s for s in day_screenings if s != screening and s.overlaps(screening, self.travel_time)]
-                    used_screens = set([s.screen for s in overlappers])
-                    screening.screen = self.new_screen(screening.screen, used_screens)
 
 
 class IffrData(planner.FestivalData):

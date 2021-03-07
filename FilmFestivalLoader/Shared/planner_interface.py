@@ -11,7 +11,6 @@ Created on Sat Oct 10 18:13:42 2020
 import os
 import re
 import xml.etree.ElementTree as ET
-import datetime
 
 interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 articles_file = os.path.join(interface_dir, "articles.txt")
@@ -187,16 +186,14 @@ class FilmInfo():
 
 class Screen():
 
-    type_by_onlocation = {}
-    type_by_onlocation[True] = "Location"
-    type_by_onlocation[False] = "OnDemand"
+    screen_types = ['Location', 'OnLine', 'OnDemand']
 
-    def __init__(self, screen_id, city, name, abbr, on_location=True):
+    def __init__(self, screen_id, city, name, abbr, screentype='Location'):
         self.screen_id = screen_id
         self.city = city
         self.name = name
         self.abbr = abbr
-        self.type = self.type_by_onlocation[on_location]
+        self.type = screentype
 
     def __str__(self):
         return self.abbr
@@ -231,7 +228,6 @@ class Screening:
     def screening_repr_csv_head(self):
         text = ";".join([
             "filmid",
-            "date",
             "screen",
             "starttime",
             "endtime",
@@ -254,12 +250,6 @@ class Screening:
             self.extra
         ])
         return "{}\n".format(text)
-
-    def overlaps(self, other, travel_time=datetime.timedelta(minutes=0)):
-        return self.start_datetime <= other.end_datetime + travel_time and self.end_datetime >= other.start_datetime - travel_time
-
-    def coincides(self, other):
-        return self.screen == other.screen and self.overlaps(other)
 
 
 class FestivalData:
@@ -357,9 +347,9 @@ class FestivalData:
             city = fields[1]
             name = fields[2]
             abbr = fields[3]
-            screen_type_str = fields[4]
-            screen_types = [k for (k, v) in Screen.type_by_onlocation.items() if v == screen_type_str]
-            screen_type = screen_types[0]
+            screen_type = fields[4]
+            if screen_type not in Screen.screen_types:
+                raise ScreenTypeError(abbr, screen_type)
             return Screen(screen_id, city, name, abbr, screen_type)
 
         try:
@@ -456,6 +446,17 @@ class FilmTitleError(Error):
 
     def __str__(self):
         return f'Film has no title. Description: {self.film_description}'
+
+
+class ScreenTypeError(Error):
+    """Exception raised when an unknown screen type is being processed."""
+
+    def __init__(self, screen_abbr, screen_type):
+        self.screen_abbr = screen_abbr
+        self.screen_type = screen_type
+
+    def __str__(self):
+        return f'Screen with abbreviation \'{self.screen_abbr}\' has unknown type: {self.screen_type}'
 
 
 if __name__ == "__main__":

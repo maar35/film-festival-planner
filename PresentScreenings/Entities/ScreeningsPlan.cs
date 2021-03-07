@@ -96,7 +96,7 @@ namespace PresentScreenings.TableView
             foreach (Screening screening in Screenings)
             {
                 // Initialialize on-demand features when applicable.
-                InitializeOnDemandScreening(screening);
+                InitializeOnLineScreening(screening);
 
                 // Initialize day lists when a new day is encountered.
                 DateTime day = screening.StartDate;
@@ -227,24 +227,37 @@ namespace PresentScreenings.TableView
         #region Private methods
         private Screening PickScreening(string line)
         {
+            // Parse the screen form the input line.
             string[] fields = line.Split(';');
             string screenString = fields[Screening.IndexByName["Screen"]];
             Screen screen = Screens
                 .Where(s => s.Abbreviation == screenString)
                 .First();
-            return screen.Type == Screen.ScreenType.OnDemand ? new OnDemandScreening(line) : new Screening(line);
+
+            // Return the Screening or subclass, dependant of the screen type.
+            switch (screen.Type)
+            {
+                case Screen.ScreenType.OnLine:
+                    return new OnLineScreening(line);
+                case Screen.ScreenType.OnDemand:
+                    return new OnDemandScreening(line);
+                default:
+                    return new Screening(line);
+            }
         }
 
         private void InitializeDisplayScreenByAbbreviation()
         {
             _displayScreenByAbbreviation = new Dictionary<string, Screen> { };
-            foreach (var screen in Screens.Where(s => s.Type == Screen.ScreenType.OnDemand))
+            var onlineScreens = Screens
+                .Where(s => s.Type == Screen.ScreenType.OnLine || s.Type == Screen.ScreenType.OnDemand);
+            foreach (var screen in onlineScreens)
             {
                 _displayScreenByAbbreviation.Add(screen.Abbreviation, screen);
             }
         }
 
-        private void InitializeOnDemandScreening(Screening screening)
+        private void InitializeOnLineScreening(Screening screening)
         {
             if (screening is OnDemandScreening onDemandScreening)
             {
@@ -267,37 +280,45 @@ namespace PresentScreenings.TableView
                 {
                     onDemandScreening.MoveStartTime(ViewController.EarliestTime - timeOfDay);
                 }
-
-                // Fix overlapping on-line and on-demand screenings on the smae "screen".
-                FixOverlappingScreenings(onDemandScreening);
+            }
+            if (screening is OnLineScreening onLineScreening)
+            {
+                // Fix overlapping on-line and on-demand screenings on the same "screen".
+                FixOverlappingScreenings(onLineScreening);
             }
         }
 
-        private void FixOverlappingScreenings(OnDemandScreening onDemandScreening)
+        private void FixOverlappingScreenings(OnLineScreening onLineScreening)
         {
+            // Establish whether there are coinciding screenings.
             var overlappers = Screenings
-                .Where(s => s != onDemandScreening && s.Overlaps(onDemandScreening, true) && s is OnDemandScreening);
+                .Where(s => s != onLineScreening && s.Overlaps(onLineScreening, true) && (s is OnLineScreening));
             var coinciders = overlappers
-                .Where(s => s.Screen == onDemandScreening.Screen);
+                .Where(s => s.Screen == onLineScreening.Screen);
             if (coinciders.Count() == 0)
             {
-                onDemandScreening.DisplayScreen = onDemandScreening.Screen;
+                onLineScreening.DisplayScreen = onLineScreening.Screen;
                 return;
             }
+
+            // Gererate a screen abbreviation different from all overlapping screenings.
             var abbreviations = overlappers
                 .Select(s => s.DisplayScreen.Abbreviation)
                 .Distinct();
-
-            string abbreviation = onDemandScreening.Screen.Abbreviation;
+            string abbreviation = onLineScreening.Screen.Abbreviation;
             while (abbreviations.Contains(abbreviation))
             {
-                abbreviation = nextAbbreviation(abbreviation);
+                abbreviation = NextAbbreviation(abbreviation);
             }
+
+            // Create a new screen with the new screen abbreviation if none already exists.
             if (!_displayScreenByAbbreviation.ContainsKey(abbreviation))
             {
-                _displayScreenByAbbreviation.Add(abbreviation, new Screen(onDemandScreening.DisplayScreen, abbreviation));
+                _displayScreenByAbbreviation.Add(abbreviation, new Screen(onLineScreening.Screen, abbreviation));
             }
-            onDemandScreening.DisplayScreen = _displayScreenByAbbreviation[abbreviation];
+
+            // Assign the screen with the new screen abbreviation to the Display Screen.
+            onLineScreening.DisplayScreen = _displayScreenByAbbreviation[abbreviation];
         }
 
         private void SetDay(DateTime day)
@@ -308,7 +329,7 @@ namespace PresentScreenings.TableView
             _currScreenScreeningNumber = 0;
         }
 
-        string nextAbbreviation(string currAbbreviation)
+        string NextAbbreviation(string currAbbreviation)
         {
             Match match = _screenRegex.Match(currAbbreviation);
             if (match != null)
