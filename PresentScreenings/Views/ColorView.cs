@@ -145,14 +145,14 @@ namespace PresentScreenings.TableView
             g.DrawPath(CGPathDrawingMode.Stroke);
         }
 
-        public static void DrawTicketAvalabilityFrame(CGContext g, Screening screening, CGRect rect)
+        public static void DrawTicketAvalabilityFrame(CGContext g, Screening screening, nfloat side)
         {
             g.SetLineWidth(2);
             SetTicketsStatusColor(screening, g);
             var rectPath = new CGPath();
             nfloat org = 1;
-            nfloat x = rect.Width - 2 * org;
-            nfloat y = rect.Height - 2 * org;
+            nfloat x = side - 2 * org;
+            nfloat y = side - 2 * org;
             rectPath.AddLines(new CGPoint[]{
                 new CGPoint(org, y),
                 new CGPoint(x, y),
@@ -164,20 +164,15 @@ namespace PresentScreenings.TableView
             g.DrawPath(CGPathDrawingMode.Stroke);
         }
 
-        public static void DrawTicketAvalabilityFrame(CGContext g, Screening screening, nfloat side)
-        {
-            DrawTicketAvalabilityFrame(g, screening, new CGRect(0, 0, side, side));
-        }
-
-        public static void DrawOnDemandAvailabilityStatus(CGContext context, OnDemandScreening screening, CGRect rect, bool selected)
+        public static void DrawOnDemandAvailabilityStatus(CGContext context, OnDemandScreening screening, nfloat side, bool selected)
         {
             // Establish some base dimensions.
             const int maxDaysInRuler = 5;
             const int margin = 2;
-            nfloat w = rect.Width - 2 * margin;
-            nfloat h = rect.Height - 2 * margin;
-            nfloat x = rect.X + margin;
-            nfloat y = rect.Y + margin;
+            nfloat w = side - 2 * margin;
+            nfloat h = side - 2 * margin;
+            nfloat x = margin;
+            nfloat y = margin;
             var windowSeconds = (screening.WindowEndTime - screening.WindowStartTime).TotalSeconds;
             var passedSeconds = (screening.StartTime - screening.WindowStartTime).TotalSeconds;
             nfloat wPassed = w * (nfloat)passedSeconds / (nfloat)windowSeconds;

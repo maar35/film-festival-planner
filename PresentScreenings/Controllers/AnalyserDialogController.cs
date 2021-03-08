@@ -14,11 +14,11 @@ namespace PresentScreenings.TableView
     /// overlapping screenings.
     /// </summary>
 
-    public partial class AnalyserDialogController : GoToScreeningDialog, IScreeningProvider
+    public partial class AnalyserDialogController : NSViewController, IScreeningProvider
 	{
         #region Private Variables
-        ViewController _presentor;
-        FilmOutlineDataSource _dataSource;
+        private ViewController _presentor;
+        private FilmOutlineDataSource _dataSource;
         #endregion
 
         #region Constructors
@@ -28,7 +28,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Application Access
-        static AppDelegate _app => (AppDelegate)NSApplication.SharedApplication.Delegate;
+        private static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
         #endregion
 
         #region Properties
@@ -37,7 +37,7 @@ namespace PresentScreenings.TableView
 
         #region Interface Implementations
         Film IScreeningProvider.CurrentFilm => GetSelectedFilm();
-        Screening IScreeningProvider.CurrentScreening => _app.Controller.CurrentScreening;
+        Screening IScreeningProvider.CurrentScreening => App.Controller.CurrentScreening;
         List<Screening> IScreeningProvider.Screenings => GetFilmScreenings();
         #endregion
 
@@ -47,13 +47,13 @@ namespace PresentScreenings.TableView
             base.ViewDidLoad();
 
             // Initialize the presentor.
-            _presentor = _app.Controller;
+            _presentor = App.Controller;
 
             // Tell the app delegate we're alive.
-            _app.AnalyserDialogController = this;
+            App.AnalyserDialogController = this;
 
             // Set the GoToScreening function for screenings.
-            Screening.GoToScreening = GoToScreening;
+            Screening.GoToScreening = App.NavigateFilmScreening;
 
             // Create data source and populate.
             _dataSource = new FilmOutlineDataSource();
@@ -102,20 +102,10 @@ namespace PresentScreenings.TableView
             base.ViewWillDisappear();
 
             // Tell the app delegate we're gone.
-            _app.AnalyserDialogController = null;
+            App.AnalyserDialogController = null;
 
             // Tell the main view controller we're gone.
             _presentor.RunningPopupsCount--;
-        }
-
-        public override void GoToScreening(Screening screening)
-        {
-            _presentor.GoToScreening(screening);
-
-            // Commented out as a work-around to prevent:
-            // *** Terminating app due to uncaught exception 'NSInternalInconsistencyException',
-            // reason: 'dismissViewController:: Error: maybe this view controller was not presented?'
-            //CloseDialog();
         }
         #endregion
 
@@ -183,9 +173,6 @@ namespace PresentScreenings.TableView
         {
             _presentor.DismissViewController(this);
         }
-        #endregion
-
-        #region Private Methods
         #endregion
     }
 }

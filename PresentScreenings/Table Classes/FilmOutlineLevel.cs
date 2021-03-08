@@ -76,7 +76,7 @@ namespace PresentScreenings.TableView
                 var infoButton = new FilmScreeningControl(view.Frame, screening);
                 infoButton.ReDraw();
                 infoButton.ScreeningInfoAsked += (sender, e) => FilmOutlineLevel.GoToScreening(screening);
-                infoButton.Selected = false;
+                infoButton.Selected = ScreeningIsSelected(screening);
                 view.AddSubview(infoButton);
             }
         }
@@ -91,6 +91,14 @@ namespace PresentScreenings.TableView
                 view.StringValue += "  " + FilmInfo.InfoString(((Screening)_filmOutlinable).Film);
                 view.LineBreakMode = NSLineBreakMode.TruncatingTail;
             }
+        }
+        #endregion
+
+        #region Public Methods
+        public static bool ScreeningIsSelected(Screening screening)
+        {
+            AppDelegate app = (AppDelegate)NSApplication.SharedApplication.Delegate;
+            return app.Controller.CurrentScreening == screening;
         }
         #endregion
     }

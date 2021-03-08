@@ -245,7 +245,7 @@ namespace PresentScreenings.TableView
             var infoButton = new FilmScreeningControl(rect, this);
             infoButton.ReDraw();
             infoButton.ScreeningInfoAsked += (sender, e) => GoToScreening(this);
-            infoButton.Selected = false;
+            infoButton.Selected = FilmOutlineLevel.ScreeningIsSelected(this);
             view.AddSubview(infoButton);
         }
 
