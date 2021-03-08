@@ -87,7 +87,13 @@ namespace PresentScreenings.TableView
                 // Draw a frame if something's wrong with the tickets
                 if (ScreeningInfo.TicketStatusNeedsAttention(_screening))
                 {
-					ColorView.DrawTicketAvalabilityFrame(g, _screening, Frame);
+					ColorView.DrawTicketAvalabilityFrame(g, _screening, Frame.Width);
+                }
+
+                // Draw a progress bar if the screening is on-demand.
+                if (_screening is OnDemandScreening onDemandScreening)
+                {
+                    ColorView.DrawOnDemandAvailabilityStatus(g, onDemandScreening, Frame.Width, Selected);
                 }
 
                 // Draw Sold Out Symbol

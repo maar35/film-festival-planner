@@ -125,7 +125,7 @@ namespace PresentScreenings.TableView
                 // Draw a progress bar if the screening is on-demand.
                 if (Screening is OnDemandScreening onDemandScreening)
                 {
-                    ColorView.DrawOnDemandAvailabilityStatus(context, onDemandScreening, clickableRect, Selected);
+                    ColorView.DrawOnDemandAvailabilityStatus(context, onDemandScreening, side, Selected);
                 }
 
                 // Draw Sold Out symbol.
