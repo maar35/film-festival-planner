@@ -196,8 +196,7 @@ namespace PresentScreenings.TableView
             Controller.SetPreviousScreening();
         }
 
-        [Action("NavigateFilmScreening:")]
-        internal void NavigateFilmScreening(NSObject sender)
+        internal void NavigateFilmScreening(Screening screening)
         {
             if (FilmsDialogController != null)
             {
@@ -207,8 +206,14 @@ namespace PresentScreenings.TableView
             {
                 AnalyserDialogController.CloseDialog();
             }
-            var screening = ScreeningMenuDelegate.FilmScreening(((NSMenuItem)sender).Title);
             Controller.GoToScreening(screening);
+        }
+
+        [Action("NavigateFilmScreening:")]
+        internal void NavigateFilmScreening(NSObject sender)
+        {
+            var screening = ScreeningMenuDelegate.FilmScreening(((NSMenuItem)sender).Title);
+            NavigateFilmScreening(screening);
         }
 
         [Action("ToggleAttendance:")]
