@@ -15,6 +15,7 @@ namespace PresentScreenings.TableView
         void SetRating(NSTextField view);
         void SetGo(NSView view);
         void SetInfo(NSTextField view);
+        void Cleanup();
         #endregion
     }
 }

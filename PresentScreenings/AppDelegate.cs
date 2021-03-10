@@ -26,13 +26,13 @@ namespace PresentScreenings.TableView
 
         #region Properties
         public ViewController Controller { get; set; } = null;
-        public FilmRatingDialogController FilmsDialogController { get; set; }
         public AnalyserDialogController AnalyserDialogController { get; set; }
-        public CombineTitlesSheetController CombineTitleController { get; set; }
-        public UncombineTitlesSheetController UncombineTitleController;
-        public FilmInfoDialogController filmInfoController;
-        public PlannerDialogController PlannerDialogController;
         public AvailabilityDialogControler AvailabilityDialogControler { get; set; }
+        public CombineTitlesSheetController CombineTitleController { get; set; }
+        public FilmInfoDialogController FilmInfoController { get; set; }
+        public FilmRatingDialogController FilmsDialogController { get; set; }
+        public PlannerDialogController PlannerDialogController { get; set; }
+        public UncombineTitlesSheetController UncombineTitleController { get; set; }
         public ScreeningMenuDelegate ScreeningMenuDelegate => (ScreeningMenuDelegate)_screeningMenu.Delegate;
         public NSMenuItem ToggleTypeMatchMenuItem => _toggleTypeMatchMethod;
         #endregion

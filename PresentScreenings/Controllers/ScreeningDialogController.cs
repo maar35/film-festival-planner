@@ -65,6 +65,7 @@ namespace PresentScreenings.TableView
             base.ViewWillAppear();
 
             // Tell the presentor we're alive.
+            _presentor.ScreeningInfoDialog = this;
             _presentor.RunningPopupsCount += 1;
 
             // Initialize the list of screenings.
@@ -85,6 +86,10 @@ namespace PresentScreenings.TableView
         {
             // Tell the presentor we're gone.
             _presentor.RunningPopupsCount--;
+            if (_presentor.RunningPopupsCount == 0)
+            {
+                _presentor.ScreeningInfoDialog = null;
+            }
         }
 
         public override void PrepareForSegue(NSStoryboardSegue segue, NSObject sender)
@@ -222,15 +227,6 @@ namespace PresentScreenings.TableView
             _sampleSubView = scrollView;
         }
 
-        private void UpdateAttendances()
-        {
-            _labelPresent.StringValue = _screening.AttendeesString();
-            _presentor.UpdateAttendanceStatus(_screening);
-            _presentor.ReloadScreeningsView();
-            UpdateScreeningControls();
-            _screeningInfoControl.ReDraw();
-        }
-
         private void CloseDialog()
         {
             _presentor.DismissViewController(this);
@@ -307,6 +303,15 @@ namespace PresentScreenings.TableView
             UpdateAttendances();
             var attendanceState = AttendanceCheckbox.GetAttendanceState(_screening.FilmFanAttends(filmFan));
             _attendanceCheckboxByFilmFan[filmFan].State = attendanceState;
+        }
+
+        public void UpdateAttendances()
+        {
+            _labelPresent.StringValue = _screening.AttendeesString();
+            _presentor.UpdateAttendanceStatus(_screening);
+            _presentor.ReloadScreeningsView();
+            UpdateScreeningControls();
+            _screeningInfoControl.ReDraw();
         }
         #endregion
 

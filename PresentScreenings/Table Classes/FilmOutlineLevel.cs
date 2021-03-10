@@ -92,6 +92,11 @@ namespace PresentScreenings.TableView
                 view.LineBreakMode = NSLineBreakMode.TruncatingTail;
             }
         }
+
+        void IFilmOutlinable.Cleanup()
+        {
+            AnalyserDialogController.CleanupOutlinables(FilmOutlinables);
+        }
         #endregion
 
         #region Public Methods

@@ -28,7 +28,6 @@ namespace PresentScreenings.TableView
             {
                 return ((IFilmOutlinable)item).FilmOutlinables.Count;
             }
-
         }
 
         public override NSObject GetChild(NSOutlineView outlineView, nint childIndex, NSObject item)

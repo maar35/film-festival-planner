@@ -89,8 +89,8 @@ namespace PresentScreenings.TableView
             // Process every item in the menu
             foreach (NSMenuItem item in menu.Items)
             {
-                // If the combine or uncombine film dialog is active, all menu items must be inactive.
-                if (_app.CombineTitleController != null || _app.UncombineTitleController != null)
+                // If one of some specific dialogs is running, all menu items must be inactive.
+                if (DialogDisablesAllMenuItems())
                 {
                     item.Enabled = false;
                     continue;
@@ -154,20 +154,21 @@ namespace PresentScreenings.TableView
         private bool ItemIsHandledByTag(NSMenuItem item)
         {
             bool itemHandled = true;
+            bool enabled = Screening != null && !AnalyserViewRunning();
             switch (item.Tag)
             {
                 case _showScreeningInfoMenuItemTag:
                     item.Enabled = _controller.ViewIsActive();
                     break;
                 case _showFilmInfoMenuItemTag:
-                    item.Enabled = Screening != null && _app.filmInfoController == null;
+                    item.Enabled = enabled && _app.FilmInfoController == null;
                     break;
                 case _soldOutMenuItemTag:
-                    item.Enabled = Screening != null;
+                    item.Enabled = enabled;
                     item.State = (Screening != null && Screening.SoldOut) ? NSCellStateValue.On : NSCellStateValue.Off;
                     break;
                 case _ticketsBoughtMenuItemTag:
-                    item.Enabled = Screening != null;
+                    item.Enabled = enabled;
                     item.State = (Screening != null && Screening.TicketsBought) ? NSCellStateValue.On : NSCellStateValue.Off;
                     break;
                 case _filmMenuHeaderItemTag:
@@ -175,16 +176,16 @@ namespace PresentScreenings.TableView
                     item.Enabled = false;
                     break;
                 case _moveBackwardMenuItemTag:
-                    item.Enabled = ViewController.MoveBackwardAllowed(Screening, true);
+                    item.Enabled = enabled && ViewController.MoveBackwardAllowed(Screening, true);
                     break;
                 case _moveForwardMenuItemTag:
-                    item.Enabled = ViewController.MoveForwardAllowed(Screening, true);
+                    item.Enabled = enabled && ViewController.MoveForwardAllowed(Screening, true);
                     break;
                 case _moveToPreviousDayMenuItemTag:
-                    item.Enabled = ViewController.MoveBackwardAllowed(Screening);
+                    item.Enabled = enabled && ViewController.MoveBackwardAllowed(Screening);
                     break;
                 case _moveToNextDayMenuItemTag:
-                    item.Enabled = ViewController.MoveForwardAllowed(Screening);
+                    item.Enabled = enabled && ViewController.MoveForwardAllowed(Screening);
                     break;
                 default:
                     itemHandled = false;
@@ -291,7 +292,8 @@ namespace PresentScreenings.TableView
                     item.KeyEquivalentModifierMask = mask;
                 }
                 menu.AddItem(item);
-                _FilmScreeningEnabledByTag.Add(item.Tag, screening != Screening);
+                bool enabled = (AnalyserViewRunning() || screening != Screening);
+                _FilmScreeningEnabledByTag.Add(item.Tag, enabled);
                 _filmScreeningByMenuItemTitle.Add(itemTitle, screening);
             }
         }
@@ -304,6 +306,14 @@ namespace PresentScreenings.TableView
         private bool AnalyserViewRunning()
         {
             return AnalyserDialogController != null;
+        }
+
+        private bool DialogDisablesAllMenuItems()
+        {
+            return _app.AvailabilityDialogControler != null
+                || _app.PlannerDialogController != null
+                || _app.CombineTitleController != null
+                || _app.UncombineTitleController != null;
         }
         #endregion
 

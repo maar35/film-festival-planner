@@ -135,6 +135,11 @@ namespace PresentScreenings.TableView
             view.BackgroundColor = NSColor.Clear;
             view.TextColor = NSColor.Text;
         }
+
+        void IFilmOutlinable.Cleanup()
+        {
+            AnalyserDialogController.CleanupOutlinables(FilmOutlinables);
+        }
         #endregion
 
         #region Public Methods

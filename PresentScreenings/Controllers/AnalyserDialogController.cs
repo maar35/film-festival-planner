@@ -21,18 +21,14 @@ namespace PresentScreenings.TableView
         private FilmOutlineDataSource _dataSource;
         #endregion
 
+        #region Properties
+        private static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
+        #endregion
+
         #region Constructors
         public AnalyserDialogController (IntPtr handle) : base (handle)
 		{
         }
-        #endregion
-
-        #region Application Access
-        private static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
-        #endregion
-
-        #region Properties
-        public NSOutlineView FilmOutlineView => _filmOutlineView;
         #endregion
 
         #region Interface Implementations
@@ -164,13 +160,27 @@ namespace PresentScreenings.TableView
             return new List<Screening> { };
         }
 
-        public static bool FilterHighRatedFilms(Film film)
+        public bool FilterHighRatedFilms(Film film)
         {
             return film.MaxRating.IsGreaterOrEqual(FilmRating.LowestSuperRating);
         }
 
+        public static void CleanupOutlinables(List<IFilmOutlinable> filmOutlinables)
+        {
+            foreach (var filmOutlinable in filmOutlinables)
+            {
+                filmOutlinable.Cleanup();
+            }
+            var count = filmOutlinables.Count;
+            if (count > 0)
+            {
+                filmOutlinables.RemoveRange(0, count);
+            }
+        }
+
         public void CloseDialog()
         {
+            CleanupOutlinables(_dataSource.FilmOutlinables);
             _presentor.DismissViewController(this);
         }
         #endregion

@@ -66,7 +66,7 @@ namespace PresentScreenings.TableView
             base.ViewWillAppear();
 
             // Tell the app delegate that we're alive.
-            App.filmInfoController = this;
+            App.FilmInfoController = this;
 
             // Get the selected film.
             _film = ((IScreeningProvider)Presentor).CurrentFilm;
@@ -91,7 +91,7 @@ namespace PresentScreenings.TableView
             base.ViewWillDisappear();
 
             // Tell the app delegate that we're gone.
-            App.filmInfoController = null;
+            App.FilmInfoController = null;
         }
         #endregion
 
