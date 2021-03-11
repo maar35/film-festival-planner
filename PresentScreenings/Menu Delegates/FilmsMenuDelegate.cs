@@ -36,7 +36,7 @@ namespace PresentScreenings.TableView
             foreach (NSMenuItem item in menu.Items)
             {
                 // If one of the film dialogs is active, all menu items must be inactive.
-                if (_app.CombineTitleController != null || _app.UncombineTitleController != null || _app.filmInfoController != null)
+                if (_app.CombineTitleController != null || _app.UncombineTitleController != null || _app.FilmInfoController != null)
                 {
                     item.Enabled = false;
                     continue;

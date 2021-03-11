@@ -28,6 +28,7 @@ namespace PresentScreenings.TableView
         #region Properties
         public ScreeningsPlan Plan => _plan;
         public NSTableView TableView => ScreeningsTable;
+        internal ScreeningDialogController ScreeningInfoDialog { get; set; }
         internal int RunningPopupsCount { get; set; } = 0;
         public static TimeSpan DaySpan => new TimeSpan(24, 0, 0);
         public static TimeSpan EarliestTime => new TimeSpan(ScreeningsTableView.FirstDisplayedHour, 0, 0);
@@ -272,10 +273,6 @@ namespace PresentScreenings.TableView
         public void ReloadScreeningsView()
         {
             TableView.ReloadData();
-            if (App.AnalyserDialogController != null)
-            {
-                App.AnalyserDialogController.FilmOutlineView.ReloadData();
-            }
         }
 
         public void AddScreeningControl(Screening screening, ScreeningControl control)
@@ -586,6 +583,7 @@ namespace PresentScreenings.TableView
         {
             _plan.CurrDay = day;
             DisplayScreeningsView();
+            ScreeningInfoDialog?.UpdateAttendances();
         }
 
         public void SetNextDay(int days)
@@ -655,6 +653,7 @@ namespace PresentScreenings.TableView
                 onDemandScreening.MoveStartTime(GetSpanToFit(onDemandScreening, forward));
                 Plan.InitializeDays();
                 UpdateAttendanceStatus(onDemandScreening);
+                ScreeningInfoDialog?.UpdateAttendances();
                 SetCurrScreening(onDemandScreening);
             }
         }

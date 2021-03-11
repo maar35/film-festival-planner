@@ -235,15 +235,9 @@ namespace PresentScreenings.TableView
                 .First();
 
             // Return the Screening or subclass, dependant of the screen type.
-            switch (screen.Type)
-            {
-                case Screen.ScreenType.OnLine:
-                    return new OnLineScreening(line);
-                case Screen.ScreenType.OnDemand:
-                    return new OnDemandScreening(line);
-                default:
-                    return new Screening(line);
-            }
+            return screen.Type == Screen.ScreenType.OnLine ? new OnLineScreening(line)
+                : screen.Type == Screen.ScreenType.OnDemand ? new OnDemandScreening(line)
+                : new Screening(line);
         }
 
         private void InitializeDisplayScreenByAbbreviation()
