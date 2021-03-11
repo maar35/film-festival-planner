@@ -292,7 +292,7 @@ namespace PresentScreenings.TableView
                     item.KeyEquivalentModifierMask = mask;
                 }
                 menu.AddItem(item);
-                bool enabled = (AnalyserViewRunning() || screening != Screening);
+                bool enabled = AnalyserViewRunning() || screening != Screening;
                 _FilmScreeningEnabledByTag.Add(item.Tag, enabled);
                 _filmScreeningByMenuItemTitle.Add(itemTitle, screening);
             }
