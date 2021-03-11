@@ -350,7 +350,7 @@ namespace PresentScreenings.TableView
 
         public string ToMenuItemString()
         {
-            return $"{DayString(StartTime)} {Screen} {StartTime.ToString(_timeFormat)} {ExtraTimeSymbolsString()}";
+            return $"{DayString(StartTime)} {DisplayScreen} {StartTime.ToString(_timeFormat)} {ExtraTimeSymbolsString()}";
         }
 
         public string ToScreeningLabelString(bool withDay = false)
