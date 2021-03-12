@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using AppKit;
-using CoreGraphics;
 using static PresentScreenings.TableView.FilmInfo;
 
 namespace PresentScreenings.TableView
@@ -15,7 +13,7 @@ namespace PresentScreenings.TableView
     /// screening is attended at the same time or the film is already planned.
     /// </summary>
 
-    public class Screening : ListStreamer, IComparable, IFilmOutlinable
+    public class Screening : ListStreamer, IComparable
     {
         #region Constant Private Members
         protected const string _dateFormat = "yyyy-MM-dd";
@@ -226,45 +224,6 @@ namespace PresentScreenings.TableView
         {
             return StartTime.CompareTo(((Screening)obj).StartTime);
         }
-
-        bool IFilmOutlinable.ContainsFilmOutlinables()
-        {
-            return FilmOutlinables.Count > 0;
-        }
-
-        void IFilmOutlinable.SetTitle(NSTextField view)
-        {
-            view.StringValue = ToMenuItemString();
-            view.LineBreakMode = NSLineBreakMode.TruncatingMiddle;
-        }
-
-        public void SetGo(NSView view)
-        {
-            ScreeningsView.DisposeSubViews(view);
-            var rect = new CGRect(0, 0, view.Frame.Width, view.Frame.Height);
-            var infoButton = new FilmScreeningControl(rect, this);
-            infoButton.ReDraw();
-            infoButton.ScreeningInfoAsked += (sender, e) => GoToScreening(this);
-            infoButton.Selected = FilmOutlineLevel.ScreeningIsSelected(this);
-            view.AddSubview(infoButton);
-        }
-
-        void IFilmOutlinable.SetRating(NSTextField view)
-        {
-            view.StringValue = string.Empty;
-        }
-
-        void IFilmOutlinable.SetInfo(NSTextField view)
-        {
-            ColorView.SetScreeningColor(this, view);
-            view.StringValue = ScreeningStringForLabel(true);
-            view.LineBreakMode = NSLineBreakMode.TruncatingTail;
-        }
-
-        void IFilmOutlinable.Cleanup()
-        {
-            AnalyserDialogController.CleanupOutlinables(FilmOutlinables);
-        }
         #endregion
 
         #region Public Methods
@@ -307,23 +266,6 @@ namespace PresentScreenings.TableView
             var travelTime = useTravelTime ? TravelTime : TimeSpan.Zero;
             return otherScreening.StartTime <= EndTime + travelTime
                 && otherScreening.EndTime >= StartTime - travelTime;
-        }
-
-        public void SetOverlappingScreenings()
-        {
-            if (FilmOutlinables.Count == 0)
-            {
-                Func<Screening, bool> Attending = s => s.Status == ScreeningInfo.ScreeningStatus.Attending;
-                var screenings = ViewController.OverlappingScreenings(this, true)
-                                               .Where(s => Attending(s))
-                                               .OrderByDescending(s => s.Film.MaxRating);
-                var level = FilmOutlineLevel.Level.OverlappingScreening;
-                foreach (var screening in screenings)
-                {
-                    var filmOutlineLevel = new FilmOutlineLevel(screening, level, GoToScreening);
-                    FilmOutlinables.Add(filmOutlineLevel);
-                }
-            }
         }
         #endregion
 
@@ -379,7 +321,7 @@ namespace PresentScreenings.TableView
         public string AppendingExtraTimesString()
         {
             string extrasString = ExtraTimeSymbolsString();
-            return extrasString == string.Empty ? extrasString : $" ({Film.Duration.ToString(_durationFormat)} + {extrasString})";
+            return extrasString == string.Empty ? extrasString : $" ({Film.DurationString} + {extrasString})";
         }
 
         public string ExtraTimeSymbolsString()

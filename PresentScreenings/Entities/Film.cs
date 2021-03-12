@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using AppKit;
 
 namespace PresentScreenings.TableView
 {
@@ -9,7 +8,7 @@ namespace PresentScreenings.TableView
     /// Keeps information about a film and supports international sorting and personal rating.
     /// </summary>
 
-    public class Film : ListStreamer, IComparable, IFilmOutlinable
+    public class Film : ListStreamer, IComparable
     {
         #region Public Members
         public enum FilmInfoStatus
@@ -22,10 +21,6 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Constants
-        private const string _hhmmDuration = "hh\\:mm";
-        #endregion
-
         #region Properties
         public int SequenceNumber { get; private set; }
         public int FilmId { get; private set; }
@@ -34,6 +29,8 @@ namespace PresentScreenings.TableView
         public string TitleLanguage { get; private set; }
         public string Section { get; private set; }
         public TimeSpan Duration { get; private set; }
+        public string DurationFormat => "hh\\:mm";
+        public string DurationString => Duration.ToString(DurationFormat);
         public string MinutesString => Duration.TotalMinutes + "′";
         public string Url { get; private set; }
         public List<Screening> FilmScreenings => ViewController.FilmScreenings(FilmId);
@@ -42,7 +39,6 @@ namespace PresentScreenings.TableView
         public FilmInfo FilmInfo => ViewController.GetFilmInfo(FilmId);
         public FilmInfoStatus InfoStatus => ViewController.GetFilmInfoStatus(FilmId);
         public FilmRating MaxRating => ViewController.GetMaxRating(this);
-        public List<IFilmOutlinable> FilmOutlinables { get; private set; } = new List<IFilmOutlinable> { };
         #endregion
 
         #region Constructors
@@ -88,7 +84,7 @@ namespace PresentScreenings.TableView
             List<string> fields = new List<string> { };
 
             fields.Add(ToString());
-            fields.Add(Duration.ToString(_hhmmDuration));
+            fields.Add(DurationString);
             fields.Add(Rating.ToString());
             fields.Add(ViewController.GetFilmFanFilmRating(this, "Adrienne").ToString());
             var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == FilmId);
@@ -104,55 +100,6 @@ namespace PresentScreenings.TableView
         public int CompareTo(object obj)
         {
             return SequenceNumber.CompareTo(((Film)obj).SequenceNumber);
-        }
-
-        bool IFilmOutlinable.ContainsFilmOutlinables()
-        {
-            return FilmOutlinables.Count > 0;
-        }
-
-        void IFilmOutlinable.SetTitle(NSTextField view)
-        {
-            view.StringValue = Duration.ToString(_hhmmDuration) + " - " + Title;
-            view.LineBreakMode = NSLineBreakMode.TruncatingMiddle;
-            view.Selectable = false;
-        }
-
-        void IFilmOutlinable.SetRating(NSTextField view)
-        {
-            view.StringValue = MaxRating.ToString();
-        }
-
-        public void SetGo(NSView view)
-        {
-            ScreeningsView.DisposeSubViews(view);
-        }
-
-        void IFilmOutlinable.SetInfo(NSTextField view)
-        {
-            view.StringValue = FilmInfo.InfoString(this);
-            view.LineBreakMode = NSLineBreakMode.ByWordWrapping;
-            view.BackgroundColor = NSColor.Clear;
-            view.TextColor = NSColor.Text;
-        }
-
-        void IFilmOutlinable.Cleanup()
-        {
-            AnalyserDialogController.CleanupOutlinables(FilmOutlinables);
-        }
-        #endregion
-
-        #region Public Methods
-        public void SetScreenings()
-        {
-            if (FilmOutlinables.Count == 0)
-            {
-                FilmOutlinables.AddRange(FilmScreenings);
-            }
-            foreach (var filmScreening in FilmScreenings)
-            {
-                filmScreening.SetOverlappingScreenings();
-            }
         }
         #endregion
     }

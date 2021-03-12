@@ -74,8 +74,9 @@ namespace PresentScreenings.TableView
             var sortedFilms = films.OrderByDescending(f => f.MaxRating).ThenBy(f => f.SequenceNumber);
             foreach (var film in sortedFilms)
             {
-                film.SetScreenings();
-                _dataSource.FilmOutlinables.Add(film);
+                FilmOutlinable filmOutlinable = new FilmOutlinable(film);
+                filmOutlinable.SetFilmScreenings();
+                _dataSource.FilmOutlinables.Add(filmOutlinable);
             }
 
             // Populate the outline.
@@ -124,28 +125,18 @@ namespace PresentScreenings.TableView
 
         public Film GetSelectedFilm()
         {
-            var filmOutlinable = GetSelectedItem();
-            if (filmOutlinable == null)
+            var iFilmOutlinable = GetSelectedItem();
+            if (iFilmOutlinable == null)
             {
                 return null;
             }
-            if (filmOutlinable is Film film)
+            if (iFilmOutlinable is FilmOutlinable filmOutlinable)
             {
-                return film;
+                return filmOutlinable.Film;
             }
-            if (filmOutlinable is Screening screening)
+            if (iFilmOutlinable is ScreeningOutlinable screeningOutlinable)
             {
-                return screening.Film;
-            }
-            var level = (FilmOutlineLevel)filmOutlinable;
-            switch (level.OutlineLevel)
-            {
-                case FilmOutlineLevel.Level.Film:
-                    break;
-                case FilmOutlineLevel.Level.FilmScreening:
-                    break;
-                case FilmOutlineLevel.Level.OverlappingScreening:
-                    return ((Screening)level.FilmOutlinable).Film;
+                return screeningOutlinable.Screening.Film;
             }
             return null;
         }
