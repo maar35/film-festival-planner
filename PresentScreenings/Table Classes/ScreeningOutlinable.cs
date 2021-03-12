@@ -126,8 +126,7 @@ namespace PresentScreenings.TableView
                 var level = Level.OverlappingScreening;
                 foreach (var screening in screenings)
                 {
-                    var filmOutlineLevel = new ScreeningOutlinable(screening, level);
-                    FilmOutlinables.Add(filmOutlineLevel);
+                    FilmOutlinables.Add(new ScreeningOutlinable(screening, level));
                 }
             }
         }
