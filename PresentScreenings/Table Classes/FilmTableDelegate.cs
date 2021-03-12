@@ -98,7 +98,7 @@ namespace PresentScreenings.TableView
                 case "Duration":
                     NSTextField durationLabel = (NSTextField)view;
                     PopulateDuration(ref durationLabel);
-                    durationLabel.StringValue = film.Duration.ToString("hh\\:mm");
+                    durationLabel.StringValue = film.DurationString;
                     durationLabel.TextColor = TextColor(film.Duration);
                     return durationLabel;
                 case "Rating":

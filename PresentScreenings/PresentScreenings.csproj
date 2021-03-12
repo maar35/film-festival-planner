@@ -162,7 +162,7 @@
     <Compile Include="Utilities\ListStreamer.cs" />
     <Compile Include="Utilities\ScreeningsPlanner.cs" />
     <Compile Include="Utilities\WebUtility.cs" />
-    <Compile Include="Table Classes\FilmOutlineLevel.cs" />
+    <Compile Include="Table Classes\ScreeningOutlinable.cs" />
     <Compile Include="Utilities\AlertRaiser.cs" />
     <Compile Include="Controllers\AvailabilityDialogControler.cs" />
     <Compile Include="Controllers\AvailabilityDialogControler.designer.cs">
@@ -175,6 +175,7 @@
     <Compile Include="Entities\FilmFanAvailability.cs" />
     <Compile Include="Entities\OnDemandScreening.cs" />
     <Compile Include="Entities\OnLineScreening.cs" />
+    <Compile Include="Table Classes\FilmOutlinable.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

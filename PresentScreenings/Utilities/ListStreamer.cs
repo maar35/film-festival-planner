@@ -10,7 +10,7 @@ namespace PresentScreenings.TableView
     /// List streamer, read/write files based on list of derived objects.
     /// </summary>
 
-    public abstract class ListStreamer : NSObject
+    public abstract class ListStreamer  
     {
         #region Virtual Methods
         public virtual bool ListFileIsMandatory()
