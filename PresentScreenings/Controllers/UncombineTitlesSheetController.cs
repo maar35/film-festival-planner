@@ -131,21 +131,17 @@ namespace PresentScreenings.TableView
 
             // Create the window title label.
             _yCurr -= _labelHeight;
-            var titleLabel = new NSTextField(new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight));
-            titleLabel.Editable = false;
+            var titleLabelRect = new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight);
+            var titleLabel = ControlsFactory.NewStandardLabel(titleLabelRect);
             titleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
-            titleLabel.BackgroundColor = NSColor.WindowBackground;
-            titleLabel.Bordered = false;
             titleLabel.StringValue = "Uncombine film";
             View.AddSubview(titleLabel);
 
             // Create the instruction label.
             _yCurr -= _labelHeight + _yLabelsDistance;
-            var instructionLabel = new NSTextField(new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight));
-            instructionLabel.Editable = false;
+            var instructionLabelRect = new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight);
+            var instructionLabel = ControlsFactory.NewStandardLabel(instructionLabelRect);
             instructionLabel.Font = NSFont.LabelFontOfSize(NSFont.LabelFontSize);
-            instructionLabel.BackgroundColor = NSColor.WindowBackground;
-            instructionLabel.Bordered = false;
             instructionLabel.StringValue = "Create multiple films, one per distinct screening title";
             View.AddSubview(instructionLabel);
 

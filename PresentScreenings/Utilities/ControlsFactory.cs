@@ -84,12 +84,15 @@ namespace PresentScreenings.TableView
             return comboBox;
         }
 
-        public static NSScrollView NewStandardScrollView(CGRect frame, NSView documentView, bool debug = false)
+        public static NSScrollView NewStandardScrollView(CGRect frame, NSView documentView, bool useWindowsBackgroundCoplor = false, bool debug = false)
         {
             var scrollView = new NSScrollView(frame);
-            scrollView.BackgroundColor = NSColor.WindowBackground;
             scrollView.BorderType = NSBorderType.BezelBorder;
             scrollView.DocumentView = documentView;
+            if (useWindowsBackgroundCoplor)
+            {
+                scrollView.BackgroundColor = NSColor.WindowBackground;
+            }
             if (frame.Width > documentView.Frame.Width)
             {
                 documentView.SetFrameSize(new CGSize(frame.Width, documentView.Frame.Height));

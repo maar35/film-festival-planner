@@ -28,7 +28,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public int FilmId { get; set; }
+        public int OriginalFilmId { get; }
         public Screen Screen { get; }
         public int? CombinationProgramId { get; }
         public string Subtitles { get; }
@@ -37,15 +37,16 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Calculated Properties
+        public int FilmId { get => _screeningInfo.CombinedFilmId; set => _screeningInfo.CombinedFilmId = value; }
         public Film Film { get => ViewController.GetFilmById(FilmId); set => FilmId = value.FilmId; }
         public string FilmTitle => Film.Title;
+        public string ScreeningTitle => ViewController.GetFilmById(OriginalFilmId).Title;
         public Screen DisplayScreen { get => GetDisplayScreen(); set => SetDisplayScreen(value); }
         public DateTime StartTime { get => _screeningInfo.MovableStartTime; protected set => _screeningInfo.MovableStartTime = value; }
         public DateTime EndTime { get => _screeningInfo.MovableEndTime; protected set => _screeningInfo.MovableEndTime = value; }
         public DateTime StartDate => StartTime.Date;
         public TimeSpan Duration => EndTime - StartTime;
         public FilmRating Rating => Film.Rating;
-        public string ScreeningTitle { get => _screeningInfo.ScreeningTitle; set => _screeningInfo.ScreeningTitle = value; }
         public List<string> AttendingFilmFans { get => _screeningInfo.Attendees; set => _screeningInfo.Attendees = value; }
         public bool IAttend => _screeningInfo.IAttend;
         public List<string> AttendingFriends => _screeningInfo.AttendingFriends;
@@ -109,16 +110,19 @@ namespace PresentScreenings.TableView
             string extra = fields[IndexByName["Extra"]];
 
             // Assign key properties.
-            FilmId = filmId;
+            OriginalFilmId = filmId;
             Screen = (from Screen s in ScreeningsPlan.Screens where s.ToString() == screen select s).First();
             DateTime startTime = DateTime.Parse(startTimeString);
             DateTime endTime = DateTime.Parse(endTimeString);
 
             // Get screening info.
-            var screeningInfos = ScreeningsPlan.ScreeningInfos.Where(s => s.FilmId == FilmId && s.Screen == Screen && s.StartTime == startTime).ToList();
+            var screeningInfos = ScreeningsPlan
+                .ScreeningInfos
+                .Where(s => s.OriginalFilmId == OriginalFilmId && s.Screen == Screen && s.StartTime == startTime)
+                .ToList();
             if (screeningInfos.Count == 0)
             {
-                _screeningInfo = new ScreeningInfo(FilmId, Screen, startTime);
+                _screeningInfo = new ScreeningInfo(OriginalFilmId, Screen, startTime);
                 StartTime = startTime;
                 EndTime = endTime;
                 ScreeningsPlan.ScreeningInfos.Add(_screeningInfo);
@@ -129,7 +133,7 @@ namespace PresentScreenings.TableView
             }
 
             // Assign other properties.
-            Film = (from Film film in ScreeningsPlan.Films where film.FilmId == filmId select film).First();
+            Film = (from Film film in ScreeningsPlan.Films where film.FilmId == FilmId select film).First();
             CombinationProgramId = int.TryParse(combinationIdStr, out int outcome) ? (int?)outcome : null;
             Subtitles = subtitles;
             QAndA = qAndA;
