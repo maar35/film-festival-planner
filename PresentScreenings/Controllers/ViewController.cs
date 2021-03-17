@@ -652,7 +652,7 @@ namespace PresentScreenings.TableView
             {
                 onDemandScreening.MoveStartTime(GetSpanToFit(onDemandScreening, forward));
                 Plan.InitializeDays();
-                UpdateAttendanceStatus(onDemandScreening);
+                UpdateDayAttendanceStatus(onDemandScreening);
                 ScreeningInfoDialog?.UpdateAttendances();
                 SetCurrScreening(onDemandScreening);
             }
@@ -664,8 +664,13 @@ namespace PresentScreenings.TableView
             Screening screening = Plan.CurrScreening;
             if (screening is OnDemandScreening onDemandScreening)
             {
+                var oldOverlappers = OverlappingScreenings(screening, true);
                 TimeSpan span = forward ? DaySpan : -DaySpan;
                 onDemandScreening.MoveStartTime(span);
+                foreach (var overlappingScreening in oldOverlappers)
+                {
+                    UpdateAttendanceStatus(overlappingScreening);
+                }
                 Plan.InitializeDays();
                 GoToDay(onDemandScreening.StartTime.Date);
                 UpdateAttendanceStatus(onDemandScreening);
