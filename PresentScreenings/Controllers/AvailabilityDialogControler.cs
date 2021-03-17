@@ -207,7 +207,7 @@ namespace PresentScreenings.TableView
             var scrollerHeight = _yCurr - _yControlsMargin - _controlHeight - _yBetweenControls;
             _yCurr -= scrollerHeight;
             var scrollerFrame = new CGRect(_xMargin, _yCurr, documentWidth, scrollerHeight);
-            var scrollerView = ControlsFactory.NewStandardScrollView(scrollerFrame, documentView);
+            var scrollerView = ControlsFactory.NewStandardScrollView(scrollerFrame, documentView, true);
             View.AddSubview(scrollerView);
 
             // Populate the document view.

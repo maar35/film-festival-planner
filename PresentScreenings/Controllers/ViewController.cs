@@ -331,7 +331,7 @@ namespace PresentScreenings.TableView
 
         public static ScreeningInfo GetScreeningInfo(int filmId, Screen screen, DateTime startTime)
         {
-            var info = ScreeningsPlan.ScreeningInfos.Where(s => s.FilmId == filmId && s.Screen == screen && s.StartTime == startTime).ToList();
+            var info = ScreeningsPlan.ScreeningInfos.Where(s => s.OriginalFilmId == filmId && s.Screen == screen && s.StartTime == startTime).ToList();
             return info.Count > 0 ? info.First() : null;
         }
         #endregion

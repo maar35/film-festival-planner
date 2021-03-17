@@ -214,7 +214,7 @@ namespace PresentScreenings.TableView
             var scrollViewHeight = _yCurr - _yBetweenViews - _buttonHeight - _yMargin;
             _yCurr -= scrollViewHeight;
             var scrollViewFrame = new CGRect(_xMargin, _yCurr, contentWidth, scrollViewHeight);
-            var scrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, screeningsView);
+            var scrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, screeningsView, true);
             View.AddSubview(scrollView);
 
             // Display the screenings.

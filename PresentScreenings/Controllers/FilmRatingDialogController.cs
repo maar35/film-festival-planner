@@ -163,7 +163,6 @@ namespace PresentScreenings.TableView
                     Identifier = friend,
                     SortDescriptorPrototype = sortDescriptor
                 };
-                nint tag = ScreeningInfo.MyFriends.IndexOf(friend);
                 _filmRatingTableView.AddColumn(friendColumn);
                 CGRect frame = _filmRatingTableView.Frame;
                 nfloat newRight = frame.X;
@@ -258,44 +257,20 @@ namespace PresentScreenings.TableView
             // Get the screenings from the event args.
             List<Screening> screenings = e.Screenings;
 
-            // Find the original film ID of each distinct screening title.
-            Dictionary<string, Film> filmByTitle = GetFilmByTitleDict(screenings);
-
             // Restore the original film ID in each of the given screenings.
-            RestoreOriginalFilmId(screenings, filmByTitle);
+            foreach (var screening in screenings)
+            {
+                screening.FilmId = screening.OriginalFilmId;
+            }
 
             // Update the world outside.
             PropagateScreeningUpdates(screenings);
 
             // Select the uncombined films.
-            SelectFilms(filmByTitle.Values.ToList());
-        }
-
-        private Dictionary<string, Film> GetFilmByTitleDict(List<Screening> screenings)
-        {
-            Dictionary<string, Film> filmByTitle = new Dictionary<string, Film> { };
-            List<string> distinctTitles = (
-                from Screening screening in screenings
-                select screening.ScreeningTitle
-            ).Distinct().ToList();
-            foreach (var distinctTitle in distinctTitles)
-            {
-                Film film = GetFilmByTitle(distinctTitle);
-                filmByTitle[distinctTitle] = film;
-            }
-            return filmByTitle;
-        }
-
-        private void RestoreOriginalFilmId(List<Screening> screenings, Dictionary<string, Film> filmByTitle)
-        {
-            foreach (var screening in screenings)
-            {
-                Film originalFilm = filmByTitle[screening.ScreeningTitle];
-                if (screening.FilmId != originalFilm.FilmId)
-                {
-                    screening.FilmId = originalFilm.FilmId;
-                }
-            }
+            var filmIds = screenings
+                .Select(s => s.FilmId)
+                .Distinct();
+            SelectFilms(filmIds.Select(f => ViewController.GetFilmById(f)).ToList());
         }
 
         private void PropagateScreeningUpdates(List<Screening> screenings)
