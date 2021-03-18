@@ -41,7 +41,7 @@ namespace PresentScreenings.TableView
         public AppDelegate()
 		{
             // Preferences.
-            Festival = "IFFR";
+            Festival = "Imagine";
             FestivalYear = "2021";
             PauseBetweenOnDemandScreenings = new TimeSpan(0, 30, 0);
             Screening.TravelTime = new TimeSpan(0, 30, 0);
