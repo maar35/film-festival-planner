@@ -421,34 +421,15 @@ namespace PresentScreenings.TableView
         public void UpdateAttendanceStatus(Screening screening)
         {
             UpdateOneAttendanceStatus(screening);
-
-            var overlappingScreenings = OverlappingScreenings(screening);
-            foreach (Screening overlappingScreening in overlappingScreenings)
-            {
-                UpdateOneAttendanceStatus(overlappingScreening);
-            }
-
-            var noTravelTimeScreenings = OverlappingScreenings(screening, true);
-            foreach (Screening noTravelTimeScreening in noTravelTimeScreenings)
-            {
-                UpdateOneAttendanceStatus(noTravelTimeScreening);
-            }
-
-            var screeningsWithSameFilm = ScreeningsWithSameFilm(screening);
-            foreach (Screening screeningWithSameFilm in screeningsWithSameFilm)
-            {
-                UpdateOneAttendanceStatus(screeningWithSameFilm);
-            }
+            UpdateOneAttendanceStatus(OverlappingScreenings(screening, true));
+            UpdateOneAttendanceStatus(ScreeningsWithSameFilm(screening));
         }
 
-        public void UpdateDayAttendanceStatus(Screening screening)
+        public void UpdateOneAttendanceStatus(List<Screening> screenings)
         {
-            UpdateOneAttendanceStatus(screening);
-
-            var dayScreenings = DayScreenings();
-            foreach (Screening dayScreening in dayScreenings)
+            foreach (var screening in screenings)
             {
-                UpdateOneAttendanceStatus(dayScreening);
+                UpdateOneAttendanceStatus(screening);
             }
         }
 
@@ -470,6 +451,15 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Methods working with movable screenings
+        private void MoveOnDemandScreening(OnDemandScreening onDemandScreening, TimeSpan span)
+        {
+            var oldOverlappers = OverlappingScreenings(onDemandScreening, true);
+            onDemandScreening.MoveStartTime(span);
+            UpdateOneAttendanceStatus(oldOverlappers);
+            Plan.InitializeDays();
+            UpdateAttendanceStatus(onDemandScreening);
+        }
+
         private TimeSpan GetSpanToFit(Screening screening, bool forward)
         {
             // Define helper functions.
@@ -647,12 +637,9 @@ namespace PresentScreenings.TableView
         public void MoveScreening(bool forward)
         {
             // Move the current screening to the nearest unattended space within the day.
-            Screening screening = Plan.CurrScreening;
-            if (screening is OnDemandScreening onDemandScreening)
+            if (Plan.CurrScreening is OnDemandScreening onDemandScreening)
             {
-                onDemandScreening.MoveStartTime(GetSpanToFit(onDemandScreening, forward));
-                Plan.InitializeDays();
-                UpdateDayAttendanceStatus(onDemandScreening);
+                MoveOnDemandScreening(onDemandScreening, GetSpanToFit(onDemandScreening, forward));
                 ScreeningInfoDialog?.UpdateAttendances();
                 SetCurrScreening(onDemandScreening);
             }
@@ -661,19 +648,10 @@ namespace PresentScreenings.TableView
         public void MoveScreening24Hours(bool forward)
         {
             // Move the current screening one day into the given direction.
-            Screening screening = Plan.CurrScreening;
-            if (screening is OnDemandScreening onDemandScreening)
+            if (Plan.CurrScreening is OnDemandScreening onDemandScreening)
             {
-                var oldOverlappers = OverlappingScreenings(screening, true);
-                TimeSpan span = forward ? DaySpan : -DaySpan;
-                onDemandScreening.MoveStartTime(span);
-                foreach (var overlappingScreening in oldOverlappers)
-                {
-                    UpdateAttendanceStatus(overlappingScreening);
-                }
-                Plan.InitializeDays();
+                MoveOnDemandScreening(onDemandScreening, forward ? DaySpan : -DaySpan);
                 GoToDay(onDemandScreening.StartTime.Date);
-                UpdateAttendanceStatus(onDemandScreening);
                 SetCurrScreening(onDemandScreening);
             }
         }
