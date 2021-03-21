@@ -405,7 +405,6 @@ namespace PresentScreenings.TableView
             {
                 string informativeText = $"'{ex.Message}' is not a valid rating.\n{filmFan}'s rating of '{GetFilmById(filmId)}' remains {oldRatingString}.";
                 AlertRaiser.RunInformationalAlert("Rating Not Changed", informativeText);
-                newRatingString = oldRatingString;
             }
         }
 

@@ -22,6 +22,7 @@ namespace PresentScreenings.TableView
         public static FilmRating Unrated => new FilmRating(_valueUnrated);
         public static FilmRating LowestSuperRating => new FilmRating(Values[_lowestSuperRatingIndex]);
         public static FilmRating MaxRating => new FilmRating(Values[Values.Count - 1]);
+        public static bool RatingChanged { get; set; } = false;
         public string Value { get; private set; }
         public bool IsUnrated => Value == _valueUnrated;
         #endregion
@@ -29,10 +30,7 @@ namespace PresentScreenings.TableView
         #region Constructors
         public FilmRating(string rating)
         {
-            if (!SetRating(rating))
-            {
-                Value = _valueUnrated;
-            }
+            Value = Values.Contains(rating) ? rating : _valueUnrated;
         }
         #endregion
 
@@ -63,7 +61,7 @@ namespace PresentScreenings.TableView
             return CompareTo(otherRating) >= 0;
         }
 
-        public void Decrease ()
+        public void Decrease()
         {
             try
             {
@@ -79,6 +77,7 @@ namespace PresentScreenings.TableView
             if (Values.Contains(newRating))
             {
                 Value = newRating;
+                RatingChanged = true;
                 return true;
             }
             return false;

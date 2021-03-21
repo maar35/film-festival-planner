@@ -21,13 +21,11 @@ namespace PresentScreenings.TableView
         bool _textBeingEdited = false;
         ViewController _presentor;
         FilmTableDataSource _filmTableDataSource;
-        #endregion
-
-        #region Application Access
-        static AppDelegate _app => (AppDelegate)NSApplication.SharedApplication.Delegate;
+        Dictionary<bool, string> _titleByChanged;
         #endregion
 
         #region Properties
+        static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
         public NSTableView FilmRatingTableView => _filmRatingTableView;
         public NSButton DoneButton => _closeButton;
         public bool TextBeingEdited
@@ -53,6 +51,9 @@ namespace PresentScreenings.TableView
         #region Constructors
         public FilmRatingDialogController(IntPtr handle) : base(handle)
         {
+            _titleByChanged = new Dictionary<bool, string> { };
+            _titleByChanged.Add(false, "Close");
+            _titleByChanged.Add(true, "Save");
         }
         #endregion
 
@@ -61,7 +62,7 @@ namespace PresentScreenings.TableView
         {
             base.AwakeFromNib();
 
-            _presentor = _app.Controller;
+            _presentor = App.Controller;
         }
 
         public override void ViewDidLoad()
@@ -87,11 +88,11 @@ namespace PresentScreenings.TableView
             base.ViewWillAppear();
 
             // Create the Film Table Data Source and populate it
-            _filmTableDataSource = new FilmTableDataSource(_app);
+            _filmTableDataSource = new FilmTableDataSource(App);
             SetFilmsWithScreenings();
 
             // Tell the app delegate we're alive.
-            _app.FilmsDialogController = this;
+            App.FilmsDialogController = this;
 
             // Inactivate screenings view actions.
             _presentor.RunningPopupsCount++;
@@ -112,7 +113,7 @@ namespace PresentScreenings.TableView
             base.ViewWillDisappear();
 
             // Tell the app delegate we're gone.
-            _app.FilmsDialogController = null;
+            App.FilmsDialogController = null;
 
             // Tell the main view controller we're gone.
             _presentor.RunningPopupsCount--;
@@ -199,7 +200,7 @@ namespace PresentScreenings.TableView
         private void SetTypeMatchMethodControlStates()
         {
             _typeMatchMethodCheckBox.State = TypeMatchFromBegin ? NSCellStateValue.On : NSCellStateValue.Off;
-            _app.ToggleTypeMatchMenuItem.State = TypeMatchFromBegin ? NSCellStateValue.On : NSCellStateValue.Off;
+            App.ToggleTypeMatchMenuItem.State = TypeMatchFromBegin ? NSCellStateValue.On : NSCellStateValue.Off;
         }
 
         private void SetFilmsWithScreenings()
@@ -283,7 +284,7 @@ namespace PresentScreenings.TableView
             SetFilmRatingDialogButtonStates();
 
             // Update the menu item states.
-            _app.ScreeningMenuDelegate.ForceRepopulateFilmMenuItems();
+            App.ScreeningMenuDelegate.ForceRepopulateFilmMenuItems();
 
             // Update the screening states.
             foreach (var screening in screenings)
@@ -327,6 +328,7 @@ namespace PresentScreenings.TableView
             _goToScreeningButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             _downloadFilmInfoButton.Enabled = false;
             DoneButton.Enabled = !TextBeingEdited;
+            DoneButton.Title = _titleByChanged[FilmRating.RatingChanged];
         }
 
         public void SelectFilms(List<Film> films)
@@ -378,6 +380,18 @@ namespace PresentScreenings.TableView
 
         public void CloseDialog()
         {
+            if (FilmRating.RatingChanged)
+            {
+                // Save the ratings.
+                App.WriteFilmFanFilmRatings();
+
+                // Trigger a local notification.
+                string title = "Ratings saved";
+                string text = $"Film fan ratings have been saved in {AppDelegate.DocumentsFolder}.";
+                AlertRaiser.RaiseNotification(title, text);
+            }
+
+            // Close the dialog.
             _presentor.DismissViewController(this);
         }
         #endregion
