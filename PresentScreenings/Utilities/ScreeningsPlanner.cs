@@ -50,6 +50,7 @@ namespace PresentScreenings.TableView
                     .OrderByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.AttendedByFriend)
                     .ThenByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.Free)
                     .ThenBy(s => s.FilmScreeningCount)
+                    .ThenBy(s => s is OnDemandScreening)
                     .ThenByDescending(s => s.StartTime)
                     .ToList();
 
@@ -116,7 +117,7 @@ namespace PresentScreenings.TableView
         private bool IsPlannable(Screening screening, List<Film> films)
         {
             var inSelectedFilms = films.Any(f => f.FilmId == screening.FilmId);
-            return screening.IsPlannable && inSelectedFilms && screening.Location;
+            return screening.IsPlannable && inSelectedFilms;
         }
 
         private bool HasAttendedScreening(Film film, string filmFan)
