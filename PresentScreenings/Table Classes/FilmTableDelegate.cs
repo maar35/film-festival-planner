@@ -206,6 +206,7 @@ namespace PresentScreenings.TableView
         {
             int filmId = _dataSource.Films[(int)field.Tag].FilmId;
             _controller.SetRatingIfValid(field, r => field.StringValue, filmId, filmFan);
+            _dialogController.SetFilmRatingDialogButtonStates();
         }
         #endregion
     }

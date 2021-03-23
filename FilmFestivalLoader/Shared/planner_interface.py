@@ -328,8 +328,8 @@ class FestivalData:
             screen_id = self.curr_screen_id
             abbr = name.replace(" ", "").lower()
             print(f"NEW LOCATION:  '{city} {name}' => {abbr}")
-            self.screen_by_location[screen_key] = Screen(screen_id, city, name, abbr)
-            screen = self.screen_by_location[screen_key]
+            screen = Screen(screen_id, city, name, abbr)
+            self.screen_by_location[screen_key] = screen
         return screen
 
     def splitrec(self, line, sep):

@@ -41,7 +41,7 @@ namespace PresentScreenings.TableView
         public AppDelegate()
 		{
             // Preferences.
-            Festival = "IFFR";
+            Festival = "Imagine";
             FestivalYear = "2021";
             PauseBetweenOnDemandScreenings = new TimeSpan(0, 30, 0);
             Screening.TravelTime = new TimeSpan(0, 30, 0);
@@ -115,8 +115,7 @@ namespace PresentScreenings.TableView
                 WriteFilmFanAvailabilities(directory);
 
                 // Write film ratings.
-                string ratingsPath = Path.Combine(directory, "ratings.csv");
-                new FilmFanFilmRating().WriteListToFile(ratingsPath, ScreeningsPlan.FilmFanFilmRatings);
+                WriteFilmFanFilmRatings(directory);
 
                 // Write screening info.
                 string screeningInfosPath = Path.Combine(directory, "screeninginfo.csv");
@@ -144,6 +143,16 @@ namespace PresentScreenings.TableView
             }
             string availabilitiesPath = Path.Combine(directory, "availabilities.csv");
             new FilmFanAvailability().WriteListToFile(availabilitiesPath, ScreeningsPlan.Availabilities);
+        }
+
+        public void WriteFilmFanFilmRatings(string directory = null)
+        {
+            if (directory == null)
+            {
+                directory = DocumentsFolder;
+            }
+            string ratingsPath = Path.Combine(directory, "ratings.csv");
+            new FilmFanFilmRating().WriteListToFile(ratingsPath, ScreeningsPlan.FilmFanFilmRatings);
         }
 
         partial void ToggleClickableLabels(Foundation.NSObject sender)

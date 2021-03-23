@@ -10,6 +10,7 @@ import html.parser
 import urllib.request
 import urllib.error
 import urllib.parse
+import inspect
 
 
 def iripath_to_uripath(path):
@@ -43,6 +44,32 @@ class HtmlCharsetParser(html.parser.HTMLParser):
 
 
 class HtmlPageParser(html.parser.HTMLParser):
+
+    class StateStack:
+
+        def __init__(self, print_debug, state):
+            self.print_debug = print_debug
+            self.stack = [state]
+
+        def _print_debug(self, new_state):
+            frame = inspect.currentframe().f_back
+            caller = frame.f_code.co_name if frame.f_code is not None else 'code'
+            self.print_debug(f'Parsing state after {caller:6} is {new_state}', '')
+
+        def push(self, state):
+            self.stack.append(state)
+            self._print_debug(state)
+
+        def pop(self):
+            self.stack[-1:] = []
+            self._print_debug(self.stack[-1])
+
+        def change(self, state):
+            self.stack[-1] = state
+            self._print_debug(state)
+
+        def state_is(self, state):
+            return state == self.stack[-1]
 
     def __init__(self, debug_recorder, debug_prefix):
         html.parser.HTMLParser.__init__(self)

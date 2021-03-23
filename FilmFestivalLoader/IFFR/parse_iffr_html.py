@@ -235,27 +235,6 @@ class FilmPageParser(HtmlPageParser):
         AFTER_SCREENING = auto()
         DONE = auto()
 
-    class StateStack:
-
-        def __init__(self, print_debug, state):
-            self.print_debug = print_debug
-            self.stack = [state]
-
-        def push(self, state):
-            self.stack.append(state)
-            self.print_debug(f'Screenings parsing state after PUSH is {state}', '')
-
-        def pop(self):
-            self.stack[-1:] = []
-            self.print_debug(f'Screenings parsing state after POP is {self.stack[-1]}', '')
-
-        def change(self, state):
-            self.stack[-1] = state
-            self.print_debug(f'Entered a new SCREENING STATE {state}', '')
-
-        def state_is(self, state):
-            return state == self.stack[-1]
-
     on_demand_location = "OnDemand"
     nl_month_by_name = {}
     nl_month_by_name['januari'] = 1
