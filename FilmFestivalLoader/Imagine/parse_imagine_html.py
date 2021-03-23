@@ -22,6 +22,7 @@ import web_tools
 festival = 'Imagine'
 year = 2021
 city = 'Amsterdam'
+ondemand_available_hours = 48
 
 # Directories:
 documents_dir = os.path.expanduser("~/Documents/Film/{0}/{0}{1}".format(festival, year))
@@ -63,7 +64,7 @@ def main():
     else:
         write_film_list = True
 
-    # Display error when found.
+    # Display errors when found.
     if Globals.error_collector.error_count() > 0:
         comment('Encountered some errors:')
         print(Globals.error_collector)
@@ -104,7 +105,7 @@ def write_lists(imagine_data, write_film_list, write_other_lists):
         imagine_data.write_screens()
         imagine_data.write_screenings()
     else:
-        print("Screens and screenings NOT WRITTEN")
+        print("Film info, screens and screenings NOT WRITTEN")
 
 
 class Globals:
@@ -153,9 +154,6 @@ class HtmlPageParser(web_tools.HtmlPageParser):
         web_tools.HtmlPageParser.__init__(self, Globals.debug_recorder, debug_prefix)
         self.imagine_data = imagine_data
         self.debugging = False
-
-    def attr_str(self, attr, index):
-        return (str)(attr[index])
 
 
 class AzPageParser(HtmlPageParser):
@@ -245,27 +243,6 @@ class FilmPageParser(HtmlPageParser):
         IN_EXTRA = auto()
         DONE = auto()
 
-    class StateStack:
-
-        def __init__(self, print_debug, state):
-            self.print_debug = print_debug
-            self.stack = [state]
-
-        def push(self, state):
-            self.stack.append(state)
-            self.print_debug(f'Screenings parsing state after PUSH is {state}', '')
-
-        def pop(self):
-            self.stack[-1:] = []
-            self.print_debug(f'Screenings parsing state after POP is {self.stack[-1]}', '')
-
-        def change(self, state):
-            self.stack[-1] = state
-            self.print_debug(f'Entered a new SCREENING STATE {state}', '')
-
-        def state_is(self, state):
-            return state == self.stack[-1]
-
     nl_month_by_name = {}
     nl_month_by_name['mar'] = 3
     nl_month_by_name['apr'] = 4
@@ -304,7 +281,6 @@ class FilmPageParser(HtmlPageParser):
 
     def update_filminfo(self):
         if self.filminfo is not None:
-            # self.article = self.metadata.replace('\n\n\n', '\n') + '\n' + self.article
             self.article = re.sub('\n\n+', '\n', self.metadata).rstrip() + '\n\n' + self.article.lstrip()
             if self.article is not None and len(self.article) > 0:
                 self.filminfo.article = self.article
@@ -326,7 +302,6 @@ class FilmPageParser(HtmlPageParser):
 
     def set_screening_info(self, data):
         self.print_debug('Found SCREENING info', data)
-        print(f'Found the extra\'s section for {self.film.title}: {data}')
         parts = data.split(self.film.title)
         if len(parts) > 1:
             searchtext = parts[1]
@@ -339,7 +314,7 @@ class FilmPageParser(HtmlPageParser):
 
     def add_screening(self):
         # Calculate the screening's (virtual) end time.
-        duration = self.film.duration if self.screen.type != 'OnDemand' else datetime.timedelta(hours=48)
+        duration = self.film.duration if self.screen.type != 'OnDemand' else datetime.timedelta(hours=ondemand_available_hours)
         self.end_dt = self.start_dt + duration
 
         # Print the screening propoerties.
@@ -367,9 +342,13 @@ class FilmPageParser(HtmlPageParser):
         # Initialize the next round of parsing.
         self.init_screening_data()
 
+    def parse_imagine_category(self, data):
+        items = data.split(',')  # Feature, 88min
+        return items[0].strip()
+
     def parse_duration(self, data):
-        duration = data.split(',')[1]
-        return datetime.timedelta(minutes=int(duration.strip().rstrip('min')))
+        items = data.split(',')  # Feature, 88min
+        return datetime.timedelta(minutes=int(items[1].strip().rstrip('min')))
 
     def parse_date(self, data):
         items = data.split()  # 10 apr
@@ -443,7 +422,7 @@ class FilmPageParser(HtmlPageParser):
             self.stateStack.pop()
             self.metadata += data.strip()
             self.film.duration = self.parse_duration(data)
-            self.filminfo.description = data.split(',')[0].strip() + ' - ' + self.filminfo.description
+            self.filminfo.description = self.parse_imagine_category(data) + ' - ' + self.filminfo.description
         elif self.stateStack.state_is(self.ScreeningsParseState.IN_META_DATA):
             self.metadata += '\n' + data.strip()
             if 'ondertiteld' in data:
