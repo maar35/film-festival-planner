@@ -46,6 +46,7 @@ namespace PresentScreenings.TableView
                     && _app.UncombineTitleController == null
                     && (item.Tag == _visitFilmWebsiteMenuItemTag || _app.FilmInfoController == null)
                     && (item.Tag == _visitFilmWebsiteMenuItemTag || _app.Controller.ScreeningInfoDialog == null)
+                    || (item.Tag == _visitFilmWebsiteMenuItemTag && _app.AnalyserDialogController != null)
                     || (item.Tag == _showFilmInfoMenuItemTag && _app.Controller.ScreeningInfoDialog != null)
                     || (item.Tag == _showFilmInfoMenuItemTag && _app.Controller.RunningPopupsCount == 0)
                     )
@@ -71,6 +72,8 @@ namespace PresentScreenings.TableView
                             item.Enabled = _app.FilmInfoController != null
                                 || _app.Controller.ScreeningInfoDialog != null
                                 || _app.Controller.RunningPopupsCount == 0
+                                || (_app.AnalyserDialogController != null
+                                    && _app.AnalyserDialogController.GetSelectedFilm() != null)
                                 || (controller != null
                                     && !controller.TextBeingEdited
                                     && controller.OneFilmSelected());

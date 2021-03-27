@@ -117,17 +117,6 @@ namespace PresentScreenings.TableView
                 // Write screening info.
                 string screeningInfosPath = Path.Combine(directory, "screeninginfo.csv");
                 new ScreeningInfo().WriteListToFile(screeningInfosPath, ScreeningsPlan.ScreeningInfos);
-
-                // Write screenings summary.
-                string summaryPath = Path.Combine(directory, "Screenings Summary.csv");
-                new Screening().WriteListToFile(summaryPath, Controller.Plan.AttendedScreenings());
-
-                // Write ratings sheet.
-                string sheetPath = Path.Combine(directory, "RatingsSheet.csv");
-                new Film().WriteListToFile(sheetPath, ScreeningsPlan.Films.Where(f =>
-                {
-                    return f.Duration >= FilmRatingDialogController.MinimalDuration;
-                }).ToList());
             });
         }
         public void WriteFilmFanAvailabilities(string directory = null)
@@ -146,8 +135,21 @@ namespace PresentScreenings.TableView
             {
                 directory = DocumentsFolder;
             }
+
+            // Save the ratings.
             string ratingsPath = Path.Combine(directory, "ratings.csv");
             new FilmFanFilmRating().WriteListToFile(ratingsPath, ScreeningsPlan.FilmFanFilmRatings);
+
+            // Write ratings sheet.
+            string sheetPath = Path.Combine(directory, "RatingsSheet.csv");
+            new Film().WriteListToFile(sheetPath, ScreeningsPlan.Films.Where(f =>
+            {
+                return f.Duration >= FilmRatingDialogController.MinimalDuration;
+            }).ToList());
+
+            // Write screenings summary.
+            string summaryPath = Path.Combine(directory, "Screenings Summary.csv");
+            new Screening().WriteListToFile(summaryPath, Controller.Plan.AttendedScreenings());
         }
         #endregion
 

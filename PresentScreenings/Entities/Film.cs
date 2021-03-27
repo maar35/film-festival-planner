@@ -75,7 +75,7 @@ namespace PresentScreenings.TableView
 
         public override string WriteHeader()
         {
-            return "title;duration;maarten;adrienne;url;description";
+            return "title;duration;maarten;adrienne;genre;url;description";
         }
 
         public override string Serialize()
@@ -89,6 +89,7 @@ namespace PresentScreenings.TableView
             fields.Add(ViewController.GetFilmFanFilmRating(this, "Adrienne").ToString());
             var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == FilmId);
             var filmInfo = filmInfoList.Count() == 1 ? filmInfoList.First() : null;
+            fields.Add(filmInfo != null ? filmInfo.GetGenreDescription() : "");
             fields.Add(filmInfo != null ? filmInfo.Url : "");
             fields.Add(filmInfo != null ? Screening.HtmlDecode(filmInfo.FilmDescription.Replace("\n", " ")) : "");
 

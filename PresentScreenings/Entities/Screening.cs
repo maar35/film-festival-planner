@@ -156,7 +156,7 @@ namespace PresentScreenings.TableView
 
         public override string WriteHeader()
         {
-            string headerFmt = "weekday;date;{0};screen;starttime;endtime;vod till;title;duration;filmsinscreening;extra;qanda;subtitles;url;mainfilmdescription";
+            string headerFmt = "weekday;date;{0};screen;starttime;endtime;vod till;title;duration;rating;filmsinscreening;extra;qanda;subtitles;genre;url;mainfilmdescription";
             return string.Format(headerFmt, ScreeningInfo.FilmFansString().Replace(',', ';'));
         }
 
@@ -188,12 +188,14 @@ namespace PresentScreenings.TableView
             fields.Add(AvailableTillString());
             fields.Add($"{Film}");
             fields.Add($"{Film.MinutesString}");
+            fields.Add(ShortFriendsString(true));
             fields.Add(FilmsInScreening.ToString());
             fields.Add(Extra);
             fields.Add(QAndA);
             fields.Add(Subtitles);
             var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == FilmId);
             var filmInfo = filmInfoList.Count() == 1 ? filmInfoList.First() : null;
+            fields.Add(filmInfo != null ? filmInfo.GetGenreDescription() : "");
             fields.Add(filmInfo != null ? filmInfo.Url : "");
             fields.Add(filmInfo != null ? HtmlDecode(filmInfo.FilmDescription) : "");
 
@@ -374,13 +376,19 @@ namespace PresentScreenings.TableView
         /// who rated the film but do not attend the screening in lower case.
         /// Does not display all film fans because 'my attendance' follows from
         /// the label color.
+        /// 'Me' can be included through an optional argument though.
         /// </summary>
         /// <returns></returns>
-        public string ShortFriendsString()
+        public string ShortFriendsString(bool includeMe = false)
         {
             var screeningFilmRatings = ScreeningsPlan.FilmFanFilmRatings.Where(f => f.FilmId == FilmId);
             var builder = new StringBuilder();
-            foreach (string friend in ScreeningInfo.MyFriends)
+            var filmFanList = ScreeningInfo.MyFriends;
+            if (includeMe)
+            {
+                filmFanList.Insert(0, ScreeningInfo.Me);
+            }
+            foreach (string friend in filmFanList)
             {
                 var friendRatings = screeningFilmRatings.Where(f => f.FilmFan == friend);
                 bool friendHasRated = friendRatings.Any();

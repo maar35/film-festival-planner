@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using AppKit;
+using Foundation;
 using PresentScreenings.TableView.TableClasses;
 
 namespace PresentScreenings.TableView
@@ -173,6 +174,14 @@ namespace PresentScreenings.TableView
         {
             CleanupOutlinables(_dataSource.FilmOutlinables);
             _presentor.DismissViewController(this);
+        }
+        #endregion
+
+        #region Custom Actions
+        [Action("VisitFilmWebsite:")]
+        void VisitFilmWebsite(NSObject sender)
+        {
+            ViewController.VisitFilmWebsite(GetSelectedFilm());
         }
         #endregion
     }
