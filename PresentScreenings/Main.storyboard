@@ -377,9 +377,9 @@
                                     </items>
                                 </menu>
                             </menuItem>
-                            <menuItem title="Films" id="fp5-D0-0vn">
+                            <menuItem title="Film" id="fp5-D0-0vn">
                                 <modifierMask key="keyEquivalentModifierMask"/>
-                                <menu key="submenu" title="Films" id="H0R-t1-cOF">
+                                <menu key="submenu" title="Film" id="H0R-t1-cOF">
                                     <items>
                                         <menuItem title="Edit Film Ratings" tag="501" keyEquivalent="r" id="l2M-r4-jN4">
                                             <connections>
@@ -395,8 +395,14 @@
 DQ
 </string>
                                         </menuItem>
-                                        <menuItem title="Combine Titles" tag="504" keyEquivalent="k" id="sG4-4A-cBU"/>
-                                        <menuItem title="Uncombine Title" tag="505" keyEquivalent="K" id="NR9-b1-rZW"/>
+                                        <menuItem title="Open Film Website" tag="504" id="0hx-SW-HY4">
+                                            <string key="keyEquivalent" base64-UTF8="YES">
+DQ
+</string>
+                                            <modifierMask key="keyEquivalentModifierMask" shift="YES" command="YES"/>
+                                        </menuItem>
+                                        <menuItem title="Combine Titles" tag="505" keyEquivalent="k" id="sG4-4A-cBU"/>
+                                        <menuItem title="Uncombine Title" tag="506" keyEquivalent="K" id="NR9-b1-rZW"/>
                                         <menuItem isSeparatorItem="YES" id="2qy-BY-Op3"/>
                                     </items>
                                 </menu>
@@ -408,12 +414,6 @@ DQ
                                         <menuItem title="Show Screening Info" tag="201" keyEquivalent="i" id="xdF-lq-5IE">
                                             <connections>
                                                 <action selector="ShowScreeningInfo:" target="Voe-Tx-rLC" id="Kna-6U-yif"/>
-                                            </connections>
-                                        </menuItem>
-                                        <menuItem title="Show Film Info" tag="202" keyEquivalent="i" id="Vnl-WP-Kdg">
-                                            <modifierMask key="keyEquivalentModifierMask" option="YES" command="YES"/>
-                                            <connections>
-                                                <action selector="TryShowFilmInfo:" target="Ady-hI-5gd" id="fMM-P2-mgW"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem isSeparatorItem="YES" id="KFc-Ms-vYF"/>
@@ -930,7 +930,7 @@ Gw
                             <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="0fB-1r-jAn">
                                 <rect key="frame" x="14" y="478" width="48" height="32"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                                <buttonCell key="cell" type="push" title="Info" bezelStyle="rounded" image="NSInfo" imagePosition="only" alignment="center" alternateImage="NSNetwork" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Fy9-GM-W0w">
+                                <buttonCell key="cell" type="push" title="Info" bezelStyle="rounded" image="NSInfo" imagePosition="only" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="Fy9-GM-W0w">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
                                 </buttonCell>
@@ -1000,13 +1000,13 @@ Gw
                         <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <scrollView autohidesScrollers="YES" horizontalLineScroll="19" horizontalPageScroll="10" verticalLineScroll="19" verticalPageScroll="10" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="VCv-Jr-uiq">
-                                <rect key="frame" x="20" y="60" width="877" height="553"/>
+                                <rect key="frame" x="20" y="60" width="877" height="457"/>
                                 <clipView key="contentView" drawsBackground="NO" id="lfs-rW-7gy">
-                                    <rect key="frame" x="1" y="1" width="875" height="551"/>
+                                    <rect key="frame" x="1" y="1" width="875" height="455"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <subviews>
                                         <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="firstColumnOnly" columnSelection="YES" autosaveColumns="NO" rowSizeStyle="automatic" headerView="phV-Fb-8ew" viewBased="YES" id="yF0-fE-yMF">
-                                            <rect key="frame" x="0.0" y="0.0" width="875" height="528"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="875" height="432"/>
                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                             <size key="intercellSpacing" width="3" height="2"/>
                                             <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -1254,10 +1254,10 @@ DQ
             </objects>
             <point key="canvasLocation" x="553" y="674.5"/>
         </scene>
-        <!--Combine Title View Controler-->
+        <!--Combine Titles-->
         <scene sceneID="bHF-hp-bF2">
             <objects>
-                <viewController id="aXh-o3-u1V" customClass="CombineTitleViewControler" colorLabel="IBBuiltInLabel-Red" sceneMemberID="viewController">
+                <viewController title="Combine Titles" id="aXh-o3-u1V" customClass="CombineTitleViewControler" colorLabel="IBBuiltInLabel-Red" sceneMemberID="viewController">
                     <view key="view" id="QwR-HM-5ft">
                         <rect key="frame" x="0.0" y="0.0" width="484" height="249"/>
                         <autoresizingMask key="autoresizingMask"/>
@@ -1332,10 +1332,10 @@ Gw
             </objects>
             <point key="canvasLocation" x="550" y="1351"/>
         </scene>
-        <!--Uncombine Title Popover Controller-->
+        <!--Uncombine Title-->
         <scene sceneID="QRr-MY-F7K">
             <objects>
-                <viewController id="xwY-ys-qMS" customClass="UncombineTitlePopoverController" sceneMemberID="viewController">
+                <viewController title="Uncombine Title" id="xwY-ys-qMS" customClass="UncombineTitlePopoverController" sceneMemberID="viewController">
                     <view key="view" id="npA-NG-Mcr">
                         <rect key="frame" x="0.0" y="0.0" width="408" height="375"/>
                         <autoresizingMask key="autoresizingMask"/>
@@ -1345,10 +1345,10 @@ Gw
             </objects>
             <point key="canvasLocation" x="1028" y="1414"/>
         </scene>
-        <!--Film Info Controller-->
+        <!--Film Info-->
         <scene sceneID="1sJ-mx-miZ">
             <objects>
-                <viewController title="Film Info Controller" id="heZ-Uf-iae" customClass="FilmInfoSheetController" sceneMemberID="viewController">
+                <viewController title="Film Info" id="heZ-Uf-iae" customClass="FilmInfoSheetController" sceneMemberID="viewController">
                     <view key="view" id="cJm-1J-zdj">
                         <rect key="frame" x="0.0" y="0.0" width="408" height="569"/>
                         <autoresizingMask key="autoresizingMask"/>
@@ -1545,8 +1545,8 @@ Gw
         </scene>
     </scenes>
     <inferredMetricsTieBreakers>
-        <segue reference="GdS-O0-lhM"/>
-        <segue reference="aIf-jF-vlz"/>
+        <segue reference="Aco-xL-TKu"/>
+        <segue reference="MQZ-rL-cxz"/>
     </inferredMetricsTieBreakers>
     <resources>
         <image name="NSActionTemplate" width="15" height="15"/>

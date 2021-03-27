@@ -57,7 +57,6 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-
         #region Override Methods
         public override void MenuWillHighlightItem(NSMenu menu, NSMenuItem item)
         {

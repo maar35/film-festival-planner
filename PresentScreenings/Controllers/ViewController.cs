@@ -609,6 +609,12 @@ namespace PresentScreenings.TableView
             PerformSegue("ScreeningsToScreeningInfo:", control);
         }
 
+        public static void VisitFilmWebsite(Film film)
+        {
+            string url = film.Url;
+            NSWorkspace.SharedWorkspace.OpenUrl(new NSUrl(url));
+        }
+
         public void ToggleTicketsBought()
         {
             Screening screening = _plan.CurrScreening;
@@ -661,8 +667,8 @@ namespace PresentScreenings.TableView
             PerformSegue("FilmRatingSegue", sender);
         }
 
-        [Action("TryShowFilmInfo:")]
-        internal void TryShowFilmInfo(NSObject sender)
+        [Action("ShowFilmInfo:")]
+        internal void ShowFilmInfo(NSObject sender)
         {
             PerformSegue("ScreeningsToFilmInfo", sender);
         }

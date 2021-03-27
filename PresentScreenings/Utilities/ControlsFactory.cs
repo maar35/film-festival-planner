@@ -22,6 +22,8 @@ namespace PresentScreenings.TableView
         public const float StandardLabelWidth = 128;
         public const float StandardLabelHeight = 19;
         public const float SmallControlWidth = 64;
+        public const float StandardButtomImageSide = 20;
+        public const float StandardImageButtonWidth = 47;
         public const string EscapeKey = "\x1b";
         public const string EnterKey = "\r";
         #endregion
@@ -61,10 +63,25 @@ namespace PresentScreenings.TableView
 
         public static NSButton NewCancelButton(CGRect frame)
         {
-            var cancelButton = ControlsFactory.NewStandardButton(frame);
+            var cancelButton = NewStandardButton(frame);
             cancelButton.Title = "Cancel";
             cancelButton.KeyEquivalent = EscapeKey;
             return cancelButton;
+        }
+
+        public static NSButton NewVisitWebsiteButton(float x, float y)
+        {
+            CGRect websiteButtonRect = new CGRect(x, y, StandardImageButtonWidth, StandardButtonHeight);
+            NSButton websiteButton = NewStandardButton(websiteButtonRect);
+            websiteButton.Image = NSImage.ImageNamed("NSNetwork");
+            websiteButton.Image.Size = new CGSize(StandardButtomImageSide, StandardButtomImageSide);
+            websiteButton.Action = new ObjCRuntime.Selector("VisitFilmWebsite:");
+            return websiteButton;
+        }
+
+        public static NSButton NewVisitWebsiteButton(nfloat x, nfloat y)
+        {
+            return NewVisitWebsiteButton((float)x, (float)y);
         }
 
         public static NSButton NewCheckbox(CGRect frame)
