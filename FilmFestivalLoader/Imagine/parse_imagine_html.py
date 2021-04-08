@@ -311,6 +311,8 @@ class FilmPageParser(HtmlPageParser):
             self.qa = 'Q&A'
         if '+' in searchtext:
             self.extra = searchtext.split('+')[1].strip()
+        if searchtext.endswith('(besloten)'):
+            self.audience = 'besloten'
 
     def add_screening(self):
         # Calculate the screening's (virtual) end time.

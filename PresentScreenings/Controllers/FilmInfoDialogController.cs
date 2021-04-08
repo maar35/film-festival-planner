@@ -21,14 +21,18 @@ namespace PresentScreenings.TableView
     public partial class FilmInfoDialogController : NSViewController
     {
         #region Constants
-        const float _xMargin = ControlsFactory.HorizontalMargin;
-        const float _yMargin = ControlsFactory.BigVerticalMargin;
-        const float _yBetweenViews = ControlsFactory.VerticalPixelsBetweenViews;
-        const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
-        const float _labelHeight = ControlsFactory.StandardLabelHeight;
-        const float _buttonWidth = ControlsFactory.StandardButtonWidth;
-        const float _buttonHeight = ControlsFactory.StandardButtonHeight;
-        const float _summaryBoxHeight = 300;
+        private const float _xMargin = ControlsFactory.HorizontalMargin;
+        private const float _yMargin = ControlsFactory.BigVerticalMargin;
+        private const float _yBetweenViews = ControlsFactory.VerticalPixelsBetweenViews;
+        private const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
+        private const float _labelHeight = ControlsFactory.StandardLabelHeight;
+        private const float _buttonWidth = ControlsFactory.StandardButtonWidth;
+        private const float _buttonHeight = ControlsFactory.StandardButtonHeight;
+        private const float _imageSide = ControlsFactory.StandardButtomImageSide;
+        private const float _imageButtonWidth = ControlsFactory.StandardImageButtonWidth;
+        private const float _summaryBoxHeight = 300;
+        private const int _maxVisibleScreeningCount = 5;
+        private const float _scrollViewHeight = _maxVisibleScreeningCount * (_labelHeight + _yBetweenLabels);
         #endregion
 
         #region Private Variables
@@ -41,7 +45,6 @@ namespace PresentScreenings.TableView
         private NSColor _originalSummaryFieldColor;
         private bool _summaryFieldFormatIsOriginal;
         private NSScrollView _summaryScrollView;
-        private NSTextField _linkButton;
         private NSButton _cancelButton;
         private FilmScreeningControl _currentScreeningControl;
         private NSView _sampleView;
@@ -68,6 +71,9 @@ namespace PresentScreenings.TableView
             // Tell the app delegate that we're alive.
             App.FilmInfoController = this;
 
+            // Inactivate screenings view actions.
+            App.Controller.RunningPopupsCount++;
+
             // Get the selected film.
             _film = ((IScreeningProvider)Presentor).CurrentFilm;
 
@@ -86,12 +92,15 @@ namespace PresentScreenings.TableView
             Presentor.DisableResizing(this, _sampleView);
         }
 
-        public override void ViewWillDisappear()
+        public override void ViewDidDisappear()
         {
-            base.ViewWillDisappear();
+            base.ViewDidDisappear();
 
             // Tell the app delegate that we're gone.
             App.FilmInfoController = null;
+
+            // Tell the main view controller we're gone.
+            App.Controller.RunningPopupsCount--;
         }
         #endregion
 
@@ -122,20 +131,17 @@ namespace PresentScreenings.TableView
 
         private void PopulateAsModal()
         {
-            // Create the film article link.
-            _yCurr -= _yBetweenViews;
-            CreateFilmArticleLink();
-
             // Create the film summary box.
             _yCurr -= _yBetweenViews;
-            CreateFilmSummaryBox(_summaryBoxHeight);
+            CreateFilmSummaryBox(_yCurr - _scrollViewHeight - 2 * _yBetweenViews - _buttonHeight - _yMargin);
 
             // Create the screenings scroll view.
             _yCurr -= _yBetweenViews;
             CreateScreeningsScrollView();
 
-            // Create the cancel button.
-            CreateCancelButton();
+            // Create the buttons at the bottom of the view.
+            _yCurr -= _yBetweenViews;
+            CreateBottomButtons();
         }
 
         private void CreateFilmTitleLabel()
@@ -149,6 +155,23 @@ namespace PresentScreenings.TableView
 
             // Set sample view used to disable resizing.
             _sampleView = filmTitleLabel;
+        }
+
+        private void CreateFilmSummaryBox(float boxHeight)
+        {
+            // Create a text box to contain the film info.
+            var docRect = new CGRect(0, 0, _contentWidth, _summaryBoxHeight);
+            _summaryField = new NSTextField(docRect);
+            InitiateSummaryFieldText();
+            var fit = _summaryField.SizeThatFits(_summaryField.Frame.Size);
+            _summaryField.SetFrameSize(fit);
+
+            // Create a scroll view to display the film info.
+            _yCurr -= boxHeight;
+            var rect = new CGRect(_xMargin, _yCurr, _contentWidth, boxHeight);
+            _summaryScrollView = ControlsFactory.NewStandardScrollView(rect, _summaryField);
+            _summaryScrollView.ContentView.ScrollToPoint(new CGPoint(0, 0));
+            View.AddSubview(_summaryScrollView);
         }
 
         private void CreateScreeningsScrollView()
@@ -175,9 +198,8 @@ namespace PresentScreenings.TableView
             var screeningsView = new NSView(screeningsViewFrame);
 
             // Create the scroll view.
-            var scrollViewHeight = _yCurr - _yBetweenViews - _buttonHeight - _yMargin;
-            _yCurr -= (float)scrollViewHeight;
-            var scrollViewFrame = new CGRect(_xMargin, _yCurr, _contentWidth, scrollViewHeight);
+            _yCurr -= _scrollViewHeight;
+            var scrollViewFrame = new CGRect(_xMargin, _yCurr, _contentWidth, _scrollViewHeight);
             var scrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, screeningsView);
             View.AddSubview(scrollView);
 
@@ -188,62 +210,23 @@ namespace PresentScreenings.TableView
             GoToScreeningDialog.ScrollScreeningToVisible(App.Controller.CurrentScreening, scrollView);
         }
 
-        private void CreateFilmArticleLink()
+        private void CreateBottomButtons()
         {
-            _yCurr -= _buttonHeight;
-            var rect = new CGRect(_xMargin, _yCurr, _contentWidth, _buttonHeight);
-            _linkButton = ControlsFactory.NewStandardLabel(rect);
-            _linkButton.LineBreakMode = NSLineBreakMode.TruncatingMiddle;
-            _linkButton.StringValue = _film.Url;
-            _linkButton.Editable = true;
-            _linkButton.Enabled &= !FilmInfoIsAvailable();
-            _linkButton.Tag = _film.FilmId;
+            var xCurr = _xMargin + _contentWidth;
 
-            //NSMutableAttributedString attrStr = new NSMutableAttributedString("Alpha Go hyperlink");
-            //var range = new NSRange(8, 9); // Range for "hyperlink" word
-            //var url = new NSUrl("https://IFFR.com/nl/2018/films/alpha-go");
-            //label.AccessibilityUrl = url;
-            //var font = label.Font; // _myLablel is an instance of NSClickableURLTextField class
-            //// We have to setup paragraph if we want to keep original alignment and line break node
-            //var paragraph = new NSMutableParagraphStyle();
-            //paragraph.LineBreakMode = label.Cell.LineBreakMode;
-            //paragraph.Alignment = label.Alignment;
-            //attrStr.BeginEditing();
-            ////attrStr.AddAttribute(NSAttributedString.CreateWithHTML(url, range);
-            //attrStr.AddAttribute((NSString)"color", NSColor.Blue, range);
-            ////attrStr.AddAttribute(NSAttributedString.UnderlineStyleAttributeName, new NSNumber(1), range);
-            ////attrStr.AddAttribute(NSAttributedString.FontAttributeName, font, new NSRange(0, attrStr.Length)); // Set font for entire string
-            ////attrStr.AddAttribute(NSAttributedString.ParagraphStyleAttributeName, paragraph, new NSRange(0, attrStr.Length)); // Optional
-            //attrStr.EndEditing();
-            //label.AttributedStringValue = attrStr;
-
-            View.AddSubview(_linkButton);
-        }
-
-        private void CreateFilmSummaryBox(float boxHeight)
-        {
-            // Create a text box to contain the film info.
-            var docRect = new CGRect(0, 0, _contentWidth, _summaryBoxHeight);
-            _summaryField = new NSTextField(docRect);
-            InitiateSummaryFieldText();
-            var fit = _summaryField.SizeThatFits(_summaryField.Frame.Size);
-            _summaryField.SetFrameSize(fit);
-
-            // Create a scroll view to display the film info.
-            _yCurr -= boxHeight;
-            var rect = new CGRect(_xMargin, _yCurr, _contentWidth, boxHeight);
-            _summaryScrollView = ControlsFactory.NewStandardScrollView(rect, _summaryField);
-            _summaryScrollView.ContentView.ScrollToPoint(new CGPoint(0, 0));
-            View.AddSubview(_summaryScrollView);
-        }
-
-        private void CreateCancelButton()
-        {
-            var cancelButtonRect = new CGRect(_xMargin, _yMargin, _buttonWidth, _buttonHeight);
+            // Create the close button.
+            xCurr -= _buttonWidth;
+            var cancelButtonRect = new CGRect(xCurr, _yMargin, _buttonWidth, _buttonHeight);
             _cancelButton = ControlsFactory.NewCancelButton(cancelButtonRect);
             _cancelButton.Title = "Close";
             _cancelButton.Action = new ObjCRuntime.Selector("CancelGotoScreening:");
             View.AddSubview(_cancelButton);
+
+            // Create the website button.
+            xCurr -= _imageButtonWidth;
+            NSButton websiteButton = ControlsFactory.NewVisitWebsiteButton(xCurr, _yMargin, _film);
+            websiteButton.Enabled = true;
+            View.AddSubview(websiteButton);
         }
 
         private void InitiateSummaryFieldText()
@@ -301,6 +284,12 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Custom Actions
+        [Action("VisitFilmWebsite:")]
+        void VisitFilmWebsite(NSObject sender)
+        {
+            ViewController.VisitFilmWebsite(_film);
+        }
+
         [Action("CancelGotoScreening:")]
         void CancelGotoScreening(NSObject sender)
         {

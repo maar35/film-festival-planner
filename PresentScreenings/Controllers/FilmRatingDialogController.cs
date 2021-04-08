@@ -25,8 +25,9 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
+        public AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
         public NSTableView FilmRatingTableView => _filmRatingTableView;
+        public NSButton WebLinkButton => _downloadFilmInfoButton;
         public NSButton DoneButton => _closeButton;
         public bool TextBeingEdited
         {
@@ -77,7 +78,8 @@ namespace PresentScreenings.TableView
             _typeMatchMethodCheckBox.Action = new ObjCRuntime.Selector("ToggleTypeMatchMethod:");
             _combineTitlesButton.Action = new ObjCRuntime.Selector("SelectTitlesToCombine:");
             _uncombineTitleButton.Action = new ObjCRuntime.Selector("ShowTitlesToUncombine:");
-            _goToScreeningButton.Action = new ObjCRuntime.Selector("ShowScreenings:");
+            _goToScreeningButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
+            WebLinkButton.Action = new ObjCRuntime.Selector("VisitFilmWebsite:");
             DoneButton.KeyEquivalent = ControlsFactory.EscapeKey;
             DoneButton.StringValue = "Noot";
             SetTypeMatchMethodControlStates();
@@ -326,9 +328,13 @@ namespace PresentScreenings.TableView
             _combineTitlesButton.Enabled = MultipleFilmsSelected() && !TextBeingEdited;
             _uncombineTitleButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             _goToScreeningButton.Enabled = OneFilmSelected() && !TextBeingEdited;
-            _downloadFilmInfoButton.Enabled = false;
             DoneButton.Enabled = !TextBeingEdited;
             DoneButton.Title = _titleByChanged[FilmRating.RatingChanged];
+            WebLinkButton.Enabled = OneFilmSelected() && !TextBeingEdited;
+            if (CurrentFilm != null)
+            {
+                WebLinkButton.ToolTip = ControlsFactory.VisitWebsiteButtonToolTip(CurrentFilm);
+            }
         }
 
         public void SelectFilms(List<Film> films)
@@ -384,6 +390,7 @@ namespace PresentScreenings.TableView
             {
                 // Save the ratings.
                 App.WriteFilmFanFilmRatings();
+                FilmRating.RatingChanged = false;
 
                 // Trigger a local notification.
                 string title = "Ratings saved";
@@ -420,10 +427,16 @@ namespace PresentScreenings.TableView
             PerformSegue("UncombineSheetSegue", sender);
         }
 
-        [Action("ShowScreenings:")]
+        [Action("ShowFilmInfo:")]
         void ShowScreenings(NSObject sender)
         {
             PerformSegue("GoToScreeningSegue", sender);
+        }
+
+        [Action("VisitFilmWebsite:")]
+        public void VisitFilmWebsite(NSObject sender)
+        {
+            ViewController.VisitFilmWebsite(GetSelectedFilm());
         }
         #endregion
     }

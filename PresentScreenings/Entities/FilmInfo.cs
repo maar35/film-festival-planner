@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace PresentScreenings.TableView
@@ -169,6 +170,18 @@ namespace PresentScreenings.TableView
                 text = filmInfo.FilmArticle;
             }
             return Screening.HtmlDecode(text);
+        }
+
+        public string GetGenreDescription()
+        {
+            Match m;
+            string genrePattern = @"^Genre: *(.*)$";
+            m = Regex.Match(FilmArticle, genrePattern, RegexOptions.Multiline);
+            if (m.Success)
+            {
+                return m.Result(@"$1");
+            }
+            return String.Empty;
         }
         #endregion
 

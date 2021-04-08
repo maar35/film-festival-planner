@@ -54,14 +54,6 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Private Methods
-        private static string GetDocumentsPath()
-        {
-            string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-            return homeFolder + $"/Documents/Film/{Festival}/{Festival}{FestivalYear}/FestivalPlan";
-        }
-        #endregion
-
         #region Override Methods
         public override void DidFinishLaunching(NSNotification notification)
         {
@@ -71,11 +63,11 @@ namespace PresentScreenings.TableView
             _screeningMenu.AutoEnablesItems = false;
             _screeningMenu.Delegate = new ScreeningMenuDelegate(this, _screeningMenu);
             _filmsMenu.AutoEnablesItems = false;
-            _filmsMenu.Delegate = new FilmsMenuDelegate(this);
+            _filmsMenu.Delegate = new FilmsMenuDelegate(this, _filmsMenu);
             _programMenu.AutoEnablesItems = false;
             _programMenu.Delegate = new ProgramMenuDelegate(this, _programMenu);
             ToggleTypeMatchMenuItem.Action = new Selector("ToggleTypeMatchMethod:");
-            _showScreeningsMenuItem.Action = new Selector("ShowScreenings:");
+            _showScreeningsMenuItem.Action = new Selector("ShowFilmInfo:");
             _combineTitlesMenuItem.Action = new Selector("SelectTitlesToCombine:");
             _uncombineTitleMenuItem.Action = new Selector("ShowTitlesToUncombine:");
             Controller.ClickableLabelsMenuItem = _clickableLabelsMenuItem;
@@ -92,9 +84,14 @@ namespace PresentScreenings.TableView
 		}
         #endregion
 
-        #region Custom Actions
-        [Export("saveDocumentAs:")]
-        void ShowSaveAs(NSObject sender)
+        #region Private Methods
+        private static string GetDocumentsPath()
+        {
+            string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            return homeFolder + $"/Documents/Film/{Festival}/{Festival}{FestivalYear}/FestivalPlan";
+        }
+
+        private void ShowSaveAs()
         {
             var dlg = new NSSavePanel
             {
@@ -120,21 +117,8 @@ namespace PresentScreenings.TableView
                 // Write screening info.
                 string screeningInfosPath = Path.Combine(directory, "screeninginfo.csv");
                 new ScreeningInfo().WriteListToFile(screeningInfosPath, ScreeningsPlan.ScreeningInfos);
-
-                // Write screenings summary.
-                string summaryPath = Path.Combine(directory, "Screenings Summary.csv");
-                new Screening().WriteListToFile(summaryPath, Controller.Plan.AttendedScreenings());
-
-                // Write ratings sheet.
-                string sheetPath = Path.Combine(directory, "RatingsSheet.csv");
-                new Film().WriteListToFile(sheetPath, ScreeningsPlan.Films.Where(f =>
-                {
-                    return f.Duration >= FilmRatingDialogController.MinimalDuration;
-                }).ToList());
             });
-
         }
-
         public void WriteFilmFanAvailabilities(string directory = null)
         {
             if (directory == null)
@@ -151,10 +135,25 @@ namespace PresentScreenings.TableView
             {
                 directory = DocumentsFolder;
             }
+
+            // Save the ratings.
             string ratingsPath = Path.Combine(directory, "ratings.csv");
             new FilmFanFilmRating().WriteListToFile(ratingsPath, ScreeningsPlan.FilmFanFilmRatings);
-        }
 
+            // Write ratings sheet.
+            string sheetPath = Path.Combine(directory, "RatingsSheet.csv");
+            new Film().WriteListToFile(sheetPath, ScreeningsPlan.Films.Where(f =>
+            {
+                return f.Duration >= FilmRatingDialogController.MinimalDuration;
+            }).ToList());
+
+            // Write screenings summary.
+            string summaryPath = Path.Combine(directory, "Screenings Summary.csv");
+            new Screening().WriteListToFile(summaryPath, Controller.Plan.AttendedScreenings());
+        }
+        #endregion
+
+        #region Custom Actions
         partial void ToggleClickableLabels(Foundation.NSObject sender)
         {
             Controller.ToggleClickableLabels();
@@ -163,6 +162,18 @@ namespace PresentScreenings.TableView
         partial void ShowScreeningInfo(Foundation.NSObject sender)
         {
             Controller.ShowScreeningInfo();
+        }
+
+        [Action("ShowFilmInfo:")]
+        internal void ShowFilmInfo(NSObject sender)
+        {
+            Controller.ShowFilmInfo(sender);
+        }
+
+        [Action("VisitFilmWebsite:")]
+        internal void VisitFilmWebsite(NSObject sender)
+        {
+            ViewController.VisitFilmWebsite(Controller.CurrentFilm);
         }
 
         partial void ToggleTicketsBought(Foundation.NSObject sender)
@@ -254,6 +265,12 @@ namespace PresentScreenings.TableView
         internal void MoveToNextDay(NSObject sender)
         {
             Controller.MoveScreening24Hours(true);
+        }
+
+        [Export("saveDocumentAs:")]
+        void ShowSaveAs(NSObject sender)
+        {
+            ShowSaveAs();
         }
         #endregion
     }

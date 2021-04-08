@@ -17,13 +17,16 @@ namespace PresentScreenings.TableView
     public partial class ScreeningDialogController : GoToScreeningDialog, IScreeningProvider
     {
         #region Constants
-        const float _xMargin = ControlsFactory.HorizontalMargin;
-        const float _yMargin = ControlsFactory.BigVerticalMargin;
-        const float _yBetweenViews = ControlsFactory.VerticalPixelsBetweenViews;
-        const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
-        const float _labelHeight = ControlsFactory.StandardLabelHeight;
-        const float _buttonHeight = ControlsFactory.StandardButtonHeight;
-        const float _yControlsDistance = ControlsFactory.VerticalPixelsBetweenControls;
+        private const float _xMargin = ControlsFactory.HorizontalMargin;
+        private const float _yMargin = ControlsFactory.BigVerticalMargin;
+        private const float _xBetweenControls = ControlsFactory.HorizontalPixelsBetweenControls;
+        private const float _yBetweenViews = ControlsFactory.VerticalPixelsBetweenViews;
+        private const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
+        private const float _labelHeight = ControlsFactory.StandardLabelHeight;
+        private const float _imageButtonWidth = ControlsFactory.StandardImageButtonWidth;
+        private const float _buttonHeight = ControlsFactory.StandardButtonHeight;
+        private const float _imageSide = ControlsFactory.StandardButtomImageSide;
+        private const float _yControlsDistance = ControlsFactory.VerticalPixelsBetweenControls;
         #endregion
 
         #region Private Members
@@ -124,7 +127,7 @@ namespace PresentScreenings.TableView
             imageByAvailability[false] = _filmInfoButton.AlternateImage;
             var isAvailable = ViewController.FilmInfoIsAvailable(_screening.Film);
             _filmInfoButton.Image = imageByAvailability[isAvailable];
-            _filmInfoButton.Action = new ObjCRuntime.Selector("TryShowFilmInfo:");
+            _filmInfoButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
 
             // Select the sending screening control in the screenings table.
             _senderControl.Selected = true;
@@ -144,6 +147,9 @@ namespace PresentScreenings.TableView
             _checkboxTicketsBought.State = ViewController.GetNSCellStateValue(_screening.TicketsBought);
             _checkboxSoldOut.Activated += (s, e) => ToggleSoldOut();
             _checkboxSoldOut.State = ViewController.GetNSCellStateValue(_screening.SoldOut);
+
+            // Create the Visit Website button.
+            CreateVisitFilmWebsiteButton();
         }
 
         private void CreateFilmFanControls()
@@ -225,6 +231,18 @@ namespace PresentScreenings.TableView
 
             // Set sample view used to disable resizing.
             _sampleSubView = scrollView;
+        }
+
+        private void CreateVisitFilmWebsiteButton()
+        {
+            // Set the position.
+            var xCurr = _closeButton.Frame.X - _imageButtonWidth;
+            var yCurr = _closeButton.Frame.Y;
+
+            // Create the Website Button.
+            var websiteButton = ControlsFactory.NewVisitWebsiteButton(xCurr, yCurr, CurrentFilm);
+            websiteButton.Enabled = true;
+            View.AddSubview(websiteButton);
         }
 
         private void CloseDialog()
@@ -354,10 +372,10 @@ namespace PresentScreenings.TableView
             GoToScreening(screening);
         }
 
-        [Action("TryShowFilmInfo:")]
+        [Action("ShowFilmInfo:")]
         internal void ShowFilmInfo(NSObject sender)
         {
-            TryShowFilmInfo(sender);
+            PerformSegue("ScreeningToFilmInfo", sender);
         }
         #endregion
 

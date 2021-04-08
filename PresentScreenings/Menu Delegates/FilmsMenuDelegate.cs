@@ -13,15 +13,18 @@ namespace PresentScreenings.TableView
         private const int _showFilmsMenuItemTag = 501;
         private const int _toggleTypeMatchMethodMenuItemTag = 502;
         private const int _showFilmInfoMenuItemTag = 503;
-        private const int _combineTitlesMenuItemTag = 504;
-        private const int _uncombineTitleMenuItemTag = 505;
+        private const int _visitFilmWebsiteMenuItemTag = 504;
+        private const int _combineTitlesMenuItemTag = 505;
+        private const int _uncombineTitleMenuItemTag = 506;
         private readonly AppDelegate _app;
+        private NSMenu _filmsMenu;
         #endregion
 
         #region Constructors
-        public FilmsMenuDelegate(AppDelegate app)
+        public FilmsMenuDelegate(AppDelegate app, NSMenu filmsMenu)
         {
             _app = app;
+            _filmsMenu = filmsMenu;
         }
         #endregion
 
@@ -32,34 +35,60 @@ namespace PresentScreenings.TableView
 
         public override void NeedsUpdate(NSMenu menu)
         {
+            // Define some aliases for improved readability.
+            ViewController viewController = _app.Controller;
+            FilmRatingDialogController ratingController = _app.FilmsDialogController;
+            ScreeningDialogController screeningInfoController = viewController.ScreeningInfoDialog;
+            FilmInfoDialogController filmInfoController = _app.FilmInfoController;
+            AnalyserDialogController analyserController = _app.AnalyserDialogController;
+
             // Process every item in the menu
             foreach (NSMenuItem item in menu.Items)
             {
-                // If one of the film dialogs is active, all menu items must be inactive.
-                if (_app.CombineTitleController != null || _app.UncombineTitleController != null || _app.FilmInfoController != null)
+                // If the Combine or Uncombine film dialog is active, all menu
+                // items must be inactive.
+                if (_app.CombineTitleController != null || _app.UncombineTitleController != null)
                 {
                     item.Enabled = false;
                     continue;
                 }
 
                 // Take action based on the menu tag.
-                FilmRatingDialogController controller = _app.FilmsDialogController;
                 switch (item.Tag)
                 {
                     case _showFilmsMenuItemTag:
-                        item.Enabled = controller == null && _app.Controller.ViewIsActive();
+                        item.Enabled = ratingController == null && viewController.ViewIsActive();
                         break;
                     case _toggleTypeMatchMethodMenuItemTag:
-                        item.Enabled = controller != null;
+                        item.Enabled = ratingController != null;
                         break;
                     case _showFilmInfoMenuItemTag:
-                        item.Enabled = controller != null && !controller.TextBeingEdited && controller.OneFilmSelected();
+                        item.Enabled = screeningInfoController != null
+                                        || viewController.RunningPopupsCount == 0
+                                        || (ratingController != null
+                                            && !ratingController.TextBeingEdited
+                                            && ratingController.OneFilmSelected()
+                                            && filmInfoController == null);
+                        break;
+                    case _visitFilmWebsiteMenuItemTag:
+                        item.Enabled = screeningInfoController != null
+                                        || viewController.RunningPopupsCount == 0
+                                        || (ratingController != null
+                                            && !ratingController.TextBeingEdited
+                                            && ratingController.OneFilmSelected())
+                                        || filmInfoController != null
+                                        || (analyserController != null
+                                            && analyserController.GetSelectedFilm() != null);
                         break;
                     case _combineTitlesMenuItemTag:
-                        item.Enabled = controller != null && !controller.TextBeingEdited && controller.MultipleFilmsSelected();
+                        item.Enabled = ratingController != null
+                                        && !ratingController.TextBeingEdited
+                                        && ratingController.MultipleFilmsSelected();
                         break;
                     case _uncombineTitleMenuItemTag:
-                        item.Enabled = controller != null && !controller.TextBeingEdited && controller.OneFilmSelected();
+                        item.Enabled = ratingController != null
+                                        && !ratingController.TextBeingEdited
+                                        && ratingController.OneFilmSelected();
                         break;
                     default:
                         item.Enabled = false;
