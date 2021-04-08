@@ -32,6 +32,7 @@ namespace PresentScreenings.TableView
         {
             return string.Empty;
         }
+
         public virtual List<T> ReadListFromFile<T>(string fileName, Func<string, T> lineConstructor) where T : ListStreamer
         {
             var resultList = new List<T> { };

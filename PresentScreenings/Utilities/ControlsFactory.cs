@@ -69,19 +69,25 @@ namespace PresentScreenings.TableView
             return cancelButton;
         }
 
-        public static NSButton NewVisitWebsiteButton(float x, float y)
+        public static NSButton NewVisitWebsiteButton(float x, float y, Film film)
         {
             CGRect websiteButtonRect = new CGRect(x, y, StandardImageButtonWidth, StandardButtonHeight);
             NSButton websiteButton = NewStandardButton(websiteButtonRect);
             websiteButton.Image = NSImage.ImageNamed("NSNetwork");
             websiteButton.Image.Size = new CGSize(StandardButtomImageSide, StandardButtomImageSide);
             websiteButton.Action = new ObjCRuntime.Selector("VisitFilmWebsite:");
+            websiteButton.ToolTip = VisitWebsiteButtonToolTip(film);
             return websiteButton;
         }
 
-        public static NSButton NewVisitWebsiteButton(nfloat x, nfloat y)
+        public static NSButton NewVisitWebsiteButton(nfloat x, nfloat y, Film film)
         {
-            return NewVisitWebsiteButton((float)x, (float)y);
+            return NewVisitWebsiteButton((float)x, (float)y, film);
+        }
+
+        public static string VisitWebsiteButtonToolTip(Film film)
+        {
+            return $"Visit the web site of {film}";
         }
 
         public static NSButton NewCheckbox(CGRect frame)

@@ -240,7 +240,7 @@ namespace PresentScreenings.TableView
             var yCurr = _closeButton.Frame.Y;
 
             // Create the Website Button.
-            var websiteButton = ControlsFactory.NewVisitWebsiteButton(xCurr, yCurr);
+            var websiteButton = ControlsFactory.NewVisitWebsiteButton(xCurr, yCurr, CurrentFilm);
             websiteButton.Enabled = true;
             View.AddSubview(websiteButton);
         }

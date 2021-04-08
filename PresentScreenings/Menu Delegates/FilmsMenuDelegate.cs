@@ -25,7 +25,6 @@ namespace PresentScreenings.TableView
         {
             _app = app;
             _filmsMenu = filmsMenu;
-            PopulateVisitWebsiteMenuItem();
         }
         #endregion
 
@@ -36,73 +35,66 @@ namespace PresentScreenings.TableView
 
         public override void NeedsUpdate(NSMenu menu)
         {
+            // Define some aliases for improved readability.
+            ViewController viewController = _app.Controller;
+            FilmRatingDialogController ratingController = _app.FilmsDialogController;
+            ScreeningDialogController screeningInfoController = viewController.ScreeningInfoDialog;
+            FilmInfoDialogController filmInfoController = _app.FilmInfoController;
+            AnalyserDialogController analyserController = _app.AnalyserDialogController;
+
             // Process every item in the menu
             foreach (NSMenuItem item in menu.Items)
             {
-                // If one of the film dialogs is active, all menu items must be
-                // inactive, except items Visit Film Website and Show Film Info
-                // when the Film Info dialog or the Screening Info dialog runs.
-                if (_app.CombineTitleController == null
-                    && _app.UncombineTitleController == null
-                    && (item.Tag == _visitFilmWebsiteMenuItemTag || _app.FilmInfoController == null)
-                    && (item.Tag == _visitFilmWebsiteMenuItemTag || _app.Controller.ScreeningInfoDialog == null)
-                    || (item.Tag == _visitFilmWebsiteMenuItemTag && _app.AnalyserDialogController != null)
-                    || (item.Tag == _showFilmInfoMenuItemTag && _app.Controller.ScreeningInfoDialog != null)
-                    || (item.Tag == _showFilmInfoMenuItemTag && _app.Controller.RunningPopupsCount == 0)
-                    )
-                {
-                    // Take action based on the menu tag.
-                    FilmRatingDialogController controller = _app.FilmsDialogController;
-                    switch (item.Tag)
-                    {
-                        case _showFilmsMenuItemTag:
-                            item.Enabled = controller == null && _app.Controller.ViewIsActive();
-                            break;
-                        case _toggleTypeMatchMethodMenuItemTag:
-                            item.Enabled = controller != null;
-                            break;
-                        case _showFilmInfoMenuItemTag:
-                            item.Enabled = _app.Controller.ScreeningInfoDialog != null
-                                || _app.Controller.RunningPopupsCount == 0
-                                || (controller != null
-                                    && !controller.TextBeingEdited
-                                    && controller.OneFilmSelected());
-                            break;
-                        case _visitFilmWebsiteMenuItemTag:
-                            item.Enabled = _app.FilmInfoController != null
-                                || _app.Controller.ScreeningInfoDialog != null
-                                || _app.Controller.RunningPopupsCount == 0
-                                || (_app.AnalyserDialogController != null
-                                    && _app.AnalyserDialogController.GetSelectedFilm() != null)
-                                || (controller != null
-                                    && !controller.TextBeingEdited
-                                    && controller.OneFilmSelected());
-                            break;
-                        case _combineTitlesMenuItemTag:
-                            item.Enabled = controller != null && !controller.TextBeingEdited && controller.MultipleFilmsSelected();
-                            break;
-                        case _uncombineTitleMenuItemTag:
-                            item.Enabled = controller != null && !controller.TextBeingEdited && controller.OneFilmSelected();
-                            break;
-                        default:
-                            item.Enabled = false;
-                            break;
-                    }
-                }
-                else
+                // If the Combine or Uncombine film dialog is active, all menu
+                // items must be inactive.
+                if (_app.CombineTitleController != null || _app.UncombineTitleController != null)
                 {
                     item.Enabled = false;
                     continue;
                 }
-            }
-        }
-        #endregion
 
-        #region Private Methods
-        private void PopulateVisitWebsiteMenuItem()
-        {
-            NSMenuItem item = _filmsMenu.ItemWithTag(_visitFilmWebsiteMenuItemTag);
-            item.Action = new ObjCRuntime.Selector("VisitFilmWebsite:");
+                // Take action based on the menu tag.
+                switch (item.Tag)
+                {
+                    case _showFilmsMenuItemTag:
+                        item.Enabled = ratingController == null && viewController.ViewIsActive();
+                        break;
+                    case _toggleTypeMatchMethodMenuItemTag:
+                        item.Enabled = ratingController != null;
+                        break;
+                    case _showFilmInfoMenuItemTag:
+                        item.Enabled = screeningInfoController != null
+                                        || viewController.RunningPopupsCount == 0
+                                        || (ratingController != null
+                                            && !ratingController.TextBeingEdited
+                                            && ratingController.OneFilmSelected()
+                                            && filmInfoController == null);
+                        break;
+                    case _visitFilmWebsiteMenuItemTag:
+                        item.Enabled = screeningInfoController != null
+                                        || viewController.RunningPopupsCount == 0
+                                        || (ratingController != null
+                                            && !ratingController.TextBeingEdited
+                                            && ratingController.OneFilmSelected())
+                                        || filmInfoController != null
+                                        || (analyserController != null
+                                            && analyserController.GetSelectedFilm() != null);
+                        break;
+                    case _combineTitlesMenuItemTag:
+                        item.Enabled = ratingController != null
+                                        && !ratingController.TextBeingEdited
+                                        && ratingController.MultipleFilmsSelected();
+                        break;
+                    case _uncombineTitleMenuItemTag:
+                        item.Enabled = ratingController != null
+                                        && !ratingController.TextBeingEdited
+                                        && ratingController.OneFilmSelected();
+                        break;
+                    default:
+                        item.Enabled = false;
+                        break;
+                }
+            }
         }
         #endregion
     }

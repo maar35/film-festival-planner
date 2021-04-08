@@ -224,7 +224,7 @@ namespace PresentScreenings.TableView
 
             // Create the website button.
             xCurr -= _imageButtonWidth;
-            NSButton websiteButton = ControlsFactory.NewVisitWebsiteButton(xCurr, _yMargin);
+            NSButton websiteButton = ControlsFactory.NewVisitWebsiteButton(xCurr, _yMargin, _film);
             websiteButton.Enabled = true;
             View.AddSubview(websiteButton);
         }

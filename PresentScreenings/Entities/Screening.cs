@@ -81,7 +81,7 @@ namespace PresentScreenings.TableView
         #region Constructors
         static Screening()
         {
-            // Initialize the index by name dictionary.
+            // Initialize the Index by Name dictionary.
             IndexByName = new Dictionary<string, int> { };
             int n = 0;
             IndexByName.Add("FilmId", n);
@@ -173,7 +173,7 @@ namespace PresentScreenings.TableView
 
         public override string Serialize()
         {
-            string line = string.Empty;
+            FilmInfo filmInfo = Film.FilmInfo;
             List<string> fields = new List<string> { };
 
             fields.Add(StartTime.DayOfWeek.ToString().Remove(3));
@@ -193,11 +193,9 @@ namespace PresentScreenings.TableView
             fields.Add(Extra);
             fields.Add(QAndA);
             fields.Add(Subtitles);
-            var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == FilmId);
-            var filmInfo = filmInfoList.Count() == 1 ? filmInfoList.First() : null;
-            fields.Add(filmInfo != null ? filmInfo.GetGenreDescription() : "");
-            fields.Add(filmInfo != null ? filmInfo.Url : "");
-            fields.Add(filmInfo != null ? HtmlDecode(filmInfo.FilmDescription) : "");
+            fields.Add(filmInfo.GetGenreDescription());
+            fields.Add(filmInfo.Url);
+            fields.Add(HtmlDecode(filmInfo.FilmDescription));
 
             return string.Join(";", fields);
         }

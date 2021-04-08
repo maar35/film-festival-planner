@@ -175,7 +175,7 @@ namespace PresentScreenings.TableView
         public string GetGenreDescription()
         {
             Match m;
-            string genrePattern = @"^Genre:(.*)$";
+            string genrePattern = @"^Genre: *(.*)$";
             m = Regex.Match(FilmArticle, genrePattern, RegexOptions.Multiline);
             if (m.Success)
             {

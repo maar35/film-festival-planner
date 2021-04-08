@@ -36,9 +36,21 @@ namespace PresentScreenings.TableView
         public List<Screening> FilmScreenings => ViewController.FilmScreenings(FilmId);
         public FilmRating Rating => ViewController.GetFilmFanFilmRating(this, ScreeningInfo.Me);
         public WebUtility.MediumCategory Category { get; private set; }
-        public FilmInfo FilmInfo => ViewController.GetFilmInfo(FilmId);
         public FilmInfoStatus InfoStatus => ViewController.GetFilmInfoStatus(FilmId);
         public FilmRating MaxRating => ViewController.GetMaxRating(this);
+        #endregion
+
+        #region Cached Properties
+        private FilmInfo _filmInfo = null;
+        public FilmInfo FilmInfo
+        {
+            get
+            {
+                if (_filmInfo == null)
+                    _filmInfo = ViewController.GetFilmInfo(FilmId);
+                return _filmInfo;
+            }
+        }
         #endregion
 
         #region Constructors
@@ -64,6 +76,13 @@ namespace PresentScreenings.TableView
             int minutes = int.Parse(duration.TrimEnd('′'));
             Duration = new TimeSpan(0, minutes, 0);
             Category = (WebUtility.MediumCategory)Enum.Parse(typeof(WebUtility.MediumCategory), category);
+
+            // Get Film Info.
+            if (FilmInfo == null)
+            {
+                ScreeningsPlan.FilmInfos.Add(new FilmInfo(FilmId, FilmInfoStatus.Absent, "", ""));
+                _filmInfo = null;
+            }
         }
         #endregion
 
@@ -87,11 +106,9 @@ namespace PresentScreenings.TableView
             fields.Add(DurationString);
             fields.Add(Rating.ToString());
             fields.Add(ViewController.GetFilmFanFilmRating(this, "Adrienne").ToString());
-            var filmInfoList = ScreeningsPlan.FilmInfos.Where(i => i.FilmId == FilmId);
-            var filmInfo = filmInfoList.Count() == 1 ? filmInfoList.First() : null;
-            fields.Add(filmInfo != null ? filmInfo.GetGenreDescription() : "");
-            fields.Add(filmInfo != null ? filmInfo.Url : "");
-            fields.Add(filmInfo != null ? Screening.HtmlDecode(filmInfo.FilmDescription.Replace("\n", " ")) : "");
+            fields.Add(FilmInfo.GetGenreDescription());
+            fields.Add(FilmInfo.Url);
+            fields.Add(Screening.HtmlDecode(FilmInfo.FilmDescription.Replace("\n", " ")));
 
             return string.Join(";", fields);
         }
