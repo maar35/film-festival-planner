@@ -14,8 +14,6 @@ delimiter = ';'
 encoding = 'UTF-8'
 festival = 'Imagine'
 year = 2021
-city = 'Amsterdam'
-ondemand_available_hours = 48
 
 # Directories.
 documents_dir = os.path.expanduser("~/Documents/Film/{0}/{0}{1}".format(festival, year))
@@ -51,12 +49,9 @@ def read_csv(file):
 
 def merge_ids(old_infos, new_infos):
     curr_id = max([info.filmid for info in old_infos])
-    print(f'Max filmid: {curr_id}')
     correct_infos = []
     old_id_by_title = {info.title: info.filmid for info in old_infos}
     new_url_by_title = {info.title: info.url for info in new_infos}
-    print(old_id_by_title['AV The Hunt'])
-    print(new_url_by_title['写真の女'])
     for title in new_url_by_title.keys():
         if title in old_id_by_title.keys():
             filmid = old_id_by_title[title]
@@ -80,7 +75,7 @@ class FilmBaseInfo:
         self.url = url
 
     def __str__(self):
-        return ';'.join([str(self.filmid), self.title, self.url])
+        return delimiter.join([str(self.filmid), self.title, self.url])
 
 
 if __name__ == "__main__":
