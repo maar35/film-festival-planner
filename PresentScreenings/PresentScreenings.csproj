@@ -189,7 +189,7 @@
       <Properties>
         <Policies>
           <VersionControlPolicy>
-            <CommitMessageStyle FirstFilePrefix="" FileSeparator=", " LastFilePostfix=":&#xA;" LineAlign="0" IncludeDirectoryPaths="True" Wrap="False" />
+            <CommitMessageStyle FileSeparator=", " LastFilePostfix=":&#xA;  " />
           </VersionControlPolicy>
         </Policies>
       </Properties>
