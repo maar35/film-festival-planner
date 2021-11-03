@@ -3,6 +3,7 @@ using AppKit;
 using Foundation;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text;
 
 namespace PresentScreenings.TableView
 {
@@ -291,11 +292,35 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods working with ScreeningsPlan lists
+        public static void RemoveDuplicateScreenings()
+        {
+            var existsByScreening = new Dictionary<Screening, bool> { };
+            var removedScreenings = new List<Screening> { };
+            foreach (var screening in ScreeningsPlan.Screenings)
+            {
+                if (existsByScreening.ContainsKey(screening))
+                {
+                    removedScreenings.Add(screening);
+                }
+                else
+                {
+                    existsByScreening.Add(screening, true);
+                }
+            }
+            if (removedScreenings.Count > 0)
+            {
+                string title = "Duplicate Screenings Found";
+                StringBuilder builder = new StringBuilder("The following screenings were found duplicate:");
+                builder.AppendJoin<Screening>("\n- ", removedScreenings);
+                AlertRaiser.RaiseNotification(title, builder.ToString());
+            }
+        }
+
         public static List<Screening> FilmScreenings(int filmId)
         {
             var filmScreenings = (
                 from Screening screening in ScreeningsPlan.Screenings
-                where screening.FilmId == filmId
+                where screening.FilmId == filmId && (AppDelegate.VisitPhysical || screening is OnDemandScreening || screening is OnLineScreening)
                 orderby screening.StartTime
                 select screening
             ).ToList();
@@ -639,10 +664,15 @@ namespace PresentScreenings.TableView
             ReloadScreeningsView();
         }
 
-        public void MoveScreening(bool forward)
+        public void MoveScreening(bool forward, Screening screening = null)
         {
+            // Apply the deafalt screening.
+            if (screening == null)
+            {
+                screening = Plan.CurrScreening;
+            }
             // Move the current screening to the nearest unattended space within the day.
-            if (Plan.CurrScreening is OnDemandScreening onDemandScreening)
+            if (screening is OnDemandScreening onDemandScreening)
             {
                 MoveOnDemandScreening(onDemandScreening, GetSpanToFit(onDemandScreening, forward));
                 ScreeningInfoDialog?.UpdateAttendances();

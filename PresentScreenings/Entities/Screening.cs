@@ -233,17 +233,19 @@ namespace PresentScreenings.TableView
         #region Public Methods
         public static string HtmlDecode(string html)
         {
-            var htmlRe = new Regex(@"&amp;([a-zA-Z]{2,7});", RegexOptions.CultureInvariant);
-            return htmlRe.Replace(html, @":$1:").Replace("&#039;", "'")
-                .Replace(";", ".,")
-                .Replace(":nbsp:", " ")
-                .Replace(":aacute:", @"á").Replace(":auml:", @"ä")
-                .Replace(":euml:", @"ë").Replace(":eacute:", @"é").Replace(":egrave:", @"è").Replace(":Eacute:", @"É")
-                .Replace(":iacute:", @"í").Replace(":iuml:", @"ï")
-                .Replace(":oacute:", @"ó")
-                .Replace(":Scaron:", @"Š")
-                .Replace(":ndash:", @"–")
-                .Replace(":ldquo:", @"“").Replace(":lsquo:", @"‘").Replace(":rdquo:", @"”").Replace(":rsquo:", @"’").Replace(":quot:", "'");
+            return html;
+            //var htmlRe = new Regex(@"&amp;([a-zA-Z]{2,7});", RegexOptions.CultureInvariant);
+            //return htmlRe.Replace(html, @":$1:").Replace("&#039;", "'")
+            //    .Replace(";", ".,")
+            //    .Replace(":nbsp:", " ")
+            //    .Replace(":aacute:", @"á").Replace(":auml:", @"ä")
+            //    .Replace(":euml:", @"ë").Replace(":eacute:", @"é").Replace(":egrave:", @"è").Replace(":Eacute:", @"É")
+            //    .Replace(":iacute:", @"í").Replace(":iuml:", @"ï")
+            //    .Replace(":oacute:", @"ó")
+            //    .Replace(":Scaron:", @"Š")
+            //    .Replace(":ndash:", @"–")
+            //    //.Replace(":amp:", @"&")
+            //    .Replace(":ldquo:", @"“").Replace(":lsquo:", @"‘").Replace(":rdquo:", @"”").Replace(":rsquo:", @"’").Replace(":quot:", "'");
         }
 
         public bool FilmFanAttends(string filmFan)

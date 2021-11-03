@@ -57,7 +57,7 @@ namespace PresentScreenings.TableView
                 // Attend the screenings.
                 foreach (var screening in screenings)
                 {
-                    if (screening.IsPlannable)
+                    if (TryPlannable(screening))
                     {
                         screening.ToggleFilmFanAttendance(filmFan);
                         screening.AutomaticallyPlanned = true;
@@ -116,8 +116,29 @@ namespace PresentScreenings.TableView
         #region Private Methods
         private bool IsPlannable(Screening screening, List<Film> films)
         {
-            var inSelectedFilms = films.Any(f => f.FilmId == screening.FilmId);
-            return screening.IsPlannable && inSelectedFilms;
+            bool inSelectedFilms = films.Any(f => f.FilmId == screening.FilmId);
+            return inSelectedFilms && (screening is OnDemandScreening || screening.IsPlannable);
+        }
+
+        private bool TryPlannable(Screening screening)
+        {
+            bool plannable = true;
+            if (screening is OnDemandScreening onDemandScreening)
+            {
+                if (!screening.IsPlannable)
+                {
+                    if (ViewController.MoveForwardAllowed(onDemandScreening, true))
+                    {
+                        _controller.MoveScreening(true, onDemandScreening);
+                    }
+                }
+            }
+            else
+            {
+                plannable = AppDelegate.VisitPhysical;
+            }
+            bool result = plannable && screening.IsPlannable;
+            return result;
         }
 
         private bool HasAttendedScreening(Film film, string filmFan)

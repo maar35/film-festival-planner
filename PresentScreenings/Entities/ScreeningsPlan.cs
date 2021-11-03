@@ -18,11 +18,11 @@ namespace PresentScreenings.TableView
         private int _currDayNumber;
         private int _currScreenNumber;
         private int _currScreenScreeningNumber;
-        private readonly Regex _screenRegex = new Regex(@"(\D+)(\d*)");
         private Dictionary<string, Screen> _displayScreenByAbbreviation;
         #endregion
 
         #region Static Properties
+        //private static readonly Regex _screenRegex = new(@"(\D+)(\d*)");
         public static List<FilmFanAvailability> Availabilities { get; private set; }
         public static List<Screen> Screens { get; private set; }
         public static List<Film> Films { get; private set; }
@@ -39,6 +39,7 @@ namespace PresentScreenings.TableView
         public Screening CurrScreening => ScreenScreenings[CurrDay][CurrScreen][_currScreenScreeningNumber];
         public List<Screen> CurrDayScreens => _dayScreens[CurrDay];
         public DateTime CurrDay { get => FestivalDays[_currDayNumber]; set => SetDay(value); }
+        //public static Regex ScreenRegex => new(@"(\D+)(\d*)");
         #endregion
 
         #region Constructors
@@ -72,8 +73,9 @@ namespace PresentScreenings.TableView
             // Read screening info.
             ScreeningInfos = new ScreeningInfo().ReadListFromFile(screeningInfoFile, line => new ScreeningInfo(line));
 
-            // Read screenings.
+            // Read unique screenings.
             Screenings = new Screening().ReadListFromFile(screeningsFile, line => PickScreening(line));
+            ViewController.RemoveDuplicateScreenings();
 
             // Imitialize the day schemes.
             InitializeDays();
@@ -323,20 +325,16 @@ namespace PresentScreenings.TableView
             _currScreenScreeningNumber = 0;
         }
 
-        string NextAbbreviation(string currAbbreviation)
+        private string NextAbbreviation(string currAbbreviation)
         {
-            Match match = _screenRegex.Match(currAbbreviation);
+            Match match = Screen.ScreenRegex.Match(currAbbreviation);
             if (match != null)
             {
                 string root = match.Groups[1].Value;
-                if (currAbbreviation == root)
-                {
-                    return currAbbreviation + "2";
-                }
-                int version = int.Parse(match.Groups[2].Value);
+                int version = currAbbreviation == root ? 1 : int.Parse(match.Groups[2].Value);
                 return $"{root}{version + 1}";
             }
-            return "";
+            return string.Empty;
         }
         #endregion
 

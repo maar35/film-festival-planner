@@ -16,8 +16,9 @@ import web_tools
 festival = 'IFFR'
 year = 2021
 city = 'Rotterdam'
+june_edition_start_date = datetime.date(year, 6, 1)
 
-# Directories:
+# Directories.
 documents_dir = os.path.expanduser("~/Documents/Film/{0}/{0}{1}".format(festival, year))
 webdata_dir = os.path.join(documents_dir, "_website_data")
 plandata_dir = os.path.join(documents_dir, "_planner_data")
@@ -70,12 +71,10 @@ def main():
 
 def parse_iffr_sites(iffr_data):
     comment('Parsing AZ pages.')
-    films_loader = FilmsLoader()
-    films_loader.get_films(iffr_data)
+    get_films(iffr_data)
 
     comment('Parsing film pages.')
-    film_detals_loader = FilmDetailsLoader()
-    film_detals_loader.get_film_details(iffr_data)
+    get_film_details(iffr_data)
 
 
 def comment(text):
@@ -101,50 +100,35 @@ def write_lists(iffr_data, write_film_list, write_other_lists):
         print("Screens and screenings NOT WRITTEN")
 
 
+def get_films(iffr_data):
+    az_url = iffr_hostname + az_url_path
+    url_file = web_tools.UrlFile(az_url, az_file, Globals.error_collector)
+    az_html = url_file.get_text()
+    if az_html is not None:
+        AzPageParser(iffr_data).feed(az_html)
+
+
+def get_film_details(iffr_data):
+    for film in iffr_data.films:
+        film_html = None
+        film_file = film_file_format.format(film.filmid)
+        url_file = web_tools.UrlFile(film.url, film_file, Globals.error_collector, bytecount=60000)
+        film_html = url_file.get_text(f'Downloading site of {film.title}: {film.url}')
+        if film_html is not None:
+            print(f"Analysing html file {film.filmid} of {film.title} {film.url}")
+            FilmPageParser(iffr_data, film).feed(film_html)
+
+
 class Globals:
     error_collector = None
     debug_recorder = None
-
-
-class FilmsLoader:
-
-    def get_films(self, iffr_data):
-        if os.path.isfile(az_file):
-            charset = web_tools.get_charset(az_file)
-            with open(az_file, 'r', encoding=charset) as f:
-                az_html = f.read()
-        else:
-            az_url = iffr_hostname + az_url_path
-            az_html = web_tools.UrlReader(Globals.error_collector).load_url(az_url, az_file)
-        if az_html is not None:
-            AzPageParser(iffr_data).feed(az_html)
-
-
-class FilmDetailsLoader:
-
-    def __init__(self):
-        pass
-
-    def get_film_details(self, iffr_data):
-        for film in iffr_data.films:
-            html_data = None
-            film_file = film_file_format.format(film.filmid)
-            if os.path.isfile(film_file):
-                charset = web_tools.get_charset(film_file)
-                with open(film_file, 'r', encoding=charset) as f:
-                    html_data = f.read()
-            else:
-                print(f"Downloading site of {film.title}: {film.url}")
-                html_data = web_tools.UrlReader(Globals.error_collector).load_url(film.url, film_file)
-            if html_data is not None:
-                print(f"Analysing html file {film.filmid} of {film.title} {film.url}")
-                FilmPageParser(iffr_data, film).feed(html_data)
 
 
 class HtmlPageParser(web_tools.HtmlPageParser):
 
     def __init__(self, iffr_data, debug_prefix):
         web_tools.HtmlPageParser.__init__(self, Globals.debug_recorder, debug_prefix)
+        # web_tools.HtmlPageParser.convert_charrefs = False
         self.iffr_data = iffr_data
         self.debugging = False
 
@@ -155,8 +139,16 @@ class HtmlPageParser(web_tools.HtmlPageParser):
 class AzPageParser(HtmlPageParser):
 
     props_re = re.compile(
+        # r"""
+        #     "bookings":\[[^]]*?\],"title":"(?P<title>[^"]+)           # Title
+        #     .*?"url\(\{\\"language\\":\\"nl\\"\}\)":"(?P<url>[^"]+)"  # URL
+        #     ,"description\(\{.*?\}\)":"(?P<grid_desc>[^"]+)"          # Grid description
+        #     ,"description\(\{.*?\}\)":"(?P<list_desc>[^"]+)"          # List description
+        #     .*?"sortedTitle":"(?P<sorted_title>[^"]+)"                # Sorted Title
+        #     (?:.*?"duration":(?P<duration>\d+)\})?                    # Duration
+        # """, re.VERBOSE)
         r"""
-            "bookings":\[[^]]*?\],"title":"(?P<title>[^"]+)           # Title
+            "bookings":\[[^]]*?\],"title":"(?P<title>[^"]+)"          # Title
             .*?"url\(\{\\"language\\":\\"nl\\"\}\)":"(?P<url>[^"]+)"  # URL
             ,"description\(\{.*?\}\)":"(?P<grid_desc>[^"]+)"          # Grid description
             ,"description\(\{.*?\}\)":"(?P<list_desc>[^"]+)"          # List description
@@ -167,11 +159,15 @@ class AzPageParser(HtmlPageParser):
     def __init__(self, iffr_data):
         HtmlPageParser.__init__(self, iffr_data, 'AZ')
         self.matching_attr_value = ""
-        self.debugging = False
+        self.debugging = True
         self.init_film_data()
 
     def parse_props(self, data):
-        for g in [m.groupdict() for m in self.props_re.finditer(data)]:
+        # for g in [m.groupdict() for m in self.props_re.finditer(data)]:
+        i = self.props_re.finditer(data)
+        matches = [match for match in i]
+        groups = [m.groupdict() for m in matches]
+        for g in groups:
             self.title = g['title']
             self.url = iffr_hostname + web_tools.iripath_to_uripath(g['url'])
             self.description = g['list_desc']
@@ -215,7 +211,7 @@ class AzPageParser(HtmlPageParser):
     def handle_data(self, data):
         HtmlPageParser.handle_data(self, data)
         if data.startswith('{"props":'):
-            self.parse_props(data)
+            self.parse_props(data.replace(r'\u0026', '&'))
 
 
 class FilmPageParser(HtmlPageParser):
@@ -239,11 +235,15 @@ class FilmPageParser(HtmlPageParser):
     nl_month_by_name = {}
     nl_month_by_name['januari'] = 1
     nl_month_by_name['februari'] = 2
+    nl_month_by_name['maart'] = 3
+    nl_month_by_name['april'] = 4
+    nl_month_by_name['mei'] = 5
+    nl_month_by_name['juni'] = 6
 
     def __init__(self, iffr_data, film):
         HtmlPageParser.__init__(self, iffr_data, "F")
         self.film = film
-        self.debugging = False
+        self.debugging = True
         self.article_paragraphs = []
         self.paragraph = None
         self.article = None
@@ -353,7 +353,7 @@ class FilmPageParser(HtmlPageParser):
         self.print_debug("--- ", f"SCREEN={self.screen}, START TIME={self.start_dt}, END TIME={self.end_dt}, AUDIENCE={self.audience}")
 
         # Print the screening propoerties.
-        if self.audience == 'publiek':
+        if self.audience == 'publiek' and self.film.medium_category != 'events':
             print()
             print(f"---SCREENING OF {self.film.title}")
             print(f"--  screen:     {self.screen}")
@@ -426,7 +426,7 @@ class FilmPageParser(HtmlPageParser):
                     self.print_debug('Found COMBINATION url', combination_url)
                     self.combination_urls.append(combination_url)
         if self.await_article and tag == 'div' and len(attrs) > 0:
-            if attrs[0] == ('class', 'grid__Grid-enb6co-0 ejdVvQ'):
+            if attrs[0] == ('class', 'grid__Grid-enb6co-0 kCNoVC'):
                 self.await_article = False
                 self.in_article = True
                 self.await_paragraph = True
@@ -465,7 +465,7 @@ class FilmPageParser(HtmlPageParser):
             self.update_screenings()
 
         # Get data for screenings.
-        if self.stateStack.state_is(self.ScreeningsParseState.IN_ON_DEMAND) and tag == 'span':
+        if self.stateStack.state_is(self.ScreeningsParseState.IN_ON_DEMAND) and tag == 'span' and len(attrs) > 0:
             if attrs[0][1] == 'bookingtable-on-demand__date-value':
                 self.stateStack.change(self.ScreeningsParseState.IN_OD_STARTTIME)
         elif self.stateStack.state_is(self.ScreeningsParseState.BETWEEN_OD_TIMES) and tag == 'span':
@@ -507,8 +507,7 @@ class FilmPageParser(HtmlPageParser):
         # Get data for screenings.
         if self.stateStack.state_is(self.ScreeningsParseState.IN_S_TIMES) and tag == 'time':
             self.set_screening_times(self.times)
-        elif self.stateStack.state_is(self.ScreeningsParseState.AFTER_ON_DEMAND) and tag == 'section':
-            self.add_on_demand_screening()
+        elif self.stateStack.state_is(self.ScreeningsParseState.IN_ON_DEMAND) and tag == 'section':
             self.stateStack.change(self.ScreeningsParseState.AWAITING_S)
         elif self.stateStack.state_is(self.ScreeningsParseState.AFTER_SCREENING) and tag == 'section':
             self.add_on_location_screening()
@@ -538,8 +537,9 @@ class FilmPageParser(HtmlPageParser):
             self.stateStack.change(self.ScreeningsParseState.BETWEEN_OD_TIMES)
             self.start_dt = self.parse_datetime(data)
         elif self.stateStack.state_is(self.ScreeningsParseState.IN_OD_ENDTIME):
-            self.stateStack.change(self.ScreeningsParseState.AFTER_ON_DEMAND)
+            self.stateStack.change(self.ScreeningsParseState.IN_ON_DEMAND)
             self.end_dt = self.parse_datetime(data)
+            self.add_on_demand_screening()
         elif self.stateStack.state_is(self.ScreeningsParseState.IN_SCREENINGS):
             self.start_date = self.parse_date(data)
         elif self.stateStack.state_is(self.ScreeningsParseState.IN_S_TIMES):
@@ -559,6 +559,10 @@ class IffrData(planner.FestivalData):
 
     def _filmkey(self, film, url):
         return url
+
+    def screening_can_go_to_planner(self, screening):
+        in_june_edition = screening.start_datetime.date() >= june_edition_start_date
+        return in_june_edition and planner.FestivalData.screening_can_go_to_planner(self, screening)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ import html.parser
 import urllib.request
 import urllib.error
 import urllib.parse
+import os
 import inspect
 
 
@@ -19,20 +20,85 @@ def iripath_to_uripath(path):
 
 def get_charset(file, byte_count=512):
     with open(file, 'r') as f:
-        pre_text = f.read(byte_count)
-    pre_parser = HtmlCharsetParser()
-    pre_parser.feed(pre_text)
-    return str(pre_parser)
+        sample_text = f.read(byte_count)
+    charset_parser = HtmlCharsetParser()
+    charset = charset_parser.get_charset(sample_text)
+    return charset
+
+
+class UrlFile:
+    default_bytecount = 512
+    default_encoding = 'utf-8'
+
+    def __init__(self, url, path, error_collector, bytecount=None):
+        self.url = url
+        self.path = path
+        self.error_collector = error_collector
+        self.bytecount = bytecount if bytecount is not None else self.default_bytecount
+        self.encoding = None
+
+    def get_text(self, comment_at_download=None):
+        reader = UrlReader(self.error_collector)
+        html = None
+        self.set_encoding(reader)
+        if os.path.isfile(self.path):
+            with open(self.path, 'r', encoding=self.encoding) as f:
+                html = f.read()
+        else:
+            if comment_at_download is not None:
+                print(comment_at_download)
+            html = reader.load_url(self.url, self.path, self.encoding)
+        return html
+
+    def set_encoding(self, reader):
+        if self.encoding is None:
+            if os.path.isfile(self.path):
+                self.encoding = get_charset(self.path, self.bytecount)
+            if self.encoding is None:
+                request = reader.get_request(self.url)
+                with urllib.request.urlopen(request) as response:
+                    self.encoding = response.headers.get_content_charset()
+            if self.encoding is None:
+                self.encoding = self.default_encoding
+
+
+class UrlReader:
+    user_agent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
+    headers = {'User-Agent': user_agent}
+
+    def __init__(self, error_collector):
+        self.error_collector = error_collector
+
+    def get_request(self, url):
+        return urllib.request.Request(url, headers=self.headers)
+
+    def load_url(self, url, target_file, sample_bytes=512, encoding='utf-8'):
+        request = self.get_request(url)
+        html_bytes = None
+        with urllib.request.urlopen(request) as response:
+            html_bytes = response.read()
+            if html_bytes is not None:
+                if len(html_bytes) == 0:
+                    self.error_collector.add(f'No text found, file {target_file} not written', f'{url}')
+                else:
+                    with open(target_file, 'wb') as f:
+                        f.write(html_bytes)
+        html = html_bytes.decode(encoding=encoding)
+        return html
 
 
 class HtmlCharsetParser(html.parser.HTMLParser):
+
+    default_charset = None
 
     def __init__(self):
         html.parser.HTMLParser.__init__(self)
         self.charset = None
 
-    def __str__(self):
-        return self.charset if self.charset is not None else 'ascii'
+    def get_charset(self, text):
+        self.feed(text)
+        charset = (self.charset if self.charset is not None else self.default_charset)
+        return charset
 
     def handle_starttag(self, tag, attrs):
         html.parser.HTMLParser.handle_starttag(self, tag, attrs)
@@ -99,31 +165,6 @@ class HtmlPageParser(html.parser.HTMLParser):
 
     def handle_decl(self, data):
         self.print_debug('Decl     :', data)
-
-
-class UrlReader:
-
-    def __init__(self, error_collector):
-        self.error_collector = error_collector
-
-    def read_url(self, url):
-        user_agent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
-        headers = {'User-Agent': user_agent}
-        req = urllib.request.Request(url, headers=headers)
-        html = None
-        with urllib.request.urlopen(req) as response:
-            html = response.read().decode()
-        return html
-
-    def load_url(self, url, target_file):
-        html = self.read_url(url)
-        if html is not None:
-            if len(html) == 0:
-                self.error_collector.add(f'No text found, file {target_file} not written', f'{url}')
-            else:
-                with open(target_file, 'w') as f:
-                    f.write(html)
-        return html
 
 
 if __name__ == "__main__":

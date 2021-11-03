@@ -77,12 +77,10 @@ def main():
 
 def parse_imagine_sites(imagine_data):
     comment('Parsing AZ pages.')
-    films_loader = FilmsLoader()
-    films_loader.get_films(imagine_data)
+    get_films(imagine_data)
 
     comment('Parsing film pages.')
-    film_detals_loader = FilmDetailsLoader()
-    film_detals_loader.get_film_details(imagine_data)
+    get_film_details(imagine_data)
 
 
 def comment(text):
@@ -113,39 +111,28 @@ class Globals:
     debug_recorder = None
 
 
-class FilmsLoader:
+def get_films(imagine_data):
+    az_url = imagine_hostname + az_url_path
+    url_file = web_tools.UrlFile(az_url, az_file, Globals.error_collector, bytecount=3)
+    az_html = url_file.get_text()
+    if az_html is not None:
+        AzPageParser(imagine_data).feed(az_html)
 
-    def get_films(self, imagine_data):
-        if os.path.isfile(az_file):
-            charset = web_tools.get_charset(az_file)
-            with open(az_file, 'r', encoding=charset) as f:
-                az_html = f.read()
+
+def get_film_details(imagine_data):
+    for film in imagine_data.films:
+        html_data = None
+        film_file = film_file_format.format(film.filmid)
+        if os.path.isfile(film_file):
+            charset = web_tools.get_charset(film_file)
+            with open(film_file, 'r', encoding=charset) as f:
+                html_data = f.read()
         else:
-            az_url = imagine_hostname + az_url_path
-            az_html = web_tools.UrlReader(Globals.error_collector).load_url(az_url, az_file)
-        if az_html is not None:
-            AzPageParser(imagine_data).feed(az_html)
-
-
-class FilmDetailsLoader:
-
-    def __init__(self):
-        pass
-
-    def get_film_details(self, imagine_data):
-        for film in imagine_data.films:
-            html_data = None
-            film_file = film_file_format.format(film.filmid)
-            if os.path.isfile(film_file):
-                charset = web_tools.get_charset(film_file)
-                with open(film_file, 'r', encoding=charset) as f:
-                    html_data = f.read()
-            else:
-                print(f"Downloading site of {film.title}: {film.url}")
-                html_data = web_tools.UrlReader(Globals.error_collector).load_url(film.url, film_file)
-            if html_data is not None:
-                print(f"Analysing html file {film.filmid} of {film.title} {film.url}")
-                FilmPageParser(imagine_data, film).feed(html_data)
+            print(f"Downloading site of {film.title}: {film.url}")
+            html_data = web_tools.UrlReader(Globals.error_collector).load_url(film.url, film_file)
+        if html_data is not None:
+            print(f"Analysing html file {film.filmid} of {film.title} {film.url}")
+            FilmPageParser(imagine_data, film).feed(html_data)
 
 
 class HtmlPageParser(web_tools.HtmlPageParser):
@@ -460,7 +447,7 @@ class ImagineData(planner.FestivalData):
     def _filmkey(self, film, url):
         return url
 
-    def has_public_screenings(self, filmid):
+    def film_can_go_to_planner(self, filmid):
         return True
 
 

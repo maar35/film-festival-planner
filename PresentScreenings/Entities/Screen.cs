@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.RegularExpressions;
 
 namespace PresentScreenings.TableView
 {
@@ -7,7 +8,7 @@ namespace PresentScreenings.TableView
     /// </summary>
 
     public class Screen : ListStreamer, IComparable
-	{
+    {
         #region Public Members
         public enum ScreenType
         {
@@ -23,6 +24,7 @@ namespace PresentScreenings.TableView
         public string ParseName { get; }
         public string Abbreviation { get; }
         public ScreenType Type { get; }
+        public static Regex ScreenRegex => new Regex(@"(\D+)(\d*)");
         #endregion
 
         #region Constructors
@@ -63,15 +65,44 @@ namespace PresentScreenings.TableView
         }
 
         public override string ToString()
-		{
-			return Abbreviation;
-		}
+        {
+            return Abbreviation;
+        }
         #endregion
 
         #region Interface Implementations
         int IComparable.CompareTo(object obj)
         {
-            return string.Compare(Abbreviation, ((Screen)obj).ToString(), StringComparison.CurrentCulture);
+            return string.Compare(ToCompareString(), ((Screen)obj).ToCompareString(), StringComparison.CurrentCulture);
+        }
+        #endregion
+
+        #region Private Methods
+        private string ToCompareString()
+        {
+            string typeString = "9";
+            switch (Type)
+            {
+                case ScreenType.Location:
+                    typeString = "3";
+                    break;
+                case ScreenType.OnDemand:
+                    typeString = "2";
+                    break;
+                case ScreenType.OnLine:
+                    typeString = "1";
+                    break;
+            }
+            string compareString = $"{typeString}.{Abbreviation}";
+            Match match = ScreenRegex.Match(Abbreviation);
+            if (match != null)
+            {
+                string root = match.Groups[1].Value;
+                string postfix = match.Groups[2].Value;
+                int number = postfix.Length == 0 ? 0 : int.Parse(postfix);
+                compareString = $"{typeString}.{root}.{number:d3}";
+            }
+            return compareString;
         }
         #endregion
     }

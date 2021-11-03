@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+//using System.Linq;
 using AppKit;
+//using Foundation;
 
 namespace PresentScreenings.TableView
 {
@@ -10,21 +13,29 @@ namespace PresentScreenings.TableView
 
     public class ScreeningsTableDataSource : NSTableViewDataSource
 	{
-		#region Public Variables
-		public ScreeningsPlan Plan = null;
+        #region Private Variables
+        //private static Dictionary<bool, int> _signByAscending;
+        #endregion
+
+        #region Public Properties
+        public ScreeningsPlan Plan { get; set; } = null;
+        public List<Screen> Screens { get; set; } = null;
 		#endregion
 
 		#region Constructors
 		public ScreeningsTableDataSource()
 		{
-		}
-		#endregion
+            //_signByAscending = new Dictionary<bool, int> { };
+            //_signByAscending[true] = 1;
+            //_signByAscending[false] = -1;
+        }
+        #endregion
 
-		#region Override Methods
-		public override nint GetRowCount(NSTableView tableView)
+        #region Override Methods
+        public override nint GetRowCount(NSTableView tableView)
 		{
             return Plan.CurrDayScreens.Count;
 		}
-		#endregion
-	}
+        #endregion
+    }
 }

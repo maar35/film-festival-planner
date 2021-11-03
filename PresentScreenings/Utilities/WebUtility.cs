@@ -61,7 +61,8 @@ namespace PresentScreenings.TableView
 
         public static string HtmlToText(string html)
         {
-            return Screening.HtmlDecode(HtmlToPlainText(html));
+            //return Screening.HtmlDecode(HtmlToPlainText(html));
+            return html;
         }
 
         public static string UrlString(string title, MediumCategory category)

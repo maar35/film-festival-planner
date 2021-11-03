@@ -14,6 +14,7 @@ namespace PresentScreenings.TableView
     public class ScreeningsTableView
     {
         #region Properties
+        private const float ScreensColumnWidth = 90;
         public nfloat HorzPixelsPerHour { get; } = 120;
         public static int FirstDisplayedHour { get; } = 9;
         public static int LastDisplayedHour { get; } = 24;
@@ -27,6 +28,7 @@ namespace PresentScreenings.TableView
         {
             ScreeningsView = new ScreeningsView(controller, this);
             HeadersView = new HeadersView(screensColumn, screeningsColumn, this);
+            screensColumn.Width = ScreensColumnWidth;
         }
         #endregion
 
