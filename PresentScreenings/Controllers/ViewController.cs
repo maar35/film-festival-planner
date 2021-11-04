@@ -671,6 +671,7 @@ namespace PresentScreenings.TableView
             {
                 screening = Plan.CurrScreening;
             }
+
             // Move the current screening to the nearest unattended space within the day.
             if (screening is OnDemandScreening onDemandScreening)
             {
