@@ -22,7 +22,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Static Properties
-        //private static readonly Regex _screenRegex = new(@"(\D+)(\d*)");
         public static List<FilmFanAvailability> Availabilities { get; private set; }
         public static List<Screen> Screens { get; private set; }
         public static List<Film> Films { get; private set; }
@@ -39,7 +38,6 @@ namespace PresentScreenings.TableView
         public Screening CurrScreening => ScreenScreenings[CurrDay][CurrScreen][_currScreenScreeningNumber];
         public List<Screen> CurrDayScreens => _dayScreens[CurrDay];
         public DateTime CurrDay { get => FestivalDays[_currDayNumber]; set => SetDay(value); }
-        //public static Regex ScreenRegex => new(@"(\D+)(\d*)");
         #endregion
 
         #region Constructors
@@ -229,7 +227,7 @@ namespace PresentScreenings.TableView
         #region Private methods
         private Screening PickScreening(string line)
         {
-            // Parse the screen form the input line.
+            // Parse the screen from the input line.
             string[] fields = line.Split(';');
             string screenString = fields[Screening.IndexByName["Screen"]];
             Screen screen = Screens
