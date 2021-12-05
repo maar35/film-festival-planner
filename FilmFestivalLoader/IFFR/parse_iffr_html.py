@@ -14,7 +14,7 @@ import web_tools
 
 # Parameters.
 festival = 'IFFR'
-year = 2021
+year = 2022
 city = 'Rotterdam'
 june_edition_start_date = datetime.date(year, 6, 1)
 
@@ -32,7 +32,7 @@ debug_file = os.path.join(plandata_dir, "debug.txt")
 
 # URL information.
 iffr_hostname = "https://iffr.com"
-az_url_path = "/nl/programma/" + str(year) + "/a-z"
+az_url_path = "/nl/iffr/" + str(year) + "/a-z"
 
 
 def main():
@@ -128,7 +128,6 @@ class HtmlPageParser(web_tools.HtmlPageParser):
 
     def __init__(self, iffr_data, debug_prefix):
         web_tools.HtmlPageParser.__init__(self, Globals.debug_recorder, debug_prefix)
-        # web_tools.HtmlPageParser.convert_charrefs = False
         self.iffr_data = iffr_data
         self.debugging = False
 
@@ -139,14 +138,6 @@ class HtmlPageParser(web_tools.HtmlPageParser):
 class AzPageParser(HtmlPageParser):
 
     props_re = re.compile(
-        # r"""
-        #     "bookings":\[[^]]*?\],"title":"(?P<title>[^"]+)           # Title
-        #     .*?"url\(\{\\"language\\":\\"nl\\"\}\)":"(?P<url>[^"]+)"  # URL
-        #     ,"description\(\{.*?\}\)":"(?P<grid_desc>[^"]+)"          # Grid description
-        #     ,"description\(\{.*?\}\)":"(?P<list_desc>[^"]+)"          # List description
-        #     .*?"sortedTitle":"(?P<sorted_title>[^"]+)"                # Sorted Title
-        #     (?:.*?"duration":(?P<duration>\d+)\})?                    # Duration
-        # """, re.VERBOSE)
         r"""
             "bookings":\[[^]]*?\],"title":"(?P<title>[^"]+)"          # Title
             .*?"url\(\{\\"language\\":\\"nl\\"\}\)":"(?P<url>[^"]+)"  # URL
@@ -158,6 +149,12 @@ class AzPageParser(HtmlPageParser):
 
     def __init__(self, iffr_data):
         HtmlPageParser.__init__(self, iffr_data, 'AZ')
+        self.film = None
+        self.duration = None
+        self.sorted_title = None
+        self.description = None
+        self.url = None
+        self.title = None
         self.matching_attr_value = ""
         self.debugging = True
         self.init_film_data()

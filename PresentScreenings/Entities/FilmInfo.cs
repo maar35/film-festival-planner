@@ -28,7 +28,7 @@ namespace PresentScreenings.TableView
             {
                 Film film = ViewController.GetFilmById(ScreenedFilmId);
                 string titleText = $"{Title} ({film.MinutesString}) - {film.MaxRating}";
-                return titleText + Environment.NewLine + WebUtility.HtmlToText(Description);
+                return titleText + Environment.NewLine + Description;
             }
         }
         #endregion
@@ -63,12 +63,12 @@ namespace PresentScreenings.TableView
             if (FilmDescription != string.Empty)
             {
                 builder.AppendLine(Environment.NewLine + "Description");
-                builder.AppendLine(WebUtility.HtmlToText(FilmDescription));
+                builder.AppendLine(FilmDescription);
             }
             if (FilmArticle != string.Empty)
             {
                 builder.AppendLine(Environment.NewLine + "Article");
-                builder.AppendLine(WebUtility.HtmlToText(FilmArticle));
+                builder.AppendLine(FilmArticle);
             }
             if (CombinationProgramIds.Count > 0)
             {
@@ -169,7 +169,7 @@ namespace PresentScreenings.TableView
             {
                 text = filmInfo.FilmArticle;
             }
-            return Screening.HtmlDecode(text);
+            return text;
         }
 
         public string GetGenreDescription()

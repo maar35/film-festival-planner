@@ -39,16 +39,16 @@ class UrlFile:
 
     def get_text(self, comment_at_download=None):
         reader = UrlReader(self.error_collector)
-        html = None
+        html_text = None
         self.set_encoding(reader)
         if os.path.isfile(self.path):
             with open(self.path, 'r', encoding=self.encoding) as f:
-                html = f.read()
+                html_text = f.read()
         else:
             if comment_at_download is not None:
                 print(comment_at_download)
-            html = reader.load_url(self.url, self.path, self.encoding)
-        return html
+            html_text = reader.load_url(self.url, self.path, self.encoding)
+        return html_text
 
     def set_encoding(self, reader):
         if self.encoding is None:
