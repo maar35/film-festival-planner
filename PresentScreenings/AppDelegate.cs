@@ -19,6 +19,7 @@ namespace PresentScreenings.TableView
         #region Static Properties
         public static string Festival { get; private set; }
         public static string FestivalYear { get; private set; }
+        public static bool VisitPhysical { get; private set; }
         public static string DocumentsFolder => GetDocumentsPath();
         public static TimeSpan PauseBetweenOnDemandScreenings { get; private set; }
         public static TimeSpan DaySpan => new TimeSpan(24, 0, 0);
@@ -41,11 +42,12 @@ namespace PresentScreenings.TableView
         public AppDelegate()
 		{
             // Preferences.
-            Festival = "Imagine";
+            Festival = "IFFR";
             FestivalYear = "2021";
+            VisitPhysical = false;
             PauseBetweenOnDemandScreenings = new TimeSpan(0, 30, 0);
             Screening.TravelTime = new TimeSpan(0, 30, 0);
-            FilmRatingDialogController.OnlyFilmsWithScreenings = false;
+            FilmRatingDialogController.OnlyFilmsWithScreenings = true;
             FilmRatingDialogController.MinimalDuration = new TimeSpan(0, 35, 0);
             ScreeningControl.UseCoreGraphics = false;
 

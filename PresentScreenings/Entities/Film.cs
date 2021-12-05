@@ -108,7 +108,7 @@ namespace PresentScreenings.TableView
             fields.Add(ViewController.GetFilmFanFilmRating(this, "Adrienne").ToString());
             fields.Add(FilmInfo.GetGenreDescription());
             fields.Add(FilmInfo.Url);
-            fields.Add(Screening.HtmlDecode(FilmInfo.FilmDescription.Replace("\n", " ")));
+            fields.Add(FilmInfo.FilmDescription.Replace("\n", " "));
 
             return string.Join(";", fields);
         }

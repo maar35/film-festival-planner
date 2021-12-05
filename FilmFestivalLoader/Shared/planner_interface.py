@@ -294,30 +294,15 @@ class FestivalData:
             self.filmid_by_key[key] = filmid
         return filmid
 
-    def read_filmids(self):
-        try:
-            with open(self.filmids_file, 'r') as f:
-                records = [self.splitrec(line, ';') for line in f]
-            for record in records:
-                filmid = int(record[0])
-                title = record[1]
-                url = record[2]
-                self.filmid_by_url[url] = filmid
-                self.filmid_by_key[self._filmkey(title, url)] = filmid
-        except OSError:
-            pass
-        try:
-            self.curr_film_id = max(self.filmid_by_key.values())
-        except ValueError:
-            self.curr_film_id = 0
-        print(f"Done reading {len(self.filmid_by_url)} records from {self.filmids_file}.")
-
     def get_film_by_key(self, title, url):
         filmid = self.filmid_by_key[self._filmkey(title, url)]
         films = [film for film in self.films if film.filmid == filmid]
         if len(films) > 0:
             return films[0]
         return None
+
+    def get_filmid(self, url):
+        return self.get_film_by_key(None, url).filmid
 
     def get_screen(self, city, name):
         screen_key = (city, name)
@@ -341,6 +326,24 @@ class FestivalData:
             articles = [Article(self.splitrec(line, ":")) for line in f]
         Film.articles_by_language = dict([(a._key(), a) for a in articles])
 
+    def read_filmids(self):
+        try:
+            with open(self.filmids_file, 'r') as f:
+                records = [self.splitrec(line, ';') for line in f]
+            for record in records:
+                filmid = int(record[0])
+                title = record[1]
+                url = record[2]
+                self.filmid_by_url[url] = filmid
+                self.filmid_by_key[self._filmkey(title, url)] = filmid
+        except OSError:
+            pass
+        try:
+            self.curr_film_id = max(self.filmid_by_key.values())
+        except ValueError:
+            self.curr_film_id = 0
+        print(f"Done reading {len(self.filmid_by_url)} records from {self.filmids_file}.")
+
     def read_screens(self):
         def create_screen(fields):
             screen_id = int(fields[0])
@@ -363,23 +366,20 @@ class FestivalData:
         except ValueError:
             self.curr_screen_id = 0
 
-    def write_screens(self):
-        with open(self.screens_file, 'w') as f:
-            for screen in self.screen_by_location.values():
-                f.write(repr(screen))
-        print(f"Done writing {len(self.screen_by_location)} records to {self.screens_file}.")
-
     def sort_films(self):
         seqnr = 0
         for film in sorted(self.films):
             seqnr += 1
             film.seqnr = seqnr
 
-    def has_public_screenings(self, filmid):
-        return len([s for s in self.screenings if s.film.filmid == filmid and s.audience == 'publiek']) > 0
+    def screening_can_go_to_planner(self, screening):
+        return screening.audience == "publiek"
+
+    def film_can_go_to_planner(self, filmid):
+        return len([s for s in self.screenings if s.film.filmid == filmid and self.screening_can_go_to_planner(s)]) > 0
 
     def write_films(self):
-        public_films = [f for f in self.films if self.has_public_screenings(f.filmid)]
+        public_films = [f for f in self.films if self.film_can_go_to_planner(f.filmid)]
         if len(self.films):
             with open(self.films_file, 'w') as f:
                 f.write(self.films[0].film_repr_csv_head())
@@ -390,15 +390,12 @@ class FestivalData:
             with open(self.filmids_file, 'w') as f:
                 for film in self.films:
                     f.write(film.filmid_repr())
-        print(f'Done writing {len(self.films)} records to {self.filmids_file}.')
-
-    def get_filmid(self, url):
-        return self.get_film_by_key(None, url).filmid
+            print(f'Done writing {len(self.films)} records to {self.filmids_file}.')
 
     def write_filminfo(self):
         info_count = 0
         filminfos = ET.Element('FilmInfos')
-        for filminfo in [i for i in self.filminfos if self.has_public_screenings(i.filmid)]:
+        for filminfo in [i for i in self.filminfos if self.film_can_go_to_planner(i.filmid)]:
             info_count += 1
             id = str(filminfo.filmid)
             article = filminfo.article
@@ -422,10 +419,16 @@ class FestivalData:
         tree.write(self.filminfo_file, encoding='utf-8', xml_declaration=True)
         print(f"Done writing {info_count} records to {self.filminfo_file}.")
 
+    def write_screens(self):
+        with open(self.screens_file, 'w') as f:
+            for screen in self.screen_by_location.values():
+                f.write(repr(screen))
+        print(f"Done writing {len(self.screen_by_location)} records to {self.screens_file}.")
+
     def write_screenings(self):
         public_screenings = []
         if len(self.screenings):
-            public_screenings = [s for s in self.screenings if s.audience == "publiek" and not s.film.is_part_of_combination(self)]
+            public_screenings = [s for s in self.screenings if self.screening_can_go_to_planner(s) and not s.film.is_part_of_combination(self)]
             with open(self.screenings_file, 'w') as f:
                 f.write(self.screenings[0].screening_repr_csv_head())
                 for screening in public_screenings:

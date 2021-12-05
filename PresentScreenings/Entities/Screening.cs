@@ -195,7 +195,7 @@ namespace PresentScreenings.TableView
             fields.Add(Subtitles);
             fields.Add(filmInfo.GetGenreDescription());
             fields.Add(filmInfo.Url);
-            fields.Add(HtmlDecode(filmInfo.FilmDescription));
+            fields.Add(filmInfo.FilmDescription);
 
             return string.Join(";", fields);
         }
@@ -231,21 +231,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public static string HtmlDecode(string html)
-        {
-            var htmlRe = new Regex(@"&amp;([a-zA-Z]{2,7});", RegexOptions.CultureInvariant);
-            return htmlRe.Replace(html, @":$1:").Replace("&#039;", "'")
-                .Replace(";", ".,")
-                .Replace(":nbsp:", " ")
-                .Replace(":aacute:", @"á").Replace(":auml:", @"ä")
-                .Replace(":euml:", @"ë").Replace(":eacute:", @"é").Replace(":egrave:", @"è").Replace(":Eacute:", @"É")
-                .Replace(":iacute:", @"í").Replace(":iuml:", @"ï")
-                .Replace(":oacute:", @"ó")
-                .Replace(":Scaron:", @"Š")
-                .Replace(":ndash:", @"–")
-                .Replace(":ldquo:", @"“").Replace(":lsquo:", @"‘").Replace(":rdquo:", @"”").Replace(":rsquo:", @"’").Replace(":quot:", "'");
-        }
-
         public bool FilmFanAttends(string filmFan)
         {
             return AttendingFilmFans.Contains(filmFan);

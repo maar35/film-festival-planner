@@ -59,11 +59,6 @@ namespace PresentScreenings.TableView
             return text;
         }
 
-        public static string HtmlToText(string html)
-        {
-            return Screening.HtmlDecode(HtmlToPlainText(html));
-        }
-
         public static string UrlString(string title, MediumCategory category)
         {
             string baseUrl = "https://iffr.com/nl/" + AppDelegate.FestivalYear + "/" + FolderByCategory[category] + "/";

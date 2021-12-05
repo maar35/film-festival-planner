@@ -19,11 +19,7 @@ import test_tools
 
 
 def main():
-    tests = [test_new_name_first,
-             test_new_name_not,
-             test_new_name_gap,
-             test_new_name_next,
-             compare_a0,
+    tests = [compare_a0,
              compare_0a,
              compare_a_,
              compare_00]
