@@ -44,10 +44,10 @@ namespace PresentScreenings.TableView
             // Preferences.
             Festival = "IFFR";
             FestivalYear = "2021";
-            VisitPhysical = false;
+            VisitPhysical = true;
             PauseBetweenOnDemandScreenings = new TimeSpan(0, 30, 0);
             Screening.TravelTime = new TimeSpan(0, 30, 0);
-            FilmRatingDialogController.OnlyFilmsWithScreenings = true;
+            FilmRatingDialogController.OnlyFilmsWithScreenings = false;
             FilmRatingDialogController.MinimalDuration = new TimeSpan(0, 35, 0);
             ScreeningControl.UseCoreGraphics = false;
 

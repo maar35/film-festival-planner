@@ -49,10 +49,7 @@ class Film:
     category_films = "Films"
     category_combinations = "CombinedProgrammes"
     category_events = "Events"
-    filmcategory_by_string = {}
-    filmcategory_by_string["films"] = category_films
-    filmcategory_by_string["verzamelprogrammas"] = category_combinations
-    filmcategory_by_string["events"] = category_events
+    category_by_string = dict(films=category_films, verzamelprogrammas=category_combinations, events=category_events)
     mapper = UnicodeMapper()
     articles_by_language = {}
     language_by_title = {}
@@ -66,7 +63,7 @@ class Film:
         self.title_language = self.language()
         self.section = ""
         self.duration = None
-        self.medium_category = url.split("/")[5]
+        self.medium_category = url.split("/")[6]
         self.sortstring = self.lower(self.strip_article())
 
     def __str__(self):
@@ -98,7 +95,7 @@ class Film:
             self.title_language,
             self.section,
             self.duration_str(),
-            self.filmcategory_by_string[self.medium_category],
+            self.category_by_string[self.medium_category],
             self.url
         ])
         return "{}\n".format(text)

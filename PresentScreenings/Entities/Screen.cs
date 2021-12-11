@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace PresentScreenings.TableView
@@ -9,6 +10,16 @@ namespace PresentScreenings.TableView
 
     public class Screen : ListStreamer, IComparable
     {
+        #region Private Members
+        private enum ScreenTypeSortCode
+        {
+            OnLine,
+            OnDemand,
+            Location
+        }
+        private static Dictionary<ScreenType, ScreenTypeSortCode> sortCodeByType;
+        #endregion
+
         #region Public Members
         public enum ScreenType
         {
@@ -28,6 +39,15 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
+        // Static constructor.
+        static Screen()
+        {
+            sortCodeByType = new Dictionary<ScreenType, ScreenTypeSortCode> { };
+            sortCodeByType.Add(ScreenType.OnLine, ScreenTypeSortCode.OnLine);
+            sortCodeByType.Add(ScreenType.OnDemand, ScreenTypeSortCode.OnDemand);
+            sortCodeByType.Add(ScreenType.Location, ScreenTypeSortCode.Location);
+        }
+
         // Empty constructor to facilitate ListStreamer method calls.
         public Screen() { }
 
@@ -80,27 +100,15 @@ namespace PresentScreenings.TableView
         #region Private Methods
         private string ToCompareString()
         {
-            string typeString = "9";
-            switch (Type)
-            {
-                case ScreenType.Location:
-                    typeString = "3";
-                    break;
-                case ScreenType.OnDemand:
-                    typeString = "2";
-                    break;
-                case ScreenType.OnLine:
-                    typeString = "1";
-                    break;
-            }
-            string compareString = $"{typeString}.{Abbreviation}";
+            int typeCode = (int)sortCodeByType[Type];
+            string compareString = $"{typeCode}.{Abbreviation}";
             Match match = ScreenRegex.Match(Abbreviation);
             if (match != null)
             {
                 string root = match.Groups[1].Value;
                 string postfix = match.Groups[2].Value;
                 int number = postfix.Length == 0 ? 0 : int.Parse(postfix);
-                compareString = $"{typeString}.{root}.{number:d3}";
+                compareString = $"{typeCode}.{root}.{number:d3}";
             }
             return compareString;
         }

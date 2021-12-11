@@ -16,7 +16,6 @@ import web_tools
 festival = 'IFFR'
 year = 2022
 city = 'Rotterdam'
-june_edition_start_date = datetime.date(year, 6, 1)
 
 # Directories.
 documents_dir = os.path.expanduser("~/Documents/Film/{0}/{0}{1}".format(festival, year))
@@ -41,9 +40,9 @@ def main():
     Globals.debug_recorder = app_tools.DebugRecorder(debug_file)
 
     # Initialize a festival data object.
-    iffr_data = IffrData(plandata_dir)
+    iffr_data: IffrData = IffrData(plandata_dir)
 
-    # Try parsing the web sites.
+    # Try parsing the websites.
     write_film_list = False
     write_other_lists = True
     try:
@@ -160,7 +159,6 @@ class AzPageParser(HtmlPageParser):
         self.init_film_data()
 
     def parse_props(self, data):
-        # for g in [m.groupdict() for m in self.props_re.finditer(data)]:
         i = self.props_re.finditer(data)
         matches = [match for match in i]
         groups = [m.groupdict() for m in matches]
@@ -189,7 +187,7 @@ class AzPageParser(HtmlPageParser):
         if self.film is None:
             Globals.error_collector.add(f'Could\'t create film from {self.title}', self.url)
         else:
-            self.film.medium_category = self.url.split('/')[5]
+            self.film.medium_category = self.url.split('/')[6]
             self.film.duration = self.duration
             self.film.sortstring = self.sorted_title
             print(f'Adding FILM: {self.title} ({self.film.duration_str()}) {self.film.medium_category}')
@@ -557,9 +555,8 @@ class IffrData(planner.FestivalData):
     def _filmkey(self, film, url):
         return url
 
-    def screening_can_go_to_planner(self, screening):
-        in_june_edition = screening.start_datetime.date() >= june_edition_start_date
-        return in_june_edition and planner.FestivalData.screening_can_go_to_planner(self, screening)
+    def film_can_go_to_planner(self, filmid):
+        return True
 
 
 if __name__ == "__main__":
