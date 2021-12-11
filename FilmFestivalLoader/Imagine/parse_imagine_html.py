@@ -153,10 +153,10 @@ class AzPageParser(HtmlPageParser):
         self.init_film_data()
 
     def init_catagories(self):
-        planner.Film.filmcategory_by_string['feature'] = planner.Film.category_films
-        planner.Film.filmcategory_by_string['special'] = planner.Film.category_events
-        planner.Film.filmcategory_by_string['talk'] = planner.Film.category_events
-        planner.Film.filmcategory_by_string['workshop'] = planner.Film.category_events
+        planner.Film.category_by_string['feature'] = planner.Film.category_films
+        planner.Film.category_by_string['special'] = planner.Film.category_events
+        planner.Film.category_by_string['talk'] = planner.Film.category_events
+        planner.Film.category_by_string['workshop'] = planner.Film.category_events
 
     def init_film_data(self):
         self.film = None
