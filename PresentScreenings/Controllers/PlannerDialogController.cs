@@ -132,7 +132,7 @@ namespace PresentScreenings.TableView
             xCurr -= _xDistance + _controlsWidth;
             _unplanButton = ControlsFactory.NewStandardButton(new CGRect(xCurr, _yXcodeControlsMargin, _controlsWidth, _controlsHeight));
             _unplanButton.Title = "Unplan";
-            _unplanButton.Enabled = ScreeningsPlan.Screenings.Count(s => s.AutomaticallyPlanned) >= 1;
+            _unplanButton.Enabled = ScreeningsPlan.DisplayedScreenings.Count(s => s.AutomaticallyPlanned) >= 1;
             _unplanButton.Action = new ObjCRuntime.Selector("UnplanScreenings:");
             View.AddSubview(_unplanButton);
 

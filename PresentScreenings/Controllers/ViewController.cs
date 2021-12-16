@@ -241,7 +241,7 @@ namespace PresentScreenings.TableView
         public static List<Screening> OverlappingScreenings(Screening screening, bool useTravelTime = false)
         {
             var overlappingScreenings = (
-                from Screening s in ScreeningsPlan.Screenings
+                from Screening s in ScreeningsPlan.DisplayedScreenings
                 where s.Overlaps(screening, useTravelTime) && s.FilmId != screening.FilmId
                 select s
             ).ToList();
@@ -251,7 +251,7 @@ namespace PresentScreenings.TableView
         public static List<Screening> OverlappingAttendedScreenings(Screening screening, bool useTravelTime = false)
         {
             var overlappingAttendedScreenings = (
-                from Screening s in ScreeningsPlan.Screenings
+                from Screening s in ScreeningsPlan.DisplayedScreenings
                 where s.IAttend && s.Overlaps(screening, useTravelTime)
                 select s
             ).ToList();
@@ -260,7 +260,7 @@ namespace PresentScreenings.TableView
 
         public List<Screening> DayScreenings()
         {
-            var dayScreenings = ScreeningsPlan.Screenings
+            var dayScreenings = ScreeningsPlan.DisplayedScreenings
                 .Where(s => s.StartDate == Plan.CurrDay)
                 .ToList();
             return dayScreenings;

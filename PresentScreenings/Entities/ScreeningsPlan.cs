@@ -26,6 +26,7 @@ namespace PresentScreenings.TableView
         public static List<Screen> Screens { get; private set; }
         public static List<Film> Films { get; private set; }
         public static List<Screening> Screenings { get; private set; }
+        public static List<Screening> DisplayedScreenings { get; private set; }
         public static List<ScreeningInfo> ScreeningInfos { get; private set; }
         public static List<FilmFanFilmRating> FilmFanFilmRatings { get; private set; }
         public static List<FilmInfo> FilmInfos { get; private set; }
@@ -75,7 +76,10 @@ namespace PresentScreenings.TableView
             Screenings = new Screening().ReadListFromFile(screeningsFile, line => PickScreening(line));
             ViewController.RemoveDuplicateScreenings();
 
-            // Imitialize the day schemes.
+            // Filter out screenings that are screened in a combination program.
+            SetDisplayedScreenings();
+
+            // Initialize the day schemes.
             InitializeDays();
             _currDayNumber = 0;
             _currScreenNumber = 0;
@@ -93,7 +97,7 @@ namespace PresentScreenings.TableView
             InitializeDisplayScreenByAbbreviation();
 
             // Fill the dictionaries based on the screenings.
-            foreach (Screening screening in Screenings)
+            foreach (Screening screening in DisplayedScreenings)
             {
                 // Initialialize on-demand features when applicable.
                 InitializeOnLineScreening(screening);
@@ -107,7 +111,7 @@ namespace PresentScreenings.TableView
                     ScreenScreenings.Add(day, new Dictionary<Screen, List<Screening>> { });
                 }
 
-                // Initializes screen lists when a new screen is encountered.
+                // Initialize screen lists when a new screen is encountered.
                 Screen screen = screening.DisplayScreen;
                 if (!_dayScreens[day].Contains(screen))
                 {
@@ -215,7 +219,7 @@ namespace PresentScreenings.TableView
         public List<Screening> AttendedScreenings()
         {
             var attendedScreenings = (
-                from Screening s in Screenings
+                from Screening s in DisplayedScreenings
                 where s.AttendingFilmFans.Count > 0
                 orderby s.StartDate
                 select s
@@ -251,6 +255,18 @@ namespace PresentScreenings.TableView
             }
         }
 
+        private void SetDisplayedScreenings()
+        {
+            DisplayedScreenings = new List<Screening> { };
+            foreach (Screening screening in Screenings)
+            {
+                if (screening.Film.FilmInfo.CombinationProgramIds.Count == 0)
+                {
+                    DisplayedScreenings.Add(screening);
+                }
+            }
+        }
+
         private void InitializeOnLineScreening(Screening screening)
         {
             if (screening is OnDemandScreening onDemandScreening)
@@ -259,7 +275,7 @@ namespace PresentScreenings.TableView
                 int filmId = onDemandScreening.FilmId;
                 int screenId = onDemandScreening.Screen.ScreenId;
                 string odAbbreviation = onDemandScreening.Screen.Abbreviation;
-                List<Screening> localScreenings = Screenings
+                List<Screening> localScreenings = DisplayedScreenings
                     .Where(s => s.FilmId == filmId && s.Screen.ScreenId != screenId)
                     .ToList();
                 if (localScreenings.Count > 0)
@@ -268,7 +284,7 @@ namespace PresentScreenings.TableView
                     onDemandScreening.SetEndTime(localScreening);
                 }
 
-                // Place film that is available from midnight in day scheme.
+                // Place film that is available from midnight into day scheme.
                 TimeSpan timeOfDay = onDemandScreening.StartTime.TimeOfDay;
                 if (timeOfDay < ViewController.EarliestTime)
                 {
@@ -285,7 +301,7 @@ namespace PresentScreenings.TableView
         private void FixOverlappingScreenings(OnLineScreening onLineScreening)
         {
             // Establish whether there are coinciding screenings.
-            var overlappers = Screenings
+            var overlappers = DisplayedScreenings
                 .Where(s => s != onLineScreening && s.Overlaps(onLineScreening, true) && (s is OnLineScreening));
             var coinciders = overlappers
                 .Where(s => s.Screen == onLineScreening.Screen);
