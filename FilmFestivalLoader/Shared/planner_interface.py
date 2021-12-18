@@ -31,16 +31,16 @@ class UnicodeMapper:
         return s
 
 
-class Article():
+class Article:
 
     def __init__(self, language_articles_tuple):
         self.language = language_articles_tuple[0]
         self.articles = language_articles_tuple[1].split()
 
-    def _key(self):
+    def key(self):
         return self.language
 
-    def isarticle(self, word):
+    def is_article(self, word):
         return word.lower() in self.articles
 
 
@@ -67,7 +67,7 @@ class Film:
         self.sortstring = self.lower(self.strip_article())
 
     def __str__(self):
-        return "; ".join([self.title, self.medium_category])
+        return ", ".join([str(self.filmid), self.title, self.duration_str(), self.medium_category])
 
     def __lt__(self, other):
         return self.sortstring < other.sortstring
@@ -88,8 +88,8 @@ class Film:
 
     def __repr__(self):
         text = ";".join([
-            (str)(self.seqnr),
-            (str)(self.filmid),
+            str(self.seqnr),
+            str(self.filmid),
             self.sortstring.replace(";", ".,"),
             self.title.replace(";", ".,"),
             self.title_language,
@@ -102,7 +102,7 @@ class Film:
 
     def filmid_repr(self):
         text = ";".join([
-            (str)(self.filmid),
+            str(self.filmid),
             self.title.replace(";", ".,"),
             self.url
         ])
@@ -150,7 +150,7 @@ class Film:
                 i += 1
             first = title[0:i]
             rest = title[i:].lstrip()
-        if not self.articles_by_language[self.title_language].isarticle(first):
+        if not self.articles_by_language[self.title_language].is_article(first):
             return title
         return "{}, {}".format(rest, first)
 
@@ -168,7 +168,7 @@ class ScreenedFilm:
         return '\n'.join([str(self.filmid), self.title, self.description])
 
 
-class FilmInfo():
+class FilmInfo:
 
     def __init__(self, filmid, description, article, combination_urls=[], screened_films=[]):
         self.filmid = filmid
@@ -178,10 +178,12 @@ class FilmInfo():
         self.screened_films = screened_films
 
     def __str__(self):
-        return '\n'.join([str(self.filmid), self.description, self.article, '\n'.join([str(fi) for fi in self.screened_films])]) + '\n'
+        combinations_str = '\nCombinations:\n' + '\n'.join([str(u) for u in self.combination_urls])
+        screened_str = '\nScreened:\n' + '\n'.join([str(fi) for fi in self.screened_films])
+        return '\n'.join([str(self.filmid), self.description, self.article, combinations_str, screened_str]) + '\n'
 
 
-class Screen():
+class Screen:
 
     screen_types = ['Location', 'OnLine', 'OnDemand']
 
@@ -199,8 +201,8 @@ class Screen():
         text = ";".join([str(self.screen_id), self.city, self.name, self.abbr, self.type])
         return "{}\n".format(text)
 
-    def _key(self):
-        return (self.city, self.name)
+    def key(self):
+        return self.city, self.name
 
 
 class Screening:
@@ -237,11 +239,11 @@ class Screening:
 
     def __repr__(self):
         text = ";".join([
-            (str)(self.film.filmid),
+            str(self.film.filmid),
             self.screen.abbr,
             self.start_datetime.isoformat(sep=' '),
             self.end_datetime.isoformat(sep=' '),
-            (str)(self.combination_program.filmid if self.combination_program is not None else ''),
+            str(self.combination_program.filmid if self.combination_program is not None else ''),
             self.subtitles,
             self.q_and_a,
             self.extra
@@ -321,7 +323,7 @@ class FestivalData:
     def read_articles(self):
         with open(articles_file) as f:
             articles = [Article(self.splitrec(line, ":")) for line in f]
-        Film.articles_by_language = dict([(a._key(), a) for a in articles])
+        Film.articles_by_language = dict([(a.key(), a) for a in articles])
 
     def read_filmids(self):
         try:
@@ -355,7 +357,7 @@ class FestivalData:
         try:
             with open(self.screens_file, 'r') as f:
                 screens = [create_screen(self.splitrec(line, ';')) for line in f]
-            self.screen_by_location = {screen._key(): screen for screen in screens}
+            self.screen_by_location = {screen.key(): screen for screen in screens}
         except OSError:
             pass
         try:

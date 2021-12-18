@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 using static PresentScreenings.TableView.FilmInfo;
 
 namespace PresentScreenings.TableView
@@ -133,7 +133,20 @@ namespace PresentScreenings.TableView
             }
 
             // Assign other properties.
-            Film = (from Film film in ScreeningsPlan.Films where film.FilmId == FilmId select film).First();
+            var filmList = ScreeningsPlan
+                .Films
+                .Where(f => f.FilmId == FilmId)
+                .ToList();
+            if (filmList.Count == 0)
+            {
+                string messageText = "No film found for screening";
+                string informativeText = $"Can't find film with ID={FilmId} "
+                    + $"while reading {AppDelegate.ScreeningsFile}."
+                    + "\n\nFor developers: If this is caused by a URL change of the film, please"
+                    + "replace the filmId in ratings.csv, screenings.csv (two columns) and screeninginfo.";
+                AlertRaiser.QuitWithAlert(messageText, informativeText);
+            }
+            Film = filmList.First();
             CombinationProgramId = int.TryParse(combinationIdStr, out int outcome) ? (int?)outcome : null;
             Subtitles = subtitles;
             QAndA = qAndA;

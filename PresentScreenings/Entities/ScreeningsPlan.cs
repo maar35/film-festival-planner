@@ -47,8 +47,8 @@ namespace PresentScreenings.TableView
             string availabilitiesFile = Path.Combine(documentsFolder, "availabilities.csv");
             string screensFile = Path.Combine(documentsFolder, "screens.csv");
             string filmsFile = Path.Combine(documentsFolder, "films.csv");
-            string screeningsFile = Path.Combine(documentsFolder, "screenings.csv");
             string screeningInfoFile = Path.Combine(documentsFolder, "screeninginfo.csv");
+            string screeningsFile = AppDelegate.ScreeningsFile;
             string ratingsFile = Path.Combine(documentsFolder, "ratings.csv");
             string filmInfoFile = Path.Combine(documentsFolder, "filminfo.xml");
 
@@ -75,7 +75,10 @@ namespace PresentScreenings.TableView
             Screenings = new Screening().ReadListFromFile(screeningsFile, line => PickScreening(line));
             ViewController.RemoveDuplicateScreenings();
 
-            // Imitialize the day schemes.
+            // Filter out screenings that are screened in a combination program.
+            SetDisplayedScreenings();
+
+            // Initialize the day schemes.
             InitializeDays();
             _currDayNumber = 0;
             _currScreenNumber = 0;
@@ -107,7 +110,7 @@ namespace PresentScreenings.TableView
                     ScreenScreenings.Add(day, new Dictionary<Screen, List<Screening>> { });
                 }
 
-                // Initializes screen lists when a new screen is encountered.
+                // Initialize screen lists when a new screen is encountered.
                 Screen screen = screening.DisplayScreen;
                 if (!_dayScreens[day].Contains(screen))
                 {
@@ -251,6 +254,23 @@ namespace PresentScreenings.TableView
             }
         }
 
+        private void SetDisplayedScreenings()
+        {
+            List<Screening> screeningsToRemove = new List<Screening> { };
+            foreach (Screening screening in Screenings)
+            {
+                FilmInfo filmInfo = ViewController.GetFilmInfo(screening.FilmId);
+                if (filmInfo.CombinationProgramIds.Count > 0)
+                {
+                    screeningsToRemove.Add(screening);
+                }
+            }
+            foreach (var screeningToRemove in screeningsToRemove)
+            {
+                Screenings.Remove(screeningToRemove);
+            }
+        }
+
         private void InitializeOnLineScreening(Screening screening)
         {
             if (screening is OnDemandScreening onDemandScreening)
@@ -268,7 +288,7 @@ namespace PresentScreenings.TableView
                     onDemandScreening.SetEndTime(localScreening);
                 }
 
-                // Place film that is available from midnight in day scheme.
+                // Place film that is available from midnight into day scheme.
                 TimeSpan timeOfDay = onDemandScreening.StartTime.TimeOfDay;
                 if (timeOfDay < ViewController.EarliestTime)
                 {

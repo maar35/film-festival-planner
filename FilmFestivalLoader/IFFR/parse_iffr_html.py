@@ -5,6 +5,7 @@ import sys
 import re
 import datetime
 from enum import Enum, auto
+from typing import Dict
 
 shared_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 sys.path.insert(0, shared_dir)
@@ -14,7 +15,7 @@ import web_tools
 
 # Parameters.
 festival = 'IFFR'
-year = 2022
+year = 2021
 city = 'Rotterdam'
 
 # Directories.
@@ -109,13 +110,14 @@ def get_films(iffr_data):
 
 def get_film_details(iffr_data):
     for film in iffr_data.films:
-        film_html = None
         film_file = film_file_format.format(film.filmid)
         url_file = web_tools.UrlFile(film.url, film_file, Globals.error_collector, bytecount=60000)
         film_html = url_file.get_text(f'Downloading site of {film.title}: {film.url}')
         if film_html is not None:
-            print(f"Analysing html file {film.filmid} of {film.title} {film.url}")
+            print(f'Analysing html file {film.filmid} of {film.title} {film.url}')
             FilmPageParser(iffr_data, film).feed(film_html)
+            print(f'Finding compilation program of {film.title}')
+            CombinationPageParser(iffr_data, film).feed(film_html)
 
 
 class Globals:
@@ -131,7 +133,7 @@ class HtmlPageParser(web_tools.HtmlPageParser):
         self.debugging = False
 
     def attr_str(self, attr, index):
-        return (str)(attr[index])
+        return str(attr[index])
 
 
 class AzPageParser(HtmlPageParser):
@@ -155,7 +157,7 @@ class AzPageParser(HtmlPageParser):
         self.url = None
         self.title = None
         self.matching_attr_value = ""
-        self.debugging = True
+        self.debugging = False
         self.init_film_data()
 
     def parse_props(self, data):
@@ -171,8 +173,6 @@ class AzPageParser(HtmlPageParser):
             minutes = 0 if minutes_str is None else int(minutes_str)
             self.duration = datetime.timedelta(minutes=minutes)
             self.add_film()
-            if self.film is not None:
-                self.add_filminfo()
 
     def init_film_data(self):
         self.film = None
@@ -192,10 +192,11 @@ class AzPageParser(HtmlPageParser):
             self.film.sortstring = self.sorted_title
             print(f'Adding FILM: {self.title} ({self.film.duration_str()}) {self.film.medium_category}')
             self.iffr_data.films.append(self.film)
+            self.add_film_info()
 
-    def add_filminfo(self):
-        filminfo = planner.FilmInfo(self.film.filmid, self.description, '')
-        self.iffr_data.filminfos.append(filminfo)
+    def add_film_info(self):
+        film_info = planner.FilmInfo(self.film.filmid, self.description, '')
+        self.iffr_data.filminfos.append(film_info)
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -214,9 +215,9 @@ class FilmPageParser(HtmlPageParser):
     class ScreeningsParseState(Enum):
         AWAITING_OD = auto()
         IN_ON_DEMAND = auto()
-        IN_OD_STARTTIME = auto()
+        IN_OD_START_TIME = auto()
         BETWEEN_OD_TIMES = auto()
-        IN_OD_ENDTIME = auto()
+        IN_OD_END_TIME = auto()
         AFTER_ON_DEMAND = auto()
         AWAITING_S = auto()
         IN_SCREENINGS = auto()
@@ -227,44 +228,32 @@ class FilmPageParser(HtmlPageParser):
         DONE = auto()
 
     on_demand_location = "OnDemand"
-    nl_month_by_name = {}
-    nl_month_by_name['januari'] = 1
-    nl_month_by_name['februari'] = 2
-    nl_month_by_name['maart'] = 3
-    nl_month_by_name['april'] = 4
-    nl_month_by_name['mei'] = 5
-    nl_month_by_name['juni'] = 6
+    nl_month_by_name: Dict[str, int] = {'januari': 1, 'februari': 2, 'maart': 3, 'april': 4, 'mei': 5, 'juni': 6}
 
     def __init__(self, iffr_data, film):
         HtmlPageParser.__init__(self, iffr_data, "F")
+        self.location = None
+        self.start_date = None
+        self.subtitles = None
+        self.qa = None
+        self.times = None
+        self.end_dt = None
+        self.start_dt = None
+        self.audience = None
+        self.screen = None
         self.film = film
-        self.debugging = True
+        self.debugging = False
         self.article_paragraphs = []
         self.paragraph = None
         self.article = None
-        self.combination_urls = []
         self.await_article = False
         self.in_article = False
         self.await_paragraph = False
         self.in_paragraph = False
         self.print_debug(f"{40 * '-'} ", f"Analysing FILM {film}, {film.url}")
 
-        self.init_screened_film_data()
-        self.screened_films = []
-        self.in_screened_films = False
-
         self.init_screening_data()
         self.stateStack = self.StateStack(self.print_debug, self.ScreeningsParseState.AWAITING_OD)
-
-    def init_screened_film_data(self):
-        self.screened_url = None
-        self.screened_title = None
-        self.screened_description = None
-        self.in_screened_film = False
-        self.in_screened_url = False
-        self.in_screened_title = False
-        self.await_screened_description = False
-        self.in_screened_description = False
 
     def init_screening_data(self):
         self.audience = 'publiek'
@@ -282,52 +271,20 @@ class FilmPageParser(HtmlPageParser):
             self.article = '\n\n'.join(self.article_paragraphs)
         self.print_debug(f"Found ARTICLE of {self.film.title}:", self.article)
 
-    def add_screened_film(self):
-        print(f'Found screened film: {self.screened_title}')
-        try:
-            film = self.iffr_data.get_film_by_key(self.screened_title, self.screened_url)
-        except KeyError:
-            Globals.error_collector.add('No screened URL found', f'{self.screened_title}')
-        else:
-            if film is not None:
-                screened_film = planner.ScreenedFilm(film.filmid, self.screened_title, self.screened_description)
-                self.screened_films.append(screened_film)
-            else:
-                Globals.error_collector.add(f"{self.screened_title} not found as film", self.screened_url)
-        finally:
-            self.init_screened_film_data()
+    def update_film_info(self):
+        # Get the film info of the current film. Its unique existence is guaranteed in AzPageParser.
+        film_info = self.film.film_info(self.iffr_data)
 
-    def update_filminfo(self):
-        filminfos = [filminfo for filminfo in self.iffr_data.filminfos if filminfo.filmid == self.film.filmid]
-        if len(filminfos) == 1:
-            filminfo = filminfos[0]
-            if self.article is not None and len(self.article) > 0:
-                filminfo.article = self.article
-            elif self.article is None:
-                Globals().error_collector.add('Article is None', f'{self.film} {self.film.duration_str()}')
-                filminfo.article = ''
-            else:
-                Globals().error_collector.add('Article is empty string', f'{self.film} {self.film.duration_str()}')
-                filminfo.article = ''
-            filminfo.combination_urls = self.combination_urls
-            filminfo.screened_films = self.screened_films
-            self.print_debug(f'FILMINFO of {self.film.title} updated', f'ARTICLE: {filminfo.article}')
+        # Assign the newly found properties.
+        if self.article is not None and len(self.article) > 0:
+            film_info.article = self.article
+        elif self.article is None:
+            Globals().error_collector.add('Article is None', f'{self.film} {self.film.duration_str()}')
+            film_info.article = ''
         else:
-            filminfo = planner.FilmInfo(self.film.filmid, '', self.article, self.screened_films)
-            self.iffr_data.filminfos.append(filminfo)
-            Globals.error_collector.add(f'No unique FILMINFO found for {self.film}', f'{len(filminfos)} linked filminfo records')
-
-    def update_screenings(self):
-        urls = self.film.film_info(self.iffr_data).combination_urls
-        if len(urls) > 0:
-            program = self.iffr_data.get_film_by_key(None, urls[0])
-            screenings = [s for s in self.iffr_data.screenings if s.film.filmid == self.film.filmid]
-            for screening in screenings:
-                screening.combination_program = program
-            if self.audience == 'publiek':
-                print(f'--  combination:{program}')
-                print("---SCREENINGS UPDATED")
-                print()
+            Globals().error_collector.add('Article is empty string', f'{self.film} {self.film.duration_str()}')
+            film_info.article = ''
+        self.print_debug(f'FILM INFO of {self.film.title} updated', f'ARTICLE: {film_info.article}')
 
     def add_on_demand_screening(self):
         self.screen = self.iffr_data.get_screen(city, self.on_demand_location)
@@ -347,7 +304,7 @@ class FilmPageParser(HtmlPageParser):
             self.audience = 'Crew'
         self.print_debug("--- ", f"SCREEN={self.screen}, START TIME={self.start_dt}, END TIME={self.end_dt}, AUDIENCE={self.audience}")
 
-        # Print the screening propoerties.
+        # Print the screening properties.
         if self.audience == 'publiek' and self.film.medium_category != 'events':
             print()
             print(f"---SCREENING OF {self.film.title}")
@@ -410,16 +367,6 @@ class FilmPageParser(HtmlPageParser):
         HtmlPageParser.handle_starttag(self, tag, attrs)
 
         # Get data for film info.
-        if tag == 'a' and len(attrs) > 0:
-            attr = attrs[0]
-            if attr[0] == 'href':
-                combine_attr = f'/nl/{year}/events/'
-                if attr[1].startswith(combine_attr):
-                    url_path = web_tools.iripath_to_uripath(attr[1])
-                    combination_url = f'{iffr_hostname}{url_path}'
-                    print(f'Part of COMBINATION: {combination_url}')
-                    self.print_debug('Found COMBINATION url', combination_url)
-                    self.combination_urls.append(combination_url)
         if self.await_article and tag == 'div' and len(attrs) > 0:
             if attrs[0] == ('class', 'grid__Grid-enb6co-0 kCNoVC'):
                 self.await_article = False
@@ -431,41 +378,18 @@ class FilmPageParser(HtmlPageParser):
             self.await_paragraph = False
             self.in_paragraph = True
             self.paragraph = ''
-        elif self.await_screened_description and tag == 'p':
-            self.await_screened_description = False
-            self.in_screened_description = True
-        elif not self.in_screened_films and tag == 'h3' and len(attrs) > 0:
-            attr = attrs[0]
-            if attr == ('class', 'typography__H3-sc-1jflaau-4 eqGgqi'):
-                if self.film.medium_category != 'films':
-                    self.in_screened_films = True
-                    self.print_debug('Entering SCREENED FILMS section', f'{self.film.title}')
-        elif self.in_screened_films and tag == 'article':
-            self.in_screened_film = True
-        elif self.in_screened_film and tag == 'a' and len(attrs) > 0:
-            attr = attrs[0]
-            if attr[0] == 'href':
-                url_path = web_tools.iripath_to_uripath(attr[1])
-                self.screened_url = f'{iffr_hostname}{url_path}'
-        elif self.in_screened_film and tag == 'h4':
-            self.in_screened_title = True
         if tag == 'h3' and len(attrs) > 0 and attrs[0][1] == 'typography__H3-sc-1jflaau-4 dNhFS':
-            if self.in_screened_films:
-                self.print_debug('Leaving SCREENED FILMS section', f'{self.film.title}')
-            self.in_screened_films = False
-            self.in_screened_film = False
             self.stateStack.change(self.ScreeningsParseState.DONE)
-            self.print_debug('Done finding SREENINGS', f'Attribute name: {attrs[0][0]}')
-            self.update_filminfo()
-            self.update_screenings()
+            self.update_film_info()
+            self.print_debug('Done finding SCREENINGS', f'Attribute name: {attrs[0][0]}')
 
         # Get data for screenings.
         if self.stateStack.state_is(self.ScreeningsParseState.IN_ON_DEMAND) and tag == 'span' and len(attrs) > 0:
             if attrs[0][1] == 'bookingtable-on-demand__date-value':
-                self.stateStack.change(self.ScreeningsParseState.IN_OD_STARTTIME)
+                self.stateStack.change(self.ScreeningsParseState.IN_OD_START_TIME)
         elif self.stateStack.state_is(self.ScreeningsParseState.BETWEEN_OD_TIMES) and tag == 'span':
             if attrs[0][1] == 'bookingtable-on-demand__date-value':
-                self.stateStack.change(self.ScreeningsParseState.IN_OD_ENDTIME)
+                self.stateStack.change(self.ScreeningsParseState.IN_OD_END_TIME)
         elif tag == 'div' and len(attrs) > 0:
             if attrs[0][1] == 'styles__FunctionalLabelWrapper-sc-12mea6v-0 iWNHmD':
                 self.stateStack.push(self.ScreeningsParseState.IN_S_INFO)
@@ -485,9 +409,7 @@ class FilmPageParser(HtmlPageParser):
         HtmlPageParser.handle_endtag(self, tag)
 
         # Get data for film info.
-        if self.in_screened_film and tag == 'article':
-            self.in_screened_film = False
-        elif self.in_paragraph and tag == 'p':
+        if self.in_paragraph and tag == 'p':
             self.in_paragraph = False
             self.await_paragraph = True
             self.article_paragraphs.append(self.paragraph)
@@ -518,20 +440,12 @@ class FilmPageParser(HtmlPageParser):
             self.paragraph += data.replace('\n', ' ')
         elif self.in_article:
             self.article += data.replace('\n', ' ')
-        elif self.in_screened_title:
-            self.in_screened_title = False
-            self.await_screened_description = True
-            self.screened_title = data
-        elif self.in_screened_description:
-            self.in_screened_description = False
-            self.screened_description = data
-            self.add_screened_film()
 
         # Get data for screenings.
-        if self.stateStack.state_is(self.ScreeningsParseState.IN_OD_STARTTIME):
+        if self.stateStack.state_is(self.ScreeningsParseState.IN_OD_START_TIME):
             self.stateStack.change(self.ScreeningsParseState.BETWEEN_OD_TIMES)
             self.start_dt = self.parse_datetime(data)
-        elif self.stateStack.state_is(self.ScreeningsParseState.IN_OD_ENDTIME):
+        elif self.stateStack.state_is(self.ScreeningsParseState.IN_OD_END_TIME):
             self.stateStack.change(self.ScreeningsParseState.IN_ON_DEMAND)
             self.end_dt = self.parse_datetime(data)
             self.add_on_demand_screening()
@@ -547,10 +461,140 @@ class FilmPageParser(HtmlPageParser):
             self.set_screening_info(data)
 
 
+class CombinationPageParser(HtmlPageParser):
+
+    class CombinationsParseState(Enum):
+        IDLE = auto()
+        AWAITING_SCREENED_FILMS = auto()
+        IN_SCREENED_FILMS = auto()
+        IN_SCREENED_FILM = auto()
+        FOUND_SCREENED_URL = auto()
+        IN_SCREENED_TITLE = auto()
+        AWAITING_SCREENED_DESCRIPTION = auto()
+        IN_SCREENED_DESCRIPTION = auto()
+        DONE = auto()
+
+    def __init__(self, iffr_data, film):
+        HtmlPageParser.__init__(self, iffr_data, 'CP')
+        self.iffr_data = iffr_data
+        self.film = film
+        self.debugging = False
+        self.combination_urls = []
+        self.screened_url = None
+        self.screened_title = None
+        self.screened_description = None
+        self.screened_films = []
+
+        self.init_screened_film_data()
+        self.stateStack = self.StateStack(self.print_debug, self.CombinationsParseState.IDLE)
+
+    def init_screened_film_data(self):
+        self.screened_url = None
+        self.screened_title = None
+        self.screened_description = None
+
+    def add_screened_film(self):
+        self.print_debug('Found screened film:', f'{self.screened_title}')
+        try:
+            film = self.iffr_data.get_film_by_key(self.screened_title, self.screened_url)
+        except KeyError:
+            Globals.error_collector.add('No screened URL found', f'{self.screened_title}')
+        else:
+            if film is not None:
+                screened_film = planner.ScreenedFilm(film.filmid, self.screened_title, self.screened_description)
+                self.screened_films.append(screened_film)
+            else:
+                Globals.error_collector.add(f"{self.screened_title} not found as film", self.screened_url)
+        finally:
+            self.init_screened_film_data()
+
+    def update_film_info(self):
+        # Get the film info of the current film. Its unique existence is guaranteed in AzPageParser.
+        film_info = self.film.film_info(self.iffr_data)
+
+        # Set the screened films list of the film info of the current film.
+        film_info.screened_films = self.screened_films
+        self.print_debug(
+            f'SCREENED FILMS of {self.film.title} UPDATED', f'{len(self.screened_films)} screened films added.')
+        self.print_debug(f'SCREENED FILMS LIST of {self.film} is now in info:', f'\n{film_info}')
+
+        # Append the film being analysed to the combination programs of the screened films.
+        for screened_film in self.screened_films:
+            screened_film_infos = [i for i in self.iffr_data.filminfos if i.filmid == screened_film.filmid]
+            screened_film_info = screened_film_infos[0]
+            self.print_debug(f'COMBINATION URLS of {screened_film.title}:', f'{screened_film_info.combination_urls}')
+            if len(screened_film_info.combination_urls) == 0:
+                screened_film_info.combination_urls = [self.film.url]
+            else:
+                Globals.error_collector.add('Multiple combinations',
+                                            f'Screened film {screened_film} already has a '
+                                            f'combination program {screened_film_info.combination_urls[0]}')
+            self.print_debug(
+                f'COMBINATION PROGRAM INFO of {screened_film.title} UPDATED.',
+                f'FILM INFO is now:\n{screened_film_info}'
+            )
+
+    def update_screenings(self):
+        urls = self.film.film_info(self.iffr_data).combination_urls
+        if len(urls) > 0:
+            program = self.iffr_data.get_film_by_key(None, urls[0])
+            screenings = [s for s in self.iffr_data.screenings if s.film.filmid == self.film.filmid]
+            for screening in screenings:
+                screening.combination_program = program
+
+    def handle_starttag(self, tag, attrs):
+        HtmlPageParser.handle_starttag(self, tag, attrs)
+
+        if self.stateStack.state_is(self.CombinationsParseState.IDLE) and tag == 'h3' and len(attrs) > 0:
+            attr = attrs[0]
+            if attr[0] == 'class' and attr[1] == 'sc-crzoAE hwJoPF':
+                self.stateStack.change(self.CombinationsParseState.AWAITING_SCREENED_FILMS)
+        elif self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_FILMS) and tag == 'article':
+            self.stateStack.push(self.CombinationsParseState.IN_SCREENED_FILM)
+        elif self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_FILM):
+            if tag == 'a' and len(attrs) > 1:
+                attr = attrs[1]
+                if attr[0] == 'href':
+                    self.screened_url = f'{iffr_hostname}{attr[1]}'
+                    self.stateStack.push(self.CombinationsParseState.FOUND_SCREENED_URL)
+        elif self.stateStack.state_is(self.CombinationsParseState.FOUND_SCREENED_URL) and tag == 'h4':
+            if attrs[0][1].endswith('tile__title'):
+                self.stateStack.change(self.CombinationsParseState.IN_SCREENED_TITLE)
+        elif self.stateStack.state_is(self.CombinationsParseState.AWAITING_SCREENED_DESCRIPTION) and tag == 'p':
+            self.stateStack.change(self.CombinationsParseState.IN_SCREENED_DESCRIPTION)
+
+    def handle_endtag(self, tag):
+        HtmlPageParser.handle_endtag(self, tag)
+
+        if self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_FILM) and tag == 'article':
+            self.stateStack.pop()
+            self.add_screened_film()
+
+    def handle_data(self, data):
+        HtmlPageParser.handle_data(self, data)
+
+        if self.stateStack.state_is(self.CombinationsParseState.AWAITING_SCREENED_FILMS):
+            if data == 'In dit verzamelprogramma':
+                self.stateStack.change(self.CombinationsParseState.IN_SCREENED_FILMS)
+            else:
+                self.stateStack.change(self.CombinationsParseState.DONE)
+        elif self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_FILMS):
+            if data.startswith('Programma IFFR'):
+                self.stateStack.change(self.CombinationsParseState.DONE)
+                self.update_film_info()
+                self.update_screenings()
+        elif self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_TITLE):
+            self.stateStack.change(self.CombinationsParseState.AWAITING_SCREENED_DESCRIPTION)
+            self.screened_title = data
+        elif self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_DESCRIPTION):
+            self.stateStack.pop()
+            self.screened_description = data
+
+
 class IffrData(planner.FestivalData):
 
-    def _init__(self, plandata_dir):
-        planner.FestivalData.__init__(self, plandata_dir)
+    def _init__(self, planner_data_dir):
+        planner.FestivalData.__init__(self, planner_data_dir)
 
     def _filmkey(self, film, url):
         return url
