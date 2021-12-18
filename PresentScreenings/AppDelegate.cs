@@ -21,7 +21,15 @@ namespace PresentScreenings.TableView
         public static string FestivalYear { get; private set; }
         public static bool VisitPhysical { get; private set; }
         public static string DocumentsFolder => GetDocumentsPath();
+        public static string AvailabilitiesFile { get; private set; }
+        public static string ScreensFile { get; private set; }
+        public static string FilmsFile { get; private set; }
+        public static string ScreeningInfoFile { get; private set; }
         public static string ScreeningsFile { get; private set; }
+        public static string RatingsFile {get; private set; }
+        public static string FilmInfoFile {get; private set; }
+        public static string RatingsSheetFile { get; private set; }
+        public static string ScreeningsSummaryFile { get; private set; }
         public static TimeSpan PauseBetweenOnDemandScreenings { get; private set; }
         public static TimeSpan DaySpan => new TimeSpan(24, 0, 0);
         #endregion
@@ -56,7 +64,15 @@ namespace PresentScreenings.TableView
             _ = Directory.CreateDirectory(DocumentsFolder);
 
             // Set load/unload file names.
+            AvailabilitiesFile = Path.Combine(DocumentsFolder, "availabilities.csv");
+            ScreensFile = Path.Combine(DocumentsFolder, "screens.csv");
+            FilmsFile = Path.Combine(DocumentsFolder, "films.csv");
+            ScreeningInfoFile = Path.Combine(DocumentsFolder, "screeninginfo.csv");
             ScreeningsFile = Path.Combine(DocumentsFolder, "screenings.csv");
+            RatingsFile = Path.Combine(DocumentsFolder, "ratings.csv");
+            FilmInfoFile = Path.Combine(DocumentsFolder, "filminfo.xml");
+            RatingsSheetFile = Path.Combine(DocumentsFolder, "RatingsSheet.csv");
+            ScreeningsSummaryFile = Path.Combine(DocumentsFolder, "Screenings Summary.csv");
         }
         #endregion
 
@@ -121,7 +137,8 @@ namespace PresentScreenings.TableView
                 WriteFilmFanFilmRatings(directory);
 
                 // Write screening info.
-                string screeningInfosPath = Path.Combine(directory, "screeninginfo.csv");
+                string screeningInfoFileName = Path.GetFileName(ScreeningInfoFile);
+                string screeningInfosPath = Path.Combine(directory, screeningInfoFileName);
                 new ScreeningInfo().WriteListToFile(screeningInfosPath, ScreeningsPlan.ScreeningInfos);
             });
         }
@@ -131,7 +148,8 @@ namespace PresentScreenings.TableView
             {
                 directory = DocumentsFolder;
             }
-            string availabilitiesPath = Path.Combine(directory, "availabilities.csv");
+            string availabilitiesFileName = Path.GetFileName(AvailabilitiesFile);
+            string availabilitiesPath = Path.Combine(directory, availabilitiesFileName);
             new FilmFanAvailability().WriteListToFile(availabilitiesPath, ScreeningsPlan.Availabilities);
         }
 
@@ -143,18 +161,21 @@ namespace PresentScreenings.TableView
             }
 
             // Save the ratings.
-            string ratingsPath = Path.Combine(directory, "ratings.csv");
+            string ratingsFileName = Path.GetFileName(RatingsFile);
+            string ratingsPath = Path.Combine(directory, ratingsFileName);
             new FilmFanFilmRating().WriteListToFile(ratingsPath, ScreeningsPlan.FilmFanFilmRatings);
 
             // Write ratings sheet.
-            string sheetPath = Path.Combine(directory, "RatingsSheet.csv");
+            string sheetFileName = Path.GetFileName(RatingsSheetFile);
+            string sheetPath = Path.Combine(directory, sheetFileName);
             new Film().WriteListToFile(sheetPath, ScreeningsPlan.Films.Where(f =>
             {
                 return f.Duration >= FilmRatingDialogController.MinimalDuration;
             }).ToList());
 
             // Write screenings summary.
-            string summaryPath = Path.Combine(directory, "Screenings Summary.csv");
+            string summaryFileName = Path.GetFileName(ScreeningsSummaryFile);
+            string summaryPath = Path.Combine(directory, summaryFileName);
             new Screening().WriteListToFile(summaryPath, Controller.Plan.AttendedScreenings());
         }
         #endregion

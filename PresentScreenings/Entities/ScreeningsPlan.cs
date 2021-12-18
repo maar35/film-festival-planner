@@ -43,36 +43,33 @@ namespace PresentScreenings.TableView
         #region Constructors
         public ScreeningsPlan(string documentsFolder)
         {
-            // Initialize file names.
-            string availabilitiesFile = Path.Combine(documentsFolder, "availabilities.csv");
-            string screensFile = Path.Combine(documentsFolder, "screens.csv");
-            string filmsFile = Path.Combine(documentsFolder, "films.csv");
-            string screeningInfoFile = Path.Combine(documentsFolder, "screeninginfo.csv");
-            string screeningsFile = AppDelegate.ScreeningsFile;
-            string ratingsFile = Path.Combine(documentsFolder, "ratings.csv");
-            string filmInfoFile = Path.Combine(documentsFolder, "filminfo.xml");
-
             // Read availability.
-            Availabilities = new FilmFanAvailability().ReadListFromFile(availabilitiesFile, line => new FilmFanAvailability(line));
+            Availabilities = new FilmFanAvailability()
+                .ReadListFromFile(AppDelegate.AvailabilitiesFile, line => new FilmFanAvailability(line));
 
             // Read screens.
-            Screens = new Screen().ReadListFromFile(screensFile, line => new Screen(line));
+            Screens = new Screen()
+                .ReadListFromFile(AppDelegate.ScreensFile, line => new Screen(line));
 
             // Read film info.
-            FilmInfos = FilmInfo.LoadFilmInfoFromXml(filmInfoFile);
+            FilmInfos = FilmInfo.LoadFilmInfoFromXml(AppDelegate.FilmInfoFile);
 
             // Read films.
-            Films = new Film().ReadListFromFile(filmsFile, line => new Film(line));
+            Films = new Film()
+                .ReadListFromFile(AppDelegate.FilmsFile, line => new Film(line));
             Films.Sort();
 
             // Read film ratings.
-            FilmFanFilmRatings = new FilmFanFilmRating().ReadListFromFile(ratingsFile, line => new FilmFanFilmRating(line));
+            FilmFanFilmRatings = new FilmFanFilmRating()
+                .ReadListFromFile(AppDelegate.RatingsFile, line => new FilmFanFilmRating(line));
 
             // Read screening info.
-            ScreeningInfos = new ScreeningInfo().ReadListFromFile(screeningInfoFile, line => new ScreeningInfo(line));
+            ScreeningInfos = new ScreeningInfo()
+                .ReadListFromFile(AppDelegate.ScreeningInfoFile, line => new ScreeningInfo(line));
 
             // Read unique screenings.
-            Screenings = new Screening().ReadListFromFile(screeningsFile, line => PickScreening(line));
+            Screenings = new Screening()
+                .ReadListFromFile(AppDelegate.ScreeningsFile, line => PickScreening(line));
             ViewController.RemoveDuplicateScreenings();
 
             // Filter out screenings that are screened in a combination program.
