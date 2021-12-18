@@ -21,6 +21,7 @@ namespace PresentScreenings.TableView
         public static string FestivalYear { get; private set; }
         public static bool VisitPhysical { get; private set; }
         public static string DocumentsFolder => GetDocumentsPath();
+        public static string ScreeningsFile { get; private set; }
         public static TimeSpan PauseBetweenOnDemandScreenings { get; private set; }
         public static TimeSpan DaySpan => new TimeSpan(24, 0, 0);
         #endregion
@@ -53,6 +54,9 @@ namespace PresentScreenings.TableView
 
             // Make sure the documents directory exists.
             _ = Directory.CreateDirectory(DocumentsFolder);
+
+            // Set load/unload file names.
+            ScreeningsFile = Path.Combine(DocumentsFolder, "screenings.csv");
         }
         #endregion
 

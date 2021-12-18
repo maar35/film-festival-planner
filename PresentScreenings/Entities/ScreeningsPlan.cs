@@ -26,7 +26,6 @@ namespace PresentScreenings.TableView
         public static List<Screen> Screens { get; private set; }
         public static List<Film> Films { get; private set; }
         public static List<Screening> Screenings { get; private set; }
-        public static List<Screening> DisplayedScreenings { get; private set; }
         public static List<ScreeningInfo> ScreeningInfos { get; private set; }
         public static List<FilmFanFilmRating> FilmFanFilmRatings { get; private set; }
         public static List<FilmInfo> FilmInfos { get; private set; }
@@ -48,8 +47,8 @@ namespace PresentScreenings.TableView
             string availabilitiesFile = Path.Combine(documentsFolder, "availabilities.csv");
             string screensFile = Path.Combine(documentsFolder, "screens.csv");
             string filmsFile = Path.Combine(documentsFolder, "films.csv");
-            string screeningsFile = Path.Combine(documentsFolder, "screenings.csv");
             string screeningInfoFile = Path.Combine(documentsFolder, "screeninginfo.csv");
+            string screeningsFile = AppDelegate.ScreeningsFile;
             string ratingsFile = Path.Combine(documentsFolder, "ratings.csv");
             string filmInfoFile = Path.Combine(documentsFolder, "filminfo.xml");
 
@@ -97,7 +96,7 @@ namespace PresentScreenings.TableView
             InitializeDisplayScreenByAbbreviation();
 
             // Fill the dictionaries based on the screenings.
-            foreach (Screening screening in DisplayedScreenings)
+            foreach (Screening screening in Screenings)
             {
                 // Initialialize on-demand features when applicable.
                 InitializeOnLineScreening(screening);
@@ -219,7 +218,7 @@ namespace PresentScreenings.TableView
         public List<Screening> AttendedScreenings()
         {
             var attendedScreenings = (
-                from Screening s in DisplayedScreenings
+                from Screening s in Screenings
                 where s.AttendingFilmFans.Count > 0
                 orderby s.StartDate
                 select s
@@ -257,13 +256,18 @@ namespace PresentScreenings.TableView
 
         private void SetDisplayedScreenings()
         {
-            DisplayedScreenings = new List<Screening> { };
+            List<Screening> screeningsToRemove = new List<Screening> { };
             foreach (Screening screening in Screenings)
             {
-                if (screening.Film.FilmInfo.CombinationProgramIds.Count == 0)
+                FilmInfo filmInfo = ViewController.GetFilmInfo(screening.FilmId);
+                if (filmInfo.CombinationProgramIds.Count > 0)
                 {
-                    DisplayedScreenings.Add(screening);
+                    screeningsToRemove.Add(screening);
                 }
+            }
+            foreach (var screeningToRemove in screeningsToRemove)
+            {
+                Screenings.Remove(screeningToRemove);
             }
         }
 
@@ -275,7 +279,7 @@ namespace PresentScreenings.TableView
                 int filmId = onDemandScreening.FilmId;
                 int screenId = onDemandScreening.Screen.ScreenId;
                 string odAbbreviation = onDemandScreening.Screen.Abbreviation;
-                List<Screening> localScreenings = DisplayedScreenings
+                List<Screening> localScreenings = Screenings
                     .Where(s => s.FilmId == filmId && s.Screen.ScreenId != screenId)
                     .ToList();
                 if (localScreenings.Count > 0)
@@ -301,7 +305,7 @@ namespace PresentScreenings.TableView
         private void FixOverlappingScreenings(OnLineScreening onLineScreening)
         {
             // Establish whether there are coinciding screenings.
-            var overlappers = DisplayedScreenings
+            var overlappers = Screenings
                 .Where(s => s != onLineScreening && s.Overlaps(onLineScreening, true) && (s is OnLineScreening));
             var coinciders = overlappers
                 .Where(s => s.Screen == onLineScreening.Screen);

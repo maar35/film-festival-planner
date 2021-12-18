@@ -139,7 +139,12 @@ namespace PresentScreenings.TableView
                 .ToList();
             if (filmList.Count == 0)
             {
-                AlertRaiser.QuitWithAlert("No film found for screening", $"Can't find film with ID={FilmId} while reading {Path.Combine(AppDelegate.DocumentsFolder, "screenings.csv")}.");
+                string messageText = "No film found for screening";
+                string informativeText = $"Can't find film with ID={FilmId} "
+                    + $"while reading {AppDelegate.ScreeningsFile}."
+                    + "\n\nFor developers: If this is caused by a URL change of the film, please"
+                    + "replace the filmId in ratings.csv, screenings.csv (two columns) and screeninginfo.";
+                AlertRaiser.QuitWithAlert(messageText, informativeText);
             }
             Film = filmList.First();
             CombinationProgramId = int.TryParse(combinationIdStr, out int outcome) ? (int?)outcome : null;

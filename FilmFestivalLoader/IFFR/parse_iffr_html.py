@@ -468,7 +468,7 @@ class CombinationPageParser(HtmlPageParser):
         AWAITING_SCREENED_FILMS = auto()
         IN_SCREENED_FILMS = auto()
         IN_SCREENED_FILM = auto()
-        IN_SCREENED_URL = auto()
+        FOUND_SCREENED_URL = auto()
         IN_SCREENED_TITLE = auto()
         AWAITING_SCREENED_DESCRIPTION = auto()
         IN_SCREENED_DESCRIPTION = auto()
@@ -523,8 +523,12 @@ class CombinationPageParser(HtmlPageParser):
             screened_film_infos = [i for i in self.iffr_data.filminfos if i.filmid == screened_film.filmid]
             screened_film_info = screened_film_infos[0]
             self.print_debug(f'COMBINATION URLS of {screened_film.title}:', f'{screened_film_info.combination_urls}')
-            # screened_film_info.combination_urls.append(film.url)
-            screened_film_info.combination_urls = [self.film.url]
+            if len(screened_film_info.combination_urls) == 0:
+                screened_film_info.combination_urls = [self.film.url]
+            else:
+                Globals.error_collector.add('Multiple combinations',
+                                            f'Screened film {screened_film} already has a '
+                                            f'combination program {screened_film_info.combination_urls[0]}')
             self.print_debug(
                 f'COMBINATION PROGRAM INFO of {screened_film.title} UPDATED.',
                 f'FILM INFO is now:\n{screened_film_info}'
@@ -537,10 +541,6 @@ class CombinationPageParser(HtmlPageParser):
             screenings = [s for s in self.iffr_data.screenings if s.film.filmid == self.film.filmid]
             for screening in screenings:
                 screening.combination_program = program
-            if self.audience == 'publiek':
-                print(f'--  combination:{program}')
-                print("---SCREENINGS UPDATED")
-                print()
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -548,8 +548,7 @@ class CombinationPageParser(HtmlPageParser):
         if self.stateStack.state_is(self.CombinationsParseState.IDLE) and tag == 'h3' and len(attrs) > 0:
             attr = attrs[0]
             if attr[0] == 'class' and attr[1] == 'sc-crzoAE hwJoPF':
-                self.stateStack.push(self.CombinationsParseState.AWAITING_SCREENED_FILMS)
-                self.print_debug('Entering SCREENED FILMS section', f'{self.film.title}')
+                self.stateStack.change(self.CombinationsParseState.AWAITING_SCREENED_FILMS)
         elif self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_FILMS) and tag == 'article':
             self.stateStack.push(self.CombinationsParseState.IN_SCREENED_FILM)
         elif self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_FILM):
@@ -557,9 +556,8 @@ class CombinationPageParser(HtmlPageParser):
                 attr = attrs[1]
                 if attr[0] == 'href':
                     self.screened_url = f'{iffr_hostname}{attr[1]}'
-                    self.print_debug('SCREENED URL FOUND', f'{self.screened_url}')
-                    self.stateStack.push(self.CombinationsParseState.IN_SCREENED_URL)
-        elif self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_URL) and tag == 'h4':
+                    self.stateStack.push(self.CombinationsParseState.FOUND_SCREENED_URL)
+        elif self.stateStack.state_is(self.CombinationsParseState.FOUND_SCREENED_URL) and tag == 'h4':
             if attrs[0][1].endswith('tile__title'):
                 self.stateStack.change(self.CombinationsParseState.IN_SCREENED_TITLE)
         elif self.stateStack.state_is(self.CombinationsParseState.AWAITING_SCREENED_DESCRIPTION) and tag == 'p':
@@ -582,11 +580,10 @@ class CombinationPageParser(HtmlPageParser):
                 self.stateStack.change(self.CombinationsParseState.DONE)
         elif self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_FILMS):
             if data.startswith('Programma IFFR'):
-                self.stateStack.pop()
                 self.stateStack.change(self.CombinationsParseState.DONE)
                 self.update_film_info()
                 self.update_screenings()
-        if self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_TITLE):
+        elif self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_TITLE):
             self.stateStack.change(self.CombinationsParseState.AWAITING_SCREENED_DESCRIPTION)
             self.screened_title = data
         elif self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_DESCRIPTION):

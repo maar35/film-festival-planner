@@ -45,7 +45,7 @@ namespace PresentScreenings.TableView
                     .ToList();
 
                 // Select free screenings of the selected films.
-                var screenings = ScreeningsPlan.DisplayedScreenings
+                var screenings = ScreeningsPlan.Screenings
                     .Where(s => IsPlannable(s, films))
                     .OrderByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.AttendedByFriend)
                     .ThenByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.Free)
@@ -88,7 +88,7 @@ namespace PresentScreenings.TableView
             _builder.AppendLine($"{LogTimeString()}  Started unplanning.");
 
             // Select the automaticaly planned screenings.
-            var screenings = ScreeningsPlan.DisplayedScreenings.Where(s => s.AutomaticallyPlanned && s.FilmFanAttends(attendee));
+            var screenings = ScreeningsPlan.Screenings.Where(s => s.AutomaticallyPlanned && s.FilmFanAttends(attendee));
 
             // Unattend the screenings.
             foreach (var screening in screenings)
