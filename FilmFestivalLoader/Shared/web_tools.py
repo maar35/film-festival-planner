@@ -137,10 +137,14 @@ class HtmlPageParser(html.parser.HTMLParser):
         def state_is(self, state):
             return state == self.stack[-1]
 
+        def state_in(self, states):
+            return self.stack[-1] in states
+
     def __init__(self, debug_recorder, debug_prefix):
         html.parser.HTMLParser.__init__(self)
         self.debug_recorder = debug_recorder
         self.debug_prefix = debug_prefix
+        self.debugging = None
 
     def print_debug(self, str1, str2):
         if self.debugging:

@@ -22,7 +22,9 @@ def main():
     tests = [compare_a0,
              compare_0a,
              compare_a_,
-             compare_00]
+             compare_00,
+             repair_url_works,
+             repair_url_pass]
     test_tools.execute_tests(tests)
 
 
@@ -36,6 +38,10 @@ class TestFilm:
         self.description = None
         self.article = None
         self.sorted_title = None
+        self.film_inf0 = None
+
+    def film_info(self, data):
+        return None
 
 
 class TestList:
@@ -58,13 +64,15 @@ class TestList:
         'https://iffr.com/nl/2021/films/80-000-ans',
         28))
     festival_data = iffr.IffrData(iffr.plandata_dir)
-    parser = iffr.AzPageParser(festival_data)
+    az_parser = iffr.AzPageParser(festival_data)
     for film in test_films:
-        parser.title = film.title
-        parser.url = film.url
-        parser.duration = film.duration
-        parser.sorted_title = film.title
-        parser.add_film()
+        az_parser.title = film.title
+        az_parser.url = film.url
+        az_parser.duration = film.duration
+        az_parser.sorted_title = film.title
+        az_parser.add_film()
+    combi_parser = iffr.FilmInfoPageParser(festival_data, test_films[0])
+
 
 
 @test_tools.equity_decorator
@@ -173,6 +181,31 @@ def compare_00():
 
     # Assert.
     return less, True
+
+
+@test_tools.equity_decorator
+def repair_url_works():
+    # Arrange.
+    faulty_url = 'https://iffr.com/nl/2021/films/the-amusement-park'
+    correct_url = 'https://iffr.com/nl/iffr/2021/films/the-amusement-park'
+
+    # Act.
+    repaired_url = TestList.combi_parser.repair_url(faulty_url)
+
+    # Assert.
+    return repaired_url, correct_url
+
+
+@test_tools.equity_decorator
+def repair_url_pass():
+    # Arrange.
+    correct_url = 'https://iffr.com/nl/iffr/2021/films/the-amusement-park'
+
+    # Act.
+    repaired_url = TestList.combi_parser.repair_url(correct_url)
+
+    # Assert.
+    return repaired_url, correct_url
 
 
 if __name__ == '__main__':

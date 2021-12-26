@@ -165,7 +165,7 @@ class ScreenedFilm:
         self.description = description if description is not None else ''
 
     def __str__(self):
-        return '\n'.join([str(self.filmid), self.title, self.description])
+        return ' - '.join([str(self.filmid), self.title])
 
 
 class FilmInfo:
@@ -179,7 +179,7 @@ class FilmInfo:
 
     def __str__(self):
         combinations_str = '\nCombinations:\n' + '\n'.join([str(u) for u in self.combination_urls])
-        screened_str = '\nScreened:\n' + '\n'.join([str(fi) for fi in self.screened_films])
+        screened_str = '\nScreened:\n' + '\n'.join([str(sf) for sf in self.screened_films])
         return '\n'.join([str(self.filmid), self.description, self.article, combinations_str, screened_str]) + '\n'
 
 
@@ -302,6 +302,12 @@ class FestivalData:
 
     def get_filmid(self, url):
         return self.get_film_by_key(None, url).filmid
+
+    def get_film_from_id(self, film_id):
+        films = [f for f in self.films if f.filmid == film_id]
+        if len(films) > 0:
+            return films[0]
+        return None
 
     def get_screen(self, city, name):
         screen_key = (city, name)
