@@ -33,7 +33,7 @@ debug_file = os.path.join(plandata_dir, "debug.txt")
 # URL information.
 iffr_hostname = "https://iffr.com"
 url_festival = iffr_hostname.split('/')[2].split('.')[0]
-az_url_path = "/nl/iffr/" + str(year) + "/a-z"
+az_url_path = f'/nl/{url_festival}/{year}/a-z'
 
 
 def main():
@@ -117,30 +117,7 @@ def get_film_details(iffr_data):
             print(f'Analysing html file {film.filmid} of {film.title} {film.url}')
             ScreeningsPageParser(iffr_data, film).feed(film_html)
             FilmInfoPageParser(iffr_data, film).feed(film_html)
-    apply_combinations(iffr_data)
-
-
-def apply_combinations(iffr_data):
-    def rep(film_id):
-        film = iffr_data.get_film_from_id(film_id)
-        return f'{film.title} ({film.duration_str()})'
-
-    Globals.debug_recorder.add(f'\nMain films and extras: {Globals.extras_by_main}')
-    for (main_film_id, extra_film_ids) in Globals.extras_by_main.items():
-        Globals.debug_recorder.add(f'{rep(main_film_id)} [{" || ".join([rep(f) for f in extra_film_ids])}]')
-        main_film = iffr_data.get_film_from_id(main_film_id)
-        main_film_info = main_film.film_info(iffr_data)
-        screened_films = []
-        for extra_film_id in extra_film_ids:
-            extra_film = iffr_data.get_film_from_id(extra_film_id)
-            extra_film_info = extra_film.film_info(iffr_data)
-            if len(extra_film_info.combination_urls) == 0:
-                extra_film_info.combination_urls = [main_film.url]
-            else:
-                extra_film_info.combination_urls.append(main_film.url)
-            screened_film = planner.ScreenedFilm(extra_film_id, extra_film.title, extra_film_info.description)
-            screened_films.append(screened_film)
-        main_film_info.screened_films = screened_films
+    FilmInfoPageParser.apply_combinations(iffr_data)
 
 
 class Globals:
@@ -150,11 +127,11 @@ class Globals:
 
 
 class HtmlPageParser(web_tools.HtmlPageParser):
+    debugging = False
 
     def __init__(self, iffr_data, debug_prefix):
         web_tools.HtmlPageParser.__init__(self, Globals.debug_recorder, debug_prefix)
         self.iffr_data = iffr_data
-        self.debugging = False
 
 
 class AzPageParser(HtmlPageParser):
@@ -167,6 +144,7 @@ class AzPageParser(HtmlPageParser):
             .*?"sortedTitle":"(?P<sorted_title>[^"]+)"                # Sorted Title
             (?:.*?"duration":(?P<duration>\d+)\})?                    # Duration
         """, re.VERBOSE)
+    debugging = False
 
     def __init__(self, iffr_data):
         HtmlPageParser.__init__(self, iffr_data, 'AZ')
@@ -176,7 +154,6 @@ class AzPageParser(HtmlPageParser):
         self.description = None
         self.url = None
         self.title = None
-        self.debugging = False
         self.init_film_data()
 
     def parse_props(self, data):
@@ -245,11 +222,13 @@ class ScreeningsPageParser(HtmlPageParser):
         AFTER_SCREENING = auto()
         DONE = auto()
 
+    debugging = False
     on_demand_location = "OnDemand"
     nl_month_by_name: Dict[str, int] = {'januari': 1, 'februari': 2, 'maart': 3, 'april': 4, 'mei': 5, 'juni': 6}
 
     def __init__(self, iffr_data, film):
-        HtmlPageParser.__init__(self, iffr_data, "F")
+        HtmlPageParser.__init__(self, iffr_data, "FS")
+        self.film = film
         self.location = None
         self.start_date = None
         self.subtitles = None
@@ -259,8 +238,6 @@ class ScreeningsPageParser(HtmlPageParser):
         self.start_dt = None
         self.audience = None
         self.screen = None
-        self.film = film
-        self.debugging = True
         self.print_debug(f"{40 * '-'} ", f"Analysing FILM {film}, {film.url}")
 
         self.init_screening_data()
@@ -434,11 +411,12 @@ class FilmInfoPageParser(HtmlPageParser):
         IN_SCREENED_DESCRIPTION = auto()
         DONE = auto()
 
+    debugging = False
+
     def __init__(self, iffr_data, film):
-        HtmlPageParser.__init__(self, iffr_data, 'CP')
+        HtmlPageParser.__init__(self, iffr_data, 'FI')
         self.iffr_data = iffr_data
         self.film = film
-        self.debugging = True
         self.article_paragraphs = []
         self.article_paragraph = ''
         self.article = None
@@ -458,6 +436,14 @@ class FilmInfoPageParser(HtmlPageParser):
         self.screened_title = None
         self.screened_description = None
 
+    def add_paragraph(self):
+        self.article_paragraphs.append(self.article_paragraph)
+        self.article_paragraph = ''
+
+    def set_article(self):
+        self.article = '\n\n'.join(self.article_paragraphs)
+        self.film_info.article = self.article
+
     def add_screened_film(self):
         self.print_debug('Found screened film:', f'{self.screened_title}')
         try:
@@ -473,13 +459,21 @@ class FilmInfoPageParser(HtmlPageParser):
         finally:
             self.init_screened_film_data()
 
-    def add_paragraph(self):
-        self.article_paragraphs.append(self.article_paragraph)
-        self.article_paragraph = ''
+    def set_screened_films(self):
+        # Set the screened films list of the film info of the current film.
+        self.film_info.screened_films = self.screened_films
+        self.print_debug(
+            f'SCREENED FILMS of {self.film.title} UPDATED', f'{len(self.screened_films)} screened films added.')
+        self.print_debug(f'SCREENED FILMS LIST of {self.film} is now in info:', f'\n{self.film_info}')
 
-    def set_article(self):
-        self.article = '\n\n'.join(self.article_paragraphs)
-        self.film_info.article = self.article
+        # Append the film being analysed to the combination programs of the screened films.
+        for screened_film in self.screened_films:
+            screened_film_infos = [i for i in self.iffr_data.filminfos if i.filmid == screened_film.filmid]
+            screened_film_info = screened_film_infos[0]
+            combination_films = screened_film_info.combination_films
+            screened_film_info.combination_films = planner.append_combination_film(combination_films, self.film)
+            self.print_debug(f'COMBINATION PROGRAM INFO of {screened_film.title} UPDATED:',
+                             f'\n{", ".join(str(cf) for cf in screened_film_info.combination_films)}')
 
     def store_combination_from_title(self, combination_title):
         films = [f for f in self.iffr_data.films if f.title == combination_title]
@@ -505,33 +499,35 @@ class FilmInfoPageParser(HtmlPageParser):
             return '/'.join(parts)
         return url
 
-    def set_screened_films(self):
-        # Set the screened films list of the film info of the current film.
-        self.film_info.screened_films = self.screened_films
-        self.print_debug(
-            f'SCREENED FILMS of {self.film.title} UPDATED', f'{len(self.screened_films)} screened films added.')
-        self.print_debug(f'SCREENED FILMS LIST of {self.film} is now in info:', f'\n{self.film_info}')
+    @staticmethod
+    def apply_combinations(iffr_data):
 
-        # Append the film being analysed to the combination programs of the screened films.
-        for screened_film in self.screened_films:
-            screened_film_infos = [i for i in self.iffr_data.filminfos if i.filmid == screened_film.filmid]
-            screened_film_info = screened_film_infos[0]
-            combination_urls = screened_film_info.combination_urls
-            if len(combination_urls) == 0:
-                combination_urls = [self.film.url]
-            else:
-                combination_urls.append(self.film.url)
-            screened_film_info.combination_urls = combination_urls
-            self.print_debug(f'COMBINATION PROGRAM INFO of {screened_film.title} UPDATED:',
-                             f'\n{", ".join(u for u in combination_urls)}')
+        def pr_debug(s):
+            if FilmInfoPageParser.debugging:
+                Globals.debug_recorder.add('AC ' + s)
+
+        short_str = iffr_data.short_str_by_film_id
+        pr_debug(f'Main films and extras: {Globals.extras_by_main}')
+        for (main_film_id, extra_film_ids) in Globals.extras_by_main.items():
+            pr_debug(f'{short_str(main_film_id)} [{" || ".join([short_str(f) for f in extra_film_ids])}]')
+            main_film = iffr_data.get_film_from_id(main_film_id)
+            main_film_info = main_film.film_info(iffr_data)
+            screened_films = []
+            for extra_film_id in extra_film_ids:
+                extra_film = iffr_data.get_film_from_id(extra_film_id)
+                extra_film_info = extra_film.film_info(iffr_data)
+                extra_film_info.combination_films = \
+                    planner.append_combination_film(extra_film_info.combination_films, main_film)
+                screened_film = planner.ScreenedFilm(extra_film_id, extra_film.title, extra_film_info.description)
+                screened_films.append(screened_film)
+            main_film_info.screened_films = screened_films
 
     def update_screenings(self):
-        urls = self.film.film_info(self.iffr_data).combination_urls
-        if len(urls) > 0:
-            program = self.iffr_data.get_film_by_key(None, urls[0])
+        combination_films = self.film_info.combination_films
+        if len(combination_films) > 0:
             screenings = [s for s in self.iffr_data.screenings if s.film.filmid == self.film.filmid]
             for screening in screenings:
-                screening.combination_program = program
+                screening.combination_program = combination_films[0]
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)

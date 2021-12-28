@@ -113,6 +113,8 @@ class HtmlPageParser(html.parser.HTMLParser):
 
     class StateStack:
 
+        debugging = None
+
         def __init__(self, print_debug, state):
             self.print_debug = print_debug
             self.stack = [state]
@@ -144,7 +146,6 @@ class HtmlPageParser(html.parser.HTMLParser):
         html.parser.HTMLParser.__init__(self)
         self.debug_recorder = debug_recorder
         self.debug_prefix = debug_prefix
-        self.debugging = None
 
     def print_debug(self, str1, str2):
         if self.debugging:

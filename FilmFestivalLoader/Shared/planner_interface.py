@@ -101,12 +101,11 @@ class Film:
         return "{}\n".format(text)
 
     def filmid_repr(self):
-        text = ";".join([
-            str(self.filmid),
-            self.title.replace(";", ".,"),
-            self.url
-        ])
+        text = ";".join([str(self.filmid), self.title.replace(";", ".,"), self.url ])
         return f'{text}\n'
+
+    def short_str(self):
+        return f'{self.title} ({self.duration_str()})'
 
     def lower(self, s):
         return self.mapper.toascii(s).lower()
@@ -133,7 +132,7 @@ class Film:
             return FilmInfo(None, '', '')
 
     def is_part_of_combination(self, festival_data):
-        return len(self.film_info(festival_data).combination_urls) > 0
+        return len(self.film_info(festival_data).combination_films) > 0
 
     def screened_films(self, festival_data):
         return self.film_info(festival_data).screened_films
@@ -170,15 +169,15 @@ class ScreenedFilm:
 
 class FilmInfo:
 
-    def __init__(self, filmid, description, article, combination_urls=[], screened_films=[]):
+    def __init__(self, filmid, description, article, combination_films=[], screened_films=[]):
         self.filmid = filmid
         self.description = description
         self.article = article
-        self.combination_urls = combination_urls
+        self.combination_films = combination_films
         self.screened_films = screened_films
 
     def __str__(self):
-        combinations_str = '\nCombinations:\n' + '\n'.join([str(u) for u in self.combination_urls])
+        combinations_str = '\nCombinations:\n' + '\n'.join([str(cf) for cf in self.combination_films])
         screened_str = '\nScreened:\n' + '\n'.join([str(sf) for sf in self.screened_films])
         return '\n'.join([str(self.filmid), self.description, self.article, combinations_str, screened_str]) + '\n'
 
@@ -309,6 +308,9 @@ class FestivalData:
             return films[0]
         return None
 
+    def short_str_by_film_id(self, film_id):
+        return self.get_film_from_id(film_id).short_str()
+
     def get_screen(self, city, name):
         screen_key = (city, name)
         try:
@@ -411,9 +413,9 @@ class FestivalData:
                                  FilmDescription=descr,
                                  InfoStatus='Complete')
             combination_programs = ET.SubElement(info, 'CombinationPrograms')
-            for combination_url in filminfo.combination_urls:
+            for combination_film in filminfo.combination_films:
                 _ = ET.SubElement(combination_programs, 'CombinationProgram',
-                                  CombinationProgramId=str(self.get_filmid(combination_url)))
+                                  CombinationProgramId=str(combination_film.filmid))
             screened_films = ET.SubElement(info, 'ScreenedFilms')
             for screened_film in filminfo.screened_films:
                 _ = ET.SubElement(screened_films, 'ScreenedFilm',
@@ -439,6 +441,25 @@ class FestivalData:
                 for screening in public_screenings:
                     f.write(repr(screening))
         print(f"Done writing {len(public_screenings)} of {len(self.screenings)} records to {self.screenings_file}.")
+
+
+def append_combination_film(combination_films, combination_film):
+    """
+    Workaround for the bug that all combination_films seem to be referring to each other.
+
+    @param combination_films: list
+    @param combination_film: string
+    """
+    result_urls = combination_films
+    bug_fixed = False
+    if bug_fixed:
+        result_urls.append(combination_film)
+    else:
+        if len(combination_films) == 0:
+            result_urls = [combination_film]
+        else:
+            result_urls.append(combination_film)
+    return result_urls
 
 
 class Error(Exception):
