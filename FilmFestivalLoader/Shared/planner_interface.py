@@ -308,9 +308,6 @@ class FestivalData:
             return films[0]
         return None
 
-    def short_str_by_film_id(self, film_id):
-        return self.get_film_from_id(film_id).short_str()
-
     def get_screen(self, city, name):
         screen_key = (city, name)
         try:

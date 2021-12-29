@@ -218,33 +218,33 @@ def repair_url_pass():
 @test_tools.equity_decorator
 def append_combination_0():
     # Arrange.
-    new_film = 600
+    new_film = TestList.festival_data.films[0]
+    film_infos = TestList.festival_data.filminfos
+    append_combination = planner_interface.append_combination_film
 
     # Act.
-    TestList.festival_data.filminfos[0].combination_films =\
-        planner_interface.append_combination_film(TestList.festival_data.filminfos[0].combination_films, new_film)
+    film_infos[0].combination_films = append_combination(film_infos[0].combination_films, new_film)
 
     # Assert.
-    return len(TestList.festival_data.filminfos[1].combination_films), 0
+    return len(film_infos[1].combination_films), 0
 
 
 @test_tools.equity_decorator
 def append_combination_1():
     # Arrange.
-    first_film = 'https://iffr.com/nl/iffr/2021/events/ammodo-tiger-short-competition-6'
-    second_film = 'https://iffr.com/nl/iffr/2021/films/the-amusement-park'
-    third_film = 'https://iffr.com/nl/iffr/2021/films/black-cat'
+    first_film = TestList.festival_data.films[1]
+    second_film = TestList.festival_data.films[2]
+    third_film = TestList.festival_data.films[3]
+    film_infos = TestList.festival_data.filminfos
+    append_combination = planner_interface.append_combination_film
 
     # Act.
-    TestList.festival_data.filminfos[1].combination_films =\
-        planner_interface.append_combination_film(TestList.festival_data.filminfos[1].combination_films, first_film)
-    TestList.festival_data.filminfos[1].combination_films =\
-        planner_interface.append_combination_film(TestList.festival_data.filminfos[1].combination_films, second_film)
-    TestList.festival_data.filminfos[2].combination_films =\
-        planner_interface.append_combination_film(TestList.festival_data.filminfos[2].combination_films, third_film)
+    film_infos[1].combination_films = append_combination(film_infos[1].combination_films, first_film)
+    film_infos[1].combination_films = append_combination(film_infos[1].combination_films, second_film)
+    film_infos[2].combination_films = append_combination(film_infos[2].combination_films, third_film)
 
     # Assert.
-    return TestList.festival_data.filminfos[1].combination_films[0], first_film
+    return film_infos[1].combination_films[0], first_film
 
 
 if __name__ == '__main__':

@@ -506,7 +506,9 @@ class FilmInfoPageParser(HtmlPageParser):
             if FilmInfoPageParser.debugging:
                 Globals.debug_recorder.add('AC ' + s)
 
-        short_str = iffr_data.short_str_by_film_id
+        def short_str(film_id):
+            return iffr_data.get_film_from_id(film_id).short_str()
+
         pr_debug(f'Main films and extras: {Globals.extras_by_main}')
         for (main_film_id, extra_film_ids) in Globals.extras_by_main.items():
             pr_debug(f'{short_str(main_film_id)} [{" || ".join([short_str(f) for f in extra_film_ids])}]')
