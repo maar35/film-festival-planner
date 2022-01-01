@@ -17,7 +17,6 @@ namespace PresentScreenings.TableView
             ScreenedBefore,
             ScreenedAfter,
             DirectlyCombined
-
         }
         #endregion
 
