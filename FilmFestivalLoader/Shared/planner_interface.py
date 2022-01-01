@@ -11,6 +11,7 @@ Created on Sat Oct 10 18:13:42 2020
 import os
 import re
 import xml.etree.ElementTree as ET
+from enum import Enum, auto
 
 interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 articles_file = os.path.join(interface_dir, "articles.txt")
@@ -154,18 +155,33 @@ class Film:
         return "{}, {}".format(rest, first)
 
 
+class ScreenedFilmType(Enum):
+    PART_OF_COMBINATION_PROGRAM = auto()
+    SCREENED_BEFORE = auto()
+    SCREENED_AFTER = auto()
+    DIRECTLY_COMBINED = auto()
+
+
 class ScreenedFilm:
 
-    def __init__(self, filmid, title, description):
-        self.filmid = filmid
+    def __init__(self, film_id, title, description, sf_type: ScreenedFilmType = ScreenedFilmType.PART_OF_COMBINATION_PROGRAM):
+        """
+        Screened Film: representation of a film that
+        is displayed as part of combination program.
+
+        @type film_id: int
+        @type title: str
+        @type description: str
+        """
+        self.filmid = film_id
         if title is None or len(title) == 0:
             raise FilmTitleError(description)
         self.title = title
         self.description = description if description is not None else ''
+        self.screened_film_type = sf_type
 
     def __str__(self):
         return ' - '.join([str(self.filmid), self.title])
-
 
 class FilmInfo:
 
@@ -418,7 +434,8 @@ class FestivalData:
                 _ = ET.SubElement(screened_films, 'ScreenedFilm',
                                   ScreenedFilmId=str(screened_film.filmid),
                                   Title=screened_film.title,
-                                  Description=screened_film.description)
+                                  Description=screened_film.description,
+                                  ScreenedFilmType=screened_film.screened_film_type.name)
         tree = ET.ElementTree(filminfos)
         tree.write(self.filminfo_file, encoding='utf-8', xml_declaration=True)
         print(f"Done writing {info_count} records to {self.filminfo_file}.")

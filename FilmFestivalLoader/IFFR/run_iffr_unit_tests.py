@@ -27,7 +27,9 @@ def main():
              repair_url_works,
              repair_url_pass,
              append_combination_0,
-             append_combination_1]
+             append_combination_1,
+             new_screened_film_0,
+             new_screened_film_1]
     test_tools.execute_tests(tests)
 
 
@@ -87,14 +89,14 @@ def test_new_name_first():
 
     # Arrange.
     screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
-    testname = 'offline'
+    test_name = 'offline'
     names = ['offline']
 
     # Act.
-    newname = screen_splitter.new_name(testname, names)
+    new_name = screen_splitter.new_name(test_name, names)
 
     # Assert.
-    return newname, 'offline2'
+    return new_name, 'offline2'
 
 
 @test_tools.equity_decorator
@@ -102,14 +104,14 @@ def test_new_name_not():
 
     # Arrange.
     screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
-    testname = 'offline'
+    test_name = 'offline'
     names = []
 
     # Act.
-    newname = screen_splitter.new_name(testname, names)
+    new_name = screen_splitter.new_name(test_name, names)
 
     # Assert.
-    return newname, 'offline'
+    return new_name, 'offline'
 
 
 @test_tools.equity_decorator
@@ -117,14 +119,14 @@ def test_new_name_gap():
 
     # Arrange.
     screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
-    testname = 'offline'
+    test_name = 'offline'
     names = ['offline', 'offline3']
 
     # Act.
-    newname = screen_splitter.new_name(testname, names)
+    new_name = screen_splitter.new_name(test_name, names)
 
     # Assert.
-    return newname, 'offline2'
+    return new_name, 'offline2'
 
 
 @test_tools.equity_decorator
@@ -132,14 +134,14 @@ def test_new_name_next():
 
     # Arrange.
     screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
-    testname = 'offline199'
+    test_name = 'offline199'
     names = ['offline199', 'offline200']
 
     # Act.
-    newname = screen_splitter.new_name(testname, names)
+    new_name = screen_splitter.new_name(test_name, names)
 
     # Assert.
-    return newname, 'offline201'
+    return new_name, 'offline201'
 
 
 @test_tools.equity_decorator
@@ -245,6 +247,38 @@ def append_combination_1():
 
     # Assert.
     return film_infos[1].combination_films[0], first_film
+
+
+@test_tools.equity_decorator
+def new_screened_film_0():
+    # Arrange.
+    film = TestList.festival_data.films[0]
+    film_id = film.filmid
+    title = film.title
+    description = TestList.test_films[0].description
+    sf_type = planner_interface.ScreenedFilmType.SCREENED_BEFORE
+
+    # Act.
+    screened_film = planner_interface.ScreenedFilm(film_id, title, description, sf_type)
+
+    # Assert.
+    return screened_film.screened_film_type, planner_interface.ScreenedFilmType.SCREENED_BEFORE
+
+
+@test_tools.equity_decorator
+def new_screened_film_1():
+    # Arrange.
+    film = TestList.festival_data.films[0]
+    film_id = film.filmid
+    title = film.title
+    description = TestList.test_films[0].description
+    sf_type = planner_interface.ScreenedFilmType.SCREENED_AFTER
+
+    # Act.
+    screened_film = planner_interface.ScreenedFilm(film_id, title, description, sf_type)
+
+    # Assert.
+    return screened_film.screened_film_type.name, 'SCREENED_AFTER'
 
 
 if __name__ == '__main__':
