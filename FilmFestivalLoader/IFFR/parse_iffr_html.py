@@ -1,4 +1,4 @@
-#!/Users/maarten/opt/anaconda3/bin/python3
+#!/usr/bin/env python3
 
 import os
 import sys
@@ -412,6 +412,8 @@ class FilmInfoPageParser(HtmlPageParser):
         DONE = auto()
 
     debugging = False
+    screened_film_type_by_string = {'Voorfilm bij ': planner.ScreenedFilmType.SCREENED_BEFORE,
+                                    'Te zien na ': planner.ScreenedFilmType.SCREENED_AFTER}
 
     def __init__(self, iffr_data, film):
         HtmlPageParser.__init__(self, iffr_data, 'FI')
@@ -424,6 +426,7 @@ class FilmInfoPageParser(HtmlPageParser):
         self.screened_url = None
         self.screened_title = None
         self.screened_description = None
+        self.screened_film_type = None
         self.screened_films = []
         self.stateStack = self.StateStack(self.print_debug, self.CombinationsParseState.IDLE)
         self.init_screened_film_data()
@@ -487,9 +490,10 @@ class FilmInfoPageParser(HtmlPageParser):
     def store_combination(self, combination_film_id):
         screened_film_id = self.film.filmid
         if combination_film_id in Globals.extras_by_main.keys():
-            Globals.extras_by_main[combination_film_id].append(screened_film_id)
+            Globals.extras_by_main[combination_film_id].append((screened_film_id, self.screened_film_type))
         else:
-            Globals.extras_by_main[combination_film_id] = [screened_film_id]
+            Globals.extras_by_main[combination_film_id] = [(screened_film_id, self.screened_film_type)]
+        self.screened_film_type = None
 
     @staticmethod
     def repair_url(url):
@@ -510,17 +514,18 @@ class FilmInfoPageParser(HtmlPageParser):
             return iffr_data.get_film_from_id(film_id).short_str()
 
         pr_debug(f'Main films and extras: {Globals.extras_by_main}')
-        for (main_film_id, extra_film_ids) in Globals.extras_by_main.items():
-            pr_debug(f'{short_str(main_film_id)} [{" || ".join([short_str(f) for f in extra_film_ids])}]')
+        for (main_film_id, extra_infos) in Globals.extras_by_main.items():
+            pr_debug(f'{short_str(main_film_id)} [{" || ".join([short_str(i) for (i, t) in extra_infos])}]')
             main_film = iffr_data.get_film_from_id(main_film_id)
             main_film_info = main_film.film_info(iffr_data)
             screened_films = []
-            for extra_film_id in extra_film_ids:
+            for (extra_film_id, screened_film_type) in extra_infos:
                 extra_film = iffr_data.get_film_from_id(extra_film_id)
                 extra_film_info = extra_film.film_info(iffr_data)
                 extra_film_info.combination_films = \
                     planner.append_combination_film(extra_film_info.combination_films, main_film)
-                screened_film = planner.ScreenedFilm(extra_film_id, extra_film.title, extra_film_info.description)
+                screened_film = planner.ScreenedFilm(
+                    extra_film_id, extra_film.title, extra_film_info.description, screened_film_type)
                 screened_films.append(screened_film)
             main_film_info.screened_films = screened_films
 
@@ -579,9 +584,10 @@ class FilmInfoPageParser(HtmlPageParser):
         HtmlPageParser.handle_data(self, data)
 
         if self.stateStack.state_is(self.CombinationsParseState.IN_EMPHASIS):
-            prefixes = ['Voorfilm bij ', 'Te zien na ']
-            for prefix in prefixes:
+            prefix_items = self.screened_film_type_by_string.items()
+            for (prefix, screened_film_type) in prefix_items:
                 if data.startswith(prefix):
+                    self.screened_film_type = screened_film_type
                     if data == prefix:
                         self.stateStack.change(self.CombinationsParseState.IN_COMBINATION)
                     else:

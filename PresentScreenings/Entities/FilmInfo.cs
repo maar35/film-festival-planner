@@ -10,18 +10,30 @@ namespace PresentScreenings.TableView
 {
     public class FilmInfo
     {
+        #region Public Enumerations.
+        public enum ScreenedFilmType
+        {
+            PartOfCombinationProgram,
+            ScreenedBefore,
+            ScreenedAfter,
+            DirectlyCombined
+        }
+        #endregion
+
         #region Public Sub-classes.
         public class ScreenedFilm
         {
             public int ScreenedFilmId { get; }
             public string Title { get; }
             public string Description { get; }
+            public ScreenedFilmType ScreenedFilmType { get; }
 
-            public ScreenedFilm(int screenedFilmId, string title, string description)
+            public ScreenedFilm(int screenedFilmId, string title, string description, ScreenedFilmType screenedFilmType)
             {
                 ScreenedFilmId = screenedFilmId;
                 Title = title;
                 Description = description;
+                ScreenedFilmType = screenedFilmType;
             }
 
             public override string ToString()
@@ -31,6 +43,12 @@ namespace PresentScreenings.TableView
                 return titleText + Environment.NewLine + Description;
             }
         }
+        #endregion
+
+        #region Static Private Members
+        private static readonly Dictionary<string, ScreenedFilmType> _screenedFilmTypeByString;
+        private static readonly Dictionary<ScreenedFilmType, string> _partByScreenedFilmType;
+        private static readonly Dictionary<ScreenedFilmType, string> _headerByScreenedFilmType;
         #endregion
 
         #region Properties
@@ -45,6 +63,25 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
+        static FilmInfo()
+        {
+            _screenedFilmTypeByString = new Dictionary<string, ScreenedFilmType> { };
+            _screenedFilmTypeByString.Add("DIRECTLY_COMBINED", ScreenedFilmType.DirectlyCombined);
+            _screenedFilmTypeByString.Add("PART_OF_COMBINATION_PROGRAM", ScreenedFilmType.PartOfCombinationProgram);
+            _screenedFilmTypeByString.Add("SCREENED_AFTER", ScreenedFilmType.ScreenedAfter);
+            _screenedFilmTypeByString.Add("SCREENED_BEFORE", ScreenedFilmType.ScreenedBefore);
+            _partByScreenedFilmType = new Dictionary<ScreenedFilmType, string> { };
+            _partByScreenedFilmType.Add(ScreenedFilmType.PartOfCombinationProgram, "Screened as part of");
+            _partByScreenedFilmType.Add(ScreenedFilmType.ScreenedBefore, "Screened before");
+            _partByScreenedFilmType.Add(ScreenedFilmType.ScreenedAfter, "Screened after");
+            _partByScreenedFilmType.Add(ScreenedFilmType.DirectlyCombined, "Screened in combination with");
+            _headerByScreenedFilmType = new Dictionary<ScreenedFilmType, string> { };
+            _headerByScreenedFilmType.Add(ScreenedFilmType.PartOfCombinationProgram, "Screened films");
+            _headerByScreenedFilmType.Add(ScreenedFilmType.ScreenedBefore, "Screened before the main feature");
+            _headerByScreenedFilmType.Add(ScreenedFilmType.ScreenedAfter, "Screened after the main feature");
+            _headerByScreenedFilmType.Add(ScreenedFilmType.DirectlyCombined, "Screened in combination with");
+        }
+
         public FilmInfo(int filmId, Film.FilmInfoStatus infoStatus, string description, string article)
         {
             FilmId = filmId;
@@ -59,39 +96,85 @@ namespace PresentScreenings.TableView
         #region Override Methods
         public override string ToString()
         {
-            var builder = new StringBuilder(Url + Environment.NewLine);
+            var newLine = Environment.NewLine;
+            var twoLines = newLine + newLine;
+            var builder = new StringBuilder(Url + newLine);
             if (FilmDescription != string.Empty)
             {
-                builder.AppendLine(Environment.NewLine + "Description");
+                builder.AppendLine(newLine + "Description");
                 builder.AppendLine(FilmDescription);
             }
             if (FilmArticle != string.Empty)
             {
-                builder.AppendLine(Environment.NewLine + "Article");
+                builder.AppendLine(newLine + "Article");
                 builder.AppendLine(FilmArticle);
             }
             if (CombinationProgramIds.Count > 0)
             {
-                builder.AppendLine(Environment.NewLine + "Screened as part of:");
-                builder.AppendJoin(Environment.NewLine, (
-                    from int filmId in CombinationProgramIds
-                    select ViewController.GetFilmById(filmId)
-                ));
+                // Per combination program, find its screened film that matches
+                // the current film and create a list of combination program -
+                // screened film pairs.
+                var combinationScreenedPairs = CombinationProgramIds
+                    .Select(i => ViewController.GetFilmById(i))
+                    .SelectMany(cf => cf.FilmInfo.ScreenedFilms
+                        .Select(sf => new { cf, sf })
+                        .Where(pair => pair.sf.ScreenedFilmId == FilmId));
+
+                // Store each screened film type together with the combination
+                // programs it is paired with.
+                var combinationsByType = new Dictionary<ScreenedFilmType, List<Film>> { };
+                foreach (var pair in combinationScreenedPairs)
+                {
+                    if (!combinationsByType.Keys.Contains(pair.sf.ScreenedFilmType))
+                    {
+                        combinationsByType.Add(pair.sf.ScreenedFilmType, new List<Film> { });
+                    }
+                    combinationsByType[pair.sf.ScreenedFilmType].Add(pair.cf);
+                }
+
+                // Per type, add the applicable header and the combination
+                // programs in which this film has that type to the string
+                // builder.
+                var space = newLine;
+                foreach (var screenedFilmType in combinationsByType.Keys)
+                {
+                    builder.AppendLine($"{space}{_partByScreenedFilmType[screenedFilmType]}:");
+                    builder.AppendJoin(
+                        newLine,
+                        combinationsByType[screenedFilmType]);
+                    space = twoLines;
+                }
             }
             if (ScreenedFilms.Count > 0)
             {
-                builder.AppendLine(Environment.NewLine + "Screened films");
-                var space = Environment.NewLine + Environment.NewLine;
-                builder.AppendLine(string.Join(space, ScreenedFilms.Select(f => f.ToString())));
+                // Create a list of the distinct screened film types in the
+                // screened films.
+                var screenedFilmTypes = ScreenedFilms
+                    .Select(sf => sf.ScreenedFilmType)
+                    .Distinct();
+                var space = newLine;
+
+                // Per type, add the applicible header and the screened films
+                // with that type to the string builder.
+                foreach (var screenedFilmType in screenedFilmTypes)
+                {
+                    builder.AppendLine($"{space}{_headerByScreenedFilmType[screenedFilmType]}:");
+                    var screenedFilmsOfType = ScreenedFilms
+                        .Where(sf => sf.ScreenedFilmType == screenedFilmType);
+                    builder.AppendJoin(
+                        twoLines,
+                        screenedFilmsOfType.Select(f => f.ToString()));
+                    space = twoLines;
+                }
             }
             return builder.ToString();
         }
         #endregion
 
         #region Public Methods
-        public void AddScreenedFilm(int filmid, string title, string description)
+        public void AddScreenedFilm(int filmid, string title, string description, ScreenedFilmType screenedFilmType)
         {
-            var screenedFilm = new ScreenedFilm(filmid, title, description);
+            var screenedFilm = new ScreenedFilm(filmid, title, description, screenedFilmType);
             ScreenedFilms.Add(screenedFilm);
         }
 
@@ -129,7 +212,8 @@ namespace PresentScreenings.TableView
                     (
                         (string)s.Attribute("ScreenedFilmId"),
                         (string)s.Attribute("Title"),
-                        (string)s.Attribute("Description")
+                        (string)s.Attribute("Description"),
+                        (string)s.Attribute("ScreenedFilmType")
                     )
                 );
             foreach (var filmInfoElement in filmInfoElements)
@@ -150,7 +234,9 @@ namespace PresentScreenings.TableView
                     int filmid = int.Parse(screenedFilmAttribute.Item1);
                     var title = screenedFilmAttribute.Item2;
                     var description = screenedFilmAttribute.Item3;
-                    filmInfo.AddScreenedFilm(filmid, title, description);
+                    var type = screenedFilmAttribute.Item4;
+                    var screenedFilmType = _screenedFilmTypeByString[type];
+                    filmInfo.AddScreenedFilm(filmid, title, description, screenedFilmType);
                 }
                 filmInfos.Add(filmInfo);
             }
