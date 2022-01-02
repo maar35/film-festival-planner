@@ -331,10 +331,7 @@ namespace PresentScreenings.TableView
             DoneButton.Enabled = !TextBeingEdited;
             DoneButton.Title = _titleByChanged[FilmRating.RatingChanged];
             WebLinkButton.Enabled = OneFilmSelected() && !TextBeingEdited;
-            if (CurrentFilm != null)
-            {
-                WebLinkButton.ToolTip = ControlsFactory.VisitWebsiteButtonToolTip(CurrentFilm);
-            }
+            WebLinkButton.ToolTip = OneFilmSelected() ? ControlsFactory.VisitWebsiteButtonToolTip(CurrentFilm) : string.Empty;
         }
 
         public void SelectFilms(List<Film> films)
