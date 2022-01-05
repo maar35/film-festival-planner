@@ -27,19 +27,18 @@ def get_charset(file, byte_count=512):
 
 
 class UrlFile:
-    default_bytecount = 512
-    default_encoding = 'utf-8'
+    default_byte_count = 512
+    default_encoding = 'ascii'
 
     def __init__(self, url, path, error_collector, bytecount=None):
         self.url = url
         self.path = path
         self.error_collector = error_collector
-        self.bytecount = bytecount if bytecount is not None else self.default_bytecount
+        self.byte_count = bytecount if bytecount is not None else self.default_byte_count
         self.encoding = None
 
     def get_text(self, comment_at_download=None):
         reader = UrlReader(self.error_collector)
-        html_text = None
         self.set_encoding(reader)
         if os.path.isfile(self.path):
             with open(self.path, 'r', encoding=self.encoding) as f:
@@ -53,12 +52,13 @@ class UrlFile:
     def set_encoding(self, reader):
         if self.encoding is None:
             if os.path.isfile(self.path):
-                self.encoding = get_charset(self.path, self.bytecount)
+                self.encoding = get_charset(self.path, self.byte_count)
             if self.encoding is None:
                 request = reader.get_request(self.url)
                 with urllib.request.urlopen(request) as response:
                     self.encoding = response.headers.get_content_charset()
             if self.encoding is None:
+                self.error_collector.add('No encoding found', f'{self.url}')
                 self.encoding = self.default_encoding
 
 

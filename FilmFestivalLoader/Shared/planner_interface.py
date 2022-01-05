@@ -245,10 +245,10 @@ class Screening:
             "screen",
             "starttime",
             "endtime",
-            "filmsinscreening",
             "combinationid",
+            "subtitles",
+            "qanda",
             "extra",
-            "qanda"
         ])
         return "{}\n".format(text)
 

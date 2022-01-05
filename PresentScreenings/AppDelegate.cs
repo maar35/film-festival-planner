@@ -52,7 +52,7 @@ namespace PresentScreenings.TableView
 		{
             // Preferences.
             Festival = "IFFR";
-            FestivalYear = "2021";
+            FestivalYear = "2022";
             VisitPhysical = true;
             PauseBetweenOnDemandScreenings = new TimeSpan(0, 30, 0);
             Screening.TravelTime = new TimeSpan(0, 30, 0);
