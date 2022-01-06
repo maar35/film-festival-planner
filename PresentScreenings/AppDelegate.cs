@@ -52,7 +52,7 @@ namespace PresentScreenings.TableView
 		{
             // Preferences.
             Festival = "IFFR";
-            FestivalYear = "2022";
+            FestivalYear = "2021";
             VisitPhysical = true;
             PauseBetweenOnDemandScreenings = new TimeSpan(0, 30, 0);
             Screening.TravelTime = new TimeSpan(0, 30, 0);
@@ -248,6 +248,10 @@ namespace PresentScreenings.TableView
             if (FilmsDialogController != null)
             {
                 FilmsDialogController.CloseDialog();
+            }
+            if (FilmInfoController != null)
+            {
+                FilmInfoController.CloseDialog();
             }
             if (AnalyserDialogController != null)
             {
