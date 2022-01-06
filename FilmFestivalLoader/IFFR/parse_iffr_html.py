@@ -15,7 +15,7 @@ import web_tools
 
 # Parameters.
 festival = 'IFFR'
-festival_year = 2022
+festival_year = 2021
 city = 'Rotterdam'
 
 # Directories.

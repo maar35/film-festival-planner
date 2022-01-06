@@ -264,9 +264,9 @@ namespace PresentScreenings.TableView
         private void PopulateFilmScreeningsMenuItems(NSMenu menu)
         {
             // Remove the existing screening items from the menu.
-            foreach (var item in _filmScreeningByMenuItemTitle.Keys)
+            foreach (string title in _filmScreeningByMenuItemTitle.Keys)
             {
-                menu.RemoveItem(menu.ItemWithTitle(item));
+                menu.RemoveItem(menu.ItemWithTitle(title));
             }
 
             // Add the screenings with same film to the Screening menu.

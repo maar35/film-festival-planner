@@ -104,6 +104,13 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
+        #region Public Methods
+        public void CloseDialog()
+        {
+            Presentor.DismissViewController(this);
+        }
+        #endregion
+
         #region Private Methods
         private void PopulatieDialogView()
         {
@@ -275,11 +282,6 @@ namespace PresentScreenings.TableView
         {
             Presentor.GoToScreening(screening);
             CloseDialog();
-        }
-
-        private void CloseDialog()
-        {
-            Presentor.DismissViewController(this);
         }
         #endregion
 
