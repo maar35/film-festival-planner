@@ -14,6 +14,7 @@ namespace PresentScreenings.TableView
 
     public partial class ViewController : GoToScreeningDialog, IScreeningProvider
     {
+
         #region Private Members
         private TimeSpan _pause = AppDelegate.PauseBetweenOnDemandScreenings;
         private ScreeningsPlan _plan = null;
@@ -292,11 +293,14 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods working with ScreeningsPlan lists
-        public static void RemoveDuplicateScreenings()
+        public static void ReportDuplicateScreenings()
         {
-            var existsByScreening = new Dictionary<Screening, bool> { };
+            var screeningComparer = new ScreeningEqualityComparer();
+            var existsByScreening = new Dictionary<Screening, bool>(screeningComparer);
             var removedScreenings = new List<Screening> { };
-            foreach (var screening in ScreeningsPlan.Screenings)
+            var screenings = ScreeningsPlan.Screenings
+                .Where(s => s.Screen.Type == Screen.ScreenType.Location);
+            foreach (var screening in screenings)
             {
                 if (existsByScreening.ContainsKey(screening))
                 {
@@ -309,10 +313,38 @@ namespace PresentScreenings.TableView
             }
             if (removedScreenings.Count > 0)
             {
+                string line = Environment.NewLine;
                 string title = "Duplicate Screenings Found";
-                StringBuilder builder = new StringBuilder("The following screenings were found duplicate:");
-                builder.AppendJoin<Screening>("\n- ", removedScreenings);
-                AlertRaiser.RaiseNotification(title, builder.ToString());
+                StringBuilder builder = new StringBuilder($"Duplicate screenings:{line}{line}");
+                builder.AppendJoin<Screening>($",{line}", removedScreenings);
+                AlertRaiser.RunInformationalAlert(title, builder.ToString());
+            }
+        }
+
+        public static void ReportCoincidingScreeninings()
+        {
+            var screeningsByCoincideKey = new Dictionary<string, List<Screening>> { };
+            var screenings = ScreeningsPlan.Screenings
+                .Where(s => s.Screen.Type == Screen.ScreenType.Location);
+            foreach (var screening in screenings)
+            {
+                string key = screening.CoincideKey;
+                if (!screeningsByCoincideKey.Keys.Contains(key))
+                {
+                    screeningsByCoincideKey.Add(key, new List<Screening> { });
+                }
+                screeningsByCoincideKey[key].Add(screening);
+            }
+            string line = Environment.NewLine;
+            var coinciders = screeningsByCoincideKey
+                .Where(pair => pair.Value.Count > 1)
+                .Select(pair => $"{line}{pair.Key}:{line}{string.Join(',' + line, pair.Value.Select(s => s.ScreeningTitle))}");
+            if (coinciders.Count() > 0)
+            {
+                string title = "Coinciding Screenings Found";
+                StringBuilder builder = new StringBuilder($"Coinciding screenings:{line}");
+                builder.AppendJoin(line, coinciders);
+                AlertRaiser.RunInformationalAlert(title, builder.ToString(), true);
             }
         }
 

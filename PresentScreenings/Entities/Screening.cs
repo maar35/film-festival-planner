@@ -41,6 +41,7 @@ namespace PresentScreenings.TableView
         public Film Film { get => ViewController.GetFilmById(FilmId); set => FilmId = value.FilmId; }
         public string FilmTitle => Film.Title;
         public string ScreeningTitle => ViewController.GetFilmById(OriginalFilmId).Title;
+        public string CoincideKey => GetCoincideKey();
         public Screen DisplayScreen { get => GetDisplayScreen(); set => SetDisplayScreen(value); }
         public DateTime StartTime { get => _screeningInfo.MovableStartTime; protected set => _screeningInfo.MovableStartTime = value; }
         public DateTime EndTime { get => _screeningInfo.MovableEndTime; protected set => _screeningInfo.MovableEndTime = value; }
@@ -426,6 +427,31 @@ namespace PresentScreenings.TableView
         {
             return string.Format("{0}-{1}", StartTime.ToString(_timeFormat), EndTime.ToString(_timeFormat));
         }
-                    #endregion
+
+        private string GetCoincideKey()
+        {
+            string weekDay = $"{StartTime.DayOfWeek.ToString().Remove(3)}";
+            string dateTime = $"{StartTime:yyyy-MM-dd HH:mm}";
+            TimeSpan duration = EndTime - StartTime;
+            return $"{Screen}, {weekDay} {dateTime} ({duration:hh\\:mm})";
+        }
+        #endregion
+    }
+
+    internal class ScreeningEqualityComparer : IEqualityComparer<Screening>
+    {
+        bool IEqualityComparer<Screening>.Equals(Screening screening, Screening otherScreening)
+        {
+            return screening.OriginalFilmId == otherScreening.OriginalFilmId
+                && screening.Screen.ToString() == otherScreening.Screen.ToString()
+                && screening.StartTime == otherScreening.StartTime
+                && screening.EndTime == otherScreening.EndTime;
+        }
+
+        int IEqualityComparer<Screening>.GetHashCode(Screening screening)
+        {
+            string key = $"{screening.Screen}.{screening.StartTime}.{screening.EndTime}.{screening.OriginalFilmId}";
+            return key.GetHashCode();
+        }
     }
 }

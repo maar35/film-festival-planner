@@ -20,7 +20,7 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Public Sub-classes.
+        #region Public Nested Classes.
         public class ScreenedFilm
         {
             public int ScreenedFilmId { get; }

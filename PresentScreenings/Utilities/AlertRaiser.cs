@@ -9,7 +9,7 @@ namespace PresentScreenings.TableView
     /// <summary>
     /// Alert Raiser, stops the application after writing a stack dump on file
     /// and displaying an alert.
-    /// If no alert can be displayed, a usrr notification is raised.
+    /// If no alert can be displayed, a user notification is raised.
     /// </summary>
     public static class AlertRaiser
     {
@@ -65,20 +65,37 @@ namespace PresentScreenings.TableView
             }
         }
 
-        public static void RunInformationalAlert(string messageText, string informativeText)
+        public static void RunInformationalAlert(string messageText, string informativeText, bool saveText=false)
         {
             var alert = new NSAlert()
             {
                 AlertStyle = NSAlertStyle.Informational,
                 MessageText = messageText,
-                InformativeText = informativeText
+                InformativeText = informativeText,
             };
-            alert.RunModal();
+            if (saveText)
+            {
+                alert.AddButton("OK");
+                alert.AddButton("Save");
+            }
+            var result = alert.RunModal();
+
+            // Save the text in the errorfile when the Save button is hit.
+            if (result == 1001)
+            {
+                WriteToErrorlog(informativeText);
+                RaiseNotification("Alert text is saved", $"Text saved to {ErrorFile}");
+            }
         }
 
         public static void WriteToErrorlog(Exception ex, Exception ex2 = null)
         {
-            System.IO.File.WriteAllText(ErrorFile, ErrorString(ex, ex2));
+            WriteToErrorlog(ErrorString(ex, ex2));
+        }
+
+        public static void WriteToErrorlog(string text)
+        {
+            System.IO.File.WriteAllText(ErrorFile, text);
         }
 
         public static void RaiseNotification(string title, string text)
