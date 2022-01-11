@@ -102,12 +102,12 @@ namespace PresentScreenings.TableView
         {
             // Create the document view displaying information on unplanned films.
             var docRect = new CGRect(0, 0, _scrollViewWidth, _scrollViewHeight);
-            _filmsDocumentView = ControlsFactory.NewStandardLabel(docRect);
+            _filmsDocumentView = ControlsFactory.NewStandardLabel(docRect, true);
             _filmsDocumentView.StringValue = InstructionsString();
 
             // Create the scroll view.
             var scrollViewFrame = new CGRect(_xMargin, _yScrollView, _scrollViewWidth, _scrollViewHeight);
-            _filmsScrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, _filmsDocumentView);
+            _filmsScrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, _filmsDocumentView, true);
             View.AddSubview(_filmsScrollView);
 
             // Scroll to the instruction text.
