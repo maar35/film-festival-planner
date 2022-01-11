@@ -35,7 +35,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public static NSTextField NewStandardLabel(CGRect frame, bool useWindowsBackgroundCoplor = false)
+        public static NSTextField NewStandardLabel(CGRect frame, bool useWindowBackgroundColor = false)
         {
             var label = new NSTextField(frame)
             {
@@ -43,7 +43,7 @@ namespace PresentScreenings.TableView
                 Bordered = false,
                 LineBreakMode = NSLineBreakMode.TruncatingMiddle
             };
-            if (useWindowsBackgroundCoplor)
+            if (useWindowBackgroundColor)
             {
                 label.BackgroundColor = NSColor.WindowBackground;
             }
@@ -107,12 +107,12 @@ namespace PresentScreenings.TableView
             return comboBox;
         }
 
-        public static NSScrollView NewStandardScrollView(CGRect frame, NSView documentView, bool useWindowsBackgroundCoplor = false, bool debug = false)
+        public static NSScrollView NewStandardScrollView(CGRect frame, NSView documentView, bool useWindowBackgroundColor = false, bool debug = false)
         {
             var scrollView = new NSScrollView(frame);
             scrollView.BorderType = NSBorderType.BezelBorder;
             scrollView.DocumentView = documentView;
-            if (useWindowsBackgroundCoplor)
+            if (useWindowBackgroundColor)
             {
                 scrollView.BackgroundColor = NSColor.WindowBackground;
             }
