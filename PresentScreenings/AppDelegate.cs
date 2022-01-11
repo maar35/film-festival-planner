@@ -93,8 +93,12 @@ namespace PresentScreenings.TableView
             _combineTitlesMenuItem.Action = new Selector("SelectTitlesToCombine:");
             _uncombineTitleMenuItem.Action = new Selector("ShowTitlesToUncombine:");
             Controller.ClickableLabelsMenuItem = _clickableLabelsMenuItem;
-		}
-        
+
+            // Report coinciding screenings.
+            ViewController.ReportDuplicateScreenings();
+            ViewController.ReportCoincidingScreeninings();
+        }
+
         public override void WillTerminate(NSNotification notification)
 		{
 			// Insert code here to tear down your application

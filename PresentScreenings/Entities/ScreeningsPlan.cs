@@ -67,10 +67,9 @@ namespace PresentScreenings.TableView
             ScreeningInfos = new ScreeningInfo()
                 .ReadListFromFile(AppDelegate.ScreeningInfoFile, line => new ScreeningInfo(line));
 
-            // Read unique screenings.
+            // Read screenings.
             Screenings = new Screening()
                 .ReadListFromFile(AppDelegate.ScreeningsFile, line => PickScreening(line));
-            ViewController.RemoveDuplicateScreenings();
 
             // Filter out screenings that are screened in a combination program.
             SetDisplayedScreenings();
