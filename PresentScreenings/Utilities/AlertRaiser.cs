@@ -7,15 +7,16 @@ using Foundation;
 namespace PresentScreenings.TableView
 {
     /// <summary>
-    /// Alert Raiser, stops the application after writing a stack dump on file
-    /// and displaying an alert.
-    /// If no alert can be displayed, a user notification is raised.
+    /// Alert Raiser, provides alert facilities, among which methods to land the
+    /// application softly.
     /// </summary>
+
     public static class AlertRaiser
     {
         #region Properties
-        static string ProgramName => Path.GetFileNameWithoutExtension(Environment.GetCommandLineArgs()[0]);
-        static string ErrorFile => Path.Combine(AppDelegate.DocumentsFolder, @"error.txt");
+        private static string ProgramName => Path.GetFileNameWithoutExtension(Environment.GetCommandLineArgs()[0]);
+        private static string ErrorFile => Path.Combine(AppDelegate.DocumentsFolder, @"error.txt");
+        private static string WarningFile => Path.Combine(AppDelegate.DocumentsFolder, @"warning.txt");
         #endregion
 
         #region Constructors
@@ -39,11 +40,17 @@ namespace PresentScreenings.TableView
 
         public static void LandApplication(Exception ex)
         {
-            WriteToErrorlog(ex);
+            WriteError(ex);
             RaiseAlert(ex);
             NSApplication.SharedApplication.Terminate(NSApplication.SharedApplication);
         }
 
+        /// <summary>
+        /// Stop the application after writing a stack dump on file and display
+        /// an alert.
+        /// If no alert can be displayed, raise a user notification.
+        /// </summary>
+        /// <param name="ex"></param>
         public static void RaiseAlert(Exception ex)
         {
             var alert = new NSAlert()
@@ -58,7 +65,7 @@ namespace PresentScreenings.TableView
             }
             catch (Exception ex2)
             {
-                WriteToErrorlog(ex, ex2);
+                WriteError(ex, ex2);
                 string title = $"Error in {ProgramName}";
                 string text = $"See {ErrorFile}.";
                 RaiseNotification(title, text);
@@ -80,22 +87,22 @@ namespace PresentScreenings.TableView
             }
             var result = alert.RunModal();
 
-            // Save the text in the errorfile when the Save button is hit.
+            // Save the text in the error file when the Save button is hit.
             if (result == 1001)
             {
-                WriteToErrorlog(informativeText);
-                RaiseNotification("Alert text is saved", $"Text saved to {ErrorFile}");
+                WriteWarning(informativeText);
+                RaiseNotification("Alert text is saved", $"Text saved to {WarningFile}");
             }
         }
 
-        public static void WriteToErrorlog(Exception ex, Exception ex2 = null)
+        public static void WriteError(Exception ex, Exception ex2 = null)
         {
-            WriteToErrorlog(ErrorString(ex, ex2));
+            WriteText(ErrorFile, ErrorString(ex, ex2));
         }
 
-        public static void WriteToErrorlog(string text)
+        public static void WriteWarning(string text)
         {
-            System.IO.File.WriteAllText(ErrorFile, text);
+            WriteText(WarningFile, text);
         }
 
         public static void RaiseNotification(string title, string text)
@@ -127,6 +134,11 @@ namespace PresentScreenings.TableView
                 builder.AppendLine(ex2.ToString());
             }
             return builder.ToString();
+        }
+
+        private static void WriteText(string file, string text)
+        {
+            System.IO.File.WriteAllText(file, text);
         }
         #endregion
     }

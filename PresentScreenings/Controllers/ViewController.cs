@@ -14,7 +14,6 @@ namespace PresentScreenings.TableView
 
     public partial class ViewController : GoToScreeningDialog, IScreeningProvider
     {
-
         #region Private Members
         private TimeSpan _pause = AppDelegate.PauseBetweenOnDemandScreenings;
         private ScreeningsPlan _plan = null;
@@ -298,8 +297,7 @@ namespace PresentScreenings.TableView
             var screeningComparer = new ScreeningEqualityComparer();
             var existsByScreening = new Dictionary<Screening, bool>(screeningComparer);
             var removedScreenings = new List<Screening> { };
-            var screenings = ScreeningsPlan.Screenings
-                .Where(s => s.Screen.Type == Screen.ScreenType.Location);
+            var screenings = ScreeningsPlan.Screenings.Where(s => s.Location);
             foreach (var screening in screenings)
             {
                 if (existsByScreening.ContainsKey(screening))
@@ -324,8 +322,7 @@ namespace PresentScreenings.TableView
         public static void ReportCoincidingScreeninings()
         {
             var screeningsByCoincideKey = new Dictionary<string, List<Screening>> { };
-            var screenings = ScreeningsPlan.Screenings
-                .Where(s => s.Screen.Type == Screen.ScreenType.Location);
+            var screenings = ScreeningsPlan.Screenings.Where(s => s.Location);
             foreach (var screening in screenings)
             {
                 string key = screening.CoincideKey;
