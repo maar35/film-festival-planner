@@ -60,7 +60,7 @@ namespace PresentScreenings.TableView
         public bool OnDemand => ScreenType == Screen.ScreenType.OnDemand;
         public bool Location => ScreenType == Screen.ScreenType.Location;
         public int TimesIAttendFilm => ScreeningsPlan.Screenings.Count(s => s.FilmId == FilmId && s.IAttend);
-        public bool IsPlannable => TimesIAttendFilm == 0 && !HasNoTravelTime && !SoldOut;
+        public bool IsPlannable => GetIsPlannable();
         public List<Screening> FilmScreenings => ViewController.FilmScreenings(FilmId);
         public int FilmScreeningCount => FilmScreenings.Count;
         public List<ScreenedFilm> ScreenedFilms => Film.FilmInfo.ScreenedFilms;
@@ -414,18 +414,21 @@ namespace PresentScreenings.TableView
             }
             return string.Format($" - {ScreeningTitle}");
         }
-
-        public static DateTime DateTimeFromParsedData(DateTime date, string time)
-        {
-            string parseString = string.Format("{0} {1}", date.ToShortDateString(), time);
-            return DateTime.Parse(parseString);
-        }
         #endregion
 
         #region Private Methods
         private string FromTillString()
         {
-            return string.Format("{0}-{1}", StartTime.ToString(_timeFormat), EndTime.ToString(_timeFormat));
+            return string.Format($"{StartTime.ToString(_timeFormat)}-{EndTime.ToString(_timeFormat)}");
+        }
+
+        private bool GetIsPlannable()
+        {
+            bool plannable = TimesIAttendFilm == 0
+                && !HasNoTravelTime
+                && !SoldOut
+                && (AppDelegate.VisitPhysical || !Location);
+            return plannable;
         }
 
         private string GetCoincideKey()
