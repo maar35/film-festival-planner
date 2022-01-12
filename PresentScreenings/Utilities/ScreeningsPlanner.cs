@@ -50,14 +50,14 @@ namespace PresentScreenings.TableView
                     .OrderByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.AttendedByFriend)
                     .ThenByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.Free)
                     .ThenBy(s => s.FilmScreeningCount)
-                    .ThenBy(s => s is OnDemandScreening)
+                    .ThenBy(s => s.OnDemand)
                     .ThenByDescending(s => s.StartTime)
                     .ToList();
 
                 // Attend the screenings.
                 foreach (var screening in screenings)
                 {
-                    if (TryPlannable(screening))
+                    if (screening.IsPlannable)
                     {
                         screening.ToggleFilmFanAttendance(filmFan);
                         screening.AutomaticallyPlanned = true;
@@ -118,27 +118,6 @@ namespace PresentScreenings.TableView
         {
             bool inSelectedFilms = films.Any(f => f.FilmId == screening.FilmId);
             return inSelectedFilms && (screening is OnDemandScreening || screening.IsPlannable);
-        }
-
-        private bool TryPlannable(Screening screening)
-        {
-            bool plannable = true;
-            if (screening is OnDemandScreening onDemandScreening)
-            {
-                if (!screening.IsPlannable)
-                {
-                    if (ViewController.MoveForwardAllowed(onDemandScreening, true))
-                    {
-                        _controller.MoveScreening(true, onDemandScreening);
-                    }
-                }
-            }
-            else
-            {
-                plannable = AppDelegate.VisitPhysical;
-            }
-            bool result = plannable && screening.IsPlannable;
-            return result;
         }
 
         private bool HasAttendedScreening(Film film, string filmFan)
