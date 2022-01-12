@@ -258,6 +258,22 @@ namespace PresentScreenings.TableView
             return overlappingAttendedScreenings;
         }
 
+        public static bool ScreeningFitsAvailability(Screening screening, string fan=null)
+        {
+            // Take me as the default film fan.
+            if (fan == null)
+            {
+                fan = ScreeningInfo.Me;
+            }
+
+            // Check film fan availability at the screening's start date.
+            var fits = ScreeningsPlan.Availabilities
+                .Where(a => a.Equals(fan, screening.StartDate))
+                .Any();
+
+            return fits;
+        }
+
         public List<Screening> DayScreenings()
         {
             var dayScreenings = ScreeningsPlan.Screenings

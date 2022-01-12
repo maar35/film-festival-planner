@@ -46,7 +46,9 @@ namespace PresentScreenings.TableView
 
                 // Select free screenings of the selected films.
                 var screenings = ScreeningsPlan.Screenings
-                    .Where(s => IsPlannable(s, films))
+                    .Where(s => s.FitsAvailability)
+                    .Where(s => films.Any(f => f.FilmId == s.FilmId))
+                    .Where(s => s.IsPlannable)
                     .OrderByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.AttendedByFriend)
                     .ThenByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.Free)
                     .ThenBy(s => s.FilmScreeningCount)
@@ -114,12 +116,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        private bool IsPlannable(Screening screening, List<Film> films)
-        {
-            bool inSelectedFilms = films.Any(f => f.FilmId == screening.FilmId);
-            return inSelectedFilms && (screening is OnDemandScreening || screening.IsPlannable);
-        }
-
         private bool HasAttendedScreening(Film film, string filmFan)
         {
             return film.FilmScreenings.Any(s => s.FilmFanAttends(filmFan));
