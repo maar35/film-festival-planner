@@ -170,11 +170,6 @@ namespace PresentScreenings.TableView
             _controlByScreening = new Dictionary<Screening, ScreeningControl> { };
         }
 
-        private void SetWindowTitle()
-        {
-            View.Window.Title = $"{AppDelegate.Festival} {AppDelegate.FestivalYear} - {Plan.CurrDay:ddd d MMM}";
-        }
-
         private void DisposeColorLabels()
         {
             BlackLabel.RemoveFromSuperview();
@@ -272,6 +267,17 @@ namespace PresentScreenings.TableView
                 .Any();
 
             return fits;
+        }
+
+        public void SetWindowTitle()
+        {
+            var availableFans = ScreeningsPlan.Availabilities
+                .Where(a => a.Equals(a.FilmFan, Plan.CurrDay))
+                .Select(a => a.FilmFan)
+                .ToList();
+            string sep = ", ";
+            string available = availableFans.Count > 0 ? $"{string.Join(sep, availableFans)}" : "No fans available";
+            View.Window.Title = $"{AppDelegate.Festival} {AppDelegate.FestivalYear} - {Plan.CurrDay:ddd d MMM} - {available}";
         }
 
         public List<Screening> DayScreenings()

@@ -312,7 +312,6 @@ namespace PresentScreenings.TableView
         public string ToConsideredScreeningString(string filmFan)
         {
             string filmFanAttends = AttendingFilmFans.Contains(filmFan) ? filmFan.Remove(1) : string.Empty;
-            //string iAttend(bool b) => b ? "M" : string.Empty;
             return string.Format($"{Film} {FilmScreeningCount} {Screen} {LongDayString(StartTime)} "
                 + $"{DurationString()} {filmFanAttends} {ShortFriendsString()}");
         }

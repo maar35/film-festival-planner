@@ -83,6 +83,9 @@ namespace PresentScreenings.TableView
         {
             base.ViewWillDisappear();
 
+            // Redraw the window title.
+            Presentor.SetWindowTitle();
+
             // Tell the app delegate we're gone.
             App.AvailabilityDialogControler = null;
 
