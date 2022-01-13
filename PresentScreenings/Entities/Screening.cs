@@ -55,6 +55,7 @@ namespace PresentScreenings.TableView
         public bool TicketsBought { get => _screeningInfo.TicketsBought; set => _screeningInfo.TicketsBought = value; }
         public bool HasTimeOverlap => ViewController.OverlappingAttendedScreenings(this).Any();
         public bool HasNoTravelTime => ViewController.OverlappingAttendedScreenings(this, true).Any();
+        public bool FitsAvailability => ViewController.ScreeningFitsAvailability(this);
         private Screen.ScreenType ScreenType => Screen.Type;
         public bool OnLine => ScreenType == Screen.ScreenType.OnLine;
         public bool OnDemand => ScreenType == Screen.ScreenType.OnDemand;
@@ -305,15 +306,14 @@ namespace PresentScreenings.TableView
 
         public string ToPlannedScreeningString()
         {
-            return string.Format("{0} {1}", ToLongTimeString(), ScreeningTitle);
+            return string.Format($"{ToLongTimeString()} {Screen} {ScreeningTitle}");
         }
 
-        public string ToConsideredScreeningString()
+        public string ToConsideredScreeningString(string filmFan)
         {
-            string iAttend(bool b) => b ? "M" : string.Empty;
-            return string.Format("{0} {1} {2} {3} {4} {5} {6}", Film, FilmScreeningCount, Screen,
-                                 LongDayString(StartTime), DurationString(), iAttend(IAttend),
-                                 ShortFriendsString());
+            string filmFanAttends = AttendingFilmFans.Contains(filmFan) ? filmFan.Remove(1) : string.Empty;
+            return string.Format($"{Film} {FilmScreeningCount} {Screen} {LongDayString(StartTime)} "
+                + $"{DurationString()} {filmFanAttends} {ShortFriendsString()}");
         }
 
         public string DurationString()
@@ -424,7 +424,8 @@ namespace PresentScreenings.TableView
 
         private bool GetIsPlannable()
         {
-            bool plannable = TimesIAttendFilm == 0
+            bool plannable = FitsAvailability
+                && TimesIAttendFilm == 0
                 && !HasNoTravelTime
                 && !SoldOut
                 && (AppDelegate.VisitPhysical || !Location);
