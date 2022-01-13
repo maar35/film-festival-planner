@@ -309,11 +309,12 @@ namespace PresentScreenings.TableView
             return string.Format($"{ToLongTimeString()} {Screen} {ScreeningTitle}");
         }
 
-        public string ToConsideredScreeningString()
+        public string ToConsideredScreeningString(string filmFan)
         {
-            string iAttend(bool b) => b ? "M" : string.Empty;
+            string filmFanAttends = AttendingFilmFans.Contains(filmFan) ? filmFan.Remove(1) : string.Empty;
+            //string iAttend(bool b) => b ? "M" : string.Empty;
             return string.Format($"{Film} {FilmScreeningCount} {Screen} {LongDayString(StartTime)} "
-                + $"{DurationString()} {iAttend(IAttend)} {ShortFriendsString()}");
+                + $"{DurationString()} {filmFanAttends} {ShortFriendsString()}");
         }
 
         public string DurationString()
@@ -424,7 +425,8 @@ namespace PresentScreenings.TableView
 
         private bool GetIsPlannable()
         {
-            bool plannable = TimesIAttendFilm == 0
+            bool plannable = FitsAvailability
+                && TimesIAttendFilm == 0
                 && !HasNoTravelTime
                 && !SoldOut
                 && (AppDelegate.VisitPhysical || !Location);

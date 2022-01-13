@@ -46,7 +46,6 @@ namespace PresentScreenings.TableView
 
                 // Select free screenings of the selected films.
                 var screenings = ScreeningsPlan.Screenings
-                    .Where(s => s.FitsAvailability)
                     .Where(s => films.Any(f => f.FilmId == s.FilmId))
                     .Where(s => s.IsPlannable)
                     .OrderByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.AttendedByFriend)
@@ -144,7 +143,7 @@ namespace PresentScreenings.TableView
             {
                 _builder.AppendLine($"Considered screenings of films rated {rating} in order:");
                 _builder.AppendLine();
-                _builder.AppendJoin(Environment.NewLine, screenings.Select(s => s.ToConsideredScreeningString()));
+                _builder.AppendJoin(Environment.NewLine, screenings.Select(s => s.ToConsideredScreeningString(filmFan)));
                 _builder.AppendLine();
             }
             else

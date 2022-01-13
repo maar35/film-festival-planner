@@ -39,11 +39,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Override Methods
-        public override string ToString()
-        {
-            return $"{FilmFan} {AvailabilityStart:ddd yyyy-MM-dd HH:mm} - {AvailabilityEnd:ddd yyyy-MM-dd HH:mm}";
-        }
-
         public override bool ListFileIsMandatory()
         {
             return false;
