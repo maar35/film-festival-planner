@@ -194,7 +194,7 @@ namespace PresentScreenings.TableView
             // Create a checkbox for each film fan.
             var xBox = _xMargin + _labelWidth + _xBetweenControls;
             var boxAnchor = new CGPoint(xBox, _yCurr);
-            CreateFilmFanCheckboxes(View, boxAnchor, FestivalDays);
+            CreateFilmFanCheckboxes(View, boxAnchor, FestivalDays, false);
         }
 
         private void CreatePerDayCheckboxes()
@@ -237,7 +237,7 @@ namespace PresentScreenings.TableView
             _sampleView = scrollerView;
         }
 
-        private void CreateFilmFanCheckboxes(NSView view, CGPoint boxAnchor, List<DateTime> days)
+        private void CreateFilmFanCheckboxes(NSView view, CGPoint boxAnchor, List<DateTime> days, bool usePerDayDict=true)
         {
             // Initialize the model rectangle.
             var boxRect = new CGRect(boxAnchor.X, boxAnchor.Y, _controlWidth, _labelHeight);
@@ -251,8 +251,15 @@ namespace PresentScreenings.TableView
                 box.AllowsMixedState = true;
                 view.AddSubview(box);
 
-                // Update the controls dictionary.
-                StoreControlDictionaries(box, fan, days);
+                // Update the indicated controls dictionary.
+                if (usePerDayDict)
+                {
+                    UpdateControlByFanByDayDictionary(box, fan, days);
+                }
+                else
+                {
+                    _checkboxByFan.Add(fan, box);
+                }
 
                 // Update the horizontal position.
                 boxRect.X += _controlWidth + _xBetweenControls;
@@ -320,26 +327,15 @@ namespace PresentScreenings.TableView
             return day + DayTimeSpan;
         }
 
-        private void StoreControlDictionaries(NSButton box, string fan, List<DateTime> days)
+        private void UpdateControlByFanByDayDictionary(NSButton box, string fan, List<DateTime> days)
         {
-            // Establish which controls dictionary is applicable.
-            bool usePerDayDict = days.Count == 1;
-
-            // Update the controls dictionary.
-            if (usePerDayDict)
+            if (!_checkboxByDayByFan.ContainsKey(fan))
             {
-                if (!_checkboxByDayByFan.ContainsKey(fan))
-                {
-                    _checkboxByDayByFan.Add(fan, new Dictionary<DateTime, NSButton> { });
-                }
-                foreach (var day in days)
-                {
-                    _checkboxByDayByFan[fan].Add(day, box);
-                }
+                _checkboxByDayByFan.Add(fan, new Dictionary<DateTime, NSButton> { });
             }
-            else
+            foreach (var day in days)
             {
-                _checkboxByFan.Add(fan, box);
+                _checkboxByDayByFan[fan].Add(day, box);
             }
         }
 
