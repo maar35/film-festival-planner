@@ -52,8 +52,8 @@ namespace PresentScreenings.TableView
 		{
             // Preferences.
             Festival = "IFFR";
-            FestivalYear = "2022";
-            VisitPhysical = true;
+            FestivalYear = "2021";
+            VisitPhysical = false;
             PauseBetweenOnDemandScreenings = new TimeSpan(0, 30, 0);
             Screening.TravelTime = new TimeSpan(0, 30, 0);
             FilmRatingDialogController.OnlyFilmsWithScreenings = false;
@@ -94,9 +94,9 @@ namespace PresentScreenings.TableView
             _uncombineTitleMenuItem.Action = new Selector("ShowTitlesToUncombine:");
             Controller.ClickableLabelsMenuItem = _clickableLabelsMenuItem;
 
-            // Report coinciding screenings.
-            ViewController.ReportDuplicateScreenings();
-            ViewController.ReportCoincidingScreeninings();
+            //// Report coinciding screenings.
+            //ViewController.ReportDuplicateScreenings();
+            //ViewController.ReportCoincidingScreeninings();
         }
 
         public override void WillTerminate(NSNotification notification)

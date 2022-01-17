@@ -236,6 +236,16 @@ namespace PresentScreenings.TableView
         {
             return string.Format("{0} {1}{2}", ToMenuItemString(), ShortAttendingFriendsString(), ScreeningTitleIfDifferent());
         }
+
+        protected virtual bool GetIsPlannable()
+        {
+            bool plannable = FitsAvailability
+                && TimesIAttendFilm == 0
+                && !HasNoTravelTime
+                && !SoldOut
+                && (AppDelegate.VisitPhysical || !Location);
+            return plannable;
+        }
         #endregion
 
         #region Interface Implementations
@@ -311,9 +321,13 @@ namespace PresentScreenings.TableView
 
         public string ToConsideredScreeningString(string filmFan)
         {
+            string overlaps = HasNoTravelTime ? "T!" : string.Empty;
             string filmFanAttends = AttendingFilmFans.Contains(filmFan) ? filmFan.Remove(1) : string.Empty;
-            return string.Format($"{Film} {FilmScreeningCount} {Screen} {LongDayString(StartTime)} "
-                + $"{DurationString()} {filmFanAttends} {ShortFriendsString()}");
+            return string.Format($"{Film} {FilmScreeningCount} {Screen} {ToLongTimeString()} "
+                + $"{overlaps} {filmFanAttends} {ShortFriendsString()}");
+            //string filmFanAttends = AttendingFilmFans.Contains(filmFan) ? filmFan.Remove(1) : string.Empty;
+            //return string.Format($"{Film} {FilmScreeningCount} {Screen} {LongDayString(StartTime)} "
+            //    + $"{DurationString()} {filmFanAttends} {ShortFriendsString()}");
         }
 
         public string DurationString()
@@ -420,16 +434,6 @@ namespace PresentScreenings.TableView
         private string FromTillString()
         {
             return string.Format($"{StartTime.ToString(_timeFormat)}-{EndTime.ToString(_timeFormat)}");
-        }
-
-        private bool GetIsPlannable()
-        {
-            bool plannable = FitsAvailability
-                && TimesIAttendFilm == 0
-                && !HasNoTravelTime
-                && !SoldOut
-                && (AppDelegate.VisitPhysical || !Location);
-            return plannable;
         }
 
         private string GetCoincideKey()

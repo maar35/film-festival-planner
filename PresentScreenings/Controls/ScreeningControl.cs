@@ -234,7 +234,8 @@ namespace PresentScreenings.TableView
 
         private void DrawAutomaticallyPlannedSymbol(CGContext context, nfloat side)
         {
-            DrawText(context, AutomaticallyPlannedSymbol, side/2, 0);
+            nfloat y = Screening is OnDemandScreening ? side*4/16 : 0;
+            DrawText(context, AutomaticallyPlannedSymbol, side/2, y);
         }
 
         private static CGRect ControlRect(CGRect screeningRect)

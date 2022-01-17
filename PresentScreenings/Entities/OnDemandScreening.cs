@@ -43,6 +43,14 @@ namespace PresentScreenings.TableView
         {
             return $"{WindowEndTime.ToString(_expireTimeFormat)}";
         }
+
+        protected override bool GetIsPlannable()
+        {
+            bool plannable = TimesIAttendFilm == 0
+                && !SoldOut
+                && (AppDelegate.VisitPhysical || !Location);
+            return plannable;
+        }
         #endregion
 
         #region Public Methods

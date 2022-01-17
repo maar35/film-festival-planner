@@ -535,7 +535,13 @@ namespace PresentScreenings.TableView
             UpdateAttendanceStatus(onDemandScreening);
         }
 
-        private TimeSpan GetSpanToFit(Screening screening, bool forward)
+        public TimeSpan GetSpanToAutomaticallyFit(Screening screening, bool forward = false)
+        {
+            Plan.SetCurrScreening(screening);
+            return GetSpanToFit(screening, forward, true);
+        }
+
+        private TimeSpan GetSpanToFit(Screening screening, bool forward, bool automatic = false)
         {
             // Define helper functions.
             int increasingComparer(Screening one_s, Screening other_s) => one_s.EndTime.CompareTo(other_s.EndTime);
@@ -595,6 +601,13 @@ namespace PresentScreenings.TableView
                 }
             }
 
+            // Don't move further when beyond all attended screenings if moving
+            // automatically.
+            if (automatic)
+            {
+                return TimeSpan.Zero;
+            }
+
             // Return the pause span when beyond all attended screenings.
             return sign * _pause;
         }
@@ -631,6 +644,37 @@ namespace PresentScreenings.TableView
                     allowed = onDemandScreening.StartTime.TimeOfDay > EarliestTime;
                 }
                 return allowed;
+            }
+            return false;
+        }
+
+        public void MoveToWindowStart(OnDemandScreening onDemandScreening)
+        {
+            TimeSpan span = onDemandScreening.WindowStartTime - onDemandScreening.StartTime;
+            MoveOnDemandScreening(onDemandScreening, span);
+        }
+
+        public void MoveToWindowEnd(OnDemandScreening onDemandScreening)
+        {
+            TimeSpan span = onDemandScreening.WindowEndTime - onDemandScreening.StartTime;
+            MoveOnDemandScreening(onDemandScreening, span);
+        }
+
+        public void MoveOnDemandScreeningAutomatically(OnDemandScreening onDemandScreening, TimeSpan span)
+        {
+            MoveOnDemandScreening(onDemandScreening, span);
+        }
+
+        public bool TryMoveBackwardOverNight(OnDemandScreening onDemandScreening)
+        {
+            if (onDemandScreening.StartDate > onDemandScreening.WindowStartTime.Date)
+            {
+                DateTime newStartTime = onDemandScreening.StartDate - DaySpan + LatestTime;
+                TimeSpan span = newStartTime - onDemandScreening.StartTime;
+                MoveOnDemandScreening(onDemandScreening, span);
+                //GoToDay(onDemandScreening.StartTime.Date);
+                //SetCurrScreening(onDemandScreening);
+                return true;
             }
             return false;
         }
