@@ -121,9 +121,9 @@ namespace PresentScreenings.TableView
         {
             var dlg = new NSSavePanel
             {
-                Title = "Save Screenings Plan",
-                Message = "Please save your screens",
-                NameFieldLabel = "Save screens as",
+                Title = "Save Festival Data",
+                Message = $"All data will be saved in the {Festival}{FestivalYear} directory",
+                NameFieldLabel = "Save As will be replaced by Save",
                 AllowedFileTypes = new string[] { "csv" },
                 ExtensionHidden = false,
                 CanCreateDirectories = true,
@@ -132,7 +132,9 @@ namespace PresentScreenings.TableView
 
             dlg.BeginSheet(Controller.TableView.Window, (result) =>
             {
-                string directory = dlg.Directory;
+                // PRELIMINARILY save in the Documents Folder of THIS Festival!
+                //string directory = dlg.Directory;
+                string directory = DocumentsFolder;
 
                 // Write film fan availability.
                 WriteFilmFanAvailabilities(directory);
@@ -144,6 +146,11 @@ namespace PresentScreenings.TableView
                 string screeningInfoFileName = Path.GetFileName(ScreeningInfoFile);
                 string screeningInfosPath = Path.Combine(directory, screeningInfoFileName);
                 new ScreeningInfo().WriteListToFile(screeningInfosPath, ScreeningsPlan.ScreeningInfos);
+
+                // Display where the files have been stored.
+                string title = "Festival Data Saved";
+                string informativeText = $"Files of {Festival}{FestivalYear} are saved in {directory}";
+                AlertRaiser.RaiseNotification(title, informativeText);
             });
         }
         public void WriteFilmFanAvailabilities(string directory = null)
@@ -293,13 +300,13 @@ namespace PresentScreenings.TableView
         [Action("MoveToPreviousDay:")]
         internal void MoveToPreviousDay(NSObject sender)
         {
-            Controller.MoveScreening24Hours(false);
+            Controller.MoveScreeningOvernight(false);
         }
 
         [Action("MoveToNextDay:")]
         internal void MoveToNextDay(NSObject sender)
         {
-            Controller.MoveScreening24Hours(true);
+            Controller.MoveScreeningOvernight(true);
         }
 
         [Export("saveDocumentAs:")]

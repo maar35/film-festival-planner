@@ -322,12 +322,10 @@ namespace PresentScreenings.TableView
         public string ToConsideredScreeningString(string filmFan)
         {
             string overlaps = HasNoTravelTime ? "T!" : string.Empty;
+            string available = FitsAvailability ? string.Empty : "A!";
             string filmFanAttends = AttendingFilmFans.Contains(filmFan) ? filmFan.Remove(1) : string.Empty;
             return string.Format($"{Film} {FilmScreeningCount} {Screen} {ToLongTimeString()} "
-                + $"{overlaps} {filmFanAttends} {ShortFriendsString()}");
-            //string filmFanAttends = AttendingFilmFans.Contains(filmFan) ? filmFan.Remove(1) : string.Empty;
-            //return string.Format($"{Film} {FilmScreeningCount} {Screen} {LongDayString(StartTime)} "
-            //    + $"{DurationString()} {filmFanAttends} {ShortFriendsString()}");
+                + $"{overlaps}{available} {filmFanAttends} {ShortFriendsString()}");
         }
 
         public string DurationString()

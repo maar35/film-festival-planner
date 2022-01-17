@@ -55,7 +55,7 @@ namespace PresentScreenings.TableView
                     .ThenByDescending(s => s.StartTime)
                     .ToList();
 
-#warning TEMPORARILY write selected screenings.
+                // Display the selected screenings.
                 _builder.AppendLine($"Screenings of films with rating {rating} ready to plan:");
                 _builder.AppendLine();
                 _builder.AppendJoin(Environment.NewLine, screenings.Select(s => s.ToConsideredScreeningString(filmFan)));
@@ -93,6 +93,10 @@ namespace PresentScreenings.TableView
             {
                 screening.ToggleFilmFanAttendance(attendee);
                 screening.AutomaticallyPlanned = false;
+                if (screening is OnDemandScreening onDemandScreening)
+                {
+                    _controller.MoveToWindowStart(onDemandScreening);
+                }
                 _controller.UpdateAttendanceStatus(screening);
             }
             _controller.ReloadScreeningsView();
@@ -114,6 +118,7 @@ namespace PresentScreenings.TableView
         #region Private Methods
         private void AttendScreenings(string filmFan, List<Screening> screenings)
         {
+            DateTime orgDay = _controller.Plan.CurrDay;
             foreach (var screening in screenings)
             {
                 bool fits = true;
@@ -130,6 +135,7 @@ namespace PresentScreenings.TableView
                 }
                 _controller.ReloadScreeningsView();
             }
+            _controller.GoToDay(orgDay);
         }
 
         private bool FitOnDemandScreening(string filmFan, OnDemandScreening onDemandScreening)
@@ -151,31 +157,31 @@ namespace PresentScreenings.TableView
             // Try to fit the screening by moving it.
             bool stop = false;
             bool found = false;
-            bool tryPrevDay = false;
+            bool tryNextDay = false;
             if (canMove(onDemandScreening))
             {
-                // Start at the maximum delay of the screening.
-                _controller.MoveToWindowEnd(onDemandScreening);
+                // Start at the first allowed start time of the screening.
+                _controller.MoveToWindowStart(onDemandScreening);
                 if (fits(onDemandScreening))
                 {
                     return true;
                 }
 
-                // Try to fit moving backward.
+                // Try to fit moving forward.
                 while (!stop)
                 {
                     TimeSpan span = _controller.GetSpanToAutomaticallyFit(onDemandScreening);
                     if (span == TimeSpan.Zero)
                     {
-                        tryPrevDay = true;
+                        tryNextDay = true;
                     }
                     else
                     {
                         DateTime orgStartTime = onDemandScreening.StartTime;
                         _controller.MoveOnDemandScreeningAutomatically(onDemandScreening, span);
-                        if (onDemandScreening.StartTime == orgStartTime || onDemandScreening.StartTime == onDemandScreening.WindowStartTime)
+                        if (onDemandScreening.StartTime == orgStartTime || onDemandScreening.StartTime == onDemandScreening.WindowEndTime)
                         {
-                            tryPrevDay = true;
+                            tryNextDay = true;
                         }
                         else
                         {
@@ -183,9 +189,9 @@ namespace PresentScreenings.TableView
                             stop = found;
                         }
                     }
-                    if (tryPrevDay)
+                    if (tryNextDay)
                     {
-                        if (_controller.TryMoveBackwardOverNight(onDemandScreening))
+                        if (_controller.TryMoveForwardOvernight(onDemandScreening))
                         {
                             found = fits(onDemandScreening);
                             stop = found;
@@ -197,13 +203,6 @@ namespace PresentScreenings.TableView
                     }
                 }
             }
-            //else
-            //{
-            //    if (fits(onDemandScreening))
-            //    {
-            //        return true;
-            //    }
-            //}
 
             // Screening can't be fitted.
             if (!found && canMove(onDemandScreening))
