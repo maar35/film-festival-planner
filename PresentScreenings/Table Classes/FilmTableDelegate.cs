@@ -93,7 +93,6 @@ namespace PresentScreenings.TableView
                     NSTextField descriptionLabel = (NSTextField)view;
                     PopulateDescription(ref descriptionLabel);
                     descriptionLabel.StringValue = FilmInfo.InfoString(film);
-                    descriptionLabel.TextColor = TextColor(film.Duration);
                     return descriptionLabel;
                 case "Duration":
                     NSTextField durationLabel = (NSTextField)view;

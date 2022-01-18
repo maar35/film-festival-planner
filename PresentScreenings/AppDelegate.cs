@@ -53,7 +53,7 @@ namespace PresentScreenings.TableView
             // Preferences.
             Festival = "IFFR";
             FestivalYear = "2022";
-            VisitPhysical = true;
+            VisitPhysical = false;
             PauseBetweenOnDemandScreenings = new TimeSpan(0, 30, 0);
             Screening.TravelTime = new TimeSpan(0, 30, 0);
             FilmRatingDialogController.OnlyFilmsWithScreenings = false;
@@ -110,42 +110,7 @@ namespace PresentScreenings.TableView
 		}
         #endregion
 
-        #region Private Methods
-        private static string GetDocumentsPath()
-        {
-            string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-            return homeFolder + $"/Documents/Film/{Festival}/{Festival}{FestivalYear}/FestivalPlan";
-        }
-
-        private void ShowSaveAs()
-        {
-            var dlg = new NSSavePanel
-            {
-                Title = "Save Screenings Plan",
-                Message = "Please save your screens",
-                NameFieldLabel = "Save screens as",
-                AllowedFileTypes = new string[] { "csv" },
-                ExtensionHidden = false,
-                CanCreateDirectories = true,
-                ShowsTagField = false
-            };
-
-            dlg.BeginSheet(Controller.TableView.Window, (result) =>
-            {
-                string directory = dlg.Directory;
-
-                // Write film fan availability.
-                WriteFilmFanAvailabilities(directory);
-
-                // Write film ratings.
-                WriteFilmFanFilmRatings(directory);
-
-                // Write screening info.
-                string screeningInfoFileName = Path.GetFileName(ScreeningInfoFile);
-                string screeningInfosPath = Path.Combine(directory, screeningInfoFileName);
-                new ScreeningInfo().WriteListToFile(screeningInfosPath, ScreeningsPlan.ScreeningInfos);
-            });
-        }
+        #region Public Methods
         public void WriteFilmFanAvailabilities(string directory = null)
         {
             if (directory == null)
@@ -181,6 +146,58 @@ namespace PresentScreenings.TableView
             string summaryFileName = Path.GetFileName(ScreeningsSummaryFile);
             string summaryPath = Path.Combine(directory, summaryFileName);
             new Screening().WriteListToFile(summaryPath, Controller.Plan.AttendedScreenings());
+        }
+        #endregion
+
+        #region Private Methods
+        private static string GetDocumentsPath()
+        {
+            string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            return homeFolder + $"/Documents/Film/{Festival}/{Festival}{FestivalYear}/FestivalPlan";
+        }
+
+        private void RunSaveDialog()
+        {
+            // Create the Save alert.
+            string alertTitle = "Save Festival Data";
+            string okButtonTitle = "OK";
+            string informativeText = $"Please hit the {okButtonTitle} button to save the {Festival}{FestivalYear} data";
+            var alert = new NSAlert()
+            {
+                AlertStyle = NSAlertStyle.Informational,
+                MessageText = alertTitle,
+                InformativeText = informativeText,
+            };
+            alert.AddButton(okButtonTitle);
+            alert.AddButton("Cancel");
+
+            // Run the alert.
+            var alertResult = alert.RunModal();
+
+            // Take action based on the button pressed.
+            if (alertResult == 1000)
+            {
+                SaveFestivalData();
+            }
+        }
+
+        private void SaveFestivalData()
+        {
+            // Write film fan availability.
+            WriteFilmFanAvailabilities(DocumentsFolder);
+
+            // Write film ratings.
+            WriteFilmFanFilmRatings(DocumentsFolder);
+
+            // Write screening info.
+            string screeningInfoFileName = Path.GetFileName(ScreeningInfoFile);
+            string screeningInfosPath = Path.Combine(DocumentsFolder, screeningInfoFileName);
+            new ScreeningInfo().WriteListToFile(screeningInfosPath, ScreeningsPlan.ScreeningInfos);
+
+            // Display where the files have been stored.
+            string title = "Festival Data Saved";
+            string text = $"Files of {Festival}{FestivalYear} are saved in {DocumentsFolder}";
+            AlertRaiser.RaiseNotification(title, text);
         }
         #endregion
 
@@ -293,19 +310,19 @@ namespace PresentScreenings.TableView
         [Action("MoveToPreviousDay:")]
         internal void MoveToPreviousDay(NSObject sender)
         {
-            Controller.MoveScreening24Hours(false);
+            Controller.MoveScreeningOvernight(false);
         }
 
         [Action("MoveToNextDay:")]
         internal void MoveToNextDay(NSObject sender)
         {
-            Controller.MoveScreening24Hours(true);
+            Controller.MoveScreeningOvernight(true);
         }
 
-        [Export("saveDocumentAs:")]
-        void ShowSaveAs(NSObject sender)
+        [Export("saveDocument:")]
+        void ShowSave(NSObject sender)
         {
-            ShowSaveAs();
+            RunSaveDialog();
         }
         #endregion
     }

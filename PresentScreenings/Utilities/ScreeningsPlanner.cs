@@ -33,7 +33,7 @@ namespace PresentScreenings.TableView
         #region Public Methods
         public void MakeScreeningsPlan(string filmFan)
         {
-            _builder.AppendLine($"{LogTimeString()}  Started planning.");
+            _builder.AppendLine($"{LogTimeString()}  Started planning for {filmFan}.");
             _builder.AppendLine();
             _plannedScreenings = new List<Screening> { };
             var rating = FilmRating.MaxRating;
@@ -55,18 +55,15 @@ namespace PresentScreenings.TableView
                     .ThenByDescending(s => s.StartTime)
                     .ToList();
 
+                // Display the selected screenings.
+                _builder.AppendLine($"Screenings of films with rating {rating} ready to plan:");
+                _builder.AppendLine();
+                _builder.AppendJoin(Environment.NewLine, screenings.Select(s => s.ToConsideredScreeningString(filmFan)));
+                _builder.AppendLine();
+                _builder.AppendLine();
+
                 // Attend the screenings.
-                foreach (var screening in screenings)
-                {
-                    if (screening.IsPlannable)
-                    {
-                        screening.ToggleFilmFanAttendance(filmFan);
-                        screening.AutomaticallyPlanned = true;
-                        _controller.UpdateAttendanceStatus(screening);
-                        _plannedScreenings.Add(screening);
-                    }
-                    _controller.ReloadScreeningsView();
-                }
+                AttendScreenings(filmFan, screenings);
 
                 // Display the results of this rating.
                 DisplayResultsOfRating(rating, filmFan, films, screenings);
@@ -96,6 +93,10 @@ namespace PresentScreenings.TableView
             {
                 screening.ToggleFilmFanAttendance(attendee);
                 screening.AutomaticallyPlanned = false;
+                if (screening is OnDemandScreening onDemandScreening)
+                {
+                    _controller.MoveToWindowStart(onDemandScreening);
+                }
                 _controller.UpdateAttendanceStatus(screening);
             }
             _controller.ReloadScreeningsView();
@@ -115,6 +116,95 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
+        private void AttendScreenings(string filmFan, List<Screening> screenings)
+        {
+            DateTime orgDay = _controller.Plan.CurrDay;
+            foreach (var screening in screenings)
+            {
+                bool fits = true;
+                if (screening is OnDemandScreening onDemandScreening)
+                {
+                    fits = FitOnDemandScreening(filmFan, onDemandScreening);
+                }
+                if (fits && screening.IsPlannable)
+                {
+                    screening.ToggleFilmFanAttendance(filmFan);
+                    screening.AutomaticallyPlanned = true;
+                    _controller.UpdateAttendanceStatus(screening);
+                    _plannedScreenings.Add(screening);
+                }
+                _controller.ReloadScreeningsView();
+            }
+            _controller.GoToDay(orgDay);
+        }
+
+        private bool FitOnDemandScreening(string filmFan, OnDemandScreening onDemandScreening)
+        {
+            // Define helper functions.
+            bool fits(OnDemandScreening odScreening) => odScreening.IsPlannable
+                && !odScreening.HasTimeOverlap
+                && odScreening.FitsAvailability;
+            bool canMove(OnDemandScreening odScreening) =>
+                odScreening.AttendingFilmFans.Count == 0;
+
+
+            // No moving if the screening already fits.
+            if (fits(onDemandScreening))
+            {
+                return true;
+            }
+
+            // Try to fit the screening by moving it.
+            bool stop = false;
+            bool found = false;
+            bool tryNextDay = false;
+            if (canMove(onDemandScreening))
+            {
+                // Start at the first allowed start time of the screening.
+                _controller.MoveToWindowStart(onDemandScreening);
+                if (fits(onDemandScreening))
+                {
+                    return true;
+                }
+
+                // Try to fit moving forward.
+                while (!stop)
+                {
+                    TimeSpan span = _controller.GetSpanToAutomaticallyFit(onDemandScreening);
+                    if (span == TimeSpan.Zero)
+                    {
+                        tryNextDay = true;
+                    }
+                    else
+                    {
+                        _controller.MoveOnDemandScreeningAutomatically(onDemandScreening, span);
+                        found = fits(onDemandScreening);
+                        stop = found;
+                    }
+                    if (tryNextDay)
+                    {
+                        if (_controller.TryMoveForwardOvernight(onDemandScreening))
+                        {
+                            found = fits(onDemandScreening);
+                            stop = found;
+                        }
+                        else
+                        {
+                            stop = true;
+                        }
+                    }
+                }
+            }
+
+            // Screening can't be fitted.
+            if (!found && canMove(onDemandScreening))
+            {
+                _controller.MoveToWindowStart(onDemandScreening);
+            }
+
+            return found;
+        }
+
         private bool HasAttendedScreening(Film film, string filmFan)
         {
             return film.FilmScreenings.Any(s => s.FilmFanAttends(filmFan));

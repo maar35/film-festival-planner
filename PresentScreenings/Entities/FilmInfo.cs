@@ -152,10 +152,10 @@ namespace PresentScreenings.TableView
                 var screenedFilmTypes = ScreenedFilms
                     .Select(sf => sf.ScreenedFilmType)
                     .Distinct();
-                var space = newLine;
 
                 // Per type, add the applicible header and the screened films
                 // with that type to the string builder.
+                var space = newLine;
                 foreach (var screenedFilmType in screenedFilmTypes)
                 {
                     builder.AppendLine($"{space}{_headerByScreenedFilmType[screenedFilmType]}:");
@@ -165,6 +165,14 @@ namespace PresentScreenings.TableView
                         twoLines,
                         screenedFilmsOfType.Select(f => f.ToString()));
                     space = twoLines;
+                }
+
+                // Calculate the average rating of all screened films if
+                // applicable.
+                decimal meanRating = TimeWeightedMeanRating();
+                if (meanRating != decimal.Zero)
+                {
+                    builder.AppendLine($"{twoLines}Time weighted mean rating: {meanRating:0.##}");
                 }
             }
             return builder.ToString();
@@ -268,6 +276,34 @@ namespace PresentScreenings.TableView
                 return m.Result(@"$1");
             }
             return String.Empty;
+        }
+
+        public decimal TimeWeightedMeanRating()
+        {
+            TimeSpan time = TimeSpan.Zero;
+            decimal ratingMinutes = 0M;
+            decimal minutesSum = 0M;
+            bool fullyRated = true;
+            foreach (var screenedFilm in ScreenedFilms)
+            {
+                Film film = ViewController.GetFilmById(screenedFilm.ScreenedFilmId);
+                FilmRating rating = film.MaxRating;
+                if (rating.IsUnrated)
+                {
+                    fullyRated = false;
+                    break;
+                }
+                decimal decimalRating = decimal.Parse(rating.Value);
+                decimal minutes = (decimal)film.Duration.TotalMinutes;
+                ratingMinutes += decimalRating * minutes;
+                minutesSum += minutes;
+            }
+            if (fullyRated && ScreenedFilms.Count > 0)
+            {
+                decimal meanRating = ratingMinutes / minutesSum;
+                return meanRating;
+            }
+            return decimal.Zero;
         }
         #endregion
 

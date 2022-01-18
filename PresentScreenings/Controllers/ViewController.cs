@@ -33,6 +33,7 @@ namespace PresentScreenings.TableView
         internal int RunningPopupsCount { get; set; } = 0;
         public static TimeSpan DaySpan => new TimeSpan(24, 0, 0);
         public static TimeSpan EarliestTime => new TimeSpan(ScreeningsTableView.FirstDisplayedHour, 0, 0);
+        public static TimeSpan EarlyTime => new TimeSpan(ScreeningsTableView.FirstDisplayedHour + 1, 0, 0);
         public static TimeSpan LatestTime => new TimeSpan(ScreeningsTableView.LastDisplayedHour - 1, 59, 0);
         #endregion
 
@@ -518,6 +519,10 @@ namespace PresentScreenings.TableView
             {
                 screening.Warning = ScreeningInfo.Warning.TimeOverlap;
             }
+            else if(screening.IAttend && !screening.FitsAvailability)
+            {
+                screening.Warning = ScreeningInfo.Warning.Unavailable;
+            }
             else
             {
                 screening.Warning = ScreeningInfo.Warning.NoWarning;
@@ -526,16 +531,27 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Methods working with movable screenings
-        private void MoveOnDemandScreening(OnDemandScreening onDemandScreening, TimeSpan span)
+        private void MoveOnDemandScreeningTo(OnDemandScreening onDemandScreening, DateTime startTime)
         {
             var oldOverlappers = OverlappingScreenings(onDemandScreening, true);
-            onDemandScreening.MoveStartTime(span);
+            onDemandScreening.SetStartTime(startTime);
             UpdateOneAttendanceStatus(oldOverlappers);
             Plan.InitializeDays();
             UpdateAttendanceStatus(onDemandScreening);
         }
 
-        private TimeSpan GetSpanToFit(Screening screening, bool forward)
+        private void MoveOnDemandScreening(OnDemandScreening onDemandScreening, TimeSpan span)
+        {
+            MoveOnDemandScreeningTo(onDemandScreening, onDemandScreening.StartTime + span);
+        }
+
+        public TimeSpan GetSpanToAutomaticallyFit(Screening screening, bool forward = true)
+        {
+            Plan.SetCurrScreening(screening);
+            return GetSpanToFit(screening, forward, true);
+        }
+
+        private TimeSpan GetSpanToFit(Screening screening, bool forward, bool automatic = false)
         {
             // Define helper functions.
             int increasingComparer(Screening one_s, Screening other_s) => one_s.EndTime.CompareTo(other_s.EndTime);
@@ -595,6 +611,13 @@ namespace PresentScreenings.TableView
                 }
             }
 
+            // Don't move further when beyond all attended screenings if moving
+            // automatically.
+            if (automatic)
+            {
+                return TimeSpan.Zero;
+            }
+
             // Return the pause span when beyond all attended screenings.
             return sign * _pause;
         }
@@ -634,6 +657,55 @@ namespace PresentScreenings.TableView
             }
             return false;
         }
+
+        public void MoveToWindowStart(OnDemandScreening onDemandScreening)
+        {
+            MoveOnDemandScreeningTo(onDemandScreening, onDemandScreening.WindowStartTime);
+        }
+
+        public void MoveToWindowEnd(OnDemandScreening onDemandScreening)
+        {
+            MoveOnDemandScreeningTo(onDemandScreening, onDemandScreening.WindowEndTime);
+        }
+
+        public void MoveOnDemandScreeningAutomatically(OnDemandScreening onDemandScreening, TimeSpan span)
+        {
+            MoveOnDemandScreening(onDemandScreening, span);
+        }
+
+        public void MoveOnDemandScreeningOvernight(OnDemandScreening onDemandScreening, bool forward)
+        {
+            if (forward)
+            {
+                _ = TryMoveForwardOvernight(onDemandScreening);
+            }
+            else
+            {
+                _ = TryMoveBackwardOvernight(onDemandScreening);
+            }
+        }
+
+        public bool TryMoveBackwardOvernight(OnDemandScreening onDemandScreening)
+        {
+            if (onDemandScreening.StartDate > onDemandScreening.WindowStartTime.Date)
+            {
+                DateTime newStartTime = onDemandScreening.StartDate - DaySpan + LatestTime;
+                MoveOnDemandScreeningTo(onDemandScreening, newStartTime);
+                return true;
+            }
+            return false;
+        }
+
+        public bool TryMoveForwardOvernight(OnDemandScreening onDemandScreening)
+        {
+            if (onDemandScreening.StartDate < onDemandScreening.WindowEndTime.Date)
+            {
+                DateTime newStartTime = onDemandScreening.StartDate + DaySpan + EarlyTime;
+                MoveOnDemandScreeningTo(onDemandScreening, newStartTime);
+                return true;
+            }
+            return false;
+        }
         #endregion
 
         #region Public Action Methods
@@ -648,7 +720,7 @@ namespace PresentScreenings.TableView
         {
             _plan.CurrDay = day;
             DisplayScreeningsView();
-            ScreeningInfoDialog?.UpdateAttendances();
+            ScreeningInfoDialog?.UpdateMovedScreeningInfo();
         }
 
         public void SetNextDay(int days)
@@ -717,7 +789,7 @@ namespace PresentScreenings.TableView
 
         public void MoveScreening(bool forward, Screening screening = null)
         {
-            // Apply the deafalt screening.
+            // Apply the default screening.
             if (screening == null)
             {
                 screening = Plan.CurrScreening;
@@ -727,7 +799,7 @@ namespace PresentScreenings.TableView
             if (screening is OnDemandScreening onDemandScreening)
             {
                 MoveOnDemandScreening(onDemandScreening, GetSpanToFit(onDemandScreening, forward));
-                ScreeningInfoDialog?.UpdateAttendances();
+                ScreeningInfoDialog?.UpdateMovedScreeningInfo();
                 SetCurrScreening(onDemandScreening);
             }
         }
@@ -738,6 +810,17 @@ namespace PresentScreenings.TableView
             if (Plan.CurrScreening is OnDemandScreening onDemandScreening)
             {
                 MoveOnDemandScreening(onDemandScreening, forward ? DaySpan : -DaySpan);
+                GoToDay(onDemandScreening.StartTime.Date);
+                SetCurrScreening(onDemandScreening);
+            }
+        }
+
+        public void MoveScreeningOvernight(bool forward)
+        {
+            // Move the current screening overnight in the given direction.
+            if (Plan.CurrScreening is OnDemandScreening onDemandScreening)
+            {
+                MoveOnDemandScreeningOvernight(onDemandScreening, forward);
                 GoToDay(onDemandScreening.StartTime.Date);
                 SetCurrScreening(onDemandScreening);
             }

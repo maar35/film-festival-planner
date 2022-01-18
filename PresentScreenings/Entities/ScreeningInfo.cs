@@ -26,7 +26,8 @@ namespace PresentScreenings.TableView
         {
             NoWarning,
             SameMovie,
-            TimeOverlap
+            TimeOverlap,
+            Unavailable
         }
         public enum TicketsStatus
         {
