@@ -817,7 +817,7 @@ namespace PresentScreenings.TableView
 
         public void MoveScreeningOvernight(bool forward)
         {
-            // Move the current screening overnight in the given directory.
+            // Move the current screening overnight in the given direction.
             if (Plan.CurrScreening is OnDemandScreening onDemandScreening)
             {
                 MoveOnDemandScreeningOvernight(onDemandScreening, forward);
