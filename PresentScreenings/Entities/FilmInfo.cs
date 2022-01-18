@@ -293,9 +293,9 @@ namespace PresentScreenings.TableView
                     fullyRated = false;
                     break;
                 }
-                decimal intRating = decimal.Parse(rating.Value);
+                decimal decimalRating = decimal.Parse(rating.Value);
                 decimal minutes = (decimal)film.Duration.TotalMinutes;
-                ratingMinutes += minutes * intRating;
+                ratingMinutes += decimalRating * minutes;
                 minutesSum += minutes;
             }
             if (fullyRated && ScreenedFilms.Count > 0)

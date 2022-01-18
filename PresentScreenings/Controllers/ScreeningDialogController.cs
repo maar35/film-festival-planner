@@ -329,8 +329,13 @@ namespace PresentScreenings.TableView
             _presentor.UpdateAttendanceStatus(_screening);
             _presentor.ReloadScreeningsView();
             UpdateScreeningControls();
-            _labelTime.StringValue = _screening.ToLongTimeString();
             _screeningInfoControl.ReDraw();
+        }
+
+        public void UpdateMovedScreeningInfo()
+        {
+            _labelTime.StringValue = _screening.ToLongTimeString();
+            UpdateAttendances();
         }
         #endregion
 

@@ -720,7 +720,7 @@ namespace PresentScreenings.TableView
         {
             _plan.CurrDay = day;
             DisplayScreeningsView();
-            ScreeningInfoDialog?.UpdateAttendances();
+            ScreeningInfoDialog?.UpdateMovedScreeningInfo();
         }
 
         public void SetNextDay(int days)
@@ -789,7 +789,7 @@ namespace PresentScreenings.TableView
 
         public void MoveScreening(bool forward, Screening screening = null)
         {
-            // Apply the deafalt screening.
+            // Apply the default screening.
             if (screening == null)
             {
                 screening = Plan.CurrScreening;
@@ -799,7 +799,7 @@ namespace PresentScreenings.TableView
             if (screening is OnDemandScreening onDemandScreening)
             {
                 MoveOnDemandScreening(onDemandScreening, GetSpanToFit(onDemandScreening, forward));
-                ScreeningInfoDialog?.UpdateAttendances();
+                ScreeningInfoDialog?.UpdateMovedScreeningInfo();
                 SetCurrScreening(onDemandScreening);
             }
         }

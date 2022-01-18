@@ -177,17 +177,9 @@ namespace PresentScreenings.TableView
                     }
                     else
                     {
-                        DateTime orgStartTime = onDemandScreening.StartTime;
                         _controller.MoveOnDemandScreeningAutomatically(onDemandScreening, span);
-                        if (onDemandScreening.StartTime == orgStartTime || onDemandScreening.StartTime == onDemandScreening.WindowEndTime)
-                        {
-                            tryNextDay = true;
-                        }
-                        else
-                        {
-                            found = fits(onDemandScreening);
-                            stop = found;
-                        }
+                        found = fits(onDemandScreening);
+                        stop = found;
                     }
                     if (tryNextDay)
                     {
