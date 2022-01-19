@@ -270,7 +270,7 @@ class ScreeningsPageParser(HtmlPageParser):
         # Set some unwanted screenings to non-public.
         if self.film.title.startswith('GLR '):
             self.audience = 'GLR'
-        elif self.film.title == 'Testing':
+        elif self.film.title == 'Testing' or self.film.title.startswith('IFFR'):
             self.audience = 'Testers'
         elif self.film.title == 'The Last Movie':
             self.audience = 'Crew'
@@ -435,10 +435,12 @@ class FilmInfoPageParser(HtmlPageParser):
         DONE = auto()
 
     debugging = False
+    intro_span = datetime.timedelta(minutes=4)
     screened_film_type_by_string = {
         'Voorfilm bij ': planner.ScreenedFilmType.SCREENED_BEFORE,
         'Te zien na ': planner.ScreenedFilmType.SCREENED_AFTER,
-        'Gepresenteerd als onderdeel van ': planner.ScreenedFilmType.PART_OF_COMBINATION_PROGRAM}
+        'Gepresenteerd als onderdeel van ': planner.ScreenedFilmType.PART_OF_COMBINATION_PROGRAM,
+        'Wordt vertoond in combinatie met ': planner.ScreenedFilmType.DIRECTLY_COMBINED}
 
     def __init__(self, iffr_data, film):
         HtmlPageParser.__init__(self, iffr_data, 'FI')
@@ -506,6 +508,14 @@ class FilmInfoPageParser(HtmlPageParser):
             self.print_debug(f'COMBINATION PROGRAM INFO of {screened_film.title} UPDATED:',
                              f'\n{", ".join(str(cf) for cf in screened_film_info.combination_films)}')
 
+        # Fix zero film duration.
+        if self.film.duration.total_seconds() == 0:
+            event_duration = datetime.timedelta()
+            for screened_film in self.screened_films:
+                film = self.iffr_data.get_film_from_id(screened_film.filmid)
+                event_duration = event_duration + self.intro_span + film.duration
+            self.film.duration = event_duration
+
     def try_match_prefix(self, data, state_action):
         prefix_items = self.screened_film_type_by_string.items()
         for (prefix, screened_film_type) in prefix_items:
@@ -553,6 +563,26 @@ class FilmInfoPageParser(HtmlPageParser):
             return iffr_data.get_film_from_id(film_id).short_str()
 
         pr_debug(f'Main films and extras: {Globals.extras_by_main}')
+
+        # Find mutually linked films and decide which will be the main film.
+        film_ids_to_pop = set()
+        for (main_film_id, extra_infos) in Globals.extras_by_main.items():
+            if len(extra_infos) == 1:
+                (extra_film_id, screened_film_type) = extra_infos[0]
+                extra_infos_from_extra = Globals.extras_by_main[extra_film_id]
+                if len(extra_infos_from_extra) == 1:
+                    extra_info_from_extra = extra_infos_from_extra[0]
+                    if extra_info_from_extra == (main_film_id, screened_film_type):
+                        main_duration = iffr_data.get_film_from_id(main_film_id).duration
+                        extra_duration = iffr_data.get_film_from_id(extra_film_id).duration
+                        pop_film_id = extra_film_id if main_duration > extra_duration else main_film_id
+                        film_ids_to_pop.add(pop_film_id)
+
+        # Remove the non-main films from the extras by main dictionary.
+        for film_id_to_pop in film_ids_to_pop:
+            Globals.extras_by_main.pop(film_id_to_pop)
+
+        # Implement the links in the extras by main dictionary in the film info lists.
         for (main_film_id, extra_infos) in Globals.extras_by_main.items():
             pr_debug(f'{short_str(main_film_id)} [{" || ".join([short_str(i) for (i, t) in extra_infos])}]')
             main_film = iffr_data.get_film_from_id(main_film_id)

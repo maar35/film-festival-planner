@@ -332,8 +332,11 @@ class FestivalData:
             self.curr_screen_id += 1
             screen_id = self.curr_screen_id
             abbr = name.replace(" ", "").lower()
+            screen_type = 'OnDemand' if abbr.startswith('ondemand')\
+                else 'OnLine' if abbr.startswith('online')\
+                else 'Location'
             print(f"NEW LOCATION:  '{city} {name}' => {abbr}")
-            screen = Screen(screen_id, city, name, abbr)
+            screen = Screen(screen_id, city, name, abbr, screen_type)
             self.screen_by_location[screen_key] = screen
         return screen
 

@@ -29,7 +29,10 @@ def main():
              append_combination_0,
              append_combination_1,
              new_screened_film_0,
-             new_screened_film_1]
+             new_screened_film_1,
+             new_screen_online,
+             new_screen_ondemand,
+             new_screen_physical]
     test_tools.execute_tests(tests)
 
 
@@ -279,6 +282,48 @@ def new_screened_film_1():
 
     # Assert.
     return screened_film.screened_film_type.name, 'SCREENED_AFTER'
+
+
+@test_tools.equity_decorator
+def new_screen_online():
+    # Arrange.
+    city = 'The Hague'
+    name = 'Online Program 42'
+    screen_type = planner_interface.Screen.screen_types[1]  # OnLine
+
+    # Act.
+    screen = TestList.festival_data.get_screen(city, name)
+
+    # Assert.
+    return screen.type, screen_type
+
+
+@test_tools.equity_decorator
+def new_screen_ondemand():
+    # Arrange.
+    city = 'The Hague'
+    name = 'On Demand Theater'
+    screen_type = planner_interface.Screen.screen_types[2]  # OnDemand
+
+    # Act.
+    screen = TestList.festival_data.get_screen(city, name)
+
+    # Assert.
+    return screen.type, screen_type
+
+
+@test_tools.equity_decorator
+def new_screen_physical():
+    # Arrange.
+    city = 'The Hague'
+    name = 'The Horse 666'
+    screen_type = planner_interface.Screen.screen_types[0]  # Physical
+
+    # Act.
+    screen = TestList.festival_data.get_screen(city, name)
+
+    # Assert.
+    return screen.type, screen_type
 
 
 if __name__ == '__main__':
