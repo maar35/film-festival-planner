@@ -435,6 +435,7 @@ class FilmInfoPageParser(HtmlPageParser):
         DONE = auto()
 
     debugging = False
+    intro_span = datetime.timedelta(minutes=4)
     screened_film_type_by_string = {
         'Voorfilm bij ': planner.ScreenedFilmType.SCREENED_BEFORE,
         'Te zien na ': planner.ScreenedFilmType.SCREENED_AFTER,
@@ -509,12 +510,11 @@ class FilmInfoPageParser(HtmlPageParser):
 
         # Fix zero film duration.
         if self.film.duration.total_seconds() == 0:
-            pause = datetime.timedelta(minutes=5)
-            program_duration = (len(self.screened_films) - 1) * pause
-            for sf in self.screened_films:
-                f = self.iffr_data.get_film_from_id(sf.filmid)
-                program_duration = program_duration + f.duration
-            self.film.duration = program_duration
+            event_duration = datetime.timedelta()
+            for screened_film in self.screened_films:
+                film = self.iffr_data.get_film_from_id(screened_film.filmid)
+                event_duration = event_duration + self.intro_span + film.duration
+            self.film.duration = event_duration
 
     def try_match_prefix(self, data, state_action):
         prefix_items = self.screened_film_type_by_string.items()
@@ -569,10 +569,10 @@ class FilmInfoPageParser(HtmlPageParser):
         for (main_film_id, extra_infos) in Globals.extras_by_main.items():
             if len(extra_infos) == 1:
                 (extra_film_id, screened_film_type) = extra_infos[0]
-                pairs = Globals.extras_by_main[extra_film_id]
-                if len(pairs) == 1:
-                    pair = pairs[0]
-                    if pair == (main_film_id, screened_film_type):
+                extra_infos_from_extra = Globals.extras_by_main[extra_film_id]
+                if len(extra_infos_from_extra) == 1:
+                    extra_info_from_extra = extra_infos_from_extra[0]
+                    if extra_info_from_extra == (main_film_id, screened_film_type):
                         main_duration = iffr_data.get_film_from_id(main_film_id).duration
                         extra_duration = iffr_data.get_film_from_id(extra_film_id).duration
                         pop_film_id = extra_film_id if main_duration > extra_duration else main_film_id
@@ -582,7 +582,7 @@ class FilmInfoPageParser(HtmlPageParser):
         for film_id_to_pop in film_ids_to_pop:
             Globals.extras_by_main.pop(film_id_to_pop)
 
-        # Implement the links in the extras by main dictionary in the film info lists,
+        # Implement the links in the extras by main dictionary in the film info lists.
         for (main_film_id, extra_infos) in Globals.extras_by_main.items():
             pr_debug(f'{short_str(main_film_id)} [{" || ".join([short_str(i) for (i, t) in extra_infos])}]')
             main_film = iffr_data.get_film_from_id(main_film_id)
