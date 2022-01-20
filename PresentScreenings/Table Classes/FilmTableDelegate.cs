@@ -98,14 +98,15 @@ namespace PresentScreenings.TableView
                     NSTextField durationLabel = (NSTextField)view;
                     PopulateDuration(ref durationLabel);
                     durationLabel.StringValue = film.DurationString;
-                    durationLabel.TextColor = TextColor(film.Duration);
+                    durationLabel.TextColor = DurationTextColor(film.Duration);
                     return durationLabel;
-                case "Rating":
-                    RatingField myRatingField = (RatingField)view;
-                    PopulateFilmFanFilmRating(ref myRatingField, film, ScreeningInfo.Me, row);
-                    myRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, ScreeningInfo.Me).ToString();
-                    myRatingField.Tag = row;
-                    return myRatingField;
+                case "#Screenings":
+                    NSTextField screeningCountLabel = (NSTextField)view;
+                    PopulateScreeningCount(ref screeningCountLabel);
+                    int screeningCount = film.FilmScreenings.Count;
+                    screeningCountLabel.StringValue = screeningCount.ToString();
+                    screeningCountLabel.TextColor = ScreeningCountTextColor(screeningCount);
+                    return screeningCountLabel;
                 default:
                     if (ScreeningInfo.FilmFans.Contains(tableColumn.Title))
                     {
@@ -138,7 +139,7 @@ namespace PresentScreenings.TableView
                     Selectable = false,
                     Editable = false,
                     Alignment = NSTextAlignment.Left,
-                    LineBreakMode = NSLineBreakMode.TruncatingMiddle
+                    LineBreakMode = NSLineBreakMode.TruncatingMiddle,
                 };
             }
         }
@@ -154,7 +155,7 @@ namespace PresentScreenings.TableView
                     Bordered = false,
                     Selectable = false,
                     Editable = false,
-                    Alignment = NSTextAlignment.Left
+                    Alignment = NSTextAlignment.Left,
                 };
             }
         }
@@ -171,7 +172,23 @@ namespace PresentScreenings.TableView
                     Selectable = true,
                     Editable = false,
                     Alignment = NSTextAlignment.Left,
-                    LineBreakMode = NSLineBreakMode.TruncatingTail
+                    LineBreakMode = NSLineBreakMode.TruncatingTail,
+                };
+            }
+        }
+
+        private void PopulateScreeningCount(ref NSTextField field)
+        {
+            if (field == null)
+            {
+                field = new NSTextField
+                {
+                    Identifier = "#Screenings",
+                    BackgroundColor = NSColor.Clear,
+                    Bordered = false,
+                    Selectable = false,
+                    Editable = false,
+                    Alignment = NSTextAlignment.Center,
                 };
             }
         }
@@ -187,16 +204,21 @@ namespace PresentScreenings.TableView
                     Bordered = false,
                     Selectable = false,
                     Editable = true,
-                    Alignment = NSTextAlignment.Right
+                    Alignment = NSTextAlignment.Right,
                 };
             }
             var ratingField = box;
             box.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(ratingField, filmFan);
         }
 
-        private static NSColor TextColor(TimeSpan duration)
+        private static NSColor DurationTextColor(TimeSpan duration)
         {
             return duration < FilmRatingDialogController.MinimalDuration ? NSColor.LightGray : NSColor.Black;
+        }
+
+        private static NSColor ScreeningCountTextColor(int screeningCount)
+        {
+            return screeningCount == 0 ? NSColor.LightGray : NSColor.Black;
         }
         #endregion
 

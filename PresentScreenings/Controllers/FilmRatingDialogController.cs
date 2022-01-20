@@ -14,7 +14,9 @@ namespace PresentScreenings.TableView
         #region Constants
         const float _descriptionWidth = 3000;
         const float _descriptionMaxWidth = 4000;
-        const float _FriendRatingWidth = 60;
+        const float _screeningCountWidth = 40;
+        const float _screeningCountMaxWidth = 80;
+        const float _FilmFanRatingWidth = 60;
         #endregion
 
         #region Private Variables
@@ -71,7 +73,8 @@ namespace PresentScreenings.TableView
             base.ViewDidLoad();
 
             // Add in-code created colums to the table view.
-            CreateFriendRatingColumns();
+            CreateScreeningCountColumn();
+            CreateFilmFanRatingColumns();
             CreateDescriptionColumn();
 
             // Polulate the controls
@@ -152,18 +155,37 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        private void CreateFriendRatingColumns()
+        private void CreateScreeningCountColumn()
         {
-            const float width = _FriendRatingWidth;
-            foreach (string friend in ScreeningInfo.FilmFans)
+            var title = "#Screenings";
+            var sortDescriptor = new NSSortDescriptor(title, false, new ObjCRuntime.Selector("compare:"));
+            var screeningsCountColumn = new NSTableColumn
             {
-                var sortDescriptor = new NSSortDescriptor(friend, false, new ObjCRuntime.Selector("compare:"));
+                Title = title,
+                Width = _screeningCountWidth,
+                MaxWidth = _screeningCountMaxWidth,
+                Identifier = title,
+                SortDescriptorPrototype = sortDescriptor,
+            };
+            _filmRatingTableView.AddColumn(screeningsCountColumn);
+            CGRect frame = _filmRatingTableView.Frame;
+            nfloat newRight = frame.X;
+            _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + _screeningCountWidth, frame.X + screeningsCountColumn.MaxWidth);
+            _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
+        }
+
+        private void CreateFilmFanRatingColumns()
+        {
+            const float width = _FilmFanRatingWidth;
+            foreach (string filmFan in ScreeningInfo.FilmFans)
+            {
+                var sortDescriptor = new NSSortDescriptor(filmFan, false, new ObjCRuntime.Selector("compare:"));
                 var friendColumn = new NSTableColumn
                 {
-                    Title = friend,
+                    Title = filmFan,
                     Width = width,
                     MaxWidth = width,
-                    Identifier = friend,
+                    Identifier = filmFan,
                     SortDescriptorPrototype = sortDescriptor
                 };
                 _filmRatingTableView.AddColumn(friendColumn);
