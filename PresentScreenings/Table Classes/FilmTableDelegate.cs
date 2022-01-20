@@ -107,7 +107,7 @@ namespace PresentScreenings.TableView
                     myRatingField.Tag = row;
                     return myRatingField;
                 default:
-                    if (ScreeningInfo.MyFriends.Contains(tableColumn.Title))
+                    if (ScreeningInfo.FilmFans.Contains(tableColumn.Title))
                     {
                         RatingField friendRatingField = (RatingField)view;
                         PopulateFilmFanFilmRating(ref friendRatingField, film, tableColumn.Title, row);

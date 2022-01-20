@@ -82,7 +82,7 @@ namespace PresentScreenings.TableView
                     SortByCombinedRating(ScreeningInfo.Me, sign);
                     break;
                 default:
-                    foreach (var friend in ScreeningInfo.MyFriends)
+                    foreach (var friend in ScreeningInfo.FilmFans)
                     {
                         if (key == friend)
                         {

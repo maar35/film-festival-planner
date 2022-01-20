@@ -155,7 +155,7 @@ namespace PresentScreenings.TableView
         private void CreateFriendRatingColumns()
         {
             const float width = _FriendRatingWidth;
-            foreach (string friend in ScreeningInfo.MyFriends)
+            foreach (string friend in ScreeningInfo.FilmFans)
             {
                 var sortDescriptor = new NSSortDescriptor(friend, false, new ObjCRuntime.Selector("compare:"));
                 var friendColumn = new NSTableColumn
