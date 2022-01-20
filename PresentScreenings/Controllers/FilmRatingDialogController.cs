@@ -78,6 +78,7 @@ namespace PresentScreenings.TableView
             CreateDescriptionColumn();
 
             // Polulate the controls
+            _hideScreeninglessFilmsCheckBox.Action = new ObjCRuntime.Selector("ToggleHideScreeningless:");
             _typeMatchMethodCheckBox.Action = new ObjCRuntime.Selector("ToggleTypeMatchMethod:");
             _combineTitlesButton.Action = new ObjCRuntime.Selector("SelectTitlesToCombine:");
             _uncombineTitleButton.Action = new ObjCRuntime.Selector("ShowTitlesToUncombine:");
@@ -85,6 +86,7 @@ namespace PresentScreenings.TableView
             WebLinkButton.Action = new ObjCRuntime.Selector("VisitFilmWebsite:");
             DoneButton.KeyEquivalent = ControlsFactory.EscapeKey;
             DoneButton.StringValue = "Noot";
+            SetHideScreeninglessStates();
             SetTypeMatchMethodControlStates();
         }
 
@@ -213,6 +215,30 @@ namespace PresentScreenings.TableView
             nfloat newRight = frame.X;
             _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + frame.Width + _descriptionWidth, frame.X + descriptionColumn.MaxWidth);
             _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
+        }
+
+        private void ToggleHideScreeningless()
+        {
+            OnlyFilmsWithScreenings = !OnlyFilmsWithScreenings;
+
+            // Update the checkbox state.
+            SetHideScreeninglessStates();
+
+            // Update the data source.
+            SetFilmsWithScreenings();
+            _filmRatingTableView.ReloadData();
+
+            // Update the button states.
+            SetFilmRatingDialogButtonStates();
+
+            // TODO
+            // Try to select the film that was selected before the operation.
+            // Restore sorting.
+        }
+
+        private void SetHideScreeninglessStates()
+        {
+            _hideScreeninglessFilmsCheckBox.State = OnlyFilmsWithScreenings ? NSCellStateValue.On : NSCellStateValue.Off;
         }
 
         private void ToggleTypeMatchMethod()
@@ -426,6 +452,12 @@ namespace PresentScreenings.TableView
         partial void AcceptDialog(Foundation.NSObject sender)
         {
             CloseDialog();
+        }
+
+        [Action("ToggleHideScreeningless:")]
+        void ToggleHideScreeningless(NSObject sender)
+        {
+            ToggleHideScreeningless();
         }
 
         [Action("ToggleTypeMatchMethod:")]
