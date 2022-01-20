@@ -233,6 +233,8 @@ namespace PresentScreenings.TableView
 
             // TODO
             // Try to select the film that was selected before the operation.
+
+            // TODO
             // Restore sorting.
         }
 
