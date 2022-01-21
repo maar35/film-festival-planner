@@ -1002,7 +1002,7 @@ Gw
             <objects>
                 <viewController title="Film Ratings" id="gJ5-Ju-597" customClass="FilmRatingDialogController" sceneMemberID="viewController">
                     <view key="view" id="elb-OS-w3T">
-                        <rect key="frame" x="0.0" y="0.0" width="917" height="729"/>
+                        <rect key="frame" x="0.0" y="0.0" width="917" height="762"/>
                         <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="gmW-ky-y0A">
@@ -1024,6 +1024,9 @@ DQ
                             </button>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="0B2-hy-eMi">
                                 <rect key="frame" x="18" y="22" width="161" height="18"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="14" id="Lq4-pX-rCN"/>
+                                </constraints>
                                 <buttonCell key="cell" type="check" title="Type-match entire title" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="p3r-Be-5p0">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -1075,21 +1078,14 @@ DQ
                                     <action selector="DownloadFilmInfo:" target="gJ5-Ju-597" id="6mj-t5-RRl"/>
                                 </connections>
                             </button>
-                            <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="e2i-1j-ym4">
-                                <rect key="frame" x="18" y="42" width="170" height="15"/>
-                                <buttonCell key="cell" type="check" title="Hide screeningless films" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="3Ld-Ms-Djs">
-                                    <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
-                                    <font key="font" metaFont="system"/>
-                                </buttonCell>
-                            </button>
                             <scrollView autohidesScrollers="YES" horizontalLineScroll="19" horizontalPageScroll="10" verticalLineScroll="19" verticalPageScroll="10" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="VCv-Jr-uiq">
-                                <rect key="frame" x="20" y="78" width="877" height="631"/>
+                                <rect key="frame" x="20" y="89" width="877" height="664"/>
                                 <clipView key="contentView" drawsBackground="NO" id="lfs-rW-7gy">
-                                    <rect key="frame" x="1" y="0.0" width="875" height="630"/>
+                                    <rect key="frame" x="1" y="0.0" width="875" height="663"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <subviews>
                                         <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="firstColumnOnly" columnSelection="YES" autosaveColumns="NO" rowSizeStyle="automatic" headerView="phV-Fb-8ew" viewBased="YES" id="yF0-fE-yMF">
-                                            <rect key="frame" x="0.0" y="0.0" width="875" height="607"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="875" height="640"/>
                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                             <size key="intercellSpacing" width="3" height="2"/>
                                             <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -1190,31 +1186,42 @@ DQ
                                     <autoresizingMask key="autoresizingMask"/>
                                 </tableHeaderView>
                             </scrollView>
+                            <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="e2i-1j-ym4">
+                                <rect key="frame" x="18" y="46" width="170" height="18"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="14" id="xwk-lh-OPG"/>
+                                </constraints>
+                                <buttonCell key="cell" type="check" title="Hide screeningless films" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="3Ld-Ms-Djs">
+                                    <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                </buttonCell>
+                            </button>
                         </subviews>
                         <constraints>
+                            <constraint firstItem="0B2-hy-eMi" firstAttribute="top" secondItem="e2i-1j-ym4" secondAttribute="bottom" constant="10" id="3Re-XO-3Fu"/>
                             <constraint firstItem="VCv-Jr-uiq" firstAttribute="trailing" secondItem="gmW-ky-y0A" secondAttribute="trailing" id="6Vp-7F-CAb"/>
                             <constraint firstItem="VCv-Jr-uiq" firstAttribute="leading" secondItem="elb-OS-w3T" secondAttribute="leading" constant="20" symbolic="YES" id="APL-yP-Wbq"/>
-                            <constraint firstItem="e2i-1j-ym4" firstAttribute="leading" secondItem="elb-OS-w3T" secondAttribute="leading" constant="20" id="BgI-f4-OMh"/>
                             <constraint firstItem="gmW-ky-y0A" firstAttribute="leading" secondItem="Wfn-Xt-Gfg" secondAttribute="trailing" constant="12" id="COe-QO-KGl"/>
+                            <constraint firstItem="0B2-hy-eMi" firstAttribute="leading" secondItem="elb-OS-w3T" secondAttribute="leading" constant="20" id="FvY-C7-cQe"/>
                             <constraint firstAttribute="bottom" secondItem="Wfn-Xt-Gfg" secondAttribute="bottom" constant="20" id="HIn-8f-MdF"/>
                             <constraint firstItem="KcU-Ml-kPa" firstAttribute="baseline" secondItem="HT7-GE-9go" secondAttribute="baseline" id="HQP-DG-O7X"/>
                             <constraint firstItem="VCv-Jr-uiq" firstAttribute="leading" secondItem="0B2-hy-eMi" secondAttribute="leading" id="Mfg-0K-d53"/>
                             <constraint firstItem="Utj-eZ-Fhm" firstAttribute="leading" secondItem="HT7-GE-9go" secondAttribute="trailing" constant="12" symbolic="YES" id="Nv5-i8-Ejm"/>
                             <constraint firstItem="Utj-eZ-Fhm" firstAttribute="baseline" secondItem="HT7-GE-9go" secondAttribute="baseline" id="S94-mJ-qv8"/>
                             <constraint firstAttribute="bottom" secondItem="Wfn-Xt-Gfg" secondAttribute="bottom" constant="20" id="Uc3-lQ-YMV"/>
-                            <constraint firstItem="Utj-eZ-Fhm" firstAttribute="top" secondItem="VCv-Jr-uiq" secondAttribute="bottom" constant="37" id="V5P-1B-USe"/>
+                            <constraint firstItem="Utj-eZ-Fhm" firstAttribute="top" secondItem="VCv-Jr-uiq" secondAttribute="bottom" constant="48" id="V5P-1B-USe"/>
                             <constraint firstAttribute="trailing" secondItem="gmW-ky-y0A" secondAttribute="trailing" constant="20" id="Vec-NW-MRe"/>
                             <constraint firstItem="gmW-ky-y0A" firstAttribute="leading" secondItem="Wfn-Xt-Gfg" secondAttribute="trailing" constant="12" id="Z9y-f2-Re9"/>
-                            <constraint firstItem="e2i-1j-ym4" firstAttribute="top" secondItem="VCv-Jr-uiq" secondAttribute="bottom" constant="23" id="bid-hx-Mxb"/>
-                            <constraint firstItem="VCv-Jr-uiq" firstAttribute="top" secondItem="elb-OS-w3T" secondAttribute="top" constant="20" symbolic="YES" id="dWR-gz-5eA"/>
+                            <constraint firstAttribute="bottom" secondItem="0B2-hy-eMi" secondAttribute="bottom" constant="24" id="bkJ-nW-3ls"/>
+                            <constraint firstItem="VCv-Jr-uiq" firstAttribute="top" secondItem="elb-OS-w3T" secondAttribute="top" constant="9" id="dWR-gz-5eA"/>
                             <constraint firstItem="0B2-hy-eMi" firstAttribute="baseline" secondItem="Wfn-Xt-Gfg" secondAttribute="baseline" id="eeD-kI-HY2"/>
                             <constraint firstItem="Wfn-Xt-Gfg" firstAttribute="leading" secondItem="Utj-eZ-Fhm" secondAttribute="trailing" constant="12" symbolic="YES" id="fsV-2Z-jXu"/>
                             <constraint firstItem="Utj-eZ-Fhm" firstAttribute="firstBaseline" secondItem="HT7-GE-9go" secondAttribute="baseline" id="fwS-Jp-EGx"/>
                             <constraint firstItem="Utj-eZ-Fhm" firstAttribute="baseline" secondItem="0B2-hy-eMi" secondAttribute="firstBaseline" id="hnw-i4-KTX"/>
+                            <constraint firstItem="e2i-1j-ym4" firstAttribute="leading" secondItem="elb-OS-w3T" secondAttribute="leading" constant="20" id="jRK-0F-Ure"/>
                             <constraint firstAttribute="bottom" secondItem="Wfn-Xt-Gfg" secondAttribute="bottom" constant="20" id="lbq-bQ-N2d"/>
                             <constraint firstItem="HT7-GE-9go" firstAttribute="leading" secondItem="KcU-Ml-kPa" secondAttribute="trailing" constant="12" symbolic="YES" id="rir-gp-6oB"/>
                             <constraint firstAttribute="bottom" secondItem="gmW-ky-y0A" secondAttribute="bottom" constant="20" id="wQT-iv-c9V"/>
-                            <constraint firstItem="0B2-hy-eMi" firstAttribute="top" secondItem="e2i-1j-ym4" secondAttribute="bottom" constant="6" id="xHx-7B-mFM"/>
                         </constraints>
                     </view>
                     <connections>
@@ -1234,7 +1241,7 @@ DQ
                 </viewController>
                 <customObject id="Brq-Bq-Evi" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="552.5" y="674.5"/>
+            <point key="canvasLocation" x="552.5" y="691"/>
         </scene>
         <!--Combine Titles-->
         <scene sceneID="bHF-hp-bF2">
