@@ -1185,7 +1185,7 @@ DQ
                                     <autoresizingMask key="autoresizingMask"/>
                                 </tableHeaderView>
                             </scrollView>
-                            <button verticalHuggingPriority="750" ambiguous="YES" translatesAutoresizingMaskIntoConstraints="NO" id="e2i-1j-ym4">
+                            <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="e2i-1j-ym4">
                                 <rect key="frame" x="18" y="46" width="170" height="18"/>
                                 <constraints>
                                     <constraint firstAttribute="height" constant="14" id="xwk-lh-OPG"/>
@@ -1198,6 +1198,7 @@ DQ
                         </subviews>
                         <constraints>
                             <constraint firstItem="VCv-Jr-uiq" firstAttribute="trailing" secondItem="gmW-ky-y0A" secondAttribute="trailing" id="6Vp-7F-CAb"/>
+                            <constraint firstItem="0B2-hy-eMi" firstAttribute="top" secondItem="e2i-1j-ym4" secondAttribute="bottom" constant="10" id="8ZO-Gs-GTp"/>
                             <constraint firstItem="VCv-Jr-uiq" firstAttribute="leading" secondItem="elb-OS-w3T" secondAttribute="leading" constant="20" symbolic="YES" id="APL-yP-Wbq"/>
                             <constraint firstItem="gmW-ky-y0A" firstAttribute="leading" secondItem="Wfn-Xt-Gfg" secondAttribute="trailing" constant="12" id="COe-QO-KGl"/>
                             <constraint firstItem="0B2-hy-eMi" firstAttribute="leading" secondItem="elb-OS-w3T" secondAttribute="leading" constant="20" id="FvY-C7-cQe"/>
@@ -1214,7 +1215,6 @@ DQ
                             <constraint firstItem="Utj-eZ-Fhm" firstAttribute="baseline" secondItem="0B2-hy-eMi" secondAttribute="firstBaseline" id="hnw-i4-KTX"/>
                             <constraint firstItem="e2i-1j-ym4" firstAttribute="leading" secondItem="elb-OS-w3T" secondAttribute="leading" constant="20" id="jRK-0F-Ure"/>
                             <constraint firstAttribute="bottom" secondItem="Wfn-Xt-Gfg" secondAttribute="bottom" constant="20" id="lbq-bQ-N2d"/>
-                            <constraint firstItem="e2i-1j-ym4" firstAttribute="top" secondItem="VCv-Jr-uiq" secondAttribute="bottom" constant="27" id="pYa-NQ-nSm"/>
                             <constraint firstItem="HT7-GE-9go" firstAttribute="leading" secondItem="KcU-Ml-kPa" secondAttribute="trailing" constant="12" symbolic="YES" id="rir-gp-6oB"/>
                             <constraint firstAttribute="bottom" secondItem="gmW-ky-y0A" secondAttribute="bottom" constant="20" id="wQT-iv-c9V"/>
                         </constraints>
