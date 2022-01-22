@@ -370,12 +370,22 @@ namespace PresentScreenings.TableView
 
         public static List<Screening> FilmScreenings(int filmId)
         {
-            var filmScreenings = (
-                from Screening screening in ScreeningsPlan.Screenings
-                where screening.FilmId == filmId && (AppDelegate.VisitPhysical || screening is OnDemandScreening || screening is OnLineScreening)
-                orderby screening.StartTime
-                select screening
-            ).ToList();
+            var combinationProgramIds = GetFilmInfo(filmId).CombinationProgramIds;
+            var filmIds = new List<int> { };
+            if (combinationProgramIds.Count > 0)
+            {
+                filmIds.AddRange(combinationProgramIds);
+            }
+            else
+            {
+                filmIds.Add(filmId);
+            }
+            var filmScreenings = ScreeningsPlan.Screenings
+                .Where(s => filmIds.Contains(s.FilmId))
+                .Where(s => (AppDelegate.VisitPhysical || s is OnDemandScreening || s is OnLineScreening))
+                .OrderBy(s => s.StartTime)
+                .ToList();
+
             return filmScreenings;
         }
 

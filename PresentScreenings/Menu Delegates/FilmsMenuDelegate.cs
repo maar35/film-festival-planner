@@ -11,18 +11,25 @@ namespace PresentScreenings.TableView
     {
         #region Private Members
         private const int _showFilmsMenuItemTag = 501;
-        private const int _toggleTypeMatchMethodMenuItemTag = 502;
-        private const int _showFilmInfoMenuItemTag = 503;
-        private const int _visitFilmWebsiteMenuItemTag = 504;
-        private const int _combineTitlesMenuItemTag = 505;
-        private const int _uncombineTitleMenuItemTag = 506;
+        private const int _toggleHideScreeninglessMenuItemTag = 502;
+        private const int _toggleTypeMatchMethodMenuItemTag = 503;
+        private const int _showFilmInfoMenuItemTag = 504;
+        private const int _visitFilmWebsiteMenuItemTag = 505;
+        private const int _combineTitlesMenuItemTag = 506;
+        private const int _uncombineTitleMenuItemTag = 507;
         private readonly AppDelegate _app;
         private NSMenu _filmsMenu;
+        #endregion
+
+        #region Properties
+        public static int ToggleHideScreeninglessMenuItemTag => _toggleHideScreeninglessMenuItemTag;
+        public static int ToggleTypeMatchMethodMenuItemTag => _toggleTypeMatchMethodMenuItemTag;
         #endregion
 
         #region Constructors
         public FilmsMenuDelegate(AppDelegate app, NSMenu filmsMenu)
         {
+            // Initialize private members.
             _app = app;
             _filmsMenu = filmsMenu;
         }
@@ -58,6 +65,9 @@ namespace PresentScreenings.TableView
                 {
                     case _showFilmsMenuItemTag:
                         item.Enabled = ratingController == null && viewController.ViewIsActive();
+                        break;
+                    case _toggleHideScreeninglessMenuItemTag:
+                        item.Enabled = ratingController != null;
                         break;
                     case _toggleTypeMatchMethodMenuItemTag:
                         item.Enabled = ratingController != null;

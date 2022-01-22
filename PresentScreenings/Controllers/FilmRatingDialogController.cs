@@ -41,7 +41,7 @@ namespace PresentScreenings.TableView
             }
         }
         public static bool TypeMatchFromBegin { get; set; } = true;
-        public static bool OnlyFilmsWithScreenings { get; set; }
+        public static bool OnlyFilmsWithScreenings { get; set; } = false;
         public static TimeSpan MinimalDuration { get; set; }
         #endregion
 
@@ -219,7 +219,13 @@ namespace PresentScreenings.TableView
 
         private void ToggleHideScreeningless()
         {
+            // Toggle whether only films with screenings are displayd.
             OnlyFilmsWithScreenings = !OnlyFilmsWithScreenings;
+
+            // Store the current selection of films.
+            var indexSet = FilmRatingTableView.SelectedRows;
+            var rows = indexSet.ToArray();
+            var selectedFilms = rows.Select(r => GetFilmByIndex(r)).ToList();
 
             // Update the checkbox state.
             SetHideScreeninglessStates();
@@ -231,16 +237,14 @@ namespace PresentScreenings.TableView
             // Update the button states.
             SetFilmRatingDialogButtonStates();
 
-            // TODO
-            // Try to select the film that was selected before the operation.
-
-            // TODO
-            // Restore sorting.
+            // Try to select the stored films.
+            SelectFilms(selectedFilms);
         }
 
         private void SetHideScreeninglessStates()
         {
             _hideScreeninglessFilmsCheckBox.State = OnlyFilmsWithScreenings ? NSCellStateValue.On : NSCellStateValue.Off;
+            App.ToggleHideScreeninglessMenuItem.State = OnlyFilmsWithScreenings ? NSCellStateValue.On : NSCellStateValue.Off;
         }
 
         private void ToggleTypeMatchMethod()
@@ -386,14 +390,20 @@ namespace PresentScreenings.TableView
 
         public void SelectFilms(List<Film> films)
         {
-            NSMutableIndexSet rows = new NSMutableIndexSet();
+            NSMutableIndexSet indices = new NSMutableIndexSet();
             foreach (var film in films)
             {
-                int row = _filmTableDataSource.Films.IndexOf(film);
-                rows.Add(new NSIndexSet(row));
+                int index = _filmTableDataSource.Films.IndexOf(film);
+                if (index >= 0)
+                {
+                    indices.Add(new NSIndexSet(index));
+                }
             }
-            _filmRatingTableView.SelectRows(rows, false);
-            _filmRatingTableView.ScrollRowToVisible((nint)rows.First());
+            _filmRatingTableView.SelectRows(indices, false);
+            if (indices.Count() > 0)
+            {
+                _filmRatingTableView.ScrollRowToVisible((nint)indices.First());
+            }
         }
 
         public void SelectFilm(Film film)

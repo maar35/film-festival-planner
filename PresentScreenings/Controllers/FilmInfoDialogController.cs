@@ -184,20 +184,7 @@ namespace PresentScreenings.TableView
         private void CreateScreeningsScrollView()
         {
             // Get the screenings of the selected film.
-            var screenings = new List<Screening> { };
-            var programIds = _film.FilmInfo.CombinationProgramIds;
-            if (programIds.Count == 0)
-            {
-                screenings = _film.FilmScreenings;
-            }
-            else
-            {
-                foreach (var programId in programIds)
-                {
-                    var program = ViewController.GetFilmById(programId);
-                    screenings.AddRange(program.FilmScreenings);
-                }
-            }
+            var screenings = _film.FilmScreenings;
 
             // Create the screenings view.
             var yScreenings = screenings.Count * (_labelHeight + _yBetweenLabels);
