@@ -78,7 +78,7 @@ namespace PresentScreenings.TableView
             CreateDescriptionColumn();
 
             // Polulate the controls
-            _hideScreeninglessFilmsCheckBox.Action = new ObjCRuntime.Selector("ToggleHideScreeningless:");
+            _onlyFilmsWithScreeningsCheckBox.Action = new ObjCRuntime.Selector("ToggleOnlyFilmsWithScreenings:");
             _typeMatchMethodCheckBox.Action = new ObjCRuntime.Selector("ToggleTypeMatchMethod:");
             _combineTitlesButton.Action = new ObjCRuntime.Selector("SelectTitlesToCombine:");
             _uncombineTitleButton.Action = new ObjCRuntime.Selector("ShowTitlesToUncombine:");
@@ -86,7 +86,7 @@ namespace PresentScreenings.TableView
             WebLinkButton.Action = new ObjCRuntime.Selector("VisitFilmWebsite:");
             DoneButton.KeyEquivalent = ControlsFactory.EscapeKey;
             DoneButton.StringValue = "Noot";
-            SetHideScreeninglessStates();
+            SetOnlyFilmsWithScreeningsStates();
             SetTypeMatchMethodControlStates();
         }
 
@@ -159,21 +159,7 @@ namespace PresentScreenings.TableView
         #region Private Methods
         private void CreateScreeningCountColumn()
         {
-            var title = "#Screenings";
-            var sortDescriptor = new NSSortDescriptor(title, false, new ObjCRuntime.Selector("compare:"));
-            var screeningsCountColumn = new NSTableColumn
-            {
-                Title = title,
-                Width = _screeningCountWidth,
-                MaxWidth = _screeningCountMaxWidth,
-                Identifier = title,
-                SortDescriptorPrototype = sortDescriptor,
-            };
-            _filmRatingTableView.AddColumn(screeningsCountColumn);
-            CGRect frame = _filmRatingTableView.Frame;
-            nfloat newRight = frame.X;
-            _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + _screeningCountWidth, frame.X + screeningsCountColumn.MaxWidth);
-            _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
+            CreateColumn("#Screenings", _screeningCountWidth, _screeningCountMaxWidth);
         }
 
         private void CreateFilmFanRatingColumns()
@@ -181,43 +167,34 @@ namespace PresentScreenings.TableView
             const float width = _FilmFanRatingWidth;
             foreach (string filmFan in ScreeningInfo.FilmFans)
             {
-                var sortDescriptor = new NSSortDescriptor(filmFan, false, new ObjCRuntime.Selector("compare:"));
-                var friendColumn = new NSTableColumn
-                {
-                    Title = filmFan,
-                    Width = width,
-                    MaxWidth = width,
-                    Identifier = filmFan,
-                    SortDescriptorPrototype = sortDescriptor
-                };
-                _filmRatingTableView.AddColumn(friendColumn);
-                CGRect frame = _filmRatingTableView.Frame;
-                nfloat newRight = frame.X;
-                _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + width, frame.X + width);
-                _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
+                CreateColumn(filmFan, width, width);
             }
         }
 
         private void CreateDescriptionColumn()
         {
-            var title = "Description";
+            CreateColumn("Description", _descriptionWidth, _descriptionMaxWidth);
+        }
+
+        private void CreateColumn(string title, float width, float maxWidth)
+        {
             var sortDescriptor = new NSSortDescriptor(title, false, new ObjCRuntime.Selector("compare:"));
-            var descriptionColumn = new NSTableColumn
+            var newColumn = new NSTableColumn
             {
                 Title = title,
-                Width = _descriptionWidth,
-                MaxWidth = _descriptionMaxWidth,
+                Width = width,
+                MaxWidth = maxWidth,
                 Identifier = title,
                 SortDescriptorPrototype = sortDescriptor
             };
-            _filmRatingTableView.AddColumn(descriptionColumn);
+            _filmRatingTableView.AddColumn(newColumn);
             CGRect frame = _filmRatingTableView.Frame;
             nfloat newRight = frame.X;
-            _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + frame.Width + _descriptionWidth, frame.X + descriptionColumn.MaxWidth);
+            _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + frame.Width + width, frame.X + maxWidth);
             _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
         }
 
-        private void ToggleHideScreeningless()
+        private void ToggleOnlyFilmsWithScreenings()
         {
             // Toggle whether only films with screenings are displayd.
             OnlyFilmsWithScreenings = !OnlyFilmsWithScreenings;
@@ -228,7 +205,7 @@ namespace PresentScreenings.TableView
             var selectedFilms = rows.Select(r => GetFilmByIndex(r)).ToList();
 
             // Update the checkbox state.
-            SetHideScreeninglessStates();
+            SetOnlyFilmsWithScreeningsStates();
 
             // Update the data source.
             SetFilmsWithScreenings();
@@ -241,10 +218,10 @@ namespace PresentScreenings.TableView
             SelectFilms(selectedFilms);
         }
 
-        private void SetHideScreeninglessStates()
+        private void SetOnlyFilmsWithScreeningsStates()
         {
-            _hideScreeninglessFilmsCheckBox.State = OnlyFilmsWithScreenings ? NSCellStateValue.On : NSCellStateValue.Off;
-            App.ToggleHideScreeninglessMenuItem.State = OnlyFilmsWithScreenings ? NSCellStateValue.On : NSCellStateValue.Off;
+            _onlyFilmsWithScreeningsCheckBox.State = OnlyFilmsWithScreenings ? NSCellStateValue.On : NSCellStateValue.Off;
+            App.ToggleOnlyFilmsWithScreeningsMenuItem.State = OnlyFilmsWithScreenings ? NSCellStateValue.On : NSCellStateValue.Off;
         }
 
         private void ToggleTypeMatchMethod()
@@ -466,10 +443,10 @@ namespace PresentScreenings.TableView
             CloseDialog();
         }
 
-        [Action("ToggleHideScreeningless:")]
-        void ToggleHideScreeningless(NSObject sender)
+        [Action("ToggleOnlyFilmsWithScreenings:")]
+        void ToggleOnlyFilmsWithScreenings(NSObject sender)
         {
-            ToggleHideScreeningless();
+            ToggleOnlyFilmsWithScreenings();
         }
 
         [Action("ToggleTypeMatchMethod:")]

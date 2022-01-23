@@ -388,7 +388,7 @@
                                             </connections>
                                         </menuItem>
                                         <menuItem isSeparatorItem="YES" id="Og0-Cw-Lcf"/>
-                                        <menuItem title="Hide Screeningless Films" tag="502" keyEquivalent="h" id="qTz-fl-Zzb">
+                                        <menuItem title="Hide Films Without Screenings" tag="502" keyEquivalent="h" id="qTz-fl-Zzb">
                                             <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
                                         </menuItem>
                                         <menuItem title="Type-match Entire Title" state="on" tag="503" keyEquivalent="m" id="KqO-tN-phd"/>
@@ -1071,13 +1071,13 @@ DQ
                                 </connections>
                             </button>
                             <scrollView autohidesScrollers="YES" horizontalLineScroll="19" horizontalPageScroll="10" verticalLineScroll="19" verticalPageScroll="10" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="VCv-Jr-uiq">
-                                <rect key="frame" x="20" y="73" width="872" height="492"/>
+                                <rect key="frame" x="20" y="73" width="872" height="420"/>
                                 <clipView key="contentView" drawsBackground="NO" id="lfs-rW-7gy">
-                                    <rect key="frame" x="1" y="1" width="870" height="490"/>
+                                    <rect key="frame" x="1" y="1" width="870" height="418"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <subviews>
                                         <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="firstColumnOnly" columnSelection="YES" autosaveColumns="NO" rowSizeStyle="automatic" headerView="phV-Fb-8ew" viewBased="YES" id="yF0-fE-yMF">
-                                            <rect key="frame" x="0.0" y="0.0" width="870" height="467"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="870" height="395"/>
                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                             <size key="intercellSpacing" width="3" height="2"/>
                                             <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -1177,8 +1177,8 @@ DQ
                                 </tableHeaderView>
                             </scrollView>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="e2i-1j-ym4">
-                                <rect key="frame" x="18" y="48" width="174" height="18"/>
-                                <buttonCell key="cell" type="check" title="Hide screeningless films" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="3Ld-Ms-Djs">
+                                <rect key="frame" x="18" y="48" width="205" height="18"/>
+                                <buttonCell key="cell" type="check" title="Hide films without screenings" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="3Ld-Ms-Djs">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
                                     <font key="font" metaFont="system"/>
                                 </buttonCell>
@@ -1212,7 +1212,7 @@ DQ
                         <outlet property="_downloadFilmInfoButton" destination="KcU-Ml-kPa" id="qvb-Zz-rAk"/>
                         <outlet property="_filmRatingTableView" destination="yF0-fE-yMF" id="5OU-9l-7zD"/>
                         <outlet property="_goToScreeningButton" destination="HT7-GE-9go" id="OJh-nz-Ogb"/>
-                        <outlet property="_hideScreeninglessFilmsCheckBox" destination="e2i-1j-ym4" id="9HX-tO-a3A"/>
+                        <outlet property="_onlyFilmsWithScreeningsCheckBox" destination="e2i-1j-ym4" id="9HX-tO-a3A"/>
                         <outlet property="_typeMatchMethodCheckBox" destination="0B2-hy-eMi" id="g6n-JU-vfR"/>
                         <outlet property="_uncombineTitleButton" destination="Wfn-Xt-Gfg" id="oO0-bx-oS5"/>
                         <segue destination="aXh-o3-u1V" kind="sheet" identifier="CombineSheetSegue" id="2pB-eh-aEj"/>

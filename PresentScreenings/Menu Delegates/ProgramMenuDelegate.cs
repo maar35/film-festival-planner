@@ -14,15 +14,13 @@ namespace PresentScreenings.TableView
         const int _plannerMenuItemTag = 601;
         const int _analyserMenuItemTag = 602;
         const int _availabilityMenuItemTag = 603;
-        private readonly AppDelegate _app;
         private readonly ViewController _controller;
         #endregion
 
         #region Constructors
-        public ProgramMenuDelegate(AppDelegate app, NSMenu menu)
+        public ProgramMenuDelegate(ViewController controller)
         {
-            _app = app;
-            _controller = app.Controller;
+            _controller = controller;
         }
         #endregion
 

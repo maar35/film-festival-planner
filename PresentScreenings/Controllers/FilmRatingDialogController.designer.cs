@@ -28,7 +28,7 @@ namespace PresentScreenings.TableView
 		AppKit.NSButton _goToScreeningButton { get; set; }
 
 		[Outlet]
-		AppKit.NSButton _hideScreeninglessFilmsCheckBox { get; set; }
+		AppKit.NSButton _onlyFilmsWithScreeningsCheckBox { get; set; }
 
 		[Outlet]
 		AppKit.NSButton _typeMatchMethodCheckBox { get; set; }
@@ -71,9 +71,9 @@ namespace PresentScreenings.TableView
 				_typeMatchMethodCheckBox = null;
 			}
 
-			if (_hideScreeninglessFilmsCheckBox != null) {
-				_hideScreeninglessFilmsCheckBox.Dispose ();
-				_hideScreeninglessFilmsCheckBox = null;
+			if (_onlyFilmsWithScreeningsCheckBox != null) {
+				_onlyFilmsWithScreeningsCheckBox.Dispose ();
+				_onlyFilmsWithScreeningsCheckBox = null;
 			}
 
 			if (_uncombineTitleButton != null) {
