@@ -24,7 +24,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
-        public NavigateMenuDelegate(NSMenu menu, ViewController controller)
+        public NavigateMenuDelegate(ViewController controller)
         {
             _controller = controller;
             _dayItems = new List<NSMenuItem> { };

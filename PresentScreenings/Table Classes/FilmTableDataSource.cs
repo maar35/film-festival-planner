@@ -40,21 +40,6 @@ namespace PresentScreenings.TableView
 
         public override void SortDescriptorsChanged(NSTableView tableView, NSSortDescriptor[] oldDescriptors)
         {
-            //base.SortDescriptorsChanged(tableView, oldDescriptors);
-
-            //// Sort the data.
-            //if (oldDescriptors.Length > 0)
-            //{
-            //    // Update sort.
-            //    Sort(oldDescriptors[0].Key, oldDescriptors[0].Ascending);
-            //}
-            //else
-            //{
-            //    // Grab current descriptors and update sort.
-            //    NSSortDescriptor[] sortDescriptor = tableView.SortDescriptors;
-            //    Sort(sortDescriptor[0].Key, sortDescriptor[0].Ascending);
-            //}
-
             // Grab current descriptors and update sort.
             NSSortDescriptor sortDescriptor = tableView.SortDescriptors.First(s => true);
             Sort(sortDescriptor.Key, sortDescriptor.Ascending);
@@ -78,15 +63,15 @@ namespace PresentScreenings.TableView
                 case "Duration":
                     Films.Sort((x, y) => sign * x.Duration.CompareTo(y.Duration));
                     break;
-                case "Rating":
-                    SortByCombinedRating(ScreeningInfo.Me, sign);
+                case "#Screenings":
+                    Films.Sort((x, y) => sign * x.FilmScreenings.Count.CompareTo(y.FilmScreenings.Count));
                     break;
                 default:
-                    foreach (var friend in ScreeningInfo.MyFriends)
+                    foreach (var filmFan in ScreeningInfo.FilmFans)
                     {
-                        if (key == friend)
+                        if (key == filmFan)
                         {
-                            SortByCombinedRating(friend, sign);
+                            SortByCombinedRating(filmFan, sign);
                             break;
                         }
                     }

@@ -44,7 +44,8 @@ namespace PresentScreenings.TableView
         public PlannerDialogController PlannerDialogController { get; set; }
         public UncombineTitlesSheetController UncombineTitleController { get; set; }
         public ScreeningMenuDelegate ScreeningMenuDelegate => (ScreeningMenuDelegate)_screeningMenu.Delegate;
-        public NSMenuItem ToggleTypeMatchMenuItem => _toggleTypeMatchMethod;
+        public NSMenuItem ToggleOnlyFilmsWithScreeningsMenuItem => _filmsMenu.ItemWithTag(FilmsMenuDelegate.ToggleOnlyFilmsWithScreeningsMenuItemTag);
+        public NSMenuItem ToggleTypeMatchMenuItem => _filmsMenu.ItemWithTag(FilmsMenuDelegate.ToggleTypeMatchMethodMenuItemTag);
         #endregion
 
         #region Constructors
@@ -80,18 +81,25 @@ namespace PresentScreenings.TableView
         public override void DidFinishLaunching(NSNotification notification)
         {
             // Insert code here to initialize your application.
+
+            // Initialize menu delegates.
 			_navigateMenu.AutoEnablesItems = false;
-            _navigateMenu.Delegate = new NavigateMenuDelegate(_navigateMenu, Controller);
+            _navigateMenu.Delegate = new NavigateMenuDelegate(Controller);
             _screeningMenu.AutoEnablesItems = false;
             _screeningMenu.Delegate = new ScreeningMenuDelegate(this, _screeningMenu);
             _filmsMenu.AutoEnablesItems = false;
-            _filmsMenu.Delegate = new FilmsMenuDelegate(this, _filmsMenu);
+            _filmsMenu.Delegate = new FilmsMenuDelegate(this);
             _programMenu.AutoEnablesItems = false;
-            _programMenu.Delegate = new ProgramMenuDelegate(this, _programMenu);
-            ToggleTypeMatchMenuItem.Action = new Selector("ToggleTypeMatchMethod:");
+            _programMenu.Delegate = new ProgramMenuDelegate(Controller);
+
+            // Set actions of menu items.
             _showScreeningsMenuItem.Action = new Selector("ShowFilmInfo:");
             _combineTitlesMenuItem.Action = new Selector("SelectTitlesToCombine:");
             _uncombineTitleMenuItem.Action = new Selector("ShowTitlesToUncombine:");
+            ToggleOnlyFilmsWithScreeningsMenuItem.Action = new Selector("ToggleOnlyFilmsWithScreenings:");
+            ToggleTypeMatchMenuItem.Action = new Selector("ToggleTypeMatchMethod:");
+
+            // Pass outlets to the View Controller.
             Controller.ClickableLabelsMenuItem = _clickableLabelsMenuItem;
 
             // Report coinciding screenings.

@@ -14,7 +14,9 @@ namespace PresentScreenings.TableView
         #region Constants
         const float _descriptionWidth = 3000;
         const float _descriptionMaxWidth = 4000;
-        const float _FriendRatingWidth = 60;
+        const float _screeningCountWidth = 40;
+        const float _screeningCountMaxWidth = 80;
+        const float _FilmFanRatingWidth = 60;
         #endregion
 
         #region Private Variables
@@ -39,7 +41,7 @@ namespace PresentScreenings.TableView
             }
         }
         public static bool TypeMatchFromBegin { get; set; } = true;
-        public static bool OnlyFilmsWithScreenings { get; set; }
+        public static bool OnlyFilmsWithScreenings { get; set; } = false;
         public static TimeSpan MinimalDuration { get; set; }
         #endregion
 
@@ -71,10 +73,12 @@ namespace PresentScreenings.TableView
             base.ViewDidLoad();
 
             // Add in-code created colums to the table view.
-            CreateFriendRatingColumns();
+            CreateScreeningCountColumn();
+            CreateFilmFanRatingColumns();
             CreateDescriptionColumn();
 
             // Polulate the controls
+            _onlyFilmsWithScreeningsCheckBox.Action = new ObjCRuntime.Selector("ToggleOnlyFilmsWithScreenings:");
             _typeMatchMethodCheckBox.Action = new ObjCRuntime.Selector("ToggleTypeMatchMethod:");
             _combineTitlesButton.Action = new ObjCRuntime.Selector("SelectTitlesToCombine:");
             _uncombineTitleButton.Action = new ObjCRuntime.Selector("ShowTitlesToUncombine:");
@@ -82,6 +86,7 @@ namespace PresentScreenings.TableView
             WebLinkButton.Action = new ObjCRuntime.Selector("VisitFilmWebsite:");
             DoneButton.KeyEquivalent = ControlsFactory.EscapeKey;
             DoneButton.StringValue = "Noot";
+            SetOnlyFilmsWithScreeningsStates();
             SetTypeMatchMethodControlStates();
         }
 
@@ -152,45 +157,71 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        private void CreateFriendRatingColumns()
+        private void CreateScreeningCountColumn()
         {
-            const float width = _FriendRatingWidth;
-            foreach (string friend in ScreeningInfo.MyFriends)
+            CreateColumn("#Screenings", _screeningCountWidth, _screeningCountMaxWidth);
+        }
+
+        private void CreateFilmFanRatingColumns()
+        {
+            const float width = _FilmFanRatingWidth;
+            foreach (string filmFan in ScreeningInfo.FilmFans)
             {
-                var sortDescriptor = new NSSortDescriptor(friend, false, new ObjCRuntime.Selector("compare:"));
-                var friendColumn = new NSTableColumn
-                {
-                    Title = friend,
-                    Width = width,
-                    MaxWidth = width,
-                    Identifier = friend,
-                    SortDescriptorPrototype = sortDescriptor
-                };
-                _filmRatingTableView.AddColumn(friendColumn);
-                CGRect frame = _filmRatingTableView.Frame;
-                nfloat newRight = frame.X;
-                _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + width, frame.X + width);
-                _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
+                CreateColumn(filmFan, width, width);
             }
         }
 
         private void CreateDescriptionColumn()
         {
-            var title = "Description";
+            CreateColumn("Description", _descriptionWidth, _descriptionMaxWidth);
+        }
+
+        private void CreateColumn(string title, float width, float maxWidth)
+        {
             var sortDescriptor = new NSSortDescriptor(title, false, new ObjCRuntime.Selector("compare:"));
-            var descriptionColumn = new NSTableColumn
+            var newColumn = new NSTableColumn
             {
                 Title = title,
-                Width = _descriptionWidth,
-                MaxWidth = _descriptionMaxWidth,
+                Width = width,
+                MaxWidth = maxWidth,
                 Identifier = title,
                 SortDescriptorPrototype = sortDescriptor
             };
-            _filmRatingTableView.AddColumn(descriptionColumn);
+            _filmRatingTableView.AddColumn(newColumn);
             CGRect frame = _filmRatingTableView.Frame;
             nfloat newRight = frame.X;
-            _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + frame.Width + _descriptionWidth, frame.X + descriptionColumn.MaxWidth);
+            _filmRatingTableView.AdjustPageWidthNew(ref newRight, frame.X, frame.X + frame.Width + width, frame.X + maxWidth);
             _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
+        }
+
+        private void ToggleOnlyFilmsWithScreenings()
+        {
+            // Toggle whether only films with screenings are displayd.
+            OnlyFilmsWithScreenings = !OnlyFilmsWithScreenings;
+
+            // Store the current selection of films.
+            var indexSet = FilmRatingTableView.SelectedRows;
+            var rows = indexSet.ToArray();
+            var selectedFilms = rows.Select(r => GetFilmByIndex(r)).ToList();
+
+            // Update the checkbox state.
+            SetOnlyFilmsWithScreeningsStates();
+
+            // Update the data source.
+            SetFilmsWithScreenings();
+            _filmRatingTableView.ReloadData();
+
+            // Update the button states.
+            SetFilmRatingDialogButtonStates();
+
+            // Try to select the stored films.
+            SelectFilms(selectedFilms);
+        }
+
+        private void SetOnlyFilmsWithScreeningsStates()
+        {
+            _onlyFilmsWithScreeningsCheckBox.State = OnlyFilmsWithScreenings ? NSCellStateValue.On : NSCellStateValue.Off;
+            App.ToggleOnlyFilmsWithScreeningsMenuItem.State = OnlyFilmsWithScreenings ? NSCellStateValue.On : NSCellStateValue.Off;
         }
 
         private void ToggleTypeMatchMethod()
@@ -336,14 +367,20 @@ namespace PresentScreenings.TableView
 
         public void SelectFilms(List<Film> films)
         {
-            NSMutableIndexSet rows = new NSMutableIndexSet();
+            NSMutableIndexSet indices = new NSMutableIndexSet();
             foreach (var film in films)
             {
-                int row = _filmTableDataSource.Films.IndexOf(film);
-                rows.Add(new NSIndexSet(row));
+                int index = _filmTableDataSource.Films.IndexOf(film);
+                if (index >= 0)
+                {
+                    indices.Add(new NSIndexSet(index));
+                }
             }
-            _filmRatingTableView.SelectRows(rows, false);
-            _filmRatingTableView.ScrollRowToVisible((nint)rows.First());
+            _filmRatingTableView.SelectRows(indices, false);
+            if (indices.Count() > 0)
+            {
+                _filmRatingTableView.ScrollRowToVisible((nint)indices.First());
+            }
         }
 
         public void SelectFilm(Film film)
@@ -404,6 +441,12 @@ namespace PresentScreenings.TableView
         partial void AcceptDialog(Foundation.NSObject sender)
         {
             CloseDialog();
+        }
+
+        [Action("ToggleOnlyFilmsWithScreenings:")]
+        void ToggleOnlyFilmsWithScreenings(NSObject sender)
+        {
+            ToggleOnlyFilmsWithScreenings();
         }
 
         [Action("ToggleTypeMatchMethod:")]
