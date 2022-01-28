@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using static PresentScreenings.TableView.FilmInfo;
@@ -144,7 +143,7 @@ namespace PresentScreenings.TableView
                 string messageText = "No film found for screening";
                 string informativeText = $"Can't find film with ID={FilmId} "
                     + $"while reading {AppDelegate.ScreeningsFile}."
-                    + "\n\nFor developers: If this is caused by a URL change of the film, please"
+                    + "\n\nFor developers: If this is caused by a URL change of the film, please "
                     + "replace the filmId in ratings.csv, screenings.csv (two columns) and screeninginfo.";
                 AlertRaiser.QuitWithAlert(messageText, informativeText);
             }

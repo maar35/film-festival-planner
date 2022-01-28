@@ -504,7 +504,7 @@ class FilmInfoPageParser(HtmlPageParser):
             screened_film_infos = [i for i in self.iffr_data.filminfos if i.filmid == screened_film.filmid]
             screened_film_info = screened_film_infos[0]
             combination_films = screened_film_info.combination_films
-            screened_film_info.combination_films = planner.append_combination_film(combination_films, self.film)
+            screened_film_info.combination_films.append(self.film)
             self.print_debug(f'COMBINATION PROGRAM INFO of {screened_film.title} UPDATED:',
                              f'\n{", ".join(str(cf) for cf in screened_film_info.combination_films)}')
 
@@ -559,24 +559,32 @@ class FilmInfoPageParser(HtmlPageParser):
             if FilmInfoPageParser.debugging:
                 Globals.debug_recorder.add('AC ' + s)
 
+        def str_extras(extras):
+            return ' [' + ', '.join([' '.join([str(e[0]), e[1].name]) for e in extras]) + ']'
+
+        def pr_debug_dict(d):
+            str_dict = '\n'.join([str(mf) + str_extras(extras) for (mf, extras) in d.items()])
+            pr_debug(f'Main films and extras:\n{str_dict}')
+
         def short_str(film_id):
             return iffr_data.get_film_from_id(film_id).short_str()
 
-        pr_debug(f'Main films and extras: {Globals.extras_by_main}')
+        pr_debug_dict(Globals.extras_by_main)
 
         # Find mutually linked films and decide which will be the main film.
         film_ids_to_pop = set()
         for (main_film_id, extra_infos) in Globals.extras_by_main.items():
             if len(extra_infos) == 1:
                 (extra_film_id, screened_film_type) = extra_infos[0]
-                extra_infos_from_extra = Globals.extras_by_main[extra_film_id]
-                if len(extra_infos_from_extra) == 1:
-                    extra_info_from_extra = extra_infos_from_extra[0]
-                    if extra_info_from_extra == (main_film_id, screened_film_type):
-                        main_duration = iffr_data.get_film_from_id(main_film_id).duration
-                        extra_duration = iffr_data.get_film_from_id(extra_film_id).duration
-                        pop_film_id = extra_film_id if main_duration > extra_duration else main_film_id
-                        film_ids_to_pop.add(pop_film_id)
+                if extra_film_id in Globals.extras_by_main:
+                    extra_infos_from_extra = Globals.extras_by_main[extra_film_id]
+                    if len(extra_infos_from_extra) == 1:
+                        extra_info_from_extra = extra_infos_from_extra[0]
+                        if extra_info_from_extra == (main_film_id, screened_film_type):
+                            main_duration = iffr_data.get_film_from_id(main_film_id).duration
+                            extra_duration = iffr_data.get_film_from_id(extra_film_id).duration
+                            pop_film_id = extra_film_id if main_duration > extra_duration else main_film_id
+                            film_ids_to_pop.add(pop_film_id)
 
         # Remove the non-main films from the extras by main dictionary.
         for film_id_to_pop in film_ids_to_pop:
@@ -591,15 +599,11 @@ class FilmInfoPageParser(HtmlPageParser):
             for (extra_film_id, screened_film_type) in extra_infos:
                 extra_film = iffr_data.get_film_from_id(extra_film_id)
                 extra_film_info = extra_film.film_info(iffr_data)
-                extra_film_info.combination_films = \
-                    planner.append_combination_film(extra_film_info.combination_films, main_film)
+                extra_film_info.combination_films.append(main_film)
                 screened_film = planner.ScreenedFilm(
                     extra_film_id, extra_film.title, extra_film_info.description, screened_film_type)
                 screened_films.append(screened_film)
-            if len(main_film_info.screened_films) == 0:
-                main_film_info.screened_films = screened_films
-            else:
-                main_film_info.screened_films += screened_films
+            main_film_info.screened_films.extend(screened_films)
 
     def update_screenings(self):
         combination_films = self.film_info.combination_films

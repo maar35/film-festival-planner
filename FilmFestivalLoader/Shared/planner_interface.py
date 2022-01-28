@@ -183,14 +183,15 @@ class ScreenedFilm:
     def __str__(self):
         return ' - '.join([str(self.filmid), self.title])
 
+
 class FilmInfo:
 
-    def __init__(self, filmid, description, article, combination_films=[], screened_films=[]):
-        self.filmid = filmid
+    def __init__(self, film_id, description, article, combination_films=None, screened_films=None):
+        self.filmid = film_id
         self.description = description
         self.article = article
-        self.combination_films = combination_films
-        self.screened_films = screened_films
+        self.combination_films = [] if combination_films is None else combination_films
+        self.screened_films = [] if screened_films is None else screened_films
 
     def __str__(self):
         combinations_str = '\nCombinations:\n' + '\n'.join([str(cf) for cf in self.combination_films])
@@ -458,25 +459,6 @@ class FestivalData:
                 for screening in public_screenings:
                     f.write(repr(screening))
         print(f"Done writing {len(public_screenings)} of {len(self.screenings)} records to {self.screenings_file}.")
-
-
-def append_combination_film(combination_films, combination_film):
-    """
-    Workaround for the bug that all combination_films seem to be referring to each other.
-
-    @param combination_films: list
-    @param combination_film: string
-    """
-    result_urls = combination_films
-    bug_fixed = False
-    if bug_fixed:
-        result_urls.append(combination_film)
-    else:
-        if len(combination_films) == 0:
-            result_urls = [combination_film]
-        else:
-            result_urls.append(combination_film)
-    return result_urls
 
 
 class Error(Exception):
