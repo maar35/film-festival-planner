@@ -225,10 +225,9 @@ def append_combination_0():
     # Arrange.
     new_film = TestList.festival_data.films[0]
     film_infos = TestList.festival_data.filminfos
-    append_combination = planner_interface.append_combination_film
 
     # Act.
-    film_infos[0].combination_films = append_combination(film_infos[0].combination_films, new_film)
+    film_infos[0].combination_films.append(new_film)
 
     # Assert.
     return len(film_infos[1].combination_films), 0
@@ -241,12 +240,11 @@ def append_combination_1():
     second_film = TestList.festival_data.films[2]
     third_film = TestList.festival_data.films[3]
     film_infos = TestList.festival_data.filminfos
-    append_combination = planner_interface.append_combination_film
 
     # Act.
-    film_infos[1].combination_films = append_combination(film_infos[1].combination_films, first_film)
-    film_infos[1].combination_films = append_combination(film_infos[1].combination_films, second_film)
-    film_infos[2].combination_films = append_combination(film_infos[2].combination_films, third_film)
+    film_infos[1].combination_films.append(first_film)
+    film_infos[1].combination_films.append(second_film)
+    film_infos[2].combination_films.append(third_film)
 
     # Assert.
     return film_infos[1].combination_films[0], first_film
