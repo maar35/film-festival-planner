@@ -12,6 +12,7 @@ import urllib.error
 import urllib.parse
 import os
 import inspect
+import json
 
 
 def iripath_to_uripath(path):
@@ -24,6 +25,17 @@ def get_charset(file, byte_count=512):
     charset_parser = HtmlCharsetParser()
     charset = charset_parser.get_charset(sample_text)
     return charset
+
+
+def fix_json(code_point_str):
+    """Replace HTML entity code points by the corresponding symbols.
+
+    @param code_point_str: String possibly containing not decoded HTML code points like '\u003c'.
+    @return: String with code points replaced by the corresponding symbols.
+    """
+
+    result_str = json.loads('"' + code_point_str + '"')
+    return result_str
 
 
 class UrlFile:

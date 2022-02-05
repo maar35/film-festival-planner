@@ -65,7 +65,7 @@ def main():
         print(Globals.error_collector)
 
     # Write parsed information.
-    comment('Done laoding IFFR data.')
+    comment('Done loading IFFR data.')
     write_lists(iffr_data, write_film_list, write_other_lists)
     Globals.debug_recorder.write_debug()
 
@@ -105,6 +105,7 @@ def get_films(iffr_data):
     url_file = web_tools.UrlFile(az_url, az_file, Globals.error_collector, bytecount=30000)
     az_html = url_file.get_text()
     if az_html is not None:
+        AzPageParser.pr_encoding(url_file)
         AzPageParser(iffr_data).feed(az_html)
 
 
@@ -156,6 +157,11 @@ class AzPageParser(HtmlPageParser):
         self.title = None
         self.init_film_data()
 
+    @staticmethod
+    def pr_encoding(url_file):
+        if AzPageParser.debugging:
+            Globals.debug_recorder.add(f'AZ Encoding: {url_file.encoding}.')
+
     def parse_props(self, data):
         i = self.props_re.finditer(data)
         matches = [match for match in i]
@@ -163,7 +169,7 @@ class AzPageParser(HtmlPageParser):
         for g in groups:
             self.title = g['title']
             self.url = iffr_hostname + web_tools.iripath_to_uripath(g['url'])
-            self.description = g['list_desc']
+            self.description = web_tools.fix_json(g['list_desc'])
             self.sorted_title = g['sorted_title'].lower()
             minutes_str = g['duration']
             minutes = 0 if minutes_str is None else int(minutes_str)
@@ -203,7 +209,7 @@ class AzPageParser(HtmlPageParser):
     def handle_data(self, data):
         HtmlPageParser.handle_data(self, data)
         if data.startswith('{"props":'):
-            self.parse_props(data.replace(r'\u0026', '&'))
+            self.parse_props(data)
 
 
 class ScreeningsPageParser(HtmlPageParser):

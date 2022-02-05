@@ -37,7 +37,7 @@ namespace PresentScreenings.TableView
 
         void IFilmOutlinable.SetInfo(NSTextField view)
         {
-            view.StringValue = FilmInfo.InfoString(Film);
+            view.AttributedStringValue = FilmInfo.InfoString(Film);
             view.LineBreakMode = NSLineBreakMode.ByWordWrapping;
             view.BackgroundColor = NSColor.Clear;
             view.TextColor = NSColor.Text;
