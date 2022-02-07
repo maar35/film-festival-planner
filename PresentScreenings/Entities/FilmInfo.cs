@@ -106,16 +106,24 @@ namespace PresentScreenings.TableView
             var newLine = Environment.NewLine;
             var twoLines = newLine + newLine;
             var builder = new StringBuilder(Url + newLine);
+
+            // If present, add the short description.
+            // Use the version with raw html tags as to allow it to be coverted
+            // to an attributed string.
             if (RawFilmDescription != string.Empty)
             {
                 builder.AppendLine(newLine + "Description");
                 builder.AppendLine(RawFilmDescription);
             }
+
+            // Add the more elaborated article.
             if (FilmArticle != string.Empty)
             {
                 builder.AppendLine(newLine + "Article");
                 builder.AppendLine(FilmArticle);
             }
+
+            // Add combination programs in which this film is screened.
             if (CombinationProgramIds.Count > 0)
             {
                 // Per combination program, find its screened film that matches
@@ -152,6 +160,8 @@ namespace PresentScreenings.TableView
                     space = twoLines;
                 }
             }
+
+            // Add screened films if present.
             if (ScreenedFilms.Count > 0)
             {
                 // Create a list of the distinct screened film types in the
@@ -182,6 +192,7 @@ namespace PresentScreenings.TableView
                     builder.AppendLine($"{twoLines}Time weighted mean rating: {meanRating:0.##}");
                 }
             }
+
             return builder.ToString();
         }
         #endregion
