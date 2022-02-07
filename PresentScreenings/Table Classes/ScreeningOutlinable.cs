@@ -92,8 +92,9 @@ namespace PresentScreenings.TableView
             switch (OutlineLevel)
             {
                 case Level.OverlappingScreening:
-                    view.StringValue = Screening.ScreeningStringForLabel();
-                    view.StringValue += "  " + FilmInfo.InfoString(Screening.Film);
+                    var attributedInfo = new NSMutableAttributedString(Screening.ScreeningStringForLabel() + " ");
+                    attributedInfo.Append(FilmInfo.InfoString(Screening.Film));
+                    view.AttributedStringValue = attributedInfo;
                     break;
                 case Level.FilmScreening:
                     view.StringValue = Screening.ScreeningStringForLabel(true);

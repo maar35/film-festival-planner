@@ -17,6 +17,7 @@ shared_dir = os.path.join(prj_dir, "FilmFestivalLoader/Shared")
 sys.path.insert(0, shared_dir)
 import test_tools
 import planner_interface
+import web_tools
 
 
 def main():
@@ -32,7 +33,10 @@ def main():
              new_screened_film_1,
              new_screen_online,
              new_screen_ondemand,
-             new_screen_physical]
+             new_screen_physical,
+             fix_html_code_point,
+             fix_html_code_point_str,
+             fix_html_code_point_file]
     test_tools.execute_tests(tests)
 
 
@@ -322,6 +326,52 @@ def new_screen_physical():
 
     # Assert.
     return screen.type, screen_type
+
+
+@test_tools.equity_decorator
+def fix_html_code_point():
+    # Arrange.
+    code_point_str = '\u003c'
+
+    # Act.
+    result_str = web_tools.fix_json(code_point_str)
+
+    # Assert.
+    return result_str, '<'
+
+
+@test_tools.equity_decorator
+def fix_html_code_point_str():
+    # Arrange.
+    code_point_str = "Steve McQueens vorige installatie, \u003cem\u003eYear 3\u003c/em\u003e, maakte hij in " \
+                     "opdracht van Tate Britain in 2019."
+    clean_str = "Steve McQueens vorige installatie, <em>Year 3</em>, maakte hij in opdracht van Tate Britain in " \
+                "2019."
+
+    # Act.
+    result_str = web_tools.fix_json(code_point_str)
+
+    # Assert.
+    return result_str, clean_str
+
+
+@test_tools.equity_decorator
+def fix_html_code_point_file():
+    # Arrange.
+    code_point_file = os.path.join(iffr.documents_dir, 'code_point_test.html')
+    clean_file = os.path.join(iffr.documents_dir, 'code_point_test_fixed.html')
+    parser = TestList.az_parser
+
+    # Act.
+    with open(code_point_file, 'r', encoding='utf-8') as f:
+        code_point_text = f.read()
+    with open(clean_file, 'r', encoding='utf-8') as f:
+        clean_text = f.read()
+    parser.parse_props(code_point_text)
+    result_text = parser.description
+
+    # Assert.
+    return result_text, clean_text[35633:35897]
 
 
 if __name__ == '__main__':

@@ -5,6 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using AppKit;
+using CoreText;
+using Foundation;
 
 namespace PresentScreenings.TableView
 {
@@ -54,6 +57,8 @@ namespace PresentScreenings.TableView
         #region Properties
         public int FilmId { get; }
         public string FilmDescription { get; }
+        public string RawFilmDescription { get; }
+        public NSAttributedString AttributedFilmDescription { get; }
         public string FilmArticle { get; }
         public List<int> CombinationProgramIds { get; private set; }
         public List<ScreenedFilm> ScreenedFilms { get; private set; }
@@ -86,7 +91,9 @@ namespace PresentScreenings.TableView
         {
             FilmId = filmId;
             InfoStatus = infoStatus;
-            FilmDescription = description;
+            RawFilmDescription = description;
+            AttributedFilmDescription = HtmlToAttributed(description);
+            FilmDescription = AttributedFilmDescription.Value;
             FilmArticle = article;
             CombinationProgramIds = new List<int> { };
             ScreenedFilms = new List<ScreenedFilm> { };
@@ -99,16 +106,24 @@ namespace PresentScreenings.TableView
             var newLine = Environment.NewLine;
             var twoLines = newLine + newLine;
             var builder = new StringBuilder(Url + newLine);
-            if (FilmDescription != string.Empty)
+
+            // If present, add the short description.
+            // Use the version with raw html tags as to allow it to be coverted
+            // to an attributed string.
+            if (RawFilmDescription != string.Empty)
             {
                 builder.AppendLine(newLine + "Description");
-                builder.AppendLine(FilmDescription);
+                builder.AppendLine(RawFilmDescription);
             }
+
+            // Add the more elaborated article.
             if (FilmArticle != string.Empty)
             {
                 builder.AppendLine(newLine + "Article");
                 builder.AppendLine(FilmArticle);
             }
+
+            // Add combination programs in which this film is screened.
             if (CombinationProgramIds.Count > 0)
             {
                 // Per combination program, find its screened film that matches
@@ -145,6 +160,8 @@ namespace PresentScreenings.TableView
                     space = twoLines;
                 }
             }
+
+            // Add screened films if present.
             if (ScreenedFilms.Count > 0)
             {
                 // Create a list of the distinct screened film types in the
@@ -175,6 +192,7 @@ namespace PresentScreenings.TableView
                     builder.AppendLine($"{twoLines}Time weighted mean rating: {meanRating:0.##}");
                 }
             }
+
             return builder.ToString();
         }
         #endregion
@@ -251,19 +269,34 @@ namespace PresentScreenings.TableView
             return filmInfos;
         }
 
-        public static string InfoString(Film film)
+        public static NSAttributedString InfoString(Film film)
         {
             var filmInfo = ViewController.GetFilmInfo(film.FilmId);
             if (filmInfo == null)
             {
-                return string.Empty;
+                return new NSAttributedString(string.Empty);
             }
-            string text = filmInfo.FilmDescription;
+            NSAttributedString text = filmInfo.AttributedFilmDescription;
             if (text.Length == 0)
             {
-                text = filmInfo.FilmArticle;
+                text = new NSAttributedString(filmInfo.FilmArticle);
             }
             return text;
+        }
+
+        public static NSAttributedString HtmlToAttributed(string text)
+        {
+
+            var html = text + Environment.NewLine;
+            int startIndex = 0;
+            var attributedString = new NSMutableAttributedString(html);
+
+            while (startIndex >= 0)
+            {
+                startIndex = NextAttributedPart(ref attributedString, startIndex);
+            }
+
+            return attributedString;
         }
 
         public string GetGenreDescription()
@@ -318,6 +351,44 @@ namespace PresentScreenings.TableView
             {
                 throw new IllegalFilmInfoCategoryException($"'{name}' is not a valid FilmInfoCategory");
             }
+        }
+
+        /// <summary>
+        /// Search for HTML tags, remove them and apply a bold font
+        /// to the text range marked by the tags.
+        ///
+        /// It is presumed that:
+        ///     - Every start tag has a matching end tag
+        ///     - Tag ranges do not overlap
+        /// </summary>
+        /// <param name="attrText"> The attributed string to be searched from</param>
+        /// <param name="index">The index to start searching</param>
+        /// <returns>The new starting index, -1 when no tags are found.</returns>
+        private static int NextAttributedPart(ref NSMutableAttributedString attrText, int index)
+        {
+            // Search for an html tag.
+            string text = attrText.Value;
+            int startIndex = text.IndexOf("<", index);
+            if (startIndex >= 0)
+            {
+                int startIndex1 = startIndex;
+                int endIndex1 = text.IndexOf(">", startIndex);
+                attrText.DeleteRange(new NSRange(startIndex1, endIndex1 - startIndex + 1));
+                text = attrText.Value;
+
+                // Find the closing tag.
+                int startIndex2 = text.IndexOf("<", startIndex);
+                if (text.Substring(startIndex2 + 1, 1) == "/")
+                {
+                    int endIndex2 = text.IndexOf(">", startIndex2);
+                    attrText.DeleteRange(new NSRange(startIndex2, endIndex2 - startIndex2 + 1));
+                    var range = new NSRange(startIndex1, startIndex2 - startIndex1);
+                    attrText.BeginEditing();
+                    attrText.AddAttribute(CTStringAttributeKey.Font, NSFont.BoldSystemFontOfSize(13), range);
+                    startIndex = startIndex2;
+                }
+            }
+            return startIndex;
         }
 
         private bool isCombinationProgram()

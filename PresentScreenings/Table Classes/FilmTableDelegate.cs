@@ -92,7 +92,7 @@ namespace PresentScreenings.TableView
                 case "Description":
                     NSTextField descriptionLabel = (NSTextField)view;
                     PopulateDescription(ref descriptionLabel);
-                    descriptionLabel.StringValue = FilmInfo.InfoString(film);
+                    descriptionLabel.AttributedStringValue = FilmInfo.InfoString(film);
                     return descriptionLabel;
                 case "Duration":
                     NSTextField durationLabel = (NSTextField)view;
