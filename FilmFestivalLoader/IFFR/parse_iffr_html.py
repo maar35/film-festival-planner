@@ -138,23 +138,29 @@ class HtmlPageParser(web_tools.HtmlPageParser):
 class AzPageParser(HtmlPageParser):
     props_re = re.compile(
         r"""
-            "bookings":\[[^]]*?\],"title":"(?P<title>[^"]+)"          # Title
-            .*?"url\(\{\\"language\\":\\"nl\\"\}\)":"(?P<url>[^"]+)"  # URL
-            ,"description\(\{.*?\}\)":"(?P<grid_desc>[^"]+)"          # Grid description
-            ,"description\(\{.*?\}\)":"(?P<list_desc>[^"]+)"          # List description
-            .*?"sortedTitle":"(?P<sorted_title>[^"]+)"                # Sorted Title
-            (?:.*?"duration":(?P<duration>\d+)\})?                    # Duration
+            "bookings":\[[^]]*?\],"title":"(?P<title>[^"]+)"                    # Title
+            .*?"url\(\{\\"language\\":\\"nl\\"\}\)":"(?P<url>[^"]+)"            # Film URL
+            ,"description\(\{.*?\}\)":"(?P<grid_desc>[^"]+)"                    # Grid description
+            ,"description\(\{.*?\}\)":"(?P<list_desc>[^"]+)"                    # List description
+            ,"section":([^:]*?:"Section","title":"(?P<section>[^"]+)".*?|null)  # IFFR Section
+            ,"subSection":([^:]*?:"SubSection","title":"(?P<sub_section>[^"]+)" # IFFR Sub-section
+            ,"url\(\{.*?\}\)":"(?P<sub_section_url>[^"]+)".*?|null)             # Sub-section URL
+            ,"sortedTitle":"(?P<sorted_title>[^"]+)"                            # Sorted Title
+            (?:.*?"duration":(?P<duration>\d+)\})?                              # Duration
         """, re.VERBOSE)
     debugging = False
 
     def __init__(self, iffr_data):
         HtmlPageParser.__init__(self, iffr_data, 'AZ')
         self.film = None
-        self.duration = None
-        self.sorted_title = None
-        self.description = None
-        self.url = None
         self.title = None
+        self.url = None
+        self.description = None
+        self.section = None
+        self.sub_section = None
+        self.sub_section_url = None
+        self.sorted_title = None
+        self.duration = None
         self.init_film_data()
 
     @staticmethod
@@ -170,6 +176,15 @@ class AzPageParser(HtmlPageParser):
             self.title = g['title']
             self.url = iffr_hostname + web_tools.iripath_to_uripath(g['url'])
             self.description = web_tools.fix_json(g['list_desc'])
+            self.section = g['section']
+            if self.section:
+                self.section = web_tools.fix_json(self.section)
+            self.sub_section = g['sub_section']
+            if self.sub_section:
+                self.sub_section = web_tools.fix_json(self.sub_section).rstrip()
+            self.sub_section_url = g['sub_section_url']
+            if self.sub_section_url:
+                self.sub_section_url = iffr_hostname + web_tools.iripath_to_uripath(self.sub_section_url)
             self.sorted_title = g['sorted_title'].lower()
             minutes_str = g['duration']
             minutes = 0 if minutes_str is None else int(minutes_str)
@@ -197,7 +212,8 @@ class AzPageParser(HtmlPageParser):
             self.add_film_info()
 
     def add_film_info(self):
-        film_info = planner.FilmInfo(self.film.filmid, self.description, '')
+        description = f'[{self.section}|{self.sub_section}|{self.sub_section_url}] {self.description}'
+        film_info = planner.FilmInfo(self.film.filmid, description, '')
         self.iffr_data.filminfos.append(film_info)
 
     def handle_starttag(self, tag, attrs):
