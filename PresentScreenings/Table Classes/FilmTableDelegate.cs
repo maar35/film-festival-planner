@@ -107,6 +107,12 @@ namespace PresentScreenings.TableView
                     screeningCountLabel.StringValue = screeningCount.ToString();
                     screeningCountLabel.TextColor = ScreeningCountTextColor(screeningCount);
                     return screeningCountLabel;
+                case "Subsection":
+                    NSTextField subsectionLabel = (NSTextField)view;
+                    PupulateSubsection(ref subsectionLabel);
+                    subsectionLabel.StringValue = film.SubsectionName;
+                    subsectionLabel.TextColor = SubsectionTextColor(film);
+                    return subsectionLabel;
                 default:
                     if (ScreeningInfo.FilmFans.Contains(tableColumn.Title))
                     {
@@ -193,6 +199,23 @@ namespace PresentScreenings.TableView
             }
         }
 
+        private void PupulateSubsection(ref NSTextField field)
+        {
+            if (field == null)
+            {
+                field = new NSTextField
+                {
+                    Identifier = "Subsection",
+                    BackgroundColor = NSColor.Clear,
+                    Bordered = false,
+                    Selectable = false,
+                    Editable = false,
+                    Alignment = NSTextAlignment.Left,
+                    LineBreakMode = NSLineBreakMode.TruncatingTail,
+                };
+            }
+        }
+
         private void PopulateFilmFanFilmRating(ref RatingField box, Film film, string filmFan, nint row)
         {
             if (box == null)
@@ -219,6 +242,11 @@ namespace PresentScreenings.TableView
         private static NSColor ScreeningCountTextColor(int screeningCount)
         {
             return screeningCount == 0 ? NSColor.LightGray : NSColor.Black;
+        }
+
+        private static NSColor SubsectionTextColor(Film film)
+        {
+            return film.SubsectionColor;
         }
         #endregion
 

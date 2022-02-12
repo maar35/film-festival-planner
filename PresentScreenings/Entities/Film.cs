@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using AppKit;
 
 namespace PresentScreenings.TableView
 {
@@ -27,7 +28,9 @@ namespace PresentScreenings.TableView
         public string SortedTitle { get; private set; }
         public string Title { get; private set; }
         public string TitleLanguage { get; private set; }
-        public string Section { get; private set; }
+        private Subsection Subsection { get; set; }
+        public string SubsectionName => Subsection == null ? string.Empty : Subsection.Name;
+        public NSColor SubsectionColor => Subsection == null ? NSColor.Black : Subsection.Section.Color;
         public TimeSpan Duration { get; private set; }
         public string DurationFormat => "hh\\:mm";
         public string DurationString => Duration.ToString(DurationFormat);
@@ -65,7 +68,7 @@ namespace PresentScreenings.TableView
             SortedTitle = fields[2];
             Title = fields[3];
             TitleLanguage = fields[4];
-            Section = fields[5];
+            string subsectionIdStr = fields[5];
             string duration = fields[6];
             string category = fields[7];
             Url = fields[8];
@@ -73,6 +76,8 @@ namespace PresentScreenings.TableView
             // Assign properties that need calculating.
             SequenceNumber = int.Parse(sequenceNumber);
             FilmId = int.Parse(filmId);
+            int? subsectionId = int.TryParse(subsectionIdStr, out int outcome) ? (int?)outcome : null;
+            Subsection = ViewController.GetSubsection(subsectionId);
             int minutes = int.Parse(duration.TrimEnd('′'));
             Duration = new TimeSpan(0, minutes, 0);
             Category = (WebUtility.MediumCategory)Enum.Parse(typeof(WebUtility.MediumCategory), category);

@@ -176,6 +176,8 @@
     <Compile Include="Entities\OnDemandScreening.cs" />
     <Compile Include="Entities\OnLineScreening.cs" />
     <Compile Include="Table Classes\FilmOutlinable.cs" />
+    <Compile Include="Entities\Section.cs" />
+    <Compile Include="Entities\Subsection.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />
@@ -189,7 +191,7 @@
       <Properties>
         <Policies>
           <VersionControlPolicy>
-            <CommitMessageStyle FileSeparator=", " LastFilePostfix=":&#xA;  " />
+            <CommitMessageStyle FileSeparator=", " LastFilePostfix=":&#xA;  " LineAlign="0" />
           </VersionControlPolicy>
         </Policies>
       </Properties>

@@ -16,6 +16,8 @@ namespace PresentScreenings.TableView
         const float _descriptionMaxWidth = 4000;
         const float _screeningCountWidth = 40;
         const float _screeningCountMaxWidth = 80;
+        const float _subsectionWidth = 72;
+        const float _subsectionMaxWidth = 200;
         const float _FilmFanRatingWidth = 60;
         #endregion
 
@@ -74,6 +76,7 @@ namespace PresentScreenings.TableView
 
             // Add in-code created colums to the table view.
             CreateScreeningCountColumn();
+            CreateSubsectionColumn();
             CreateFilmFanRatingColumns();
             CreateDescriptionColumn();
 
@@ -160,6 +163,11 @@ namespace PresentScreenings.TableView
         private void CreateScreeningCountColumn()
         {
             CreateColumn("#Screenings", _screeningCountWidth, _screeningCountMaxWidth);
+        }
+
+        private void CreateSubsectionColumn()
+        {
+            CreateColumn("Subsection", _subsectionWidth, _subsectionMaxWidth);
         }
 
         private void CreateFilmFanRatingColumns()

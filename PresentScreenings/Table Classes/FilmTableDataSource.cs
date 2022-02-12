@@ -66,6 +66,9 @@ namespace PresentScreenings.TableView
                 case "#Screenings":
                     Films.Sort((x, y) => sign * x.FilmScreenings.Count.CompareTo(y.FilmScreenings.Count));
                     break;
+                case "Subsection":
+                    Films.Sort((x, y) => sign * x.SubsectionName.CompareTo(y.SubsectionName));
+                    break;
                 default:
                     foreach (var filmFan in ScreeningInfo.FilmFans)
                     {

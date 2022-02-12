@@ -94,6 +94,8 @@ def write_lists(iffr_data, write_film_list, write_other_lists):
 
     if write_other_lists:
         iffr_data.write_filminfo()
+        iffr_data.write_sections()
+        iffr_data.write_sub_sections()
         iffr_data.write_screens()
         iffr_data.write_screenings()
     else:
@@ -156,8 +158,8 @@ class AzPageParser(HtmlPageParser):
         self.title = None
         self.url = None
         self.description = None
-        self.section = None
-        self.sub_section = None
+        self.section_name = None
+        self.sub_section_name = None
         self.sub_section_url = None
         self.sorted_title = None
         self.duration = None
@@ -176,12 +178,12 @@ class AzPageParser(HtmlPageParser):
             self.title = g['title']
             self.url = iffr_hostname + web_tools.iripath_to_uripath(g['url'])
             self.description = web_tools.fix_json(g['list_desc'])
-            self.section = g['section']
-            if self.section:
-                self.section = web_tools.fix_json(self.section)
-            self.sub_section = g['sub_section']
-            if self.sub_section:
-                self.sub_section = web_tools.fix_json(self.sub_section).rstrip()
+            self.section_name = g['section']
+            if self.section_name:
+                self.section_name = web_tools.fix_json(self.section_name)
+            self.sub_section_name = g['sub_section']
+            if self.sub_section_name:
+                self.sub_section_name = web_tools.fix_json(self.sub_section_name).rstrip()
             self.sub_section_url = g['sub_section_url']
             if self.sub_section_url:
                 self.sub_section_url = iffr_hostname + web_tools.iripath_to_uripath(self.sub_section_url)
@@ -209,10 +211,14 @@ class AzPageParser(HtmlPageParser):
             self.film.sortstring = self.sorted_title
             print(f'Adding FILM: {self.title} ({self.film.duration_str()}) {self.film.medium_category}')
             self.iffr_data.films.append(self.film)
+            section = self.iffr_data.get_section(self.section_name)
+            if section is not None:
+                sub_section = self.iffr_data.get_sub_section(self.sub_section_name, self.sub_section_url, section)
+                self.film.sub_section_id = sub_section.sub_section_id
             self.add_film_info()
 
     def add_film_info(self):
-        description = f'[{self.section}|{self.sub_section}|{self.sub_section_url}] {self.description}'
+        description = self.description
         film_info = planner.FilmInfo(self.film.filmid, description, '')
         self.iffr_data.filminfos.append(film_info)
 

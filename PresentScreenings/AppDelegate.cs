@@ -24,6 +24,8 @@ namespace PresentScreenings.TableView
         public static string AvailabilitiesFile { get; private set; }
         public static string ScreensFile { get; private set; }
         public static string FilmsFile { get; private set; }
+        public static string SectionsFile { get; private set; }
+        public static string SubsectionsFile { get; private set; }
         public static string ScreeningInfoFile { get; private set; }
         public static string ScreeningsFile { get; private set; }
         public static string RatingsFile {get; private set; }
@@ -68,6 +70,8 @@ namespace PresentScreenings.TableView
             AvailabilitiesFile = Path.Combine(DocumentsFolder, "availabilities.csv");
             ScreensFile = Path.Combine(DocumentsFolder, "screens.csv");
             FilmsFile = Path.Combine(DocumentsFolder, "films.csv");
+            SectionsFile = Path.Combine(DocumentsFolder, "sections.csv");
+            SubsectionsFile = Path.Combine(DocumentsFolder, "subsections.csv");
             ScreeningInfoFile = Path.Combine(DocumentsFolder, "screeninginfo.csv");
             ScreeningsFile = Path.Combine(DocumentsFolder, "screenings.csv");
             RatingsFile = Path.Combine(DocumentsFolder, "ratings.csv");
