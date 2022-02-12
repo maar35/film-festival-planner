@@ -95,7 +95,7 @@ def write_lists(iffr_data, write_film_list, write_other_lists):
     if write_other_lists:
         iffr_data.write_filminfo()
         iffr_data.write_sections()
-        iffr_data.write_sub_sections()
+        iffr_data.write_subsections()
         iffr_data.write_screens()
         iffr_data.write_screenings()
     else:
@@ -145,8 +145,8 @@ class AzPageParser(HtmlPageParser):
             ,"description\(\{.*?\}\)":"(?P<grid_desc>[^"]+)"                    # Grid description
             ,"description\(\{.*?\}\)":"(?P<list_desc>[^"]+)"                    # List description
             ,"section":([^:]*?:"Section","title":"(?P<section>[^"]+)".*?|null)  # IFFR Section
-            ,"subSection":([^:]*?:"SubSection","title":"(?P<sub_section>[^"]+)" # IFFR Sub-section
-            ,"url\(\{.*?\}\)":"(?P<sub_section_url>[^"]+)".*?|null)             # Sub-section URL
+            ,"subSection":([^:]*?:"SubSection","title":"(?P<subsection>[^"]+)"  # IFFR Sub-section
+            ,"url\(\{.*?\}\)":"(?P<subsection_url>[^"]+)".*?|null)              # Sub-section URL
             ,"sortedTitle":"(?P<sorted_title>[^"]+)"                            # Sorted Title
             (?:.*?"duration":(?P<duration>\d+)\})?                              # Duration
         """, re.VERBOSE)
@@ -159,8 +159,8 @@ class AzPageParser(HtmlPageParser):
         self.url = None
         self.description = None
         self.section_name = None
-        self.sub_section_name = None
-        self.sub_section_url = None
+        self.subsection_name = None
+        self.subsection_url = None
         self.sorted_title = None
         self.duration = None
         self.init_film_data()
@@ -181,12 +181,12 @@ class AzPageParser(HtmlPageParser):
             self.section_name = g['section']
             if self.section_name:
                 self.section_name = web_tools.fix_json(self.section_name)
-            self.sub_section_name = g['sub_section']
-            if self.sub_section_name:
-                self.sub_section_name = web_tools.fix_json(self.sub_section_name).rstrip()
-            self.sub_section_url = g['sub_section_url']
-            if self.sub_section_url:
-                self.sub_section_url = iffr_hostname + web_tools.iripath_to_uripath(self.sub_section_url)
+            self.subsection_name = g['subsection']
+            if self.subsection_name:
+                self.subsection_name = web_tools.fix_json(self.subsection_name).rstrip()
+            self.subsection_url = g['subsection_url']
+            if self.subsection_url:
+                self.subsection_url = iffr_hostname + web_tools.iripath_to_uripath(self.subsection_url)
             self.sorted_title = g['sorted_title'].lower()
             minutes_str = g['duration']
             minutes = 0 if minutes_str is None else int(minutes_str)
@@ -213,8 +213,8 @@ class AzPageParser(HtmlPageParser):
             self.iffr_data.films.append(self.film)
             section = self.iffr_data.get_section(self.section_name)
             if section is not None:
-                sub_section = self.iffr_data.get_sub_section(self.sub_section_name, self.sub_section_url, section)
-                self.film.sub_section_id = sub_section.sub_section_id
+                subsection = self.iffr_data.get_subsection(self.subsection_name, self.subsection_url, section)
+                self.film.subsection_id = subsection.subsection_id
             self.add_film_info()
 
     def add_film_info(self):
