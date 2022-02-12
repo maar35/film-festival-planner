@@ -30,6 +30,7 @@ namespace PresentScreenings.TableView
         public string TitleLanguage { get; private set; }
         private Subsection Subsection { get; set; }
         public string SubsectionName => Subsection == null ? string.Empty : Subsection.Name;
+        public string SubsectionDescription => Subsection == null ? string.Empty : Subsection.Description;
         public NSColor SubsectionColor => Subsection == null ? NSColor.Black : Subsection.Section.Color;
         public TimeSpan Duration { get; private set; }
         public string DurationFormat => "hh\\:mm";

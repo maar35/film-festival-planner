@@ -25,6 +25,7 @@ plandata_dir = os.path.join(documents_dir, "_planner_data")
 
 # Filename formats.
 film_file_format = os.path.join(webdata_dir, "filmpage_{:03d}.html")
+subsection_file_format = os.path.join(webdata_dir, "subsection_page_{:02d}.html")
 
 # Files.
 az_file = os.path.join(webdata_dir, "azpage_01.html")
@@ -77,6 +78,9 @@ def parse_iffr_sites(iffr_data):
     comment('Parsing film pages.')
     get_film_details(iffr_data)
 
+    comment('Parsing subsection pages.')
+    get_subsection_details(iffr_data)
+
 
 def comment(text):
     print(f"\n{datetime.datetime.now()}  - {text}")
@@ -121,6 +125,17 @@ def get_film_details(iffr_data):
             ScreeningsPageParser(iffr_data, film).feed(film_html)
             FilmInfoPageParser(iffr_data, film).feed(film_html)
     FilmInfoPageParser.apply_combinations(iffr_data)
+
+
+def get_subsection_details(iffr_data):
+    for subsection in iffr_data.subsection_by_name.values():
+        subsection_file = subsection_file_format.format(subsection.subsection_id)
+        url_file = web_tools.UrlFile(subsection.url, subsection_file, Globals.error_collector)
+        subsection_html = url_file.get_text(f'Downloading {subsection.name} page:{subsection.url}')
+        if subsection_html is not None:
+            print(f'Analysing html file {subsection.subsection_id} of {subsection.name}')
+            AzPageParser.pr_encoding(url_file)
+            SubsectionPageParser(iffr_data, subsection).feed(subsection_html)
 
 
 class Globals:
@@ -169,6 +184,8 @@ class AzPageParser(HtmlPageParser):
     def pr_encoding(url_file):
         if AzPageParser.debugging:
             Globals.debug_recorder.add(f'AZ Encoding: {url_file.encoding}.')
+        if SubsectionPageParser.debugging:
+            Globals.debug_recorder.add(f'SEC Encoding: {url_file.encoding}.')
 
     def parse_props(self, data):
         i = self.props_re.finditer(data)
@@ -709,6 +726,45 @@ class FilmInfoPageParser(HtmlPageParser):
         elif self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_DESCRIPTION):
             self.stateStack.pop()
             self.screened_description = data
+
+
+class SubsectionPageParser(HtmlPageParser):
+
+    class SubsectionsParseState(Enum):
+        IDLE = auto()
+        AWAITING_DESCRIPTION = auto()
+        IN_DESCRIPTION = auto()
+        DONE = auto()
+
+    debugging = False
+
+    def __init__(self, iffr_data, subsection):
+        HtmlPageParser.__init__(self, iffr_data, 'SEC')
+        self.iffr_data = iffr_data
+        self.subsection = subsection
+        self.stateStack = self.StateStack(self.print_debug, self.SubsectionsParseState.IDLE)
+        self.description = None
+
+    def update_subsection(self, description):
+        self.subsection.description = description
+
+    def handle_starttag(self, tag, attrs):
+        HtmlPageParser.handle_starttag(self, tag, attrs)
+
+        if self.stateStack.state_is(self.SubsectionsParseState.IDLE) and tag == 'h1':
+            self.stateStack.change(self.SubsectionsParseState.AWAITING_DESCRIPTION)
+        elif self.stateStack.state_is(self.SubsectionsParseState.AWAITING_DESCRIPTION) and tag == 'section':
+            self.stateStack.change(self.SubsectionsParseState.IN_DESCRIPTION)
+
+    def handle_endtag(self, tag):
+        HtmlPageParser.handle_endtag(self, tag)
+
+    def handle_data(self, data):
+        HtmlPageParser.handle_data(self, data)
+
+        if self.stateStack.state_is(self.SubsectionsParseState.IN_DESCRIPTION):
+            self.update_subsection(data)
+            self.stateStack.change(self.SubsectionsParseState.DONE)
 
 
 class IffrData(planner.FestivalData):

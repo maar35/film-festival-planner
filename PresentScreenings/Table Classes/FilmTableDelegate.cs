@@ -112,6 +112,7 @@ namespace PresentScreenings.TableView
                     PupulateSubsection(ref subsectionLabel);
                     subsectionLabel.StringValue = film.SubsectionName;
                     subsectionLabel.TextColor = SubsectionTextColor(film);
+                    subsectionLabel.ToolTip = film.SubsectionDescription;
                     return subsectionLabel;
                 default:
                     if (ScreeningInfo.FilmFans.Contains(tableColumn.Title))
