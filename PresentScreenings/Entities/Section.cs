@@ -5,8 +5,8 @@ using AppKit;
 namespace PresentScreenings.TableView
 {
     /// <summary>
-    /// A section is one of the sections that a film festival may use to divide
-    /// the films being screened into.
+    /// A filmfestival can group the films thematically into sections.
+    /// Class Section represents such sections.
     /// </summary>
 
     public class Section : ListStreamer

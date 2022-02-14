@@ -42,11 +42,11 @@ class UrlFile:
     default_byte_count = 512
     default_encoding = 'ascii'
 
-    def __init__(self, url, path, error_collector, bytecount=None):
+    def __init__(self, url, path, error_collector, byte_count=None):
         self.url = url
         self.path = path
         self.error_collector = error_collector
-        self.byte_count = bytecount if bytecount is not None else self.default_byte_count
+        self.byte_count = byte_count if byte_count is not None else self.default_byte_count
         self.encoding = None
 
     def get_text(self, comment_at_download=None):
@@ -125,8 +125,6 @@ class HtmlPageParser(html.parser.HTMLParser):
 
     class StateStack:
 
-        debugging = None
-
         def __init__(self, print_debug, state):
             self.print_debug = print_debug
             self.stack = [state]
@@ -153,6 +151,8 @@ class HtmlPageParser(html.parser.HTMLParser):
 
         def state_in(self, states):
             return self.stack[-1] in states
+
+    debugging = None
 
     def __init__(self, debug_recorder, debug_prefix):
         html.parser.HTMLParser.__init__(self)

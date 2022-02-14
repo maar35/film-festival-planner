@@ -108,17 +108,16 @@ def write_lists(iffr_data, write_film_list, write_other_lists):
 
 def get_films(iffr_data):
     az_url = iffr_hostname + az_url_path
-    url_file = web_tools.UrlFile(az_url, az_file, Globals.error_collector, bytecount=30000)
+    url_file = web_tools.UrlFile(az_url, az_file, Globals.error_collector, byte_count=30000)
     az_html = url_file.get_text()
     if az_html is not None:
-        AzPageParser.pr_encoding(url_file)
-        AzPageParser(iffr_data).feed(az_html)
+        AzPageParser(iffr_data, url_file.encoding).feed(az_html)
 
 
 def get_film_details(iffr_data):
     for film in iffr_data.films:
         film_file = film_file_format.format(film.filmid)
-        url_file = web_tools.UrlFile(film.url, film_file, Globals.error_collector, bytecount=30000)
+        url_file = web_tools.UrlFile(film.url, film_file, Globals.error_collector, byte_count=30000)
         film_html = url_file.get_text(f'Downloading site of {film.title}: {film.url}')
         if film_html is not None:
             print(f'Analysing html file {film.filmid} of {film.title} {film.url}')
@@ -130,12 +129,11 @@ def get_film_details(iffr_data):
 def get_subsection_details(iffr_data):
     for subsection in iffr_data.subsection_by_name.values():
         subsection_file = subsection_file_format.format(subsection.subsection_id)
-        url_file = web_tools.UrlFile(subsection.url, subsection_file, Globals.error_collector)
+        url_file = web_tools.UrlFile(subsection.url, subsection_file, Globals.error_collector, byte_count=30000)
         subsection_html = url_file.get_text(f'Downloading {subsection.name} page:{subsection.url}')
         if subsection_html is not None:
-            print(f'Analysing html file {subsection.subsection_id} of {subsection.name}')
-            AzPageParser.pr_encoding(url_file)
-            SubsectionPageParser(iffr_data, subsection).feed(subsection_html)
+            print(f'Analysing html file {subsection.subsection_id} of {subsection.name}.')
+            SubsectionPageParser(iffr_data, subsection, url_file.encoding).feed(subsection_html)
 
 
 class Globals:
@@ -147,9 +145,11 @@ class Globals:
 class HtmlPageParser(web_tools.HtmlPageParser):
     debugging = False
 
-    def __init__(self, iffr_data, debug_prefix):
+    def __init__(self, iffr_data, debug_prefix, encoding=None):
         web_tools.HtmlPageParser.__init__(self, Globals.debug_recorder, debug_prefix)
         self.iffr_data = iffr_data
+        if encoding is not None:
+            self.print_debug(f'Encoding: {encoding}', '')
 
 
 class AzPageParser(HtmlPageParser):
@@ -167,8 +167,8 @@ class AzPageParser(HtmlPageParser):
         """, re.VERBOSE)
     debugging = False
 
-    def __init__(self, iffr_data):
-        HtmlPageParser.__init__(self, iffr_data, 'AZ')
+    def __init__(self, iffr_data, encoding):
+        HtmlPageParser.__init__(self, iffr_data, 'AZ', encoding)
         self.film = None
         self.title = None
         self.url = None
@@ -180,13 +180,6 @@ class AzPageParser(HtmlPageParser):
         self.duration = None
         self.init_film_data()
 
-    @staticmethod
-    def pr_encoding(url_file):
-        if AzPageParser.debugging:
-            Globals.debug_recorder.add(f'AZ Encoding: {url_file.encoding}.')
-        if SubsectionPageParser.debugging:
-            Globals.debug_recorder.add(f'SEC Encoding: {url_file.encoding}.')
-
     def parse_props(self, data):
         i = self.props_re.finditer(data)
         matches = [match for match in i]
@@ -195,20 +188,18 @@ class AzPageParser(HtmlPageParser):
             self.title = g['title']
             self.url = iffr_hostname + web_tools.iripath_to_uripath(g['url'])
             self.description = web_tools.fix_json(g['list_desc'])
-            self.section_name = g['section']
-            if self.section_name:
-                self.section_name = web_tools.fix_json(self.section_name)
-            self.subsection_name = g['subsection']
-            if self.subsection_name:
-                self.subsection_name = web_tools.fix_json(self.subsection_name).rstrip()
-            self.subsection_url = g['subsection_url']
-            if self.subsection_url:
-                self.subsection_url = iffr_hostname + web_tools.iripath_to_uripath(self.subsection_url)
+            if g['section']:
+                self.section_name = web_tools.fix_json(g['section'])
+            if g['subsection']:
+                self.subsection_name = web_tools.fix_json(g['subsection']).rstrip()
+            if g['subsection_url']:
+                self.subsection_url = iffr_hostname + web_tools.iripath_to_uripath(g['subsection_url'])
             self.sorted_title = g['sorted_title'].lower()
             minutes_str = g['duration']
             minutes = 0 if minutes_str is None else int(minutes_str)
             self.duration = datetime.timedelta(minutes=minutes)
             self.add_film()
+            self.init_film_data()
 
     def init_film_data(self):
         self.film = None
@@ -216,6 +207,9 @@ class AzPageParser(HtmlPageParser):
         self.url = None
         self.duration = None
         self.description = None
+        self.section_name = None
+        self.subsection_name = None
+        self.subsection_url = None
         self.sorted_title = None
 
     def add_film(self):
@@ -231,12 +225,11 @@ class AzPageParser(HtmlPageParser):
             section = self.iffr_data.get_section(self.section_name)
             if section is not None:
                 subsection = self.iffr_data.get_subsection(self.subsection_name, self.subsection_url, section)
-                self.film.subsection_id = subsection.subsection_id
+                self.film.subsection = subsection
             self.add_film_info()
 
     def add_film_info(self):
-        description = self.description
-        film_info = planner.FilmInfo(self.film.filmid, description, '')
+        film_info = planner.FilmInfo(self.film.filmid, self.description, '')
         self.iffr_data.filminfos.append(film_info)
 
     def handle_starttag(self, tag, attrs):
@@ -738,26 +731,26 @@ class SubsectionPageParser(HtmlPageParser):
 
     debugging = False
 
-    def __init__(self, iffr_data, subsection):
-        HtmlPageParser.__init__(self, iffr_data, 'SEC')
+    def __init__(self, iffr_data, subsection, encoding):
+        HtmlPageParser.__init__(self, iffr_data, 'SEC', encoding)
         self.iffr_data = iffr_data
         self.subsection = subsection
         self.stateStack = self.StateStack(self.print_debug, self.SubsectionsParseState.IDLE)
         self.description = None
 
-    def update_subsection(self, description):
-        self.subsection.description = description
+    def update_subsection(self, description=None):
+        self.subsection.description = description if description is not None else self.subsection.name
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
 
         if self.stateStack.state_is(self.SubsectionsParseState.IDLE) and tag == 'h1':
             self.stateStack.change(self.SubsectionsParseState.AWAITING_DESCRIPTION)
+        elif self.stateStack.state_is(self.SubsectionsParseState.AWAITING_DESCRIPTION) and tag == 'h2':
+            self.update_subsection()
+            self.stateStack.change(self.SubsectionsParseState.DONE)
         elif self.stateStack.state_is(self.SubsectionsParseState.AWAITING_DESCRIPTION) and tag == 'section':
             self.stateStack.change(self.SubsectionsParseState.IN_DESCRIPTION)
-
-    def handle_endtag(self, tag):
-        HtmlPageParser.handle_endtag(self, tag)
 
     def handle_data(self, data):
         HtmlPageParser.handle_data(self, data)

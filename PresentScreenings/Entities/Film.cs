@@ -22,16 +22,19 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
+        #region Private Members
+        private Subsection _subsection;
+        #endregion
+
         #region Properties
         public int SequenceNumber { get; private set; }
         public int FilmId { get; private set; }
         public string SortedTitle { get; private set; }
         public string Title { get; private set; }
         public string TitleLanguage { get; private set; }
-        private Subsection Subsection { get; set; }
-        public string SubsectionName => Subsection == null ? string.Empty : Subsection.Name;
-        public string SubsectionDescription => Subsection == null ? string.Empty : Subsection.Description;
-        public NSColor SubsectionColor => Subsection == null ? NSColor.Black : Subsection.Section.Color;
+        public string SubsectionName => _subsection == null ? string.Empty : _subsection.Name;
+        public string SubsectionDescription => _subsection == null ? string.Empty : _subsection.Description;
+        public NSColor SubsectionColor => _subsection == null ? NSColor.Black : _subsection.Section.Color;
         public TimeSpan Duration { get; private set; }
         public string DurationFormat => "hh\\:mm";
         public string DurationString => Duration.ToString(DurationFormat);
@@ -78,7 +81,7 @@ namespace PresentScreenings.TableView
             SequenceNumber = int.Parse(sequenceNumber);
             FilmId = int.Parse(filmId);
             int? subsectionId = int.TryParse(subsectionIdStr, out int outcome) ? (int?)outcome : null;
-            Subsection = ViewController.GetSubsection(subsectionId);
+            _subsection = ViewController.GetSubsection(subsectionId);
             int minutes = int.Parse(duration.TrimEnd('′'));
             Duration = new TimeSpan(0, minutes, 0);
             Category = (WebUtility.MediumCategory)Enum.Parse(typeof(WebUtility.MediumCategory), category);

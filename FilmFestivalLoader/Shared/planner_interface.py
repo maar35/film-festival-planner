@@ -62,7 +62,7 @@ class Film:
         self.title = title
         self.url = url
         self.title_language = self.language()
-        self.subsection_id = None
+        self.subsection = None
         self.duration = None
         self.medium_category = url.split("/")[6]
         self.sortstring = self.lower(self.strip_article())
@@ -94,7 +94,7 @@ class Film:
             self.sortstring.replace(';', '.,'),
             self.title.replace(';', '.,'),
             self.title_language,
-            str(self.subsection_id) if self.subsection_id is not None else '',
+            str(self.subsection.subsection_id) if self.subsection is not None else '',
             self.duration_str(),
             self.category_by_string[self.medium_category],
             self.url
@@ -448,7 +448,7 @@ class FestivalData:
             pass
 
         try:
-            self.curr_section_id = max([section_id for section_id in self.section_by_id.keys()])
+            self.curr_section_id = max(self.section_by_id.keys())
         except ValueError:
             self.curr_section_id = 0
 
