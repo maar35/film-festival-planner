@@ -389,6 +389,20 @@ namespace PresentScreenings.TableView
             return filmScreenings;
         }
 
+        public static Section GetSection(int sectionId)
+        {
+            return ScreeningsPlan.Sections.First(s => s.SectionId == sectionId);
+        }
+
+        public static Subsection GetSubsection(int? subsectionId)
+        {
+            if (subsectionId == null)
+            {
+                return null;
+            }
+            return ScreeningsPlan.Subsections.First(s => s.SubsectionId == subsectionId);
+        }
+
         public static Film GetFilmById(int filmId)
         {
             return ScreeningsPlan.Films.First(f => f.FilmId == filmId);

@@ -25,6 +25,8 @@ namespace PresentScreenings.TableView
         public static List<FilmFanAvailability> Availabilities { get; private set; }
         public static List<Screen> Screens { get; private set; }
         public static List<Film> Films { get; private set; }
+        public static List<Section> Sections { get; private set; }
+        public static List<Subsection> Subsections { get; private set; }
         public static List<Screening> Screenings { get; private set; }
         public static List<ScreeningInfo> ScreeningInfos { get; private set; }
         public static List<FilmFanFilmRating> FilmFanFilmRatings { get; private set; }
@@ -50,6 +52,14 @@ namespace PresentScreenings.TableView
             // Read screens.
             Screens = new Screen()
                 .ReadListFromFile(AppDelegate.ScreensFile, line => new Screen(line));
+
+            // Read sections.
+            Sections = new Section()
+                .ReadListFromFile(AppDelegate.SectionsFile, line => new Section(line));
+
+            // Read subsections.
+            Subsections = new Subsection()
+                .ReadListFromFile(AppDelegate.SubsectionsFile, line => new Subsection(line));
 
             // Read film info.
             FilmInfos = FilmInfo.LoadFilmInfoFromXml(AppDelegate.FilmInfoFile);

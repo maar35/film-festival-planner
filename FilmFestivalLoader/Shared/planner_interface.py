@@ -62,7 +62,7 @@ class Film:
         self.title = title
         self.url = url
         self.title_language = self.language()
-        self.section = ""
+        self.subsection = None
         self.duration = None
         self.medium_category = url.split("/")[6]
         self.sortstring = self.lower(self.strip_article())
@@ -74,32 +74,32 @@ class Film:
         return self.sortstring < other.sortstring
 
     def film_repr_csv_head(self):
-        text = ";".join([
-            "seqnr",
-            "filmid",
-            "sort",
-            "title",
-            "titlelanguage",
-            "section",
-            "duration",
-            "mediumcategory",
-            "url"
+        text = ';'.join([
+            'seqnr',
+            'filmid',
+            'sort',
+            'title',
+            'titlelanguage',
+            'section',
+            'duration',
+            'mediumcategory',
+            'url'
         ])
-        return "{}\n".format(text)
+        return f'{text}\n'
 
     def __repr__(self):
-        text = ";".join([
+        text = ';'.join([
             str(self.seqnr),
             str(self.filmid),
-            self.sortstring.replace(";", ".,"),
-            self.title.replace(";", ".,"),
+            self.sortstring.replace(';', '.,'),
+            self.title.replace(';', '.,'),
             self.title_language,
-            self.section,
+            str(self.subsection.subsection_id) if self.subsection is not None else '',
             self.duration_str(),
             self.category_by_string[self.medium_category],
             self.url
         ])
-        return "{}\n".format(text)
+        return f'{text}\n'
 
     def filmid_repr(self):
         text = ";".join([str(self.filmid), self.title.replace(";", ".,"), self.url ])
@@ -199,6 +199,38 @@ class FilmInfo:
         return '\n'.join([str(self.filmid), self.description, self.article, combinations_str, screened_str]) + '\n'
 
 
+class Section:
+
+    def __init__(self, section_id, name, color=None):
+        self.section_id = section_id
+        self.name = name
+        self.color = color if color is not None else 'black'
+
+    def __repr__(self):
+        text = ';'.join([str(self.section_id), self.name, self.color])
+        return f'{text}\n'
+
+
+class Subsection:
+
+    def __init__(self, subsection_id, section, name, url, description=None):
+        self.subsection_id = subsection_id
+        self.section = section
+        self.name = name
+        self.url = url
+        self.description = description if description is not None else ''
+
+    def __repr__(self):
+        text = ';'.join([
+            str(self.subsection_id),
+            str(self.section.section_id),
+            self.name,
+            self.description,
+            self.url
+        ])
+        return f'{text}\n'
+
+
 class Screen:
 
     screen_types = ['Location', 'OnLine', 'OnDemand']
@@ -215,7 +247,7 @@ class Screen:
 
     def __repr__(self):
         text = ";".join([str(self.screen_id), self.city, self.name, self.abbr, self.type])
-        return "{}\n".format(text)
+        return f'{text}\n'
 
     def key(self):
         return self.city, self.name
@@ -264,7 +296,7 @@ class Screening:
             self.q_and_a,
             self.extra
         ])
-        return "{}\n".format(text)
+        return f'{text}\n'
 
 
 class FestivalData:
@@ -275,17 +307,26 @@ class FestivalData:
         self.films = []
         self.filminfos = []
         self.screenings = []
-        self.filmid_by_url = {}
-        self.filmid_by_key = {}
+        self.film_id_by_url = {}
+        self.film_id_by_key = {}
+        self.section_by_name = {}
+        self.section_by_id = {}
+        self.subsection_by_name = {}
         self.screen_by_location = {}
-        self.films_file = os.path.join(plandata_dir, "films.csv")
-        self.filmids_file = os.path.join(plandata_dir, "filmids.txt")
-        self.filminfo_file = os.path.join(plandata_dir, "filminfo.xml")
-        self.screens_file = os.path.join(plandata_dir, "screens.csv")
-        self.screenings_file = os.path.join(plandata_dir, "screenings.csv")
+        self.films_file = os.path.join(plandata_dir, 'films.csv')
+        self.filmids_file = os.path.join(plandata_dir, 'filmids.txt')
+        self.filminfo_file = os.path.join(plandata_dir, 'filminfo.xml')
+        self.sections_file = os.path.join(plandata_dir, 'sections.csv')
+        self.subsections_file = os.path.join(plandata_dir, 'subsections.csv')
+        self.screens_file = os.path.join(plandata_dir, 'screens.csv')
+        self.screenings_file = os.path.join(plandata_dir, 'screenings.csv')
         self.curr_film_id = None
         self.film_seqnr = 0
+        self.curr_section_id = None
+        self.curr_subsection_id = None
         self.read_articles()
+        self.read_sections()
+        self.read_subsections()
         self.read_screens()
         self.read_filmids()
 
@@ -302,15 +343,15 @@ class FestivalData:
 
     def new_film_id(self, key):
         try:
-            filmid = self.filmid_by_key[key]
+            filmid = self.film_id_by_key[key]
         except KeyError:
             self.curr_film_id += 1
             filmid = self.curr_film_id
-            self.filmid_by_key[key] = filmid
+            self.film_id_by_key[key] = filmid
         return filmid
 
     def get_film_by_key(self, title, url):
-        filmid = self.filmid_by_key[self._filmkey(title, url)]
+        filmid = self.film_id_by_key[self._filmkey(title, url)]
         films = [film for film in self.films if film.filmid == filmid]
         if len(films) > 0:
             return films[0]
@@ -325,6 +366,29 @@ class FestivalData:
             return films[0]
         return None
 
+    def get_section(self, name):
+        if name is None:
+            return None
+        try:
+            section = self.section_by_name[name]
+        except KeyError:
+            self.curr_section_id += 1
+            section = Section(self.curr_section_id, name)
+            self.section_by_name[name] = section
+            self.section_by_id[section.section_id] = section
+        return section
+
+    def get_subsection(self, name, url, section):
+        if name is None:
+            return None
+        try:
+            subsection = self.subsection_by_name[name]
+        except KeyError:
+            self.curr_subsection_id += 1
+            subsection = Subsection(self.curr_subsection_id, section, name, url)
+            self.subsection_by_name[name] = subsection
+        return subsection
+
     def get_screen(self, city, name):
         screen_key = (city, name)
         try:
@@ -332,7 +396,7 @@ class FestivalData:
         except KeyError:
             self.curr_screen_id += 1
             screen_id = self.curr_screen_id
-            abbr = name.replace(" ", "").lower()
+            abbr = name.replace(' ', '').lower()
             screen_type = 'OnDemand' if abbr.startswith('ondemand')\
                 else 'OnLine' if abbr.startswith('online')\
                 else 'Location'
@@ -358,15 +422,56 @@ class FestivalData:
                 filmid = int(record[0])
                 title = record[1]
                 url = record[2]
-                self.filmid_by_url[url] = filmid
-                self.filmid_by_key[self._filmkey(title, url)] = filmid
+                self.film_id_by_url[url] = filmid
+                self.film_id_by_key[self._filmkey(title, url)] = filmid
         except OSError:
             pass
+
         try:
-            self.curr_film_id = max(self.filmid_by_key.values())
+            self.curr_film_id = max(self.film_id_by_key.values())
         except ValueError:
             self.curr_film_id = 0
-        print(f"Done reading {len(self.filmid_by_url)} records from {self.filmids_file}.")
+        print(f"Done reading {len(self.film_id_by_url)} records from {self.filmids_file}.")
+
+    def read_sections(self):
+        try:
+            with open(self.sections_file, 'r') as f:
+                records = [self.splitrec(line, ';') for line in f]
+            for record in records:
+                section_id = int(record[0])
+                name = record[1]
+                color = record[2]
+                section = Section(section_id, name, color)
+                self.section_by_name[name] = section
+                self.section_by_id[section_id] = section
+        except OSError:
+            pass
+
+        try:
+            self.curr_section_id = max(self.section_by_id.keys())
+        except ValueError:
+            self.curr_section_id = 0
+
+    def read_subsections(self):
+        try:
+            with open(self.subsections_file, 'r') as f:
+                records = [self.splitrec(line, ';') for line in f]
+            for record in records:
+                subsection_id = int(record[0])
+                section_id = int(record[1])
+                name = record[2]
+                description = record[3]
+                url = record[4]
+                section = self.section_by_id[section_id]
+                self.subsection_by_name[name] = Subsection(subsection_id, section, name, url, description)
+        except OSError:
+            pass
+
+        try:
+            subsection_ids = [subsection.subsection_id for subsection in self.subsection_by_name.values()]
+            self.curr_subsection_id = max(subsection_ids)
+        except ValueError:
+            self.curr_subsection_id = 0
 
     def read_screens(self):
         def create_screen(fields):
@@ -385,6 +490,7 @@ class FestivalData:
             self.screen_by_location = {screen.key(): screen for screen in screens}
         except OSError:
             pass
+
         try:
             self.curr_screen_id = max([screen.screen_id for screen in self.screen_by_location.values()])
         except ValueError:
@@ -444,11 +550,23 @@ class FestivalData:
         tree.write(self.filminfo_file, encoding='utf-8', xml_declaration=True)
         print(f"Done writing {info_count} records to {self.filminfo_file}.")
 
+    def write_sections(self):
+        with open(self.sections_file, 'w') as f:
+            for section in self.section_by_id.values():
+                f.write((repr(section)))
+        print(f'Done writing {len(self.section_by_id)} records to {self.sections_file}.')
+
+    def write_subsections(self):
+        with open(self.subsections_file, 'w') as f:
+            for subsection in self.subsection_by_name.values():
+                f.write(repr(subsection))
+        print(f'Done writing {len(self.subsection_by_name)} records to {self.subsections_file}.')
+
     def write_screens(self):
         with open(self.screens_file, 'w') as f:
             for screen in self.screen_by_location.values():
                 f.write(repr(screen))
-        print(f"Done writing {len(self.screen_by_location)} records to {self.screens_file}.")
+        print(f'Done writing {len(self.screen_by_location)} records to {self.screens_file}.')
 
     def write_screenings(self):
         public_screenings = []

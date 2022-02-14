@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using AppKit;
 
 namespace PresentScreenings.TableView
 {
@@ -21,13 +22,19 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
+        #region Private Members
+        private Subsection _subsection;
+        #endregion
+
         #region Properties
         public int SequenceNumber { get; private set; }
         public int FilmId { get; private set; }
         public string SortedTitle { get; private set; }
         public string Title { get; private set; }
         public string TitleLanguage { get; private set; }
-        public string Section { get; private set; }
+        public string SubsectionName => _subsection == null ? string.Empty : _subsection.Name;
+        public string SubsectionDescription => _subsection == null ? string.Empty : _subsection.Description;
+        public NSColor SubsectionColor => _subsection == null ? NSColor.Black : _subsection.Section.Color;
         public TimeSpan Duration { get; private set; }
         public string DurationFormat => "hh\\:mm";
         public string DurationString => Duration.ToString(DurationFormat);
@@ -65,7 +72,7 @@ namespace PresentScreenings.TableView
             SortedTitle = fields[2];
             Title = fields[3];
             TitleLanguage = fields[4];
-            Section = fields[5];
+            string subsectionIdStr = fields[5];
             string duration = fields[6];
             string category = fields[7];
             Url = fields[8];
@@ -73,6 +80,8 @@ namespace PresentScreenings.TableView
             // Assign properties that need calculating.
             SequenceNumber = int.Parse(sequenceNumber);
             FilmId = int.Parse(filmId);
+            int? subsectionId = int.TryParse(subsectionIdStr, out int outcome) ? (int?)outcome : null;
+            _subsection = ViewController.GetSubsection(subsectionId);
             int minutes = int.Parse(duration.TrimEnd('′'));
             Duration = new TimeSpan(0, minutes, 0);
             Category = (WebUtility.MediumCategory)Enum.Parse(typeof(WebUtility.MediumCategory), category);

@@ -113,7 +113,7 @@ class Globals:
 
 def get_films(imagine_data):
     az_url = imagine_hostname + az_url_path
-    url_file = web_tools.UrlFile(az_url, az_file, Globals.error_collector, bytecount=3)
+    url_file = web_tools.UrlFile(az_url, az_file, Globals.error_collector, byte_count=3)
     az_html = url_file.get_text()
     if az_html is not None:
         AzPageParser(imagine_data).feed(az_html)

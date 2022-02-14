@@ -170,8 +170,8 @@ class CombinationProgramsLoader:
     def get_details_of_one_compilation(self, idfa_data, url):
         compilation_data = None
         film = None
-        if url in idfa_data.filmid_by_url.keys():
-            filmid = idfa_data.filmid_by_url[url]
+        if url in idfa_data.film_id_by_url.keys():
+            filmid = idfa_data.film_id_by_url[url]
             film_file = film_file_format.format(filmid)
             if os.path.isfile(film_file):
                 charset = web_tools.get_charset(film_file)

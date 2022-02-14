@@ -25,6 +25,7 @@ plandata_dir = os.path.join(documents_dir, "_planner_data")
 
 # Filename formats.
 film_file_format = os.path.join(webdata_dir, "filmpage_{:03d}.html")
+subsection_file_format = os.path.join(webdata_dir, "subsection_page_{:02d}.html")
 
 # Files.
 az_file = os.path.join(webdata_dir, "azpage_01.html")
@@ -77,6 +78,9 @@ def parse_iffr_sites(iffr_data):
     comment('Parsing film pages.')
     get_film_details(iffr_data)
 
+    comment('Parsing subsection pages.')
+    get_subsection_details(iffr_data)
+
 
 def comment(text):
     print(f"\n{datetime.datetime.now()}  - {text}")
@@ -94,6 +98,8 @@ def write_lists(iffr_data, write_film_list, write_other_lists):
 
     if write_other_lists:
         iffr_data.write_filminfo()
+        iffr_data.write_sections()
+        iffr_data.write_subsections()
         iffr_data.write_screens()
         iffr_data.write_screenings()
     else:
@@ -102,23 +108,32 @@ def write_lists(iffr_data, write_film_list, write_other_lists):
 
 def get_films(iffr_data):
     az_url = iffr_hostname + az_url_path
-    url_file = web_tools.UrlFile(az_url, az_file, Globals.error_collector, bytecount=30000)
+    url_file = web_tools.UrlFile(az_url, az_file, Globals.error_collector, byte_count=30000)
     az_html = url_file.get_text()
     if az_html is not None:
-        AzPageParser.pr_encoding(url_file)
-        AzPageParser(iffr_data).feed(az_html)
+        AzPageParser(iffr_data, url_file.encoding).feed(az_html)
 
 
 def get_film_details(iffr_data):
     for film in iffr_data.films:
         film_file = film_file_format.format(film.filmid)
-        url_file = web_tools.UrlFile(film.url, film_file, Globals.error_collector, bytecount=30000)
+        url_file = web_tools.UrlFile(film.url, film_file, Globals.error_collector, byte_count=30000)
         film_html = url_file.get_text(f'Downloading site of {film.title}: {film.url}')
         if film_html is not None:
             print(f'Analysing html file {film.filmid} of {film.title} {film.url}')
             ScreeningsPageParser(iffr_data, film).feed(film_html)
             FilmInfoPageParser(iffr_data, film).feed(film_html)
     FilmInfoPageParser.apply_combinations(iffr_data)
+
+
+def get_subsection_details(iffr_data):
+    for subsection in iffr_data.subsection_by_name.values():
+        subsection_file = subsection_file_format.format(subsection.subsection_id)
+        url_file = web_tools.UrlFile(subsection.url, subsection_file, Globals.error_collector, byte_count=30000)
+        subsection_html = url_file.get_text(f'Downloading {subsection.name} page:{subsection.url}')
+        if subsection_html is not None:
+            print(f'Analysing html file {subsection.subsection_id} of {subsection.name}.')
+            SubsectionPageParser(iffr_data, subsection, url_file.encoding).feed(subsection_html)
 
 
 class Globals:
@@ -130,37 +145,40 @@ class Globals:
 class HtmlPageParser(web_tools.HtmlPageParser):
     debugging = False
 
-    def __init__(self, iffr_data, debug_prefix):
+    def __init__(self, iffr_data, debug_prefix, encoding=None):
         web_tools.HtmlPageParser.__init__(self, Globals.debug_recorder, debug_prefix)
         self.iffr_data = iffr_data
+        if encoding is not None:
+            self.print_debug(f'Encoding: {encoding}', '')
 
 
 class AzPageParser(HtmlPageParser):
     props_re = re.compile(
         r"""
-            "bookings":\[[^]]*?\],"title":"(?P<title>[^"]+)"          # Title
-            .*?"url\(\{\\"language\\":\\"nl\\"\}\)":"(?P<url>[^"]+)"  # URL
-            ,"description\(\{.*?\}\)":"(?P<grid_desc>[^"]+)"          # Grid description
-            ,"description\(\{.*?\}\)":"(?P<list_desc>[^"]+)"          # List description
-            .*?"sortedTitle":"(?P<sorted_title>[^"]+)"                # Sorted Title
-            (?:.*?"duration":(?P<duration>\d+)\})?                    # Duration
+            "bookings":\[[^]]*?\],"title":"(?P<title>[^"]+)"                    # Title
+            .*?"url\(\{\\"language\\":\\"nl\\"\}\)":"(?P<url>[^"]+)"            # Film URL
+            ,"description\(\{.*?\}\)":"(?P<grid_desc>[^"]+)"                    # Grid description
+            ,"description\(\{.*?\}\)":"(?P<list_desc>[^"]+)"                    # List description
+            ,"section":([^:]*?:"Section","title":"(?P<section>[^"]+)".*?|null)  # IFFR Section
+            ,"subSection":([^:]*?:"SubSection","title":"(?P<subsection>[^"]+)"  # IFFR Sub-section
+            ,"url\(\{.*?\}\)":"(?P<subsection_url>[^"]+)".*?|null)              # Sub-section URL
+            ,"sortedTitle":"(?P<sorted_title>[^"]+)"                            # Sorted Title
+            (?:.*?"duration":(?P<duration>\d+)\})?                              # Duration
         """, re.VERBOSE)
     debugging = False
 
-    def __init__(self, iffr_data):
-        HtmlPageParser.__init__(self, iffr_data, 'AZ')
+    def __init__(self, iffr_data, encoding):
+        HtmlPageParser.__init__(self, iffr_data, 'AZ', encoding)
         self.film = None
-        self.duration = None
-        self.sorted_title = None
-        self.description = None
-        self.url = None
         self.title = None
+        self.url = None
+        self.description = None
+        self.section_name = None
+        self.subsection_name = None
+        self.subsection_url = None
+        self.sorted_title = None
+        self.duration = None
         self.init_film_data()
-
-    @staticmethod
-    def pr_encoding(url_file):
-        if AzPageParser.debugging:
-            Globals.debug_recorder.add(f'AZ Encoding: {url_file.encoding}.')
 
     def parse_props(self, data):
         i = self.props_re.finditer(data)
@@ -170,11 +188,18 @@ class AzPageParser(HtmlPageParser):
             self.title = g['title']
             self.url = iffr_hostname + web_tools.iripath_to_uripath(g['url'])
             self.description = web_tools.fix_json(g['list_desc'])
+            if g['section']:
+                self.section_name = web_tools.fix_json(g['section'])
+            if g['subsection']:
+                self.subsection_name = web_tools.fix_json(g['subsection']).rstrip()
+            if g['subsection_url']:
+                self.subsection_url = iffr_hostname + web_tools.iripath_to_uripath(g['subsection_url'])
             self.sorted_title = g['sorted_title'].lower()
             minutes_str = g['duration']
             minutes = 0 if minutes_str is None else int(minutes_str)
             self.duration = datetime.timedelta(minutes=minutes)
             self.add_film()
+            self.init_film_data()
 
     def init_film_data(self):
         self.film = None
@@ -182,6 +207,9 @@ class AzPageParser(HtmlPageParser):
         self.url = None
         self.duration = None
         self.description = None
+        self.section_name = None
+        self.subsection_name = None
+        self.subsection_url = None
         self.sorted_title = None
 
     def add_film(self):
@@ -194,6 +222,10 @@ class AzPageParser(HtmlPageParser):
             self.film.sortstring = self.sorted_title
             print(f'Adding FILM: {self.title} ({self.film.duration_str()}) {self.film.medium_category}')
             self.iffr_data.films.append(self.film)
+            section = self.iffr_data.get_section(self.section_name)
+            if section is not None:
+                subsection = self.iffr_data.get_subsection(self.subsection_name, self.subsection_url, section)
+                self.film.subsection = subsection
             self.add_film_info()
 
     def add_film_info(self):
@@ -687,6 +719,45 @@ class FilmInfoPageParser(HtmlPageParser):
         elif self.stateStack.state_is(self.CombinationsParseState.IN_SCREENED_DESCRIPTION):
             self.stateStack.pop()
             self.screened_description = data
+
+
+class SubsectionPageParser(HtmlPageParser):
+
+    class SubsectionsParseState(Enum):
+        IDLE = auto()
+        AWAITING_DESCRIPTION = auto()
+        IN_DESCRIPTION = auto()
+        DONE = auto()
+
+    debugging = False
+
+    def __init__(self, iffr_data, subsection, encoding):
+        HtmlPageParser.__init__(self, iffr_data, 'SEC', encoding)
+        self.iffr_data = iffr_data
+        self.subsection = subsection
+        self.stateStack = self.StateStack(self.print_debug, self.SubsectionsParseState.IDLE)
+        self.description = None
+
+    def update_subsection(self, description=None):
+        self.subsection.description = description if description is not None else self.subsection.name
+
+    def handle_starttag(self, tag, attrs):
+        HtmlPageParser.handle_starttag(self, tag, attrs)
+
+        if self.stateStack.state_is(self.SubsectionsParseState.IDLE) and tag == 'h1':
+            self.stateStack.change(self.SubsectionsParseState.AWAITING_DESCRIPTION)
+        elif self.stateStack.state_is(self.SubsectionsParseState.AWAITING_DESCRIPTION) and tag == 'h2':
+            self.update_subsection()
+            self.stateStack.change(self.SubsectionsParseState.DONE)
+        elif self.stateStack.state_is(self.SubsectionsParseState.AWAITING_DESCRIPTION) and tag == 'section':
+            self.stateStack.change(self.SubsectionsParseState.IN_DESCRIPTION)
+
+    def handle_data(self, data):
+        HtmlPageParser.handle_data(self, data)
+
+        if self.stateStack.state_is(self.SubsectionsParseState.IN_DESCRIPTION):
+            self.update_subsection(data)
+            self.stateStack.change(self.SubsectionsParseState.DONE)
 
 
 class IffrData(planner.FestivalData):
