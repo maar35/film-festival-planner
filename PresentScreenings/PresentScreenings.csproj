@@ -178,6 +178,8 @@
     <Compile Include="Table Classes\FilmOutlinable.cs" />
     <Compile Include="Entities\Section.cs" />
     <Compile Include="Entities\Subsection.cs" />
+    <Compile Include="Table Classes\FilmTableRowView.cs" />
+    <Compile Include="Table Classes\ScreenigsTableRowView.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

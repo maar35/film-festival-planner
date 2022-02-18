@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using AppKit;
 
 namespace PresentScreenings.TableView
@@ -26,7 +25,7 @@ namespace PresentScreenings.TableView
         {
             _colorByName = new Dictionary<string, NSColor> { };
             _colorByName["black"] = NSColor.Black;
-            _colorByName["blue"] = NSColor.Blue;
+            _colorByName["blue"] = NSColor.SystemBlueColor;
             _colorByName["red"] = NSColor.SystemRedColor;
             _colorByName["yellow"] = NSColor.SystemYellowColor;
         }

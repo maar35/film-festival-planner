@@ -116,6 +116,7 @@ namespace PresentScreenings.TableView
             _filmRatingTableView.AllowsMultipleSelection = true;
             _filmRatingTableView.AllowsColumnReordering = false;
             _filmRatingTableView.UsesAlternatingRowBackgroundColors = true;
+            _filmRatingTableView.SelectionHighlightStyle = NSTableViewSelectionHighlightStyle.Regular;
         }
 
         public override void ViewWillDisappear()
@@ -208,9 +209,7 @@ namespace PresentScreenings.TableView
             OnlyFilmsWithScreenings = !OnlyFilmsWithScreenings;
 
             // Store the current selection of films.
-            var indexSet = FilmRatingTableView.SelectedRows;
-            var rows = indexSet.ToArray();
-            var selectedFilms = rows.Select(r => GetFilmByIndex(r)).ToList();
+            var selectedFilms = GetSelectedFilms();
 
             // Update the checkbox state.
             SetOnlyFilmsWithScreeningsStates();
@@ -394,6 +393,14 @@ namespace PresentScreenings.TableView
         public void SelectFilm(Film film)
         {
             SelectFilms(new List<Film> { film });
+        }
+
+        public List<Film> GetSelectedFilms()
+        {
+            var indexSet = FilmRatingTableView.SelectedRows;
+            var rows = indexSet.ToArray();
+            var selectedFilms = rows.Select(r => GetFilmByIndex(r)).ToList();
+            return selectedFilms;
         }
 
         public Film GetSelectedFilm()

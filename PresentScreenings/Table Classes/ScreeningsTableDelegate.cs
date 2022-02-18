@@ -1,5 +1,6 @@
 ﻿using System;
 using AppKit;
+using Foundation;
 
 namespace PresentScreenings.TableView
 {
@@ -7,27 +8,37 @@ namespace PresentScreenings.TableView
     /// Screenings table delegate, provides the behaviour for the screenings
     /// table view.
     /// </summary>
-	
+
     public class ScreeningsTableDelegate : NSTableViewDelegate
     {
         #region Constants
-        const string _cellIdentifier = "PlanCell";
+        private const string _cellIdentifier = "PlanCell";
+        private const string _rowIdentifier = "PlanRow";
         #endregion
 
         #region Private Members
         ScreeningsTableDataSource _dataSource;
         ScreeningsView _screeningsView;
+        ViewController _controller;
         #endregion
 
         #region Constructors
-        public ScreeningsTableDelegate(ScreeningsTableDataSource datasource, ScreeningsView view)
+        public ScreeningsTableDelegate(ScreeningsTableDataSource datasource, ScreeningsView view, ViewController controller)
         {
             _dataSource = datasource;
             _screeningsView = view;
+            _controller = controller;
         }
         #endregion
 
         #region Override Methods
+        public override void SelectionDidChange(NSNotification notification)
+        {
+            // Don't call base.SelectionDidChange(notification).
+
+            _controller.TableView.DeselectRow(_controller.TableView.SelectedRow);
+        }
+
         public override NSView GetViewForItem(NSTableView tableView, NSTableColumn tableColumn, nint row)
         {
             // Get the cell view
@@ -53,6 +64,17 @@ namespace PresentScreenings.TableView
                     return clipview;
             }
             return cellview;
+        }
+
+        public override NSTableRowView CoreGetRowView(NSTableView tableView, nint row)
+        {
+            var rowView = tableView.MakeView(_rowIdentifier, this);
+            if (rowView == null)
+            {
+                rowView = new ScreenigsTableRowView();
+                rowView.Identifier = _rowIdentifier;
+            }
+            return rowView as NSTableRowView;
         }
         #endregion
 

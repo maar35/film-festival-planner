@@ -167,7 +167,7 @@ class AzPageParser(HtmlPageParser):
         """, re.VERBOSE)
     debugging = False
 
-    def __init__(self, iffr_data, encoding):
+    def __init__(self, iffr_data, encoding=None):
         HtmlPageParser.__init__(self, iffr_data, 'AZ', encoding)
         self.film = None
         self.title = None
@@ -731,7 +731,7 @@ class SubsectionPageParser(HtmlPageParser):
 
     debugging = False
 
-    def __init__(self, iffr_data, subsection, encoding):
+    def __init__(self, iffr_data, subsection, encoding=None):
         HtmlPageParser.__init__(self, iffr_data, 'SEC', encoding)
         self.iffr_data = iffr_data
         self.subsection = subsection
@@ -739,7 +739,7 @@ class SubsectionPageParser(HtmlPageParser):
         self.description = None
 
     def update_subsection(self, description=None):
-        self.subsection.description = description if description is not None else self.subsection.name
+        self.subsection.description = description
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)

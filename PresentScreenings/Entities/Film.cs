@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using AppKit;
 
 namespace PresentScreenings.TableView
@@ -33,7 +32,7 @@ namespace PresentScreenings.TableView
         public string Title { get; private set; }
         public string TitleLanguage { get; private set; }
         public string SubsectionName => _subsection == null ? string.Empty : _subsection.Name;
-        public string SubsectionDescription => _subsection == null ? string.Empty : _subsection.Description;
+        public string SubsectionDescription => _subsection == null ? string.Empty : _subsection.ToString();
         public NSColor SubsectionColor => _subsection == null ? NSColor.Black : _subsection.Section.Color;
         public TimeSpan Duration { get; private set; }
         public string DurationFormat => "hh\\:mm";

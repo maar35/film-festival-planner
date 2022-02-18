@@ -14,6 +14,7 @@ namespace PresentScreenings.TableView
         #region Constants
         private const float _titleWidth = 260;
         private const string _cellIdentifier = "FilmCell";
+        private const string _rowIdentifier = "FilmRow";
         #endregion
 
         #region Private Variables
@@ -67,7 +68,7 @@ namespace PresentScreenings.TableView
 
         public override void SelectionDidChange(NSNotification notification)
         {
-            //Don't call base.SelectionDidChange(notification)
+            // Don't call base.SelectionDidChange(notification).
 
             _dialogController.SetFilmRatingDialogButtonStates();
         }
@@ -84,31 +85,31 @@ namespace PresentScreenings.TableView
             switch (tableColumn.Title)
             {
                 case "Film":
-                    NSTextField filmLabel = (NSTextField)view;
+                    var filmLabel = (NSTextField)view;
                     PopulateFilm(ref filmLabel);
                     filmLabel.StringValue = film.Title;
                     tableColumn.Width = _titleWidth;
                     return filmLabel;
                 case "Description":
-                    NSTextField descriptionLabel = (NSTextField)view;
+                    var descriptionLabel = (NSTextField)view;
                     PopulateDescription(ref descriptionLabel);
                     descriptionLabel.AttributedStringValue = FilmInfo.InfoString(film);
                     return descriptionLabel;
                 case "Duration":
-                    NSTextField durationLabel = (NSTextField)view;
+                    var durationLabel = (NSTextField)view;
                     PopulateDuration(ref durationLabel);
                     durationLabel.StringValue = film.DurationString;
                     durationLabel.TextColor = DurationTextColor(film.Duration);
                     return durationLabel;
                 case "#Screenings":
-                    NSTextField screeningCountLabel = (NSTextField)view;
+                    var screeningCountLabel = (NSTextField)view;
                     PopulateScreeningCount(ref screeningCountLabel);
                     int screeningCount = film.FilmScreenings.Count;
                     screeningCountLabel.StringValue = screeningCount.ToString();
                     screeningCountLabel.TextColor = ScreeningCountTextColor(screeningCount);
                     return screeningCountLabel;
                 case "Subsection":
-                    NSTextField subsectionLabel = (NSTextField)view;
+                    var subsectionLabel = (NSTextField)view;
                     PupulateSubsection(ref subsectionLabel);
                     subsectionLabel.StringValue = film.SubsectionName;
                     subsectionLabel.TextColor = SubsectionTextColor(film);
@@ -117,7 +118,7 @@ namespace PresentScreenings.TableView
                 default:
                     if (ScreeningInfo.FilmFans.Contains(tableColumn.Title))
                     {
-                        RatingField friendRatingField = (RatingField)view;
+                        var friendRatingField = (RatingField)view;
                         PopulateFilmFanFilmRating(ref friendRatingField, film, tableColumn.Title, row);
                         friendRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, tableColumn.Title).ToString();
                         friendRatingField.Tag = row;
@@ -126,6 +127,17 @@ namespace PresentScreenings.TableView
                     break;
             }
             return view;
+        }
+
+        public override NSTableRowView CoreGetRowView(NSTableView tableView, nint row)
+        {
+            var rowView = tableView.MakeView(_rowIdentifier, this);
+            if (rowView == null)
+            {
+                rowView = new FilmTableRowView();
+                rowView.Identifier = _rowIdentifier;
+            }
+            return rowView as NSTableRowView;
         }
         #endregion
 
@@ -142,6 +154,7 @@ namespace PresentScreenings.TableView
                 {
                     Identifier = _cellIdentifier,
                     BackgroundColor = NSColor.Clear,
+                    TextColor = NSColor.Black,
                     Bordered = false,
                     Selectable = false,
                     Editable = false,
@@ -175,6 +188,7 @@ namespace PresentScreenings.TableView
                 {
                     Identifier = "Description",
                     BackgroundColor = NSColor.Clear,
+                    TextColor = NSColor.Black,
                     Bordered = false,
                     Selectable = true,
                     Editable = false,

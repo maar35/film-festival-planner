@@ -99,7 +99,7 @@ namespace PresentScreenings.TableView
 
             // Populate the table view
             TableView.DataSource = screeningTableDataSource;
-            TableView.Delegate = new ScreeningsTableDelegate(screeningTableDataSource, _mainView.ScreeningsView);
+            TableView.Delegate = new ScreeningsTableDelegate(screeningTableDataSource, _mainView.ScreeningsView, this);
             TableView.AllowsMultipleSelection = false;
             TableView.SelectionHighlightStyle = NSTableViewSelectionHighlightStyle.Regular;
             TableView.UsesAlternatingRowBackgroundColors = true;
@@ -124,8 +124,6 @@ namespace PresentScreenings.TableView
                 case "ScreeningsToScreeningInfo:":
                     var dialog = segue.DestinationController as ScreeningDialogController;
                     dialog.PopulateDialog((ScreeningControl)sender);
-                    dialog.DialogAccepted += (s, e) => TableView.DeselectRow(TableView.SelectedRow);
-                    dialog.DialogCanceled += (s, e) => TableView.DeselectRow(TableView.SelectedRow);
                     dialog.Presentor = this;
                     break;
                 case "ScreeningsToFilmInfo":
