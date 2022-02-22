@@ -2,6 +2,7 @@
 using AppKit;
 using System.Collections.Generic;
 using Foundation;
+using CoreGraphics;
 
 namespace PresentScreenings.TableView
 {
@@ -76,7 +77,7 @@ namespace PresentScreenings.TableView
         public override NSView GetViewForItem(NSTableView tableView, NSTableColumn tableColumn, nint row)
         {
             // Get the cell view
-            NSTextField view = (NSTextField)tableView.MakeView(_cellIdentifier, this);
+            NSView view = (NSView)tableView.MakeView(_cellIdentifier, this);
 
             // Get the data for the row
             Film film = _dataSource.Films[(int)row];
@@ -109,12 +110,12 @@ namespace PresentScreenings.TableView
                     screeningCountLabel.TextColor = ScreeningCountTextColor(screeningCount);
                     return screeningCountLabel;
                 case "Subsection":
-                    var subsectionLabel = (NSTextField)view;
-                    PupulateSubsection(ref subsectionLabel);
-                    subsectionLabel.StringValue = film.SubsectionName;
-                    subsectionLabel.TextColor = SubsectionTextColor(film);
-                    subsectionLabel.ToolTip = film.SubsectionDescription;
-                    return subsectionLabel;
+                    var subsectionButton = (SubsectionButton)view;
+                    PupulateSubsection(ref subsectionButton, film, tableView, tableColumn);
+                    subsectionButton.ToolTip = film.SubsectionDescription;
+                    subsectionButton.Activated += (s, e) => SubsectionLabelActivated(film);
+                    subsectionButton.Enabled = film.SubsectionName != null;
+                    return subsectionButton;
                 default:
                     if (ScreeningInfo.FilmFans.Contains(tableColumn.Title))
                     {
@@ -214,20 +215,18 @@ namespace PresentScreenings.TableView
             }
         }
 
-        private void PupulateSubsection(ref NSTextField field)
+        private void PupulateSubsection(ref SubsectionButton button, Film film, NSTableView tableView, NSTableColumn tableColumn)
         {
-            if (field == null)
+            if (button == null)
             {
-                field = new NSTextField
-                {
-                    Identifier = "Subsection",
-                    BackgroundColor = NSColor.Clear,
-                    Bordered = false,
-                    Selectable = false,
-                    Editable = false,
-                    Alignment = NSTextAlignment.Left,
-                    LineBreakMode = NSLineBreakMode.TruncatingTail,
-                };
+                var h = tableView.RowHeight;
+                var w = tableColumn.Width;
+                var frame = new CGRect(0, 0, w, h);
+                button = new SubsectionButton(frame, film);
+                button.SetButtonType(NSButtonType.MomentaryChange);
+                button.Title = string.Empty;
+                button.Identifier = "Subsection";
+                button.LineBreakMode = NSLineBreakMode.TruncatingTail;
             }
         }
 
@@ -271,6 +270,11 @@ namespace PresentScreenings.TableView
             int filmId = _dataSource.Films[(int)field.Tag].FilmId;
             _controller.SetRatingIfValid(field, r => field.StringValue, filmId, filmFan);
             _dialogController.SetFilmRatingDialogButtonStates();
+        }
+
+        private void SubsectionLabelActivated(Film film)
+        {
+            _dialogController.ToggleSubsectionFilter(film.Subsection);
         }
         #endregion
     }

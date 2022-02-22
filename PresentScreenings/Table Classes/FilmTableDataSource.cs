@@ -19,7 +19,9 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        internal List<Film> Films;
+        internal List<Film> Films { get; set; }
+        internal string SortedBy { get; private set; } = "Title";
+        internal bool SortedAscending { get; private set; } = true;
         #endregion
 
         #region Constructors
@@ -80,6 +82,10 @@ namespace PresentScreenings.TableView
                     }
                     break;
             }
+
+            // Remember the sort key.
+            SortedBy = key;
+            SortedAscending = ascending;
         }
         #endregion
 

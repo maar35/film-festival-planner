@@ -6,6 +6,7 @@ using System.Linq;
 using Foundation;
 using AppKit;
 using CoreGraphics;
+using System.Text;
 
 namespace PresentScreenings.TableView
 {
@@ -19,6 +20,7 @@ namespace PresentScreenings.TableView
         #region Constants
         private const float _xMargin = ControlsFactory.HorizontalMargin;
         private const float _yMargin = ControlsFactory.BigVerticalMargin;
+        private const float _xBetweenLabels = ControlsFactory.HorizontalPixelsBetweenLabels;
         private const float _xBetweenControls = ControlsFactory.HorizontalPixelsBetweenControls;
         private const float _yBetweenViews = ControlsFactory.VerticalPixelsBetweenViews;
         private const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
@@ -27,6 +29,7 @@ namespace PresentScreenings.TableView
         private const float _buttonHeight = ControlsFactory.StandardButtonHeight;
         private const float _imageSide = ControlsFactory.StandardButtomImageSide;
         private const float _yControlsDistance = ControlsFactory.VerticalPixelsBetweenControls;
+        private const float _subsectionLabelWidth = ControlsFactory.SubsectionLabelWidth;
         #endregion
 
         #region Private Members
@@ -76,9 +79,10 @@ namespace PresentScreenings.TableView
 
             // Populate the controls.
             SetControlValues();
-            CreateFilmFanControls();
 
-            // Create the screenings scroll view.
+            // Create the controls that are not defined in Xcode.
+            CreateSubsectionLabel();
+            CreateFilmFanControls();
             CreateScreeningsScrollView();
 
             // Disable Resizing.
@@ -133,11 +137,7 @@ namespace PresentScreenings.TableView
             _senderControl.Selected = true;
 
             // Populate the labels.
-            _labelTitle.StringValue = $"{_screening.FilmTitle} ({_screening.Film.MinutesString})";
-            if (_screening.Extra != string.Empty)
-            {
-                _labelTitle.StringValue += " (+ " + _screening.Extra + ")";
-            }
+            PopulateTitleLabel();
             _labelScreen.StringValue = _screening.Screen.ParseName;
             _labelTime.StringValue = _screening.ToLongTimeString();
             _labelPresent.StringValue = _screening.AttendeesString();
@@ -150,6 +150,48 @@ namespace PresentScreenings.TableView
 
             // Create the Visit Website button.
             CreateVisitFilmWebsiteButton();
+        }
+
+        private void PopulateTitleLabel()
+        {
+            _labelTitle.StringValue = $"{_screening.FilmTitle} ({_screening.Film.MinutesString})";
+            if (_screening.Extra != string.Empty)
+            {
+                _labelTitle.StringValue += " (+ " + _screening.Extra + ")";
+            }
+            _labelTitle.LineBreakMode = NSLineBreakMode.TruncatingTail;
+            _labelTitle.ToolTip = TitleLableTooltip();
+        }
+
+        private string TitleLableTooltip()
+        {
+            var film = _screening.Film;
+            var builder = new StringBuilder(film.ToString());
+
+            // If present, add the short description.
+            if (film.FilmInfo.FilmDescription != string.Empty)
+            {
+                builder.AppendLine();
+                builder.AppendLine();
+                builder.Append(film.FilmInfo.FilmDescription);
+            }
+
+            // If present, add the screened films.
+            if (film.FilmInfo.ScreenedFilms.Count > 0)
+            {
+                builder.Append(film.FilmInfo.ScreenedFilmsTostring());
+            }
+
+            return builder.ToString();
+        }
+
+        private void CreateSubsectionLabel()
+        {
+            var frame = _labelTitle.Frame;
+            var leftPosition = frame.X + frame.Width + _xBetweenLabels;
+            var subsectionRect = new CGRect(leftPosition, frame.Y, _subsectionLabelWidth, frame.Height);
+            var subsectionLabel = ControlsFactory.NewSubsectionLabel(subsectionRect, _screening.Film, true);
+            View.AddSubview(subsectionLabel);
         }
 
         private void CreateFilmFanControls()

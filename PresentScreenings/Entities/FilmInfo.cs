@@ -108,7 +108,7 @@ namespace PresentScreenings.TableView
             var builder = new StringBuilder(Url + newLine);
 
             // If present, add the short description.
-            // Use the version with raw html tags as to allow it to be coverted
+            // Use the version with raw html tags as to allow it to be converted
             // to an attributed string.
             if (RawFilmDescription != string.Empty)
             {
@@ -164,33 +164,7 @@ namespace PresentScreenings.TableView
             // Add screened films if present.
             if (ScreenedFilms.Count > 0)
             {
-                // Create a list of the distinct screened film types in the
-                // screened films.
-                var screenedFilmTypes = ScreenedFilms
-                    .Select(sf => sf.ScreenedFilmType)
-                    .Distinct();
-
-                // Per type, add the applicible header and the screened films
-                // with that type to the string builder.
-                var space = newLine;
-                foreach (var screenedFilmType in screenedFilmTypes)
-                {
-                    builder.AppendLine($"{space}{_headerByScreenedFilmType[screenedFilmType]}:");
-                    var screenedFilmsOfType = ScreenedFilms
-                        .Where(sf => sf.ScreenedFilmType == screenedFilmType);
-                    builder.AppendJoin(
-                        twoLines,
-                        screenedFilmsOfType.Select(f => f.ToString()));
-                    space = twoLines;
-                }
-
-                // Calculate the average rating of all screened films if
-                // applicable.
-                decimal meanRating = TimeWeightedMeanRating();
-                if (meanRating != decimal.Zero)
-                {
-                    builder.AppendLine($"{twoLines}Time weighted mean rating: {meanRating:0.##}");
-                }
+                builder.Append(ScreenedFilmsTostring());
             }
 
             return builder.ToString();
@@ -198,10 +172,41 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public void AddScreenedFilm(int filmid, string title, string description, ScreenedFilmType screenedFilmType)
+        public string ScreenedFilmsTostring()
         {
-            var screenedFilm = new ScreenedFilm(filmid, title, description, screenedFilmType);
-            ScreenedFilms.Add(screenedFilm);
+            var builder = new StringBuilder();
+            var newLine = Environment.NewLine;
+            var twoLines = newLine + newLine;
+
+            // Create a list of the distinct screened film types in the
+            // screened films.
+            var screenedFilmTypes = ScreenedFilms
+                .Select(sf => sf.ScreenedFilmType)
+                .Distinct();
+
+            // Per type, add the applicible header and the screened films
+            // with that type to the string builder.
+            var space = newLine;
+            foreach (var screenedFilmType in screenedFilmTypes)
+            {
+                builder.AppendLine($"{space}{_headerByScreenedFilmType[screenedFilmType]}:");
+                var screenedFilmsOfType = ScreenedFilms
+                    .Where(sf => sf.ScreenedFilmType == screenedFilmType);
+                builder.AppendJoin(
+                    twoLines,
+                    screenedFilmsOfType.Select(f => f.ToString()));
+                space = twoLines;
+            }
+
+            // Calculate the average rating of all screened films if
+            // applicable.
+            decimal meanRating = TimeWeightedMeanRating();
+            if (meanRating != decimal.Zero)
+            {
+                builder.AppendLine($"{twoLines}Time weighted mean rating: {meanRating:0.##}");
+            }
+
+            return builder.ToString();
         }
 
         public static List<FilmInfo> LoadFilmInfoFromXml(string path)
@@ -331,7 +336,7 @@ namespace PresentScreenings.TableView
                 ratingMinutes += decimalRating * minutes;
                 minutesSum += minutes;
             }
-            if (fullyRated && ScreenedFilms.Count > 0)
+            if (fullyRated && ScreenedFilms.Count > 1)
             {
                 decimal meanRating = ratingMinutes / minutesSum;
                 return meanRating;
@@ -341,6 +346,12 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
+        private void AddScreenedFilm(int filmid, string title, string description, ScreenedFilmType screenedFilmType)
+        {
+            var screenedFilm = new ScreenedFilm(filmid, title, description, screenedFilmType);
+            ScreenedFilms.Add(screenedFilm);
+        }
+
         private static Film.FilmInfoStatus StringToFilmInfoStatus(string name)
         {
             try
