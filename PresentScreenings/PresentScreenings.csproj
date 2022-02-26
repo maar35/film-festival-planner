@@ -180,7 +180,7 @@
     <Compile Include="Entities\Subsection.cs" />
     <Compile Include="Table Classes\FilmTableRowView.cs" />
     <Compile Include="Table Classes\ScreenigsTableRowView.cs" />
-    <Compile Include="Controls\SubsectionButton.cs" />
+    <Compile Include="Controls\SubsectionControl.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

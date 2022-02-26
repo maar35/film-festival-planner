@@ -110,12 +110,12 @@ namespace PresentScreenings.TableView
                     screeningCountLabel.TextColor = ScreeningCountTextColor(screeningCount);
                     return screeningCountLabel;
                 case "Subsection":
-                    var subsectionButton = (SubsectionButton)view;
-                    PupulateSubsection(ref subsectionButton, film, tableView, tableColumn);
-                    subsectionButton.ToolTip = film.SubsectionDescription;
-                    subsectionButton.Activated += (s, e) => SubsectionLabelActivated(film);
-                    subsectionButton.Enabled = film.SubsectionName != null;
-                    return subsectionButton;
+                    var subsectionControl = (SubsectionControl)view;
+                    PupulateSubsection(ref subsectionControl, film, tableView, tableColumn);
+                    subsectionControl.ToolTip = film.SubsectionDescription;
+                    subsectionControl.Film = film;
+                    subsectionControl.Enabled = film.SubsectionName != null;
+                    return subsectionControl;
                 default:
                     if (ScreeningInfo.FilmFans.Contains(tableColumn.Title))
                     {
@@ -215,18 +215,18 @@ namespace PresentScreenings.TableView
             }
         }
 
-        private void PupulateSubsection(ref SubsectionButton button, Film film, NSTableView tableView, NSTableColumn tableColumn)
+        private void PupulateSubsection(ref SubsectionControl control, Film film, NSTableView tableView, NSTableColumn tableColumn)
         {
-            if (button == null)
+            if (control == null)
             {
                 var h = tableView.RowHeight;
                 var w = tableColumn.Width;
                 var frame = new CGRect(0, 0, w, h);
-                button = new SubsectionButton(frame, film);
-                button.SetButtonType(NSButtonType.MomentaryChange);
-                button.Title = string.Empty;
-                button.Identifier = "Subsection";
-                button.LineBreakMode = NSLineBreakMode.TruncatingTail;
+                control = new SubsectionControl(frame, film, SubsectionControlActivated)
+                {
+                    Identifier = "Subsection",
+                    LineBreakMode = NSLineBreakMode.TruncatingTail
+                };
             }
         }
 
@@ -257,11 +257,6 @@ namespace PresentScreenings.TableView
         {
             return screeningCount == 0 ? NSColor.LightGray : NSColor.Black;
         }
-
-        private static NSColor SubsectionTextColor(Film film)
-        {
-            return film.SubsectionColor;
-        }
         #endregion
 
         #region Private Methods
@@ -272,7 +267,7 @@ namespace PresentScreenings.TableView
             _dialogController.SetFilmRatingDialogButtonStates();
         }
 
-        private void SubsectionLabelActivated(Film film)
+        private void SubsectionControlActivated(Film film)
         {
             _dialogController.ToggleSubsectionFilter(film.Subsection);
         }

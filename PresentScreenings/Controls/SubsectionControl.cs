@@ -7,27 +7,41 @@ using Foundation;
 namespace PresentScreenings.TableView
 {
     /// <summary>
-    /// Subsection button, button to represent the subsection of a film in the
+    /// Subsection control, control to represent the subsection of a film in the
     /// film rating dialog.
-    /// It supports filtering of the subsection of the associated film.
+    /// An action on the Film property is injected in the constructor. No event
+    /// is used when the control is activated in order to prevent memory leaks.
     /// </summary>
 
-    public class SubsectionButton : NSButton
+    public class SubsectionControl : NSControl
     {
-        #region Private constants
+        #region Private Constants
         private const float _horizontalTextOffset = 2;
         private const float _verticalTextOffset = 4;
+        private NSTrackingArea _hoverArea;
+        private NSCursor _cursor;
         #endregion
 
         #region Properties
-        Film Film { get; }
+        public Film Film { get; set; }
+        public Action<Film> FilmAction { get; private set; }
         #endregion
 
         #region Constructors
-        public SubsectionButton(CGRect frame, Film film) : base(frame)
+        public SubsectionControl(CGRect frame, Film film, Action<Film> action) : base(frame)
         {
-            Initialize();
+            // Initialize control features.
+            WantsLayer = true;
+            LayerContentsRedrawPolicy = NSViewLayerContentsRedrawPolicy.OnSetNeedsDisplay;
+
+            // Initialize mouse hovering.
+            _hoverArea = new NSTrackingArea(Frame, NSTrackingAreaOptions.MouseEnteredAndExited | NSTrackingAreaOptions.ActiveAlways, this, null);
+            AddTrackingArea(_hoverArea);
+            _cursor = NSCursor.CurrentSystemCursor;
+
+            // Initialize properties.
             Film = film;
+            FilmAction = action;
         }
         #endregion
 
@@ -39,7 +53,7 @@ namespace PresentScreenings.TableView
             // Draw the subsection label.
             using(CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
             {
-                // Equalize the button's surface.
+                // Paint the button's surface.
                 CGPath path = new CGPath();
                 CGRect frame = new CGRect(0, 0, Frame.Width, Frame.Height);
                 path.AddRect(frame);
@@ -49,8 +63,6 @@ namespace PresentScreenings.TableView
                 context.DrawPath(CGPathDrawingMode.Fill);
 
                 // Draw the subsection name.
-                context.ScaleCTM(1, -1);
-                context.TranslateCTM(0, -Frame.Height);
                 CTStringAttributes attributes = new CTStringAttributes();
                 attributes.ForegroundColor = Film.SubsectionColor.CGColor;
                 attributes.BackgroundColor = NSColor.Clear.CGColor;
@@ -65,11 +77,25 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Private Methods
-        void Initialize()
+        #region Override Mouse Handling Methods
+        public override void MouseDown(NSEvent theEvent)
         {
-            WantsLayer = true;
-            LayerContentsRedrawPolicy = NSViewLayerContentsRedrawPolicy.OnSetNeedsDisplay;
+            base.MouseDown(theEvent);
+            _cursor.Pop();
+            FilmAction(Film);
+        }
+
+        public override void MouseEntered(NSEvent theEvent)
+        {
+            base.MouseEntered(theEvent);
+            _cursor = NSCursor.PointingHandCursor;
+            _cursor.Push();
+        }
+
+        public override void MouseExited(NSEvent theEvent)
+        {
+            base.MouseExited(theEvent);
+            _cursor.Pop();
         }
         #endregion
     }
