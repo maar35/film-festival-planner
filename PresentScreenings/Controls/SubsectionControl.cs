@@ -13,13 +13,11 @@ namespace PresentScreenings.TableView
     /// is used when the control is activated in order to prevent memory leaks.
     /// </summary>
 
-    public class SubsectionControl : NSControl
+    public class SubsectionControl : PointingHandControl
     {
         #region Private Constants
         private const float _horizontalTextOffset = 2;
         private const float _verticalTextOffset = 4;
-        private NSTrackingArea _hoverArea;
-        private NSCursor _cursor;
         #endregion
 
         #region Properties
@@ -33,11 +31,6 @@ namespace PresentScreenings.TableView
             // Initialize control features.
             WantsLayer = true;
             LayerContentsRedrawPolicy = NSViewLayerContentsRedrawPolicy.OnSetNeedsDisplay;
-
-            // Initialize mouse hovering.
-            _hoverArea = new NSTrackingArea(Frame, NSTrackingAreaOptions.MouseEnteredAndExited | NSTrackingAreaOptions.ActiveAlways, this, null);
-            AddTrackingArea(_hoverArea);
-            _cursor = NSCursor.CurrentSystemCursor;
 
             // Initialize properties.
             Film = film;
@@ -75,27 +68,11 @@ namespace PresentScreenings.TableView
             }
             NeedsDisplay = true;
         }
-        #endregion
 
-        #region Override Mouse Handling Methods
         public override void MouseDown(NSEvent theEvent)
         {
             base.MouseDown(theEvent);
-            _cursor.Pop();
             FilmAction(Film);
-        }
-
-        public override void MouseEntered(NSEvent theEvent)
-        {
-            base.MouseEntered(theEvent);
-            _cursor = NSCursor.PointingHandCursor;
-            _cursor.Push();
-        }
-
-        public override void MouseExited(NSEvent theEvent)
-        {
-            base.MouseExited(theEvent);
-            _cursor.Pop();
         }
         #endregion
     }
