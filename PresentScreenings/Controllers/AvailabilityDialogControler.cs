@@ -173,7 +173,7 @@ namespace PresentScreenings.TableView
             {
                 var fanLabel = ControlsFactory.NewStandardLabel(rect, true);
                 fanLabel.StringValue = fan;
-                fanLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
+                fanLabel.Font = ControlsFactory.StandardBoldFont;
                 View.AddSubview(fanLabel);
                 xCurr += _controlWidth + _xBetweenControls;
                 rect.X = xCurr;

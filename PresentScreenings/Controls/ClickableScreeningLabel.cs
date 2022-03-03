@@ -10,7 +10,7 @@ namespace PresentScreenings.TableView
     /// displays need-to-know information of that screening.
     /// </summary>
 
-    public class ScreeningButton : NSControl
+    public class ClickableScreeningLabel : PointingHandControl
     {
         #region Private Constants
         private const float _lineHeight = ScreeningsView.ScreeningControlLineHeight;
@@ -21,7 +21,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Constructors
-        public ScreeningButton(CGRect frame, Screening screening) : base(frame)
+        public ClickableScreeningLabel(CGRect frame, Screening screening) : base(frame)
         {
             Initialize();
             _screening = screening;
@@ -34,7 +34,7 @@ namespace PresentScreenings.TableView
         {
             base.DrawRect(dirtyRect);
 
-            // Use Core Graphic routines to draw our UI
+            // Use Core Graphic routines to draw the UI.
             using (CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
             {
                 // Fill the screening color.
@@ -51,7 +51,7 @@ namespace PresentScreenings.TableView
                 ColorView.SetScreeningColor(_screening, context, true);
                 CTStringAttributes attrs = new CTStringAttributes();
                 attrs.ForegroundColorFromContext = true;
-                attrs.Font = ScreeningControl.StandardFont;
+                attrs.Font = ControlsFactory.StandardCtBondFont;
                 var textPosition = new CGPoint(0, _lineHeight);
                 string[] lines = _screening.ToScreeningLabelString().Split('\n');
                 foreach (var line in lines)

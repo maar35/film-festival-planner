@@ -82,12 +82,12 @@ namespace PresentScreenings.TableView
                 // Draw the Automatically Planned symbol.
                 if (_screening.AutomaticallyPlanned)
                 {
-                    ScreeningControl.InitializeCoreText(context, Selected);
-                    ScreeningControl.DrawText(
+                    DaySchemaScreeningControl.InitializeCoreText(context, Selected);
+                    DaySchemaScreeningControl.DrawText(
                         context,
-                        ScreeningControl.AutomaticallyPlannedSymbol,
+                        DaySchemaScreeningControl.AutomaticallyPlannedSymbol,
                         Frame.Width / 3,
-                        _yVisualCorrection + (Frame.Height - ScreeningControl.FontSize) / 2);
+                        _yVisualCorrection + (Frame.Height - ControlsFactory.StandardFontSize) / 2);
                 }
             }
         }

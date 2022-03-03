@@ -13,14 +13,12 @@ namespace PresentScreenings.TableView
     /// only clickable in Use Core Graphics mode.
     /// </summary>
 
-    public class ScreeningControl : PointingHandControl
+    public class DaySchemaScreeningControl : PointingHandControl
     {
         #region Private Variables
         private static nfloat _xExtension;
         private bool _selected = false;
         private static CTStringAttributes _stringAttributes;
-        private ScreeningLabel _label;
-        private ScreeningButton _button;
         #endregion
 
         #region Application Access
@@ -29,17 +27,15 @@ namespace PresentScreenings.TableView
 
         #region Properties
         public static bool UseCoreGraphics { get; set; }
-        public static nfloat FontSize { get; } = 13;
-        public static CTFont StandardFont { get; } = new CTFont(".AppleSystemUIFontBold", FontSize);
         public static string AutomaticallyPlannedSymbol { get; } = "𝛑"; // MATHEMATICAL BOLD SMALL PI = 𝛑
         public Screening Screening { get; }
-        public CGRect ClickableRect => new CGRect(0, 0, _xExtension - 2, Frame.Height);
-        public CGRect ScreeningRect { get; }
+        public CGRect ClickPadRect { get; }
+        public CGRect LabelRect { get; }
         public bool Selected { get => _selected; set => SetSelected(value); }
         #endregion
 
         #region Constructors
-        public ScreeningControl(CGRect screeningRect, Screening screening) : base(ControlRect(screeningRect))
+        public DaySchemaScreeningControl(CGRect screeningRect, Screening screening) : base(GetExtendedRect(screeningRect))
         {
             // Initialize control features.
             WantsLayer = true;
@@ -47,32 +43,22 @@ namespace PresentScreenings.TableView
 
             // Initialize properties.
             Screening = screening;
-            ScreeningRect = screeningRect;
-
-            // Calculate label frame.
-            nfloat clickWidth = ScreeningRect.Height;
-            nfloat clickHeigt = ScreeningRect.Height;
-            CGRect labelRect = new CGRect(_xExtension, 0, Frame.Width - _xExtension, Frame.Height);
+            ClickPadRect = new CGRect(0, 0, _xExtension - 2, Frame.Height);
+            LabelRect = new CGRect(_xExtension, 0, Frame.Width - _xExtension, Frame.Height);
 
             // Add a control depending whether core graphics are used to draw
             // the label. If core graphics are used, the label is clickable.
             if (UseCoreGraphics)
             {
-                _button = new ScreeningButton(labelRect, Screening);
-                _button.Activated += (sender, e) => ShowScreeningInfo(Screening);
-				base.AddSubview(_button);
+                var control = new ClickableScreeningLabel(LabelRect, Screening);
+                control.Activated += (sender, e) => ShowScreeningInfo(Screening);
+				base.AddSubview(control);
             }
             else
             {
-                _label = new ScreeningLabel(labelRect, Screening);
-				base.AddSubview(_label);
+                var label = new ScreeningLabel(LabelRect, Screening);
+				base.AddSubview(label);
             }
-
-            // Populate the screening control.
-            StringValue = Screening.ToScreeningLabelString();
-            Alignment = NSTextAlignment.Left;
-            LineBreakMode = NSLineBreakMode.TruncatingMiddle;
-            Font = NSFont.BoldSystemFontOfSize(FontSize);
         }
         #endregion
 
@@ -92,7 +78,7 @@ namespace PresentScreenings.TableView
             using (CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
             {
                 // Define the clickable rect.
-                var clickableRect = ClickableRect;
+                var clickableRect = ClickPadRect;
 
                 // Draw the clickable rect.
                 DrawClickRect(context, clickableRect);
@@ -151,7 +137,7 @@ namespace PresentScreenings.TableView
             _stringAttributes = new CTStringAttributes
             {
                 ForegroundColorFromContext = true,
-                Font = StandardFont
+                Font = ControlsFactory.StandardCtBondFont,
             };
         }
 
@@ -233,7 +219,7 @@ namespace PresentScreenings.TableView
             DrawText(context, AutomaticallyPlannedSymbol, side/2, y);
         }
 
-        private static CGRect ControlRect(CGRect screeningRect)
+        private static CGRect GetExtendedRect(CGRect screeningRect)
         {
             _xExtension = screeningRect.Height;
             nfloat x = screeningRect.X;

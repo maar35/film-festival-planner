@@ -22,7 +22,7 @@ namespace PresentScreenings.TableView
 
         #region Properties
         public Film Film { get; set; }
-        public Action<Film> FilmAction { get; private set; }
+        public Action<Film> FilmAction { get; }
         #endregion
 
         #region Constructors

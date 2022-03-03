@@ -243,7 +243,8 @@ namespace PresentScreenings.TableView
             if (FilteredSubsection != null)
             {
                 _filmTableDataSource.Films = films
-                    .Where(f => f.SubsectionName == FilteredSubsection.Name)
+                    .Where(f => f.Subsection != null)
+                    .Where(f => f.Subsection.SubsectionId == FilteredSubsection.SubsectionId)
                     .ToList();
             }
             else

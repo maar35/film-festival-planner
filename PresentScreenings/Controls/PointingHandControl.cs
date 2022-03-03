@@ -13,16 +13,15 @@ namespace PresentScreenings.TableView
         #region Private Members
         private NSTrackingArea _hoverArea;
         private NSCursor _cursor;
+        private readonly NSTrackingAreaOptions _options = NSTrackingAreaOptions.CursorUpdate
+                                                          | NSTrackingAreaOptions.ActiveAlways;
         #endregion
 
         #region Constructors
         public PointingHandControl(CGRect frame) : base(frame)
         {
             // Initialize mouse hovering.
-            _hoverArea = new NSTrackingArea(Bounds,
-                                            NSTrackingAreaOptions.CursorUpdate | NSTrackingAreaOptions.ActiveAlways,
-                                            this,
-                                            null);
+            _hoverArea = new NSTrackingArea(Bounds, _options, this, null);
             AddTrackingArea(_hoverArea);
             _cursor = NSCursor.CurrentSystemCursor;
         }
@@ -36,8 +35,11 @@ namespace PresentScreenings.TableView
         public override void CursorUpdate(NSEvent theEvent)
         {
             base.CursorUpdate(theEvent);
-            _cursor = NSCursor.PointingHandCursor;
-            _cursor.Push();
+            if (Enabled)
+            {
+                _cursor = NSCursor.PointingHandCursor;
+                _cursor.Set();
+            }
         }
         #endregion
     }

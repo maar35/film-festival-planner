@@ -164,7 +164,7 @@ namespace PresentScreenings.TableView
             var titleRect = new CGRect(_xMargin, _yCurr, titleLabelWidth, _labelHeight);
             var titleLabel = ControlsFactory.NewStandardLabel(titleRect, UseTitleBackground);
             titleLabel.StringValue = _film.Title;
-            titleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
+            titleLabel.Font = ControlsFactory.StandardBoldFont;
             titleLabel.LineBreakMode = NSLineBreakMode.TruncatingTail;
             titleLabel.ToolTip = _film.ToString();
             View.AddSubview(titleLabel);

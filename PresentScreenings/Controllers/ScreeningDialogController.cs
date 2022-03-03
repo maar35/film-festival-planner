@@ -35,7 +35,7 @@ namespace PresentScreenings.TableView
         #region Private Members
         private nfloat _yCurr;
         private Screening _screening;
-        private ScreeningControl _senderControl;
+        private DaySchemaScreeningControl _senderControl;
         private ViewController _presentor;
         private List<Screening> _filmScreenings;
         private FilmScreeningControl _screeningInfoControl;
@@ -339,7 +339,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
-        public void PopulateDialog(ScreeningControl sender)
+        public void PopulateDialog(DaySchemaScreeningControl sender)
         {
             _senderControl = sender;
             _screening = sender.Screening;

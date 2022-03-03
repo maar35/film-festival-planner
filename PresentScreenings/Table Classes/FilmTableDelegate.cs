@@ -59,11 +59,11 @@ namespace PresentScreenings.TableView
                     }
                 }
 
-                // Increment row counter
+                // Increment row counter.
                 ++row;
             }
 
-            // If not found select the first row
+            // If not found select the first row.
             return 0;
         }
 
@@ -76,13 +76,13 @@ namespace PresentScreenings.TableView
 
         public override NSView GetViewForItem(NSTableView tableView, NSTableColumn tableColumn, nint row)
         {
-            // Get the cell view
+            // Get the cell view.
             NSView view = (NSView)tableView.MakeView(_cellIdentifier, this);
 
-            // Get the data for the row
+            // Get the data for the row.
             Film film = _dataSource.Films[(int)row];
 
-            // Setup view based on the column selected
+            // Setup view based on the column selected.
             switch (tableColumn.Title)
             {
                 case "Film":
@@ -114,7 +114,7 @@ namespace PresentScreenings.TableView
                     PupulateSubsection(ref subsectionControl, film, tableView, tableColumn);
                     subsectionControl.ToolTip = film.SubsectionDescription;
                     subsectionControl.Film = film;
-                    subsectionControl.Enabled = film.SubsectionName != null;
+                    subsectionControl.Enabled = film.Subsection != null;
                     return subsectionControl;
                 default:
                     if (ScreeningInfo.FilmFans.Contains(tableColumn.Title))

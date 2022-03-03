@@ -395,7 +395,7 @@ namespace PresentScreenings.TableView
                     attrText.DeleteRange(new NSRange(startIndex2, endIndex2 - startIndex2 + 1));
                     var range = new NSRange(startIndex1, startIndex2 - startIndex1);
                     attrText.BeginEditing();
-                    attrText.AddAttribute(CTStringAttributeKey.Font, NSFont.BoldSystemFontOfSize(13), range);
+                    attrText.AddAttribute(CTStringAttributeKey.Font, ControlsFactory.StandardBoldFont, range);
                     startIndex = startIndex2;
                 }
             }

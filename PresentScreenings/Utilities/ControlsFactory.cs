@@ -3,6 +3,7 @@ using System.Linq;
 using AppKit;
 using CoreAnimation;
 using CoreGraphics;
+using CoreText;
 using Foundation;
 
 namespace PresentScreenings.TableView
@@ -28,6 +29,13 @@ namespace PresentScreenings.TableView
         public const float SubsectionLabelWidth = 72;
         public const string EscapeKey = "\x1b";
         public const string EnterKey = "\r";
+        #endregion
+
+        #region Properties
+        public static nfloat StandardFontSize => NSFont.SystemFontSize;
+        public static NSFont StandardFont => NSFont.SystemFontOfSize(StandardFontSize);
+        public static NSFont StandardBoldFont => NSFont.BoldSystemFontOfSize(StandardFontSize);
+        public static CTFont StandardCtBondFont => new CTFont(".AppleSystemUIFontBold", StandardFontSize);
         #endregion
 
         #region Constructors
@@ -56,7 +64,7 @@ namespace PresentScreenings.TableView
         {
             var label = NewStandardLabel(frame, useWindowBackgroundColor);
             label.StringValue = film.SubsectionName;
-            label.Font = NSFont.SystemFontOfSize(NSFont.SystemFontSize);
+            label.Font = StandardFont;
             label.Alignment = NSTextAlignment.Center;
             label.LineBreakMode = NSLineBreakMode.TruncatingTail;
             label.TextColor = film.SubsectionColor;
