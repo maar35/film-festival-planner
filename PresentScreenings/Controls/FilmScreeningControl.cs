@@ -1,5 +1,4 @@
 ﻿using System;
-using Foundation;
 using AppKit;
 using CoreGraphics;
 
@@ -10,8 +9,7 @@ namespace PresentScreenings.TableView
     /// Info Screening View of another screening of the same film.
     /// </summary>
 
-    [Register("FilmScreeningControl")]
-    public class FilmScreeningControl : NSControl
+    public class FilmScreeningControl : PointingHandControl
     {
         #region Constants
         private const float _yVisualCorrection = 1;
@@ -20,8 +18,6 @@ namespace PresentScreenings.TableView
         #region Private Variables
         private bool _selected = false;
         private Screening _screening = null;
-        private NSTrackingArea _hoverArea;
-        private NSCursor _cursor;
         #endregion
 
         #region Properties
@@ -43,12 +39,7 @@ namespace PresentScreenings.TableView
             WantsLayer = true;
             LayerContentsRedrawPolicy = NSViewLayerContentsRedrawPolicy.OnSetNeedsDisplay;
 
-            // Initialize mouse hovering.
-            _hoverArea = new NSTrackingArea(Bounds, NSTrackingAreaOptions.MouseEnteredAndExited | NSTrackingAreaOptions.ActiveAlways, this, null);
-            AddTrackingArea(_hoverArea);
-            _cursor = NSCursor.CurrentSystemCursor;
-			
-			// Initialize custom features.
+            // Initialize custom features.
             _screening = screening;
         }
         #endregion
@@ -57,21 +48,7 @@ namespace PresentScreenings.TableView
         public override void MouseDown(NSEvent theEvent)
         {
             base.MouseDown(theEvent);
-            _cursor.Pop();
             RaiseScreeningInfoAsked();
-        }
-
-        public override void MouseEntered(NSEvent theEvent)
-        {
-            base.MouseEntered(theEvent);
-            _cursor = NSCursor.PointingHandCursor;
-            _cursor.Push();
-        }
-
-        public override void MouseExited(NSEvent theEvent)
-        {
-            base.MouseExited(theEvent);
-            _cursor.Pop();
         }
 
         public override void DrawRect(CGRect dirtyRect)
@@ -79,38 +56,38 @@ namespace PresentScreenings.TableView
             base.DrawRect(dirtyRect);
 
             // Use Core Graphic routines to draw our UI
-			using (CGContext g = NSGraphicsContext.CurrentContext.GraphicsPort)
+			using (CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
             {
                 // Color the control surface
-                FillControlRect(g);
+                FillControlRect(context);
 
                 // Draw a frame if something's wrong with the tickets
                 if (ScreeningInfo.TicketStatusNeedsAttention(_screening))
                 {
-					ColorView.DrawTicketAvalabilityFrame(g, _screening, Frame.Width);
+					ColorView.DrawTicketAvalabilityFrame(context, _screening, Frame.Width);
                 }
 
                 // Draw a progress bar if the screening is on-demand.
                 if (_screening is OnDemandScreening onDemandScreening)
                 {
-                    ColorView.DrawOnDemandAvailabilityStatus(g, onDemandScreening, Frame.Width, Selected);
+                    ColorView.DrawOnDemandAvailabilityStatus(context, onDemandScreening, Frame.Width, Selected);
                 }
 
                 // Draw Sold Out Symbol
                 if (_screening.SoldOut)
                 {
-                    ColorView.DrawSoldOutSymbol(g, Selected, Frame);
+                    ColorView.DrawSoldOutSymbol(context, Selected, Frame);
                 }
 
                 // Draw the Automatically Planned symbol.
                 if (_screening.AutomaticallyPlanned)
                 {
-                    ScreeningControl.InitializeCoreText(g, Selected);
-                    ScreeningControl.DrawText(
-                        g,
-                        ScreeningControl.AutomaticallyPlannedSymbol,
+                    DaySchemaScreeningControl.InitializeCoreText(context, Selected);
+                    DaySchemaScreeningControl.DrawText(
+                        context,
+                        DaySchemaScreeningControl.AutomaticallyPlannedSymbol,
                         Frame.Width / 3,
-                        _yVisualCorrection + (Frame.Height - ScreeningControl.FontSize) / 2);
+                        _yVisualCorrection + (Frame.Height - ControlsFactory.StandardFontSize) / 2);
                 }
             }
         }

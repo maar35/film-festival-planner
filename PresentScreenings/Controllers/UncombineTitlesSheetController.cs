@@ -133,7 +133,7 @@ namespace PresentScreenings.TableView
             _yCurr -= _labelHeight;
             var titleLabelRect = new CGRect(_xMargin, _yCurr, labelWidth, _labelHeight);
             var titleLabel = ControlsFactory.NewStandardLabel(titleLabelRect);
-            titleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
+            titleLabel.Font = ControlsFactory.StandardBoldFont;
             titleLabel.StringValue = "Uncombine film";
             View.AddSubview(titleLabel);
 

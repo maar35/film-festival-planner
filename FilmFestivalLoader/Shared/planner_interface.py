@@ -225,7 +225,7 @@ class Subsection:
             str(self.subsection_id),
             str(self.section.section_id),
             self.name,
-            self.description,
+            self.description if self.description is not None else '',
             self.url
         ])
         return f'{text}\n'

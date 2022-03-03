@@ -368,7 +368,7 @@ def fix_html_code_point_file():
     with open(clean_file, 'r', encoding='utf-8') as f:
         clean_text = f.read()
     parser.parse_props(code_point_text)
-    result_text = parser.description
+    result_text = parser.iffr_data.filminfos[-1].description
 
     # Assert.
     return result_text, clean_text[35633:35897]

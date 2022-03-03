@@ -20,12 +20,13 @@ namespace PresentScreenings.TableView
         private const float _xMargin = ControlsFactory.HorizontalMargin;
         private const float _yMargin = ControlsFactory.BigVerticalMargin;
         private const float _yBetweenViews = ControlsFactory.VerticalPixelsBetweenViews;
+        private const float _xBetweenLabels = ControlsFactory.HorizontalPixelsBetweenLabels;
         private const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
         private const float _labelHeight = ControlsFactory.StandardLabelHeight;
         private const float _buttonWidth = ControlsFactory.StandardButtonWidth;
         private const float _buttonHeight = ControlsFactory.StandardButtonHeight;
-        private const float _imageSide = ControlsFactory.StandardButtomImageSide;
         private const float _imageButtonWidth = ControlsFactory.StandardImageButtonWidth;
+        private const float _subsectionLabelWidth = ControlsFactory.SubsectionLabelWidth;
         private const float _summaryBoxHeight = 300;
         private const int _maxVisibleScreeningCount = 5;
         private const float _scrollViewHeight = _maxVisibleScreeningCount * (_labelHeight + _yBetweenLabels);
@@ -112,7 +113,7 @@ namespace PresentScreenings.TableView
         {
             // Create the film title label.
             _yCurr -= _yMargin;
-            CreateFilmTitleLabel();
+            CreateTopLabels();
 
             // Populate the rest of the dialog dependant of its behaviour.
             if (BehaveAsPopover)
@@ -147,17 +148,26 @@ namespace PresentScreenings.TableView
             CreateBottomButtons();
         }
 
-        private void CreateFilmTitleLabel()
+        private void CreateTopLabels()
         {
             _yCurr -= _labelHeight;
-            var rect = new CGRect(_xMargin, _yCurr, _contentWidth, _labelHeight);
-            var filmTitleLabel = ControlsFactory.NewStandardLabel(rect, UseTitleBackground);
-            filmTitleLabel.StringValue = _film.Title;
-            filmTitleLabel.Font = NSFont.BoldSystemFontOfSize(NSFont.SystemFontSize);
-            View.AddSubview(filmTitleLabel);
+            var xCurr = _xMargin + _contentWidth;
 
-            // Set sample view used to disable resizing.
-            _sampleView = filmTitleLabel;
+            // Create the subsection label.
+            xCurr -= _subsectionLabelWidth;
+            var subsectionRect = new CGRect(xCurr, _yCurr, _subsectionLabelWidth, _labelHeight);
+            var subsectionLabel = ControlsFactory.NewSubsectionLabel(subsectionRect, _film, UseTitleBackground);
+            View.AddSubview(subsectionLabel);
+
+            // Create the film title label.
+            var titleLabelWidth = xCurr - _xMargin - _xBetweenLabels;
+            var titleRect = new CGRect(_xMargin, _yCurr, titleLabelWidth, _labelHeight);
+            var titleLabel = ControlsFactory.NewStandardLabel(titleRect, UseTitleBackground);
+            titleLabel.StringValue = _film.Title;
+            titleLabel.Font = ControlsFactory.StandardBoldFont;
+            titleLabel.LineBreakMode = NSLineBreakMode.TruncatingTail;
+            titleLabel.ToolTip = _film.ToString();
+            View.AddSubview(titleLabel);
         }
 
         private void CreateFilmSummaryBox(float boxHeight)
@@ -175,6 +185,9 @@ namespace PresentScreenings.TableView
             _summaryScrollView = ControlsFactory.NewStandardScrollView(rect, _summaryField);
             _summaryScrollView.ContentView.ScrollToPoint(new CGPoint(0, 0));
             View.AddSubview(_summaryScrollView);
+
+            // Set sample view used to disable resizing.
+            _sampleView = _summaryScrollView;
         }
 
         private void CreateScreeningsScrollView()

@@ -18,7 +18,7 @@ namespace PresentScreenings.TableView
         private TimeSpan _pause = AppDelegate.PauseBetweenOnDemandScreenings;
         private ScreeningsPlan _plan = null;
         private ScreeningsTableView _mainView = null;
-        private Dictionary<Screening, ScreeningControl> _controlByScreening;
+        private Dictionary<Screening, DaySchemaScreeningControl> _controlByScreening;
         private NSMenuItem _clickableLabelsMenuItem = null;
         #endregion
 
@@ -99,7 +99,7 @@ namespace PresentScreenings.TableView
 
             // Populate the table view
             TableView.DataSource = screeningTableDataSource;
-            TableView.Delegate = new ScreeningsTableDelegate(screeningTableDataSource, _mainView.ScreeningsView);
+            TableView.Delegate = new ScreeningsTableDelegate(screeningTableDataSource, _mainView.ScreeningsView, this);
             TableView.AllowsMultipleSelection = false;
             TableView.SelectionHighlightStyle = NSTableViewSelectionHighlightStyle.Regular;
             TableView.UsesAlternatingRowBackgroundColors = true;
@@ -123,9 +123,7 @@ namespace PresentScreenings.TableView
             {
                 case "ScreeningsToScreeningInfo:":
                     var dialog = segue.DestinationController as ScreeningDialogController;
-                    dialog.PopulateDialog((ScreeningControl)sender);
-                    dialog.DialogAccepted += (s, e) => TableView.DeselectRow(TableView.SelectedRow);
-                    dialog.DialogCanceled += (s, e) => TableView.DeselectRow(TableView.SelectedRow);
+                    dialog.PopulateDialog((DaySchemaScreeningControl)sender);
                     dialog.Presentor = this;
                     break;
                 case "ScreeningsToFilmInfo":
@@ -139,7 +137,7 @@ namespace PresentScreenings.TableView
         public override void GoToScreening(Screening screening)
         {
             SetCurrScreening(screening);
-            ScreeningControl control = _controlByScreening[screening];
+            DaySchemaScreeningControl control = _controlByScreening[screening];
             PerformSegue("ScreeningsToScreeningInfo:", control);
         }
         #endregion
@@ -155,7 +153,7 @@ namespace PresentScreenings.TableView
 
         private void SetClickableLabelsMenuItemState()
         {
-            _clickableLabelsMenuItem.State = GetNSCellStateValue(ScreeningControl.UseCoreGraphics);
+            _clickableLabelsMenuItem.State = GetNSCellStateValue(DaySchemaScreeningControl.UseCoreGraphics);
         }
 
         private void DisplayScreeningsView()
@@ -168,7 +166,7 @@ namespace PresentScreenings.TableView
 
         private void InitializeScreeningControls()
         {
-            _controlByScreening = new Dictionary<Screening, ScreeningControl> { };
+            _controlByScreening = new Dictionary<Screening, DaySchemaScreeningControl> { };
         }
 
         private void DisposeColorLabels()
@@ -299,7 +297,7 @@ namespace PresentScreenings.TableView
             TableView.ReloadData();
         }
 
-        public void AddScreeningControl(Screening screening, ScreeningControl control)
+        public void AddScreeningControl(Screening screening, DaySchemaScreeningControl control)
         {
             if (_controlByScreening.ContainsKey(screening))
             {
@@ -735,7 +733,7 @@ namespace PresentScreenings.TableView
         #region Public Action Methods
         public void ToggleClickableLabels()
         {
-            ScreeningControl.UseCoreGraphics = !ScreeningControl.UseCoreGraphics;
+            DaySchemaScreeningControl.UseCoreGraphics = !DaySchemaScreeningControl.UseCoreGraphics;
             SetClickableLabelsMenuItemState();
             DisplayScreeningsView();
         }
@@ -777,7 +775,7 @@ namespace PresentScreenings.TableView
         public void ShowScreeningInfo()
         {
             Screening screening = _plan.CurrScreening;
-            ScreeningControl control = _controlByScreening[screening];
+            DaySchemaScreeningControl control = _controlByScreening[screening];
             PerformSegue("ScreeningsToScreeningInfo:", control);
         }
 

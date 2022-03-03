@@ -21,7 +21,7 @@ namespace PresentScreenings.TableView
         {
             Initialize();
             _screening = screening;
-            Font = NSFont.BoldSystemFontOfSize(ScreeningControl.FontSize);
+            Font = ControlsFactory.StandardBoldFont;
             Editable = false;
             Bordered = false;
             StringValue = _screening.ToScreeningLabelString(withDay);

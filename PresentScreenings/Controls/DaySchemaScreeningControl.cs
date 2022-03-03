@@ -13,18 +13,12 @@ namespace PresentScreenings.TableView
     /// only clickable in Use Core Graphics mode.
     /// </summary>
 
-    [Register("NSScreeningControl")]
-    public class ScreeningControl : NSControl
+    public class DaySchemaScreeningControl : PointingHandControl
     {
         #region Private Variables
         private static nfloat _xExtension;
         private bool _selected = false;
         private static CTStringAttributes _stringAttributes;
-        private CGRect _screeningRect;
-        private ScreeningLabel _label;
-        private ScreeningButton _button;
-        private NSTrackingArea _hoverArea;
-        private NSCursor _cursor;
         #endregion
 
         #region Application Access
@@ -33,75 +27,48 @@ namespace PresentScreenings.TableView
 
         #region Properties
         public static bool UseCoreGraphics { get; set; }
-        public static nfloat FontSize { get; } = 13;
-        public static CTFont StandardFont { get; } = new CTFont(".AppleSystemUIFontBold", FontSize);
-        public Screening Screening { get; }
         public static string AutomaticallyPlannedSymbol { get; } = "𝛑"; // MATHEMATICAL BOLD SMALL PI = 𝛑
-        public bool Selected
-        {
-            get => _selected;
-            set
-            {
-                _selected = value;
-                if (value)
-                {
-                    // Scroll the view as to make the control visible.
-                    var plan = _app.Controller.Plan;
-                    var table = _app.Controller.TableView;
-                    _app.Controller.TableView.ScrollRowToVisible(plan.CurrDayScreens.IndexOf(plan.CurrScreen));
-                    var x = Frame.X;
-                    var y = Frame.Y + plan.CurrDayScreens.IndexOf(plan.CurrScreen) *(table.RowHeight + table.IntercellSpacing.Height);
-                    var frame = new CGRect(x, y, Frame.Width, Frame.Height);
-                    _app.Controller.TableView.ScrollRectToVisible(frame);
-                }
-
-                // Force a redraw.
-                NeedsDisplay = true;
-            }
-        }
-        public CGRect ClickableRect => new CGRect(0, 0, _xExtension - 2, Frame.Height);
+        public Screening Screening { get; }
+        public CGRect ClickPadRect { get; }
+        public CGRect LabelRect { get; }
+        public bool Selected { get => _selected; set => SetSelected(value); }
         #endregion
 
         #region Constructors
-        public ScreeningControl(CGRect screeningRect, Screening screening) : base(ControlRect(screeningRect))
-        {
-            Initialize();
-            Screening = screening;
-            _screeningRect = screeningRect;
-            nfloat clickWidth = _screeningRect.Height;
-            nfloat clickHeigt = _screeningRect.Height;
-            CGRect labelRect = new CGRect(_xExtension, 0, Frame.Width - _xExtension, Frame.Height);
-            if (UseCoreGraphics)
-            {
-                _button = new ScreeningButton(labelRect, Screening);
-                _button.Activated += (sender, e) => ShowScreeningInfo(Screening);
-				base.AddSubview(_button);
-            }
-            else
-            {
-                _label = new ScreeningLabel(labelRect, Screening);
-				base.AddSubview(_label);
-            }
-            StringValue = Screening.ToScreeningLabelString();
-            Alignment = NSTextAlignment.Left;
-            LineBreakMode = NSLineBreakMode.TruncatingMiddle;
-            Font = NSFont.BoldSystemFontOfSize(FontSize);
-        }
-
-        void Initialize()
+        public DaySchemaScreeningControl(CGRect screeningRect, Screening screening) : base(GetExtendedRect(screeningRect))
         {
             // Initialize control features.
             WantsLayer = true;
             LayerContentsRedrawPolicy = NSViewLayerContentsRedrawPolicy.OnSetNeedsDisplay;
 
-            // Initialize mouse hovering.
-            _hoverArea = new NSTrackingArea(ClickableRect, NSTrackingAreaOptions.MouseEnteredAndExited | NSTrackingAreaOptions.ActiveAlways, this, null);
-            AddTrackingArea(_hoverArea);
-            _cursor = NSCursor.CurrentSystemCursor;
+            // Initialize properties.
+            Screening = screening;
+            ClickPadRect = new CGRect(0, 0, _xExtension - 2, Frame.Height);
+            LabelRect = new CGRect(_xExtension, 0, Frame.Width - _xExtension, Frame.Height);
+
+            // Add a control depending whether core graphics are used to draw
+            // the label. If core graphics are used, the label is clickable.
+            if (UseCoreGraphics)
+            {
+                var control = new ClickableScreeningLabel(LabelRect, Screening);
+                control.Activated += (sender, e) => ShowScreeningInfo(Screening);
+				base.AddSubview(control);
+            }
+            else
+            {
+                var label = new ScreeningLabel(LabelRect, Screening);
+				base.AddSubview(label);
+            }
         }
         #endregion
 
         #region Override Methods
+        public override void MouseDown(NSEvent theEvent)
+        {
+            base.MouseDown(theEvent);
+            RaiseScreeningSelected();
+        }
+
         public override void DrawRect(CGRect dirtyRect)
         {
             base.DrawRect(dirtyRect);
@@ -111,7 +78,7 @@ namespace PresentScreenings.TableView
             using (CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
             {
                 // Define the clickable rect.
-                var clickableRect = ClickableRect;
+                var clickableRect = ClickPadRect;
 
                 // Draw the clickable rect.
                 DrawClickRect(context, clickableRect);
@@ -170,7 +137,7 @@ namespace PresentScreenings.TableView
             _stringAttributes = new CTStringAttributes
             {
                 ForegroundColorFromContext = true,
-                Font = StandardFont
+                Font = ControlsFactory.StandardCtBondFont,
             };
         }
 
@@ -186,9 +153,23 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        private void FlipSwitchState()
+        private void SetSelected(bool selected)
         {
-            RaiseValueChanged();
+            _selected = selected;
+            if (selected)
+            {
+                // Scroll the view as to make the control visible.
+                var plan = _app.Controller.Plan;
+                var table = _app.Controller.TableView;
+                _app.Controller.TableView.ScrollRowToVisible(plan.CurrDayScreens.IndexOf(plan.CurrScreen));
+                var x = Frame.X;
+                var y = Frame.Y + plan.CurrDayScreens.IndexOf(plan.CurrScreen) * (table.RowHeight + table.IntercellSpacing.Height);
+                var frame = new CGRect(x, y, Frame.Width, Frame.Height);
+                _app.Controller.TableView.ScrollRectToVisible(frame);
+            }
+
+            // Force a redraw.
+            NeedsDisplay = true;
         }
 
         private void DrawClickRect(CGContext context, CGRect clickRect)
@@ -238,7 +219,7 @@ namespace PresentScreenings.TableView
             DrawText(context, AutomaticallyPlannedSymbol, side/2, y);
         }
 
-        private static CGRect ControlRect(CGRect screeningRect)
+        private static CGRect GetExtendedRect(CGRect screeningRect)
         {
             _xExtension = screeningRect.Height;
             nfloat x = screeningRect.X;
@@ -254,67 +235,12 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Mouse Handling Methods
-        // --------------------------------------------------------------------------------
-        // Handle mouse with Override Methods.
-        // NOTE: Use either this method or Gesture Recognizers, NOT both!
-        // --------------------------------------------------------------------------------
-        public override void MouseDown(NSEvent theEvent)
-        {
-            base.MouseDown(theEvent);
-            _cursor.Pop();
-            RaiseScreeningSelected();
-        }
-
-        public override void MouseEntered(NSEvent theEvent)
-        {
-            base.MouseEntered(theEvent);
-            _cursor = NSCursor.PointingHandCursor;
-            _cursor.Push();
-        }
-
-        public override void MouseExited(NSEvent theEvent)
-        {
-            base.MouseExited(theEvent);
-            _cursor.Pop();
-        }
-
-        public override void MouseDragged(NSEvent theEvent)
-        {
-            base.MouseDragged(theEvent);
-        }
-
-        public override void MouseUp(NSEvent theEvent)
-        {
-            base.MouseUp(theEvent);
-        }
-
-        public override void MouseMoved(NSEvent theEvent)
-        {
-            base.MouseMoved(theEvent);
-        }
-        #endregion
-
         #region Events
         public event EventHandler ScreeningSelected;
 
         internal void RaiseScreeningSelected()
         {
             ScreeningSelected?.Invoke(this, EventArgs.Empty);
-        }
-
-        public event EventHandler ValueChanged;
-
-        internal void RaiseValueChanged()
-        {
-            ValueChanged?.Invoke(this, EventArgs.Empty);
-
-            // Perform any action bound to the control from Interface Builder
-            // via an Action.
-            if (Action != null)
-            {
-                NSApplication.SharedApplication.SendAction(Action, Target, this);
-            }
         }
         #endregion
     }

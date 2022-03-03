@@ -2,6 +2,7 @@
 using AppKit;
 using System.Collections.Generic;
 using Foundation;
+using CoreGraphics;
 
 namespace PresentScreenings.TableView
 {
@@ -14,6 +15,7 @@ namespace PresentScreenings.TableView
         #region Constants
         private const float _titleWidth = 260;
         private const string _cellIdentifier = "FilmCell";
+        private const string _rowIdentifier = "FilmRow";
         #endregion
 
         #region Private Variables
@@ -57,67 +59,67 @@ namespace PresentScreenings.TableView
                     }
                 }
 
-                // Increment row counter
+                // Increment row counter.
                 ++row;
             }
 
-            // If not found select the first row
+            // If not found select the first row.
             return 0;
         }
 
         public override void SelectionDidChange(NSNotification notification)
         {
-            //Don't call base.SelectionDidChange(notification)
+            // Don't call base.SelectionDidChange(notification).
 
             _dialogController.SetFilmRatingDialogButtonStates();
         }
 
         public override NSView GetViewForItem(NSTableView tableView, NSTableColumn tableColumn, nint row)
         {
-            // Get the cell view
-            NSTextField view = (NSTextField)tableView.MakeView(_cellIdentifier, this);
+            // Get the cell view.
+            NSView view = (NSView)tableView.MakeView(_cellIdentifier, this);
 
-            // Get the data for the row
+            // Get the data for the row.
             Film film = _dataSource.Films[(int)row];
 
-            // Setup view based on the column selected
+            // Setup view based on the column selected.
             switch (tableColumn.Title)
             {
                 case "Film":
-                    NSTextField filmLabel = (NSTextField)view;
+                    var filmLabel = (NSTextField)view;
                     PopulateFilm(ref filmLabel);
                     filmLabel.StringValue = film.Title;
                     tableColumn.Width = _titleWidth;
                     return filmLabel;
                 case "Description":
-                    NSTextField descriptionLabel = (NSTextField)view;
+                    var descriptionLabel = (NSTextField)view;
                     PopulateDescription(ref descriptionLabel);
                     descriptionLabel.AttributedStringValue = FilmInfo.InfoString(film);
                     return descriptionLabel;
                 case "Duration":
-                    NSTextField durationLabel = (NSTextField)view;
+                    var durationLabel = (NSTextField)view;
                     PopulateDuration(ref durationLabel);
                     durationLabel.StringValue = film.DurationString;
                     durationLabel.TextColor = DurationTextColor(film.Duration);
                     return durationLabel;
                 case "#Screenings":
-                    NSTextField screeningCountLabel = (NSTextField)view;
+                    var screeningCountLabel = (NSTextField)view;
                     PopulateScreeningCount(ref screeningCountLabel);
                     int screeningCount = film.FilmScreenings.Count;
                     screeningCountLabel.StringValue = screeningCount.ToString();
                     screeningCountLabel.TextColor = ScreeningCountTextColor(screeningCount);
                     return screeningCountLabel;
                 case "Subsection":
-                    NSTextField subsectionLabel = (NSTextField)view;
-                    PupulateSubsection(ref subsectionLabel);
-                    subsectionLabel.StringValue = film.SubsectionName;
-                    subsectionLabel.TextColor = SubsectionTextColor(film);
-                    subsectionLabel.ToolTip = film.SubsectionDescription;
-                    return subsectionLabel;
+                    var subsectionControl = (SubsectionControl)view;
+                    PupulateSubsection(ref subsectionControl, film, tableView, tableColumn);
+                    subsectionControl.ToolTip = film.SubsectionDescription;
+                    subsectionControl.Film = film;
+                    subsectionControl.Enabled = film.Subsection != null;
+                    return subsectionControl;
                 default:
                     if (ScreeningInfo.FilmFans.Contains(tableColumn.Title))
                     {
-                        RatingField friendRatingField = (RatingField)view;
+                        var friendRatingField = (RatingField)view;
                         PopulateFilmFanFilmRating(ref friendRatingField, film, tableColumn.Title, row);
                         friendRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, tableColumn.Title).ToString();
                         friendRatingField.Tag = row;
@@ -126,6 +128,17 @@ namespace PresentScreenings.TableView
                     break;
             }
             return view;
+        }
+
+        public override NSTableRowView CoreGetRowView(NSTableView tableView, nint row)
+        {
+            var rowView = tableView.MakeView(_rowIdentifier, this);
+            if (rowView == null)
+            {
+                rowView = new FilmTableRowView();
+                rowView.Identifier = _rowIdentifier;
+            }
+            return rowView as NSTableRowView;
         }
         #endregion
 
@@ -142,6 +155,7 @@ namespace PresentScreenings.TableView
                 {
                     Identifier = _cellIdentifier,
                     BackgroundColor = NSColor.Clear,
+                    TextColor = NSColor.Black,
                     Bordered = false,
                     Selectable = false,
                     Editable = false,
@@ -175,6 +189,7 @@ namespace PresentScreenings.TableView
                 {
                     Identifier = "Description",
                     BackgroundColor = NSColor.Clear,
+                    TextColor = NSColor.Black,
                     Bordered = false,
                     Selectable = true,
                     Editable = false,
@@ -200,19 +215,17 @@ namespace PresentScreenings.TableView
             }
         }
 
-        private void PupulateSubsection(ref NSTextField field)
+        private void PupulateSubsection(ref SubsectionControl control, Film film, NSTableView tableView, NSTableColumn tableColumn)
         {
-            if (field == null)
+            if (control == null)
             {
-                field = new NSTextField
+                var h = tableView.RowHeight;
+                var w = tableColumn.Width;
+                var frame = new CGRect(0, 0, w, h);
+                control = new SubsectionControl(frame, film, SubsectionControlActivated)
                 {
                     Identifier = "Subsection",
-                    BackgroundColor = NSColor.Clear,
-                    Bordered = false,
-                    Selectable = false,
-                    Editable = false,
-                    Alignment = NSTextAlignment.Left,
-                    LineBreakMode = NSLineBreakMode.TruncatingTail,
+                    LineBreakMode = NSLineBreakMode.TruncatingTail
                 };
             }
         }
@@ -244,11 +257,6 @@ namespace PresentScreenings.TableView
         {
             return screeningCount == 0 ? NSColor.LightGray : NSColor.Black;
         }
-
-        private static NSColor SubsectionTextColor(Film film)
-        {
-            return film.SubsectionColor;
-        }
         #endregion
 
         #region Private Methods
@@ -257,6 +265,11 @@ namespace PresentScreenings.TableView
             int filmId = _dataSource.Films[(int)field.Tag].FilmId;
             _controller.SetRatingIfValid(field, r => field.StringValue, filmId, filmFan);
             _dialogController.SetFilmRatingDialogButtonStates();
+        }
+
+        private void SubsectionControlActivated(Film film)
+        {
+            _dialogController.ToggleSubsectionFilter(film.Subsection);
         }
         #endregion
     }

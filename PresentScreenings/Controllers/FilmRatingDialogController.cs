@@ -44,6 +44,7 @@ namespace PresentScreenings.TableView
         }
         public static bool TypeMatchFromBegin { get; set; } = true;
         public static bool OnlyFilmsWithScreenings { get; set; } = false;
+        public static Subsection FilteredSubsection { get; set; } = null;
         public static TimeSpan MinimalDuration { get; set; }
         #endregion
 
@@ -116,6 +117,7 @@ namespace PresentScreenings.TableView
             _filmRatingTableView.AllowsMultipleSelection = true;
             _filmRatingTableView.AllowsColumnReordering = false;
             _filmRatingTableView.UsesAlternatingRowBackgroundColors = true;
+            _filmRatingTableView.SelectionHighlightStyle = NSTableViewSelectionHighlightStyle.Regular;
         }
 
         public override void ViewWillDisappear()
@@ -202,30 +204,6 @@ namespace PresentScreenings.TableView
             _filmRatingTableView.SortDescriptors.Append(sortDescriptor);
         }
 
-        private void ToggleOnlyFilmsWithScreenings()
-        {
-            // Toggle whether only films with screenings are displayd.
-            OnlyFilmsWithScreenings = !OnlyFilmsWithScreenings;
-
-            // Store the current selection of films.
-            var indexSet = FilmRatingTableView.SelectedRows;
-            var rows = indexSet.ToArray();
-            var selectedFilms = rows.Select(r => GetFilmByIndex(r)).ToList();
-
-            // Update the checkbox state.
-            SetOnlyFilmsWithScreeningsStates();
-
-            // Update the data source.
-            SetFilmsWithScreenings();
-            _filmRatingTableView.ReloadData();
-
-            // Update the button states.
-            SetFilmRatingDialogButtonStates();
-
-            // Try to select the stored films.
-            SelectFilms(selectedFilms);
-        }
-
         private void SetOnlyFilmsWithScreeningsStates()
         {
             _onlyFilmsWithScreeningsCheckBox.State = OnlyFilmsWithScreenings ? NSCellStateValue.On : NSCellStateValue.Off;
@@ -251,6 +229,22 @@ namespace PresentScreenings.TableView
             {
                 _filmTableDataSource.Films = films
                     .Where(f => f.FilmScreenings.Count > 0)
+                    .ToList();
+            }
+            else
+            {
+                _filmTableDataSource.Films = films;
+            }
+        }
+
+        private void FilterSubSection()
+        {
+            List<Film> films = ScreeningsPlan.Films;
+            if (FilteredSubsection != null)
+            {
+                _filmTableDataSource.Films = films
+                    .Where(f => f.Subsection != null)
+                    .Where(f => f.Subsection.SubsectionId == FilteredSubsection.SubsectionId)
                     .ToList();
             }
             else
@@ -396,6 +390,14 @@ namespace PresentScreenings.TableView
             SelectFilms(new List<Film> { film });
         }
 
+        public List<Film> GetSelectedFilms()
+        {
+            var indexSet = FilmRatingTableView.SelectedRows;
+            var rows = indexSet.ToArray();
+            var selectedFilms = rows.Select(r => GetFilmByIndex(r)).ToList();
+            return selectedFilms;
+        }
+
         public Film GetSelectedFilm()
         {
             if (OneFilmSelected())
@@ -424,6 +426,62 @@ namespace PresentScreenings.TableView
         public List<Screening> GetScreeningsByFilmId(int filmId)
         {
             return ViewController.FilmScreenings(filmId);
+        }
+
+        public void ToggleOnlyFilmsWithScreenings()
+        {
+            // Toggle whether only films with screenings are displayd.
+            OnlyFilmsWithScreenings = !OnlyFilmsWithScreenings;
+
+            // Store the current selection of films.
+            var selectedFilms = GetSelectedFilms();
+
+            // Update the checkbox state.
+            SetOnlyFilmsWithScreeningsStates();
+
+            // Filter the data.
+            SetFilmsWithScreenings();
+
+            // Resort the data.
+            if (!OnlyFilmsWithScreenings)
+            {
+                _filmTableDataSource.Sort(_filmTableDataSource.SortedBy,
+                                          _filmTableDataSource.SortedAscending);
+            }
+
+            // Update the data source.
+            _filmRatingTableView.ReloadData();
+
+            // Update the button states.
+            SetFilmRatingDialogButtonStates();
+
+            // Try to select the stored films.
+            SelectFilms(selectedFilms);
+        }
+
+        public void ToggleSubsectionFilter(Subsection subsection)
+        {
+            // Toggle between not filtered and filtered by the given subsection.
+            FilteredSubsection = FilteredSubsection == null ? subsection : null;
+
+            // Store the current selection of films.
+            var selectedFilms = GetSelectedFilms();
+
+            // Filter the data.
+            FilterSubSection();
+
+            // Resort the data.
+            if (FilteredSubsection == null)
+            {
+                _filmTableDataSource.Sort(_filmTableDataSource.SortedBy,
+                                          _filmTableDataSource.SortedAscending);
+            }
+
+            // Update the data source.
+            _filmRatingTableView.ReloadData();
+
+            // Try to select the stored films.
+            SelectFilms(selectedFilms);
         }
 
         public void CloseDialog()

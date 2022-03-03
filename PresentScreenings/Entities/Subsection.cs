@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Text;
 
 namespace PresentScreenings.TableView
 {
@@ -46,6 +46,21 @@ namespace PresentScreenings.TableView
         public override bool ListFileIsMandatory()
         {
             return false;
+        }
+
+        public override string ToString()
+        {
+            var builder = new StringBuilder(Name);
+            if (Description != string.Empty)
+            {
+                builder.AppendLine();
+                builder.AppendLine();
+                builder.Append(Description);
+            }
+            builder.AppendLine();
+            builder.AppendLine();
+            builder.Append($"{Name} is part of the {Section.Name} programme.");
+            return builder.ToString();
         }
         #endregion
     }

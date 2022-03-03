@@ -96,8 +96,8 @@
     <Compile Include="Menu Delegates\ScreeningMenuDelegate.cs" />
     <Compile Include="Controls\AttendanceCheckbox.cs" />
     <Compile Include="Controls\FilmScreeningControl.cs" />
-    <Compile Include="Controls\ScreeningButton.cs" />
-    <Compile Include="Controls\ScreeningControl.cs" />
+    <Compile Include="Controls\ClickableScreeningLabel.cs" />
+    <Compile Include="Controls\DaySchemaScreeningControl.cs" />
     <Compile Include="Controls\ScreeningLabel.cs" />
     <Compile Include="Entities\Film.cs" />
     <Compile Include="Entities\FilmInfo.cs" />
@@ -178,6 +178,10 @@
     <Compile Include="Table Classes\FilmOutlinable.cs" />
     <Compile Include="Entities\Section.cs" />
     <Compile Include="Entities\Subsection.cs" />
+    <Compile Include="Table Classes\FilmTableRowView.cs" />
+    <Compile Include="Table Classes\ScreenigsTableRowView.cs" />
+    <Compile Include="Controls\SubsectionControl.cs" />
+    <Compile Include="Controls\PointingHandControl.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

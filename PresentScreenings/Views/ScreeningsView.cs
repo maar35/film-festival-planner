@@ -53,15 +53,15 @@ namespace PresentScreenings.TableView
                 _labelLeft = _superView.NumberOfPixelsFromTime(screening.StartTime);
 				_labelWidth = _superView.NumberOfPixelsFromDuration(screening.Duration);
                 CGRect rect = new CGRect(_labelLeft, _labelTop, _labelWidth, _labelHeight);
-                var screeningControl = new ScreeningControl(rect, screening);
+                var screeningControl = new DaySchemaScreeningControl(rect, screening);
                 screeningControl.Selected = screening == currScreening;
-                screeningControl.ScreeningSelected += (s, e) => SegueToScreeningWindow((ScreeningControl)s);
+                screeningControl.ScreeningSelected += (s, e) => SegueToScreeningWindow((DaySchemaScreeningControl)s);
                 view.AddSubview(screeningControl);
                 _controller.AddScreeningControl(screening, screeningControl);
 			}
 		}
 
-        public void SegueToScreeningWindow(ScreeningControl sender)
+        public void SegueToScreeningWindow(DaySchemaScreeningControl sender)
         {
             _controller.GoToScreening(sender.Screening);
         }

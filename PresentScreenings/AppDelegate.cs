@@ -61,7 +61,7 @@ namespace PresentScreenings.TableView
             Screening.TravelTime = new TimeSpan(0, 30, 0);
             FilmRatingDialogController.OnlyFilmsWithScreenings = false;
             FilmRatingDialogController.MinimalDuration = new TimeSpan(0, 35, 0);
-            ScreeningControl.UseCoreGraphics = false;
+            DaySchemaScreeningControl.UseCoreGraphics = false;
 
             // Make sure the documents directory exists.
             _ = Directory.CreateDirectory(DocumentsFolder);

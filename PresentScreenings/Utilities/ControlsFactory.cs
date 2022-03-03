@@ -3,6 +3,7 @@ using System.Linq;
 using AppKit;
 using CoreAnimation;
 using CoreGraphics;
+using CoreText;
 using Foundation;
 
 namespace PresentScreenings.TableView
@@ -14,6 +15,7 @@ namespace PresentScreenings.TableView
         public const float SmallVerticalMargin = 8;
         public const float BigVerticalMargin = 12;
         public const float HorizontalPixelsBetweenControls = 12;
+        public const float HorizontalPixelsBetweenLabels = 2;
         public const float VerticalPixelsBetweenControls = 4;
         public const float VerticalPixelsBetweenLabels = 2;
         public const float VerticalPixelsBetweenViews = 12;
@@ -24,8 +26,16 @@ namespace PresentScreenings.TableView
         public const float SmallControlWidth = 64;
         public const float StandardButtomImageSide = 20;
         public const float StandardImageButtonWidth = 47;
+        public const float SubsectionLabelWidth = 72;
         public const string EscapeKey = "\x1b";
         public const string EnterKey = "\r";
+        #endregion
+
+        #region Properties
+        public static nfloat StandardFontSize => NSFont.SystemFontSize;
+        public static NSFont StandardFont => NSFont.SystemFontOfSize(StandardFontSize);
+        public static NSFont StandardBoldFont => NSFont.BoldSystemFontOfSize(StandardFontSize);
+        public static CTFont StandardCtBondFont => new CTFont(".AppleSystemUIFontBold", StandardFontSize);
         #endregion
 
         #region Constructors
@@ -47,6 +57,20 @@ namespace PresentScreenings.TableView
             {
                 label.BackgroundColor = NSColor.WindowBackground;
             }
+            return label;
+        }
+
+        public static NSTextField NewSubsectionLabel(CGRect frame, Film film, bool useWindowBackgroundColor = false)
+        {
+            var label = NewStandardLabel(frame, useWindowBackgroundColor);
+            label.StringValue = film.SubsectionName;
+            label.Font = StandardFont;
+            label.Alignment = NSTextAlignment.Center;
+            label.LineBreakMode = NSLineBreakMode.TruncatingTail;
+            label.TextColor = film.SubsectionColor;
+            label.ToolTip = film.SubsectionDescription;
+            label.Bordered = true;
+
             return label;
         }
 
