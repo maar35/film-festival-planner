@@ -137,7 +137,7 @@ namespace PresentScreenings.TableView
             _stringAttributes = new CTStringAttributes
             {
                 ForegroundColorFromContext = true,
-                Font = ControlsFactory.StandardCtBondFont,
+                Font = ControlsFactory.StandardCtBoldFont,
             };
         }
 

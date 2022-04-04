@@ -23,8 +23,9 @@ namespace PresentScreenings.TableView
         public const float StandardButtonHeight = 32;
         public const float StandardLabelWidth = 128;
         public const float StandardLabelHeight = 19;
+        public const float StandardLineHeight = 17;
         public const float SmallControlWidth = 64;
-        public const float StandardButtomImageSide = 20;
+        public const float StandardButtonImageSide = 20;
         public const float StandardImageButtonWidth = 47;
         public const float SubsectionLabelWidth = 72;
         public const string EscapeKey = "\x1b";
@@ -35,7 +36,8 @@ namespace PresentScreenings.TableView
         public static nfloat StandardFontSize => NSFont.SystemFontSize;
         public static NSFont StandardFont => NSFont.SystemFontOfSize(StandardFontSize);
         public static NSFont StandardBoldFont => NSFont.BoldSystemFontOfSize(StandardFontSize);
-        public static CTFont StandardCtBondFont => new CTFont(".AppleSystemUIFontBold", StandardFontSize);
+        public static CTFont StandardCtFont = new CTFont(".AppleSytemUIFont", 14);
+        public static CTFont StandardCtBoldFont => new CTFont(".AppleSystemUIFontBold", StandardFontSize);
         #endregion
 
         #region Constructors
@@ -98,7 +100,7 @@ namespace PresentScreenings.TableView
             CGRect websiteButtonRect = new CGRect(x, y, StandardImageButtonWidth, StandardButtonHeight);
             NSButton websiteButton = NewStandardButton(websiteButtonRect);
             websiteButton.Image = NSImage.ImageNamed("NSNetwork");
-            websiteButton.Image.Size = new CGSize(StandardButtomImageSide, StandardButtomImageSide);
+            websiteButton.Image.Size = new CGSize(StandardButtonImageSide, StandardButtonImageSide);
             websiteButton.Action = new ObjCRuntime.Selector("VisitFilmWebsite:");
             websiteButton.ToolTip = VisitWebsiteButtonToolTip(film);
             return websiteButton;
