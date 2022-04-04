@@ -27,7 +27,7 @@ namespace PresentScreenings.TableView
         private const float _labelHeight = ControlsFactory.StandardLabelHeight;
         private const float _imageButtonWidth = ControlsFactory.StandardImageButtonWidth;
         private const float _buttonHeight = ControlsFactory.StandardButtonHeight;
-        private const float _imageSide = ControlsFactory.StandardButtomImageSide;
+        private const float _imageSide = ControlsFactory.StandardButtonImageSide;
         private const float _yControlsDistance = ControlsFactory.VerticalPixelsBetweenControls;
         private const float _subsectionLabelWidth = ControlsFactory.SubsectionLabelWidth;
         #endregion
@@ -177,10 +177,7 @@ namespace PresentScreenings.TableView
             }
 
             // If present, add the screened films.
-            if (film.FilmInfo.ScreenedFilms.Count > 0)
-            {
-                builder.Append(film.FilmInfo.ScreenedFilmsTostring());
-            }
+            builder.Append(film.FilmInfo.ScreenedFilmsTostring());
 
             return builder.ToString();
         }
