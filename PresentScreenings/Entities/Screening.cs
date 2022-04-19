@@ -47,6 +47,7 @@ namespace PresentScreenings.TableView
         public DateTime StartDate => StartTime.Date;
         public TimeSpan Duration => EndTime - StartTime;
         public FilmRating Rating => Film.Rating;
+        public bool HasQAndA => QAndA != string.Empty;
         public List<string> AttendingFilmFans { get => _screeningInfo.Attendees; set => _screeningInfo.Attendees = value; }
         public bool IAttend => _screeningInfo.IAttend;
         public List<string> AttendingFriends => _screeningInfo.AttendingFriends;
@@ -340,7 +341,7 @@ namespace PresentScreenings.TableView
 
         public string ExtraTimeSymbolsString()
         {
-            string extrasString = (Extra == string.Empty ? Extra : "V") + (QAndA == string.Empty ? QAndA : "Q");
+            string extrasString = (Extra == string.Empty ? Extra : "V") + (HasQAndA ? "Q" : string.Empty);
             if (extrasString != string.Empty)
             {
                 extrasString = extrasString + " ";

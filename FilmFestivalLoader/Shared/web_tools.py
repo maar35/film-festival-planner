@@ -58,7 +58,7 @@ class UrlFile:
         else:
             if comment_at_download is not None:
                 print(comment_at_download)
-            html_text = reader.load_url(self.url, self.path, self.encoding)
+            html_text = reader.load_url(self.url, self.path)
         return html_text
 
     def set_encoding(self, reader):
@@ -84,7 +84,7 @@ class UrlReader:
     def get_request(self, url):
         return urllib.request.Request(url, headers=self.headers)
 
-    def load_url(self, url, target_file, sample_bytes=512, encoding='utf-8'):
+    def load_url(self, url, target_file, encoding='utf-8'):
         request = self.get_request(url)
         html_bytes = None
         with urllib.request.urlopen(request) as response:

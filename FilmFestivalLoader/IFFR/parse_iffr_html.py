@@ -66,7 +66,7 @@ def main():
         print(Globals.error_collector)
 
     # Write parsed information.
-    comment('Done loading IFFR data.')
+    comment(f'Done loading {festival} data.')
     write_lists(iffr_data, write_film_list, write_other_lists)
     Globals.debug_recorder.write_debug()
 
