@@ -18,6 +18,8 @@ import web_tools
 festival = 'MTMF'
 festival_year = 2022
 home_city = 'Den Haag'
+on_demand_start_dt = datetime.datetime.fromisoformat('2022-04-08 12:00:00')
+on_demand_end_dt = datetime.datetime.fromisoformat('2022-04-16 23:59:00')
 
 # Preferences.
 always_read_web = False
@@ -118,7 +120,7 @@ def get_films(festival_data):
         if film_html is not None:
             print(f'\nAnalysing downloaded film HTML from URL {url}')
             FilmPageParser(url, festival_data).feed(film_html)
-            ScreeningsPageParser(festival_data, Globals.current_film).feed(film_html)
+            ScreeningsPageParser(festival_data, Globals.current_film, Globals.current_subtitles).feed(film_html)
 
 
 def load_url(url, encoding='utf-8'):
@@ -158,6 +160,7 @@ class Globals:
     mtmf_urls = []
     current_film = None
     current_screen = None
+    current_subtitles = None
     extras_by_main = {}
 
 
@@ -175,6 +178,8 @@ class FilmPageParser(HtmlPageParser):
     class FilmsParseState(Enum):
         IDLE = auto()
         IN_TITLE = auto()
+        IN_ARTICLE = auto()
+        IN_PARAGRAPH = auto()
         IN_PROPERTIES = auto()
         IN_LABEL = auto()
         AWAITING_VALUE = auto()
@@ -193,6 +198,9 @@ class FilmPageParser(HtmlPageParser):
         self.film = None
         self.title = None
         self.description = None
+        self.article_paragraphs = []
+        self.article_paragraph = ''
+        self.article = None
         self.label = None
         self.section_name = None
         self.subsection_name = None
@@ -200,23 +208,38 @@ class FilmPageParser(HtmlPageParser):
         self.stateStack = self.StateStack(self.print_debug, self.FilmsParseState.IDLE)
         self.film_property_by_label = {}
 
+    def add_paragraph(self):
+        self.article_paragraphs.append(self.article_paragraph)
+        self.article_paragraph = ''
+
+    def set_article(self):
+        self.article = '\n\n'.join(self.article_paragraphs)
+
     def add_film(self):
         self.film = self.festival_data.create_film(self.title, self.url)
         if self.film is None:
             Globals.error_collector.add(f'Could\'t create film from {self.title}', self.url)
         else:
             self.film.medium_category = self.category_by_branch[self.url.split('/')[4]]
-            minutes_str = self.film_property_by_label['Duur']
-            self.film.duration = datetime.timedelta(minutes=int(minutes_str.split()[0]))
+            self.film.duration = datetime.timedelta(minutes=int(self.film_property_by_label['Duur'].split()[0]))
             print(f'Adding FILM: {self.title} ({self.film.duration_str()}) {self.film.medium_category}')
             self.festival_data.films.append(self.film)
             self.add_film_info()
-            Globals.current_film = self.film
+            self.set_global_film_properties()
 
     def add_film_info(self):
         print(f'Description:\n{self.description}')
-        film_info = planner.FilmInfo(self.film.filmid, self.description, '')
+        film_info = planner.FilmInfo(self.film.filmid, self.description, self.article)
         self.festival_data.filminfos.append(film_info)
+
+    def set_global_film_properties(self):
+        Globals.current_film = self.film
+        try:
+            Globals.current_subtitles = self.film_property_by_label['Ondertiteling']
+        except KeyError:
+            Globals.current_subtitles = ''
+        if Globals.current_subtitles == 'Geen':
+            Globals.current_subtitles = ''
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -224,9 +247,13 @@ class FilmPageParser(HtmlPageParser):
         if tag == 'meta' and len(attrs) >1:
             if attrs[0][1] == 'og:description':
                 self.description = attrs[1][1]
-        elif tag == 'h1' and len(attrs) > 0:
-            if attrs[0][1] == 'film-detail__title heading--small':
-                self.stateStack.change(self.FilmsParseState.IN_TITLE)
+        elif tag == 'h1' and len(attrs) > 0 and attrs[0][1] == 'film-detail__title heading--small':
+            self.stateStack.change(self.FilmsParseState.IN_TITLE)
+        elif self.stateStack.state_is(self.FilmsParseState.IDLE) and tag == 'div' and len(attrs) > 0:
+            if attrs[0][1] == 'film-detail__the-content the-content':
+                self.stateStack.push(self.FilmsParseState.IN_ARTICLE)
+        elif self.stateStack.state_is(self.FilmsParseState.IN_ARTICLE) and tag == 'p':
+            self.stateStack.push(self.FilmsParseState.IN_PARAGRAPH)
         elif tag == 'dl' and len(attrs) > 0 and attrs[0][1] == 'data-list data-list--details':
             self.stateStack.change(self.FilmsParseState.IN_PROPERTIES)
         elif self.stateStack.state_is(self.FilmsParseState.IN_PROPERTIES) and tag == 'span':
@@ -238,7 +265,13 @@ class FilmPageParser(HtmlPageParser):
     def handle_endtag(self, tag):
         HtmlPageParser.handle_endtag(self, tag)
 
-        if self.stateStack.state_is(self.FilmsParseState.IN_PROPERTIES) and tag == 'dl':
+        if self.stateStack.state_is(self.FilmsParseState.IN_PARAGRAPH) and tag == 'p':
+            self.stateStack.pop()
+            self.add_paragraph()
+        elif self.stateStack.state_is(self.FilmsParseState.IN_ARTICLE) and tag == 'div':
+            self.stateStack.pop()
+            self.set_article()
+        elif self.stateStack.state_is(self.FilmsParseState.IN_PROPERTIES) and tag == 'dl':
             self.stateStack.change(self.FilmsParseState.DONE)
             self.add_film()
 
@@ -248,6 +281,8 @@ class FilmPageParser(HtmlPageParser):
         if self.stateStack.state_is(self.FilmsParseState.IN_TITLE):
             self.title = data.strip()
             self.stateStack.change(self.FilmsParseState.IDLE)
+        elif self.stateStack.state_is(self.FilmsParseState.IN_PARAGRAPH):
+            self.article_paragraph += data.replace('\n', ' ')
         elif self.stateStack.state_is(self.FilmsParseState.IN_LABEL):
             self.label = data
             self.stateStack.change(self.FilmsParseState.AWAITING_VALUE)
@@ -272,13 +307,13 @@ class ScreeningsPageParser(HtmlPageParser):
     debugging = True
     nl_month_by_name: Dict[str, int] = {'apr': 4}
 
-    def __init__(self, iffr_data, film):
+    def __init__(self, iffr_data, film, subtitles):
         HtmlPageParser.__init__(self, iffr_data, "S")
         self.film = film
+        self.subtitles = subtitles
         self.screening_nr = 0
         self.screen_name = None
         self.start_date = None
-        self.subtitles = None
         self.qa = None
         self.times = None
         self.end_dt = None
@@ -295,11 +330,16 @@ class ScreeningsPageParser(HtmlPageParser):
         self.audience = 'publiek'
         self.extra = ''
         self.qa = ''
-        self.subtitles = ''
         self.screen_name = None
         self.screen = None
         self.start_dt = None
         self.end_dt = None
+
+    def add_on_demand_screening(self):
+        self.screen = self.festival_data.get_screen(home_city, 'On Demand')
+        self.start_dt = on_demand_start_dt
+        self.end_dt = on_demand_end_dt
+        self.add_screening_if_possible()
 
     def add_screening_if_possible(self):
         if self.screen is not None:
@@ -394,8 +434,10 @@ class ScreeningsPageParser(HtmlPageParser):
         elif self.stateStack.state_is(self.ScreeningsParseState.IN_SCREENINGS) and tag == 'div' and len(attrs) > 0:
             if attrs[0][1] == 'tile-date':
                 self.stateStack.push(self.ScreeningsParseState.IN_DATE)
-            elif attrs[0][1].startswith('tile-time'):
+            elif attrs[0][1].startswith('tile-time  '):
                 self.stateStack.push(self.ScreeningsParseState.AFTER_DATE)
+            elif attrs[0][1] == 'tile-date vod':
+                self.add_on_demand_screening()
         elif self.stateStack.state_is(self.ScreeningsParseState.AFTER_DATE) and tag == 'a' and len(attrs) > 1:
             if attrs[0][1] == 'time':
                 self.screening_nr += 1
