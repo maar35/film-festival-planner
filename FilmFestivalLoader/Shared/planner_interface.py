@@ -351,8 +351,8 @@ class FestivalData:
         return filmid
 
     def get_film_by_key(self, title, url):
-        filmid = self.film_id_by_key[self._filmkey(title, url)]
-        films = [film for film in self.films if film.filmid == filmid]
+        film_id = self.film_id_by_key[self._filmkey(title, url)]
+        films = [film for film in self.films if film.filmid == film_id]
         if len(films) > 0:
             return films[0]
         return None

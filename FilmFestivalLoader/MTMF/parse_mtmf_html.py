@@ -122,6 +122,9 @@ def get_films(festival_data):
             FilmPageParser(url, festival_data).feed(film_html)
             ScreeningsPageParser(festival_data, Globals.current_film, Globals.current_subtitles).feed(film_html)
 
+    comment('Applying combinations')
+    FilmPageParser.apply_combinations(festival_data)
+
 
 def load_url(url, encoding='utf-8'):
     reader = web_tools.UrlReader(Globals.error_collector)
@@ -161,7 +164,8 @@ class Globals:
     current_film = None
     current_screen = None
     current_subtitles = None
-    extras_by_main = {}
+    combination_urls_by_film_id = {}
+    screened_film_urls_by_film_id = {}
 
 
 class HtmlPageParser(web_tools.HtmlPageParser):
@@ -180,6 +184,9 @@ class FilmPageParser(HtmlPageParser):
         IN_TITLE = auto()
         IN_ARTICLE = auto()
         IN_PARAGRAPH = auto()
+        IN_EMPHASIS = auto()
+        IN_COMBINATION = auto()
+        IN_SCREENED_FILMS = auto()
         IN_PROPERTIES = auto()
         IN_LABEL = auto()
         AWAITING_VALUE = auto()
@@ -187,7 +194,7 @@ class FilmPageParser(HtmlPageParser):
         DONE = auto()
 
     category_by_branch = dict(film='films')
-    debugging = True
+    debugging = False
 
     def __init__(self, url, festival_data, encoding=None):
         HtmlPageParser.__init__(self, festival_data, 'F', encoding)
@@ -201,6 +208,8 @@ class FilmPageParser(HtmlPageParser):
         self.article_paragraphs = []
         self.article_paragraph = ''
         self.article = None
+        self.combination_urls = []
+        self.screened_film_urls = []
         self.label = None
         self.section_name = None
         self.subsection_name = None
@@ -214,6 +223,12 @@ class FilmPageParser(HtmlPageParser):
 
     def set_article(self):
         self.article = '\n\n'.join(self.article_paragraphs)
+
+    def add_combination_url(self, url):
+        self.combination_urls.append(url)
+
+    def add_screened_film_url(self, url):
+        self.screened_film_urls.append(url)
 
     def add_film(self):
         self.film = self.festival_data.create_film(self.title, self.url)
@@ -233,7 +248,18 @@ class FilmPageParser(HtmlPageParser):
         self.festival_data.filminfos.append(film_info)
 
     def set_global_film_properties(self):
+        # Set the current film.
         Globals.current_film = self.film
+
+        # Store the combinations urls for the current film.
+        if len(self.combination_urls) > 0:
+            Globals.combination_urls_by_film_id[self.film.filmid] = self.combination_urls
+
+        # Store the screened film urls for the current film.
+        if len(self.screened_film_urls) > 0:
+            Globals.screened_film_urls_by_film_id[self.film.filmid] = self.screened_film_urls
+
+        # Set the subtitles for use in the Screenings parser.
         try:
             Globals.current_subtitles = self.film_property_by_label['Ondertiteling']
         except KeyError:
@@ -254,6 +280,17 @@ class FilmPageParser(HtmlPageParser):
                 self.stateStack.push(self.FilmsParseState.IN_ARTICLE)
         elif self.stateStack.state_is(self.FilmsParseState.IN_ARTICLE) and tag == 'p':
             self.stateStack.push(self.FilmsParseState.IN_PARAGRAPH)
+        elif self.stateStack.state_is(self.FilmsParseState.IN_PARAGRAPH) and tag == 'em':
+            self.stateStack.push(self.FilmsParseState.IN_EMPHASIS)
+        elif self.stateStack.state_is(self.FilmsParseState.IN_COMBINATION) and tag == 'a' and len(attrs) > 0:
+            if attrs[0][0] == 'href':
+                self.add_combination_url(attrs[0][1])
+                self.stateStack.pop()
+        elif self.stateStack.state_is(self.FilmsParseState.IN_ARTICLE) and tag == 'ul':
+            self.stateStack.push(self.FilmsParseState.IN_SCREENED_FILMS)
+        elif self.stateStack.state_is(self.FilmsParseState.IN_SCREENED_FILMS) and tag == 'a' and len(attrs) > 0:
+            if attrs[0][0] == 'href':
+                self.add_screened_film_url(attrs[0][1])
         elif tag == 'dl' and len(attrs) > 0 and attrs[0][1] == 'data-list data-list--details':
             self.stateStack.change(self.FilmsParseState.IN_PROPERTIES)
         elif self.stateStack.state_is(self.FilmsParseState.IN_PROPERTIES) and tag == 'span':
@@ -268,6 +305,14 @@ class FilmPageParser(HtmlPageParser):
         if self.stateStack.state_is(self.FilmsParseState.IN_PARAGRAPH) and tag == 'p':
             self.stateStack.pop()
             self.add_paragraph()
+        elif self.stateStack.state_is(self.FilmsParseState.IN_EMPHASIS) and tag == 'em':
+            self.stateStack.pop()
+        elif self.stateStack.state_is(self.FilmsParseState.IN_COMBINATION) and tag == 'em':
+            self.stateStack.pop()
+            self.stateStack.pop()
+            self.stateStack.push(self.FilmsParseState.IN_COMBINATION)
+        elif self.stateStack.state_is(self.FilmsParseState.IN_SCREENED_FILMS) and tag == 'ul':
+            self.stateStack.pop()
         elif self.stateStack.state_is(self.FilmsParseState.IN_ARTICLE) and tag == 'div':
             self.stateStack.pop()
             self.set_article()
@@ -281,14 +326,50 @@ class FilmPageParser(HtmlPageParser):
         if self.stateStack.state_is(self.FilmsParseState.IN_TITLE):
             self.title = data.strip()
             self.stateStack.change(self.FilmsParseState.IDLE)
-        elif self.stateStack.state_is(self.FilmsParseState.IN_PARAGRAPH):
+        elif self.stateStack.state_in([self.FilmsParseState.IN_PARAGRAPH, self.FilmsParseState.IN_EMPHASIS]):
             self.article_paragraph += data.replace('\n', ' ')
+            if data.strip() == 'Deze korte film maakt deel uit van het programma':
+                self.stateStack.push(self.FilmsParseState.IN_COMBINATION)
         elif self.stateStack.state_is(self.FilmsParseState.IN_LABEL):
             self.label = data
             self.stateStack.change(self.FilmsParseState.AWAITING_VALUE)
         elif self.stateStack.state_is(self.FilmsParseState.IN_VALUE):
             self.film_property_by_label[self.label] = data
             self.stateStack.pop()
+
+    @staticmethod
+    def apply_combinations(festival_data):
+        # Add combination programs to film info.
+        comment(f'{len(Globals.combination_urls_by_film_id)} screened films found.')
+        for (film_id, combination_urls) in Globals.combination_urls_by_film_id.items():
+            screened_film = festival_data.get_film_from_id(film_id)
+            screened_film_info = screened_film.film_info(festival_data)
+            combination_films = []
+            for combination_url in combination_urls:
+                try:
+                    combination_film = festival_data.get_film_by_key(None, combination_url)
+                except KeyError as err:
+                    Globals.error_collector.add(f'Key error {err} for {screened_film}', 'Unknown combination URL')
+                else:
+                    combination_films.append(combination_film)
+            screened_film_info.combination_films = combination_films
+
+        # Add screened films to film info.
+        comment(f'{len(Globals.screened_film_urls_by_film_id)} combination films found.')
+        for (film_id, screened_film_urls) in Globals.screened_film_urls_by_film_id.items():
+            combination_film = festival_data.get_film_from_id(film_id)
+            combination_film_info = combination_film.film_info(festival_data)
+            screened_films = []
+            for url in screened_film_urls:
+                try:
+                    film = festival_data.get_film_by_key(None, url)
+                except KeyError as err:
+                    Globals.error_collector.add(f'Key error {err} for {combination_film}', 'Unknown screened film URL')
+                else:
+                    film_info = film.film_info(festival_data)
+                    screened_film = planner.ScreenedFilm(film.filmid, film.title, film_info.description)
+                    screened_films.append(screened_film)
+            combination_film_info.screened_films = screened_films
 
 
 class ScreeningsPageParser(HtmlPageParser):
@@ -304,7 +385,7 @@ class ScreeningsPageParser(HtmlPageParser):
         IN_LABEL = auto()
         DONE = auto()
 
-    debugging = True
+    debugging = False
     nl_month_by_name: Dict[str, int] = {'apr': 4}
 
     def __init__(self, iffr_data, film, subtitles):
@@ -514,7 +595,7 @@ class TheaterScreenPageParser(HtmlPageParser):
         IN_SCREENING_LOCATION = auto()
         DONE = auto()
 
-    debugging = True
+    debugging = False
 
     def __init__(self, festival_data, film, url):
         HtmlPageParser.__init__(self, festival_data, 'TS')
