@@ -50,6 +50,7 @@ namespace PresentScreenings.TableView
                     .Where(s => s.IsPlannable)
                     .OrderByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.AttendedByFriend)
                     .ThenByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.Free)
+                    .ThenByDescending(s => s.HasQAndA)
                     .ThenBy(s => s.FilmScreeningCount)
                     .ThenBy(s => s.OnDemand)
                     .ThenByDescending(s => s.StartTime)
