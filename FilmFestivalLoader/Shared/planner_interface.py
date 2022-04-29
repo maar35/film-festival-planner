@@ -360,7 +360,7 @@ class FestivalData:
     def get_filmid(self, url):
         return self.get_film_by_key(None, url).filmid
 
-    def get_film_from_id(self, film_id):
+    def get_film_by_id(self, film_id):
         films = [f for f in self.films if f.filmid == film_id]
         if len(films) > 0:
             return films[0]

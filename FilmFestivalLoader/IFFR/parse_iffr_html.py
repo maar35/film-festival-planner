@@ -550,7 +550,7 @@ class FilmInfoPageParser(HtmlPageParser):
         if self.film.duration.total_seconds() == 0:
             event_duration = datetime.timedelta()
             for screened_film in self.screened_films:
-                film = self.iffr_data.get_film_from_id(screened_film.filmid)
+                film = self.iffr_data.get_film_by_id(screened_film.filmid)
                 event_duration = event_duration + self.intro_span + film.duration
             self.film.duration = event_duration
 
@@ -605,7 +605,7 @@ class FilmInfoPageParser(HtmlPageParser):
             pr_debug(f'Main films and extras:\n{str_dict}')
 
         def short_str(film_id):
-            return iffr_data.get_film_from_id(film_id).short_str()
+            return iffr_data.get_film_by_id(film_id).short_str()
 
         pr_debug_dict(Globals.extras_by_main)
 
@@ -619,8 +619,8 @@ class FilmInfoPageParser(HtmlPageParser):
                     if len(extra_infos_from_extra) == 1:
                         extra_info_from_extra = extra_infos_from_extra[0]
                         if extra_info_from_extra == (main_film_id, screened_film_type):
-                            main_duration = iffr_data.get_film_from_id(main_film_id).duration
-                            extra_duration = iffr_data.get_film_from_id(extra_film_id).duration
+                            main_duration = iffr_data.get_film_by_id(main_film_id).duration
+                            extra_duration = iffr_data.get_film_by_id(extra_film_id).duration
                             pop_film_id = extra_film_id if main_duration > extra_duration else main_film_id
                             film_ids_to_pop.add(pop_film_id)
 
@@ -631,11 +631,11 @@ class FilmInfoPageParser(HtmlPageParser):
         # Implement the links in the extras by main dictionary in the film info lists.
         for (main_film_id, extra_infos) in Globals.extras_by_main.items():
             pr_debug(f'{short_str(main_film_id)} [{" || ".join([short_str(i) for (i, t) in extra_infos])}]')
-            main_film = iffr_data.get_film_from_id(main_film_id)
+            main_film = iffr_data.get_film_by_id(main_film_id)
             main_film_info = main_film.film_info(iffr_data)
             screened_films = []
             for (extra_film_id, screened_film_type) in extra_infos:
-                extra_film = iffr_data.get_film_from_id(extra_film_id)
+                extra_film = iffr_data.get_film_by_id(extra_film_id)
                 extra_film_info = extra_film.film_info(iffr_data)
                 extra_film_info.combination_films.append(main_film)
                 screened_film = planner.ScreenedFilm(

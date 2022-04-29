@@ -21,9 +21,6 @@ home_city = 'Den Haag'
 on_demand_start_dt = datetime.datetime.fromisoformat('2022-04-08 12:00:00')
 on_demand_end_dt = datetime.datetime.fromisoformat('2022-04-16 23:59:00')
 
-# Preferences.
-always_read_web = False
-
 # Directories.
 documents_dir = os.path.expanduser("~/Documents/Film/{0}/{0}{1}".format(festival, festival_year))
 webdata_dir = os.path.join(documents_dir, "_website_data")
@@ -40,7 +37,6 @@ debug_file = os.path.join(plandata_dir, 'debug.txt')
 
 # URL information.
 mtmf_hostname = 'https://moviesthatmatter.nl'
-url_festival = mtmf_hostname.split('/')[2].split('.')[0]
 
 
 def main():
@@ -68,7 +64,7 @@ def main():
 
     # Display error when found.
     if Globals.error_collector.error_count() > 0:
-        comment('Encountered some errors:')
+        comment(f'Encountered {Globals.error_collector.error_count()} error(s):')
         print(Globals.error_collector)
 
     # Write parsed information.
@@ -99,31 +95,41 @@ def get_films(festival_data):
 
     # Get basic film data from the URL's.
     for iri in Globals.mtmf_urls:
-        iri_path = iri[len(mtmf_hostname):]
-        url = mtmf_hostname + web_tools.iripath_to_uripath(iri_path)
-        film_html = None
-        try:
-            film_id = festival_data.film_id_by_url[url]
-        except KeyError:
-            try:
-                film_html = load_url(url)
-            except urllib.error.HTTPError as error:
-                print(f'\nError {error} while loading {url}.\n')
-                Globals.error_collector.add(error, f'while loading {url}')
-        else:
-            film_file = film_file_format.format(film_id)
-            url_file = web_tools.UrlFile(url, film_file, Globals.error_collector)
-            try:
-                film_html = url_file.get_text(f'Downloading site {url}')
-            except urllib.error.HTTPError:
-                print(f'\nWeb site {url} of {festival_data.get_film_from_id(film_id)} not found.\n')
-        if film_html is not None:
-            print(f'\nAnalysing downloaded film HTML from URL {url}')
-            FilmPageParser(url, festival_data).feed(film_html)
-            ScreeningsPageParser(festival_data, Globals.current_film, Globals.current_subtitles).feed(film_html)
+        get_one_film(iri, festival_data)
 
     comment('Applying combinations')
     FilmPageParser.apply_combinations(festival_data)
+
+
+def get_one_film(iri, festival_data):
+    # Get the URL from the IRI.
+    iri_path = iri[len(mtmf_hostname):]
+    url = mtmf_hostname + web_tools.iripath_to_uripath(iri_path)
+
+    # Load the film HTML.
+    film_html = None
+    try:
+        film_id = festival_data.film_id_by_url[url]
+    except KeyError:
+        try:
+            film_html = load_url(url)
+        except urllib.error.HTTPError as error:
+            print(f'\nError {error} while loading {url}.\n')
+            Globals.error_collector.add(error, f'while loading {url}')
+    else:
+        film_file = film_file_format.format(film_id)
+        url_file = web_tools.UrlFile(url, film_file, Globals.error_collector)
+        try:
+            film_html = url_file.get_text(f'Downloading site {url}')
+        except urllib.error.HTTPError:
+            print(f'\nWeb site {url} of {festival_data.get_film_by_id(film_id)} not found.\n')
+
+    # Parse the HTML.
+    if film_html is not None:
+        print(f'\nAnalysing downloaded film HTML from URL {url}')
+        film_parser = FilmPageParser(url, festival_data)
+        film_parser.feed(film_html)
+        ScreeningsPageParser(festival_data, film_parser.film, film_parser.subtitles).feed(film_html)
 
 
 def load_url(url, encoding='utf-8'):
@@ -149,8 +155,6 @@ def write_lists(festival_data, write_film_list, write_other_lists):
 
     if write_other_lists:
         festival_data.write_filminfo()
-        festival_data.write_sections()
-        festival_data.write_subsections()
         festival_data.write_screens()
         festival_data.write_screenings()
     else:
@@ -161,9 +165,6 @@ class Globals:
     error_collector = None
     debug_recorder = None
     mtmf_urls = []
-    current_film = None
-    current_screen = None
-    current_subtitles = None
     combination_urls_by_film_id = {}
     screened_film_urls_by_film_id = {}
 
@@ -200,20 +201,17 @@ class FilmPageParser(HtmlPageParser):
         HtmlPageParser.__init__(self, festival_data, 'F', encoding)
         self.url = url
         self.festival_data = festival_data
-        Globals.current_film = None
-        self.print_debug(f"{40 * '-'} ", f'Analysing URL {url}')
+        self.print_debug(self.bar, f'Analysing URL {url}')
         self.film = None
         self.title = None
         self.description = None
+        self.subtitles = None
         self.article_paragraphs = []
         self.article_paragraph = ''
         self.article = None
         self.combination_urls = []
         self.screened_film_urls = []
         self.label = None
-        self.section_name = None
-        self.subsection_name = None
-        self.subsection_url = None
         self.stateStack = self.StateStack(self.print_debug, self.FilmsParseState.IDLE)
         self.film_property_by_label = {}
 
@@ -233,7 +231,7 @@ class FilmPageParser(HtmlPageParser):
     def add_film(self):
         self.film = self.festival_data.create_film(self.title, self.url)
         if self.film is None:
-            Globals.error_collector.add(f'Could\'t create film from {self.title}', self.url)
+            Globals.error_collector.add(f"Couldn't create film from {self.title}", self.url)
         else:
             self.film.medium_category = self.category_by_branch[self.url.split('/')[4]]
             self.film.duration = datetime.timedelta(minutes=int(self.film_property_by_label['Duur'].split()[0]))
@@ -248,9 +246,6 @@ class FilmPageParser(HtmlPageParser):
         self.festival_data.filminfos.append(film_info)
 
     def set_global_film_properties(self):
-        # Set the current film.
-        Globals.current_film = self.film
-
         # Store the combinations urls for the current film.
         if len(self.combination_urls) > 0:
             Globals.combination_urls_by_film_id[self.film.filmid] = self.combination_urls
@@ -261,11 +256,11 @@ class FilmPageParser(HtmlPageParser):
 
         # Set the subtitles for use in the Screenings parser.
         try:
-            Globals.current_subtitles = self.film_property_by_label['Ondertiteling']
+            self.subtitles = self.film_property_by_label['Ondertiteling']
         except KeyError:
-            Globals.current_subtitles = ''
-        if Globals.current_subtitles == 'Geen':
-            Globals.current_subtitles = ''
+            self.subtitles = ''
+        if self.subtitles == 'Geen':
+            self.subtitles = ''
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -340,9 +335,9 @@ class FilmPageParser(HtmlPageParser):
     @staticmethod
     def apply_combinations(festival_data):
         # Add combination programs to film info.
-        comment(f'{len(Globals.combination_urls_by_film_id)} screened films found.')
+        print(f'{len(Globals.combination_urls_by_film_id)} screened films found.')
         for (film_id, combination_urls) in Globals.combination_urls_by_film_id.items():
-            screened_film = festival_data.get_film_from_id(film_id)
+            screened_film = festival_data.get_film_by_id(film_id)
             screened_film_info = screened_film.film_info(festival_data)
             combination_films = []
             for combination_url in combination_urls:
@@ -355,9 +350,9 @@ class FilmPageParser(HtmlPageParser):
             screened_film_info.combination_films = combination_films
 
         # Add screened films to film info.
-        comment(f'{len(Globals.screened_film_urls_by_film_id)} combination films found.')
+        print(f'{len(Globals.screened_film_urls_by_film_id)} combination films found.')
         for (film_id, screened_film_urls) in Globals.screened_film_urls_by_film_id.items():
-            combination_film = festival_data.get_film_from_id(film_id)
+            combination_film = festival_data.get_film_by_id(film_id)
             combination_film_info = combination_film.film_info(festival_data)
             screened_films = []
             for url in screened_film_urls:
@@ -392,17 +387,16 @@ class ScreeningsPageParser(HtmlPageParser):
         HtmlPageParser.__init__(self, iffr_data, "S")
         self.film = film
         self.subtitles = subtitles
+        self.print_debug(self.bar, f"Analysing FILM {film}, {film.url}")
         self.screening_nr = 0
         self.screen_name = None
         self.start_date = None
         self.qa = None
-        self.times = None
         self.end_dt = None
         self.start_dt = None
         self.extra = None
         self.audience = None
         self.screen = None
-        self.print_debug(f"{40 * '-'} ", f"Analysing FILM {film}, {film.url}")
 
         self.init_screening_data()
         self.stateStack = self.StateStack(self.print_debug, self.ScreeningsParseState.IDLE)
@@ -497,14 +491,14 @@ class ScreeningsPageParser(HtmlPageParser):
         locations_file = screenings_file_format.format(film_id, screening_nr)
         url_file = web_tools.UrlFile(url, locations_file, Globals.error_collector)
         try:
-            locations_html = url_file.get_text(f'Downloading shop[p[ing cart site {url}')
+            locations_html = url_file.get_text(f'Downloading shopping cart site {url}')
         except ValueError:
             pass
         else:
             if locations_html is not None:
-                ShoppingCartPageParser(self.festival_data, self.film, screening_nr, url).feed(locations_html)
-                self.screen_name = Globals.current_screen
-                Globals.current_screen = None
+                shopping_cart_parser = ShoppingCartPageParser(self.festival_data, self.film, screening_nr, url)
+                shopping_cart_parser.feed(locations_html)
+                self.screen_name = shopping_cart_parser.current_screen
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -567,10 +561,10 @@ class ShoppingCartPageParser(HtmlPageParser):
         HtmlPageParser.__init__(self, festival_data, 'SC')
         self.film = film
         self.sequence_nr = sequence_nr
-        self.url = url
-        self.print_debug(f"{40 * '-'} ", f'Analysing shopping cart #{sequence_nr} of FILM {film}, {url}')
+        self.print_debug(self.bar, f'Analysing shopping cart #{sequence_nr} of FILM {film}, {url}')
+        self.current_screen = None
 
-    def get_theater_screens(self, url):
+    def get_theater_screen(self, url):
         details_file = details_file_format.format(self.film.filmid, self.sequence_nr)
         url_file = web_tools.UrlFile(url, details_file, Globals.error_collector)
         try:
@@ -579,14 +573,16 @@ class ShoppingCartPageParser(HtmlPageParser):
             pass
         else:
             if details_html is not None:
-                TheaterScreenPageParser(self.festival_data, self.film, url).feed(details_html)
+                theater_screen_parser = TheaterScreenPageParser(self.festival_data, self.film, url)
+                theater_screen_parser.feed(details_html)
+                self.current_screen = theater_screen_parser.current_screen
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
 
         if tag == 'iframe' and len(attrs) > 4 and attrs[0][1] == 'order__iframe order__iframe--crossmarx':
             details_url = attrs[4][1]
-            self.get_theater_screens(details_url)
+            self.get_theater_screen(details_url)
 
 
 class TheaterScreenPageParser(HtmlPageParser):
@@ -599,9 +595,9 @@ class TheaterScreenPageParser(HtmlPageParser):
 
     def __init__(self, festival_data, film, url):
         HtmlPageParser.__init__(self, festival_data, 'TS')
-        self.print_debug(f"{40 * '-'} ", f'Analysing screening details of FILM {film}, {url}')
+        self.print_debug(self.bar, f'Analysing screening details of FILM {film}, {url}')
         self.stateStack = self.StateStack(self.print_debug, self.ScreensParseState.IDLE)
-        Globals.current_screen = None
+        self.current_screen = None
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -614,7 +610,7 @@ class TheaterScreenPageParser(HtmlPageParser):
         HtmlPageParser.handle_data(self, data)
 
         if self.stateStack.state_is(self.ScreensParseState.IN_SCREENING_LOCATION):
-            Globals.current_screen = data.strip()
+            self.current_screen = data.strip()
             self.stateStack.change(self.ScreensParseState.DONE)
 
 

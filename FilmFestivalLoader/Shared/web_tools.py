@@ -159,6 +159,10 @@ class HtmlPageParser(html.parser.HTMLParser):
         self.debug_recorder = debug_recorder
         self.debug_prefix = debug_prefix
 
+    @property
+    def bar(self):
+        return f'{40 * "-"} '
+
     def print_debug(self, str1, str2):
         if self.debugging:
             self.debug_recorder.add(self.debug_prefix + ' ' + str(str1) + ' ' + str(str2))
