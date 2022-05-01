@@ -182,6 +182,7 @@
     <Compile Include="Table Classes\ScreenigsTableRowView.cs" />
     <Compile Include="Controls\SubsectionControl.cs" />
     <Compile Include="Controls\PointingHandControl.cs" />
+    <Compile Include="Controls\FilmInfoControl.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />
