@@ -37,7 +37,7 @@ namespace PresentScreenings.TableView
         private float _yCurr;
         private Film _film;
         private FilmInfo _filmInfo;
-        private NSControl _summaryField;
+        private NSTextField _summaryField;
         private NSScrollView _summaryScrollView;
         private NSButton _cancelButton;
         private FilmScreeningControl _currentScreeningControl;
@@ -171,7 +171,7 @@ namespace PresentScreenings.TableView
         {
             // Create a text box to contain the film info.
             var docRect = new CGRect(0, 0, _contentWidth, _summaryBoxHeight);
-            _summaryField = new FilmInfoControl(docRect, _filmInfo);
+            _summaryField = new NSTextField(docRect);
             PopulateSummaryFieldText();
             var fit = _summaryField.SizeThatFits(_summaryField.Frame.Size);
             _summaryField.SetFrameSize(fit);
@@ -231,16 +231,13 @@ namespace PresentScreenings.TableView
 
         private void PopulateSummaryFieldText()
         {
-            var options = NSTrackingAreaOptions.CursorUpdate | NSTrackingAreaOptions.ActiveAlways;
-            var trackingArea = new NSTrackingArea(new CGRect(0, 0, 150, 100), options, this, null);
-            _summaryField.AddTrackingArea(trackingArea);
-            _summaryField.Enabled = true;
+            _summaryField.Enabled = false;
+            _summaryField.Selectable = true;
             _summaryField.Action = new ObjCRuntime.Selector("FilmInfoClicked:");
-            //if (FilmInfoIsAvailable())
-            //{
-            //    _summaryField.AttributedStringValue = _filmInfo.ToAttributedString();
-            //    //_summaryField.AttributedStringValue = FilmInfo.HtmlToAttributed(_filmInfo.ToString());
-            //}
+            if (FilmInfoIsAvailable())
+            {
+                _summaryField.AttributedStringValue = _filmInfo.ToAttributedString();
+            }
         }
 
         private void HandleClick(object sender, EventArgs e)

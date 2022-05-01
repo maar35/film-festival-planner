@@ -68,6 +68,7 @@ namespace PresentScreenings.TableView
         public WebUtility.MediumCategory MediumCategory => ViewController.GetFilmById(FilmId).Category;
         public string Url => ViewController.GetFilmById(FilmId).Url;
         public Film.FilmInfoStatus InfoStatus { get; }
+        public static NSStringAttributes StandardAttributes { get; }
         #endregion
 
         #region Constructors
@@ -88,6 +89,9 @@ namespace PresentScreenings.TableView
             _headerByScreenedFilmType.Add(ScreenedFilmType.ScreenedBefore, "Screened before the main feature");
             _headerByScreenedFilmType.Add(ScreenedFilmType.ScreenedAfter, "Screened after the main feature");
             _headerByScreenedFilmType.Add(ScreenedFilmType.DirectlyCombined, "Screened in combination with");
+            StandardAttributes = new NSStringAttributes();
+            StandardAttributes.Font = ControlsFactory.StandardFont;
+            StandardAttributes.ForegroundColor = NSColor.Text;
         }
 
         public FilmInfo(int filmId, Film.FilmInfoStatus infoStatus, string description, string article)
@@ -203,8 +207,6 @@ namespace PresentScreenings.TableView
         public NSAttributedString ToAttributedString()
         {
             // Initialize variables.
-            var attrs = new CTStringAttributes();
-            attrs.Font = ControlsFactory.StandardCtFont;
             var attrText = new NSMutableAttributedString();
             attrText.BeginEditing();
 
@@ -218,7 +220,7 @@ namespace PresentScreenings.TableView
             if (AttributedFilmDescription.Length > 0)
             {
                 string line = _newLine + "Description" + _newLine;
-                attrText.Append(new NSAttributedString(line, attrs));
+                attrText.Append(new NSAttributedString(line, StandardAttributes));
                 attrText.Append(AttributedFilmDescription);
             }
 
@@ -226,7 +228,7 @@ namespace PresentScreenings.TableView
             if (FilmArticle != string.Empty)
             {
                 string line = _newLine + "Article" + _newLine + FilmArticle + _newLine;
-                attrText.Append(new NSAttributedString(line, attrs));
+                attrText.Append(new NSAttributedString(line, StandardAttributes));
             }
 
             // Add combination programs in which this film is screened.
@@ -239,7 +241,7 @@ namespace PresentScreenings.TableView
                 // Per type, add the applicable header and the combination
                 // programs in which this film has that type to the string
                 // builder.
-                var space = _newLine;
+                string space = _newLine;
                 foreach (var screenedFilmType in _combinationsByType.Keys)
                 {
                     AppendToAttributedString(ref attrText, $"{space}{_partByScreenedFilmType[screenedFilmType]}:");
@@ -266,14 +268,15 @@ namespace PresentScreenings.TableView
                 var space = _newLine;
                 foreach (var screenedFilmType in screenedFilmTypes)
                 {
-                    AppendToAttributedString(ref attrText,$"{space}{_headerByScreenedFilmType[screenedFilmType]}:");
+                    AppendToAttributedString(ref attrText, $"{space}{_headerByScreenedFilmType[screenedFilmType]}:");
                     var screenedFilmsOfType = ScreenedFilms
                         .Where(sf => sf.ScreenedFilmType == screenedFilmType);
                     foreach (ScreenedFilm screenedFilm in screenedFilmsOfType)
                     {
                         Film film = ViewController.GetFilmById(screenedFilm.ScreenedFilmId);
-                        AppendToAttributedString(ref attrText, _newLine);
+                        AppendToAttributedString(ref attrText, _twoLines);
                         AppendFilmLinkToAtrributedString(ref attrText, film);
+                        AppendToAttributedString(ref attrText, _newLine + screenedFilm.Description);
                     }
                     space = _twoLines;
                 }
@@ -374,18 +377,24 @@ namespace PresentScreenings.TableView
             return text;
         }
 
-        public static NSAttributedString HtmlToAttributed(string text)
+        public NSAttributedString HtmlToAttributed(string text)
         {
-
             var html = text + Environment.NewLine;
             int startIndex = 0;
             var attributedString = new NSMutableAttributedString(html);
 
             attributedString.BeginEditing();
+
+            // Initialize with the standard attributes.
+            NSRange range = new NSRange(0, html.Length);
+            attributedString.AddAttributes(StandardAttributes, range);
+
+            // Set attributes for the HTML indicated ranges.
             while (startIndex >= 0)
             {
                 startIndex = NextAttributedPart(ref attributedString, startIndex);
             }
+
             attributedString.EndEditing();
 
             return attributedString;
@@ -517,7 +526,7 @@ namespace PresentScreenings.TableView
 
         private void AppendToAttributedString(ref NSMutableAttributedString attrText, string text)
         {
-            attrText.Append(new NSAttributedString(text));
+            attrText.Append(new NSAttributedString(text, StandardAttributes));
         }
 
         private void AppendFilmLinkToAtrributedString(ref NSMutableAttributedString attrText, Film film)
@@ -530,24 +539,17 @@ namespace PresentScreenings.TableView
         {
             var range = new NSRange(attrText.Length, display.Length);
             var attributes = new NSStringAttributes();
-            attributes.ForegroundColor = NSColor.SystemBlueColor;
+            attributes.ForegroundColor = NSColor.SystemBlue;
             attributes.SetUnderlineStyle(NSUnderlineStyle.Single);
             attributes.LinkUrl = new NSUrl(url);
             attributes.Cursor = NSCursor.PointingHandCursor;
-            //var action = new NSAttributedRangeCallback(DoTheThing);
-            //attrText.AddAttribute(NSStringAttributeKey.Link, action, range);
             AppendToAttributedString(ref attrText, display);
             attrText.AddAttributes(attributes, range);
         }
 
-        private bool isCombinationProgram()
+        private bool IsCombinationProgram()
         {
             return MediumCategory == WebUtility.MediumCategory.CombinedProgrammes;
-        }
-
-        private void DoTheThing(NSDictionary dict, NSRange range, ref bool stop)
-        {
-
         }
         #endregion
     }
