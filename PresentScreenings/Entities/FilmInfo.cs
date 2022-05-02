@@ -290,7 +290,6 @@ namespace PresentScreenings.TableView
                 }
             }
 
-
             // Finalize the attributed string.
             attrText.EndEditing();
 
@@ -545,11 +544,6 @@ namespace PresentScreenings.TableView
             attributes.Cursor = NSCursor.PointingHandCursor;
             AppendToAttributedString(ref attrText, display);
             attrText.AddAttributes(attributes, range);
-        }
-
-        private bool IsCombinationProgram()
-        {
-            return MediumCategory == WebUtility.MediumCategory.CombinedProgrammes;
         }
         #endregion
     }
