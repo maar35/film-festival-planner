@@ -22,6 +22,7 @@ namespace PresentScreenings.TableView
         private const int _uncombineTitleMenuItemTag = 507;
         private const int _firstExtraMenuItemTag = 520;
         private int _currentTag;
+        private int _extraFilmNumber;
         private readonly AppDelegate _app;
         private Dictionary<nint, bool> _enabledByTag;
         #endregion
@@ -159,7 +160,9 @@ namespace PresentScreenings.TableView
 
         private void CreateAllExtraMenuItems(NSMenu menu, FilmInfo filmInfo)
         {
+            // Initialize private member variables.
             _currentTag = _firstExtraMenuItemTag;
+            _extraFilmNumber = 0;
 
             // Create the screened films items.
             if (filmInfo.ScreenedFilms.Count > 0)
@@ -177,6 +180,13 @@ namespace PresentScreenings.TableView
                     .Select(id => ViewController.GetFilmById(id))
                     .ToList();
                 CreateExtraMenuItems(menu, combinationFilms, "Combination Program(s)");
+            }
+
+            // Add an inactive stub menu item if no extra films are available.
+            if (filmInfo.ScreenedFilms.Count == 0 && filmInfo.CombinationProgramIds.Count == 0)
+            {
+                var emptyList = new List<Film> { };
+                CreateExtraMenuItems(menu, emptyList, "No combinations involved");
             }
         }
 
@@ -202,18 +212,17 @@ namespace PresentScreenings.TableView
 
             // Create an item for each extra film.
             NSEventModifierMask mask = NSEventModifierMask.ControlKeyMask | NSEventModifierMask.CommandKeyMask;
-            int extraFilmNumber = 0;
             foreach (var extraFilm in extraFilms)
             {
                 _currentTag += 1;
-                extraFilmNumber += 1;
+                _extraFilmNumber += 1;
                 NSMenuItem item = new NSMenuItem
                 {
                     Title = extraFilm.ToString(),
                     Tag = _currentTag,
                     Action = new ObjCRuntime.Selector("NavigateToFilm:"),
                     Identifier = extraFilm.FilmId.ToString(),
-                    KeyEquivalent = extraFilmNumber.ToString(),
+                    KeyEquivalent = _extraFilmNumber.ToString(),
                     KeyEquivalentModifierMask = mask,
                 };
                 _enabledByTag.Add(_currentTag, true);

@@ -110,31 +110,7 @@ namespace PresentScreenings.TableView
         #region Override Methods
         public override string ToString()
         {
-            var builder = new StringBuilder(Url + _newLine);
-
-            // If present, add the short description.
-            // Use the version with raw html tags as to allow it to be converted
-            // to an attributed string.
-            if (RawFilmDescription != string.Empty)
-            {
-                builder.AppendLine(_newLine + "Description");
-                builder.AppendLine(RawFilmDescription);
-            }
-
-            // Add the more elaborated article.
-            if (FilmArticle != string.Empty)
-            {
-                builder.AppendLine(_newLine + "Article");
-                builder.AppendLine(FilmArticle);
-            }
-
-            // Add combination programs in which this film is screened.
-            builder.Append(CombinationProgramsToString());
-
-            // Add screened films if present.
-            builder.Append(ScreenedFilmsTostring());
-
-            return builder.ToString();
+            return ToAttributedString().Value;
         }
         #endregion
 
@@ -215,79 +191,30 @@ namespace PresentScreenings.TableView
             AppendToAttributedString(ref attrText, _newLine);
 
             // If present, add the short description.
-            // Use the version with raw html tags as to allow it to be converted
-            // to an attributed string.
             if (AttributedFilmDescription.Length > 0)
             {
-                string line = _newLine + "Description" + _newLine;
-                attrText.Append(new NSAttributedString(line, StandardAttributes));
+                string text = _newLine + "Description" + _newLine;
+                attrText.Append(new NSAttributedString(text, StandardAttributes));
                 attrText.Append(AttributedFilmDescription);
             }
 
             // Add the more elaborated article.
             if (FilmArticle != string.Empty)
             {
-                string line = _newLine + "Article" + _newLine + FilmArticle + _newLine;
-                attrText.Append(new NSAttributedString(line, StandardAttributes));
+                string text = _newLine + "Article" + _newLine + FilmArticle + _newLine;
+                attrText.Append(new NSAttributedString(text, StandardAttributes));
             }
 
             // Add combination programs in which this film is screened.
             if (CombinationProgramIds.Count > 0)
             {
-                // Initialize the dictionary that keeps all combination programs
-                // by type.
-                SetCombinationsByType();
-
-                // Per type, add the applicable header and the combination
-                // programs in which this film has that type to the string
-                // builder.
-                string space = _newLine;
-                foreach (var screenedFilmType in _combinationsByType.Keys)
-                {
-                    AppendToAttributedString(ref attrText, $"{space}{_partByScreenedFilmType[screenedFilmType]}:");
-                    foreach (var combiProgram in _combinationsByType[screenedFilmType])
-                    {
-                        AppendToAttributedString(ref attrText, _newLine);
-                        AppendFilmLinkToAtrributedString(ref attrText, combiProgram);
-                    }
-                    space = _twoLines;
-                }
+                AppendCombinationProgramToAttributedString(ref attrText);
             }
 
             // Add screened films if present.
             if (ScreenedFilms.Count > 0)
             {
-                // Create a list of the distinct screened film types in the
-                // screened films.
-                var screenedFilmTypes = ScreenedFilms
-                    .Select(sf => sf.ScreenedFilmType)
-                    .Distinct();
-
-                // Per type, add the applicible header and the screened films
-                // with that type to the string builder.
-                var space = _newLine;
-                foreach (var screenedFilmType in screenedFilmTypes)
-                {
-                    AppendToAttributedString(ref attrText, $"{space}{_headerByScreenedFilmType[screenedFilmType]}:");
-                    var screenedFilmsOfType = ScreenedFilms
-                        .Where(sf => sf.ScreenedFilmType == screenedFilmType);
-                    foreach (ScreenedFilm screenedFilm in screenedFilmsOfType)
-                    {
-                        Film film = ViewController.GetFilmById(screenedFilm.ScreenedFilmId);
-                        AppendToAttributedString(ref attrText, _twoLines);
-                        AppendFilmLinkToAtrributedString(ref attrText, film);
-                        AppendToAttributedString(ref attrText, _newLine + screenedFilm.Description);
-                    }
-                    space = _twoLines;
-                }
-
-                // Calculate the average rating of all screened films if
-                // applicable.
-                decimal meanRating = TimeWeightedMeanRating();
-                if (meanRating != decimal.Zero)
-                {
-                    AppendToAttributedString(ref attrText, $"{_twoLines}Time weighted mean rating: {meanRating:0.##}");
-                }
+                AppendScreenedFilmsToAttributedString(ref attrText);
             }
 
             // Finalize the attributed string.
@@ -296,69 +223,72 @@ namespace PresentScreenings.TableView
             return attrText;
         }
 
-        public string CombinationProgramsToString()
+        private void AppendCombinationProgramToAttributedString(ref NSMutableAttributedString attrText)
         {
-            var builder = new StringBuilder();
+            // Initialize the dictionary that keeps all combination programs
+            // by type.
+            SetCombinationsByType();
 
-            if (CombinationProgramIds.Count > 0)
+            // Per type, append the applicable header and the combination
+            // programs in which this film has that type to the given string.
+            string space = _newLine;
+            foreach (var screenedFilmType in _combinationsByType.Keys)
             {
-                // Initialize the dictionary that keeps all combination programs
-                // by type.
-                SetCombinationsByType();
-
-                // Per type, add the applicable header and the combination
-                // programs in which this film has that type to the string
-                // builder.
-                var space = _newLine;
-                foreach (var screenedFilmType in _combinationsByType.Keys)
+                AppendToAttributedString(ref attrText, $"{space}{_partByScreenedFilmType[screenedFilmType]}:");
+                foreach (var combiProgram in _combinationsByType[screenedFilmType])
                 {
-                    builder.AppendLine($"{space}{_partByScreenedFilmType[screenedFilmType]}:");
-                    builder.AppendJoin(
-                        _newLine,
-                        _combinationsByType[screenedFilmType]);
-                    space = _twoLines;
+                    AppendToAttributedString(ref attrText, _newLine);
+                    AppendFilmLinkToAtrributedString(ref attrText, combiProgram);
                 }
+                space = _twoLines;
             }
-
-            return builder.ToString();
         }
 
         public string ScreenedFilmsTostring()
         {
-            var builder = new StringBuilder();
+            // Get the screened films as an attributed string, which is the
+            // standard representation.
+            var attrText = new NSMutableAttributedString();
+            attrText.BeginEditing();
+            AppendScreenedFilmsToAttributedString(ref attrText);
+            attrText.EndEditing();
 
-            if (ScreenedFilms.Count > 0)
+            // Return the string value.
+            return attrText.Value;
+        }
+
+        private void AppendScreenedFilmsToAttributedString(ref NSMutableAttributedString attrText)
+        {
+            // Create a list of the distinct screened film types in the
+            // screened films.
+            var screenedFilmTypes = ScreenedFilms
+                .Select(sf => sf.ScreenedFilmType)
+                .Distinct();
+
+            // Per type, append the applicible header and the screened films
+            // with that type to the given string.
+            var space = _newLine;
+            foreach (var screenedFilmType in screenedFilmTypes)
             {
-                // Create a list of the distinct screened film types in the
-                // screened films.
-                var screenedFilmTypes = ScreenedFilms
-                    .Select(sf => sf.ScreenedFilmType)
-                    .Distinct();
-
-                // Per type, add the applicible header and the screened films
-                // with that type to the string builder.
-                var space = _newLine;
-                foreach (var screenedFilmType in screenedFilmTypes)
+                AppendToAttributedString(ref attrText, $"{space}{_headerByScreenedFilmType[screenedFilmType]}:");
+                var screenedFilmsOfType = ScreenedFilms
+                    .Where(sf => sf.ScreenedFilmType == screenedFilmType);
+                foreach (ScreenedFilm screenedFilm in screenedFilmsOfType)
                 {
-                    builder.AppendLine($"{space}{_headerByScreenedFilmType[screenedFilmType]}:");
-                    var screenedFilmsOfType = ScreenedFilms
-                        .Where(sf => sf.ScreenedFilmType == screenedFilmType);
-                    builder.AppendJoin(
-                        _twoLines,
-                        screenedFilmsOfType.Select(f => f.ToString()));
+                    Film film = ViewController.GetFilmById(screenedFilm.ScreenedFilmId);
+                    AppendToAttributedString(ref attrText, space);
+                    AppendFilmLinkToAtrributedString(ref attrText, film);
+                    AppendToAttributedString(ref attrText, _newLine + screenedFilm.Description);
                     space = _twoLines;
-                }
-
-                // Calculate the average rating of all screened films if
-                // applicable.
-                decimal meanRating = TimeWeightedMeanRating();
-                if (meanRating != decimal.Zero)
-                {
-                    builder.AppendLine($"{_twoLines}Time weighted mean rating: {meanRating:0.##}");
                 }
             }
 
-            return builder.ToString();
+            // Calculate the average rating of all screened films if applicable.
+            decimal meanRating = TimeWeightedMeanRating();
+            if (meanRating != decimal.Zero)
+            {
+                AppendToAttributedString(ref attrText, $"{_twoLines}Time weighted mean rating: {meanRating:0.##}");
+            }
         }
 
         public static NSAttributedString InfoString(Film film)
@@ -376,7 +306,21 @@ namespace PresentScreenings.TableView
             return text;
         }
 
-        public NSAttributedString HtmlToAttributed(string text)
+        public string GetGenreDescription()
+        {
+            Match m;
+            string genrePattern = @"^Genre: *(.*)$";
+            m = Regex.Match(FilmArticle, genrePattern, RegexOptions.Multiline);
+            if (m.Success)
+            {
+                return m.Result(@"$1");
+            }
+            return String.Empty;
+        }
+        #endregion
+
+        #region Private Methods
+        private NSAttributedString HtmlToAttributed(string text)
         {
             var html = text + Environment.NewLine;
             int startIndex = 0;
@@ -399,19 +343,7 @@ namespace PresentScreenings.TableView
             return attributedString;
         }
 
-        public string GetGenreDescription()
-        {
-            Match m;
-            string genrePattern = @"^Genre: *(.*)$";
-            m = Regex.Match(FilmArticle, genrePattern, RegexOptions.Multiline);
-            if (m.Success)
-            {
-                return m.Result(@"$1");
-            }
-            return String.Empty;
-        }
-
-        public decimal TimeWeightedMeanRating()
+        private decimal TimeWeightedMeanRating()
         {
             TimeSpan time = TimeSpan.Zero;
             decimal ratingMinutes = 0M;
@@ -438,9 +370,7 @@ namespace PresentScreenings.TableView
             }
             return decimal.Zero;
         }
-        #endregion
 
-        #region Private Methods
         private void AddScreenedFilm(int filmid, string title, string description, ScreenedFilmType screenedFilmType)
         {
             var screenedFilm = new ScreenedFilm(filmid, title, description, screenedFilmType);
