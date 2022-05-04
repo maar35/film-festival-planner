@@ -1,4 +1,7 @@
-﻿using AppKit;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using AppKit;
 
 namespace PresentScreenings.TableView
 {
@@ -17,7 +20,11 @@ namespace PresentScreenings.TableView
         private const int _visitFilmWebsiteMenuItemTag = 505;
         private const int _combineTitlesMenuItemTag = 506;
         private const int _uncombineTitleMenuItemTag = 507;
+        private const int _firstExtraMenuItemTag = 520;
+        private int _currentTag;
+        private int _extraFilmNumber;
         private readonly AppDelegate _app;
+        private Dictionary<nint, bool> _enabledByTag;
         #endregion
 
         #region Properties
@@ -30,6 +37,7 @@ namespace PresentScreenings.TableView
         {
             // Initialize private members.
             _app = app;
+            _enabledByTag = new Dictionary<nint, bool> { };
         }
         #endregion
 
@@ -47,7 +55,10 @@ namespace PresentScreenings.TableView
             FilmInfoDialogController filmInfoController = _app.FilmInfoController;
             AnalyserDialogController analyserController = _app.AnalyserDialogController;
 
-            // Process every item in the menu
+            // Create extra menu items for screened films and combinations.
+            PopulateExtraMenuItems(menu);
+
+            // Process every item in the menu.
             foreach (NSMenuItem item in menu.Items)
             {
                 // If the Combine or Uncombine film dialog is active, all menu
@@ -58,7 +69,14 @@ namespace PresentScreenings.TableView
                     continue;
                 }
 
-                // Take action based on the menu tag.
+                // Take action based on the extra menu item tags dictionary.
+                if (_enabledByTag.Keys.Contains(item.Tag))
+                {
+                    item.Enabled = _enabledByTag[item.Tag];
+                    continue;
+                }
+
+                // Take action based on the menu item tag.
                 switch (item.Tag)
                 {
                     case _showFilmsMenuItemTag:
@@ -102,6 +120,113 @@ namespace PresentScreenings.TableView
                         item.Enabled = false;
                         break;
                 }
+            }
+        }
+        #endregion
+
+        #region Private Methods
+        private void PopulateExtraMenuItems(NSMenu menu)
+        {
+            // FOR THE TIME BEING, bail out when the screening info dialog is active.
+            if (_app.Controller.ScreeningInfoDialog != null)
+            {
+                return;
+            }
+
+            // Remove current extra menu items.
+            foreach (nint tag in _enabledByTag.Keys)
+            {
+                menu.RemoveItem(menu.ItemWithTag(tag));
+            }
+            _enabledByTag = new Dictionary<nint, bool> { };
+
+            // Get the controller.
+            FilmRatingDialogController controller = _app.FilmsDialogController;
+
+            // Create extra menu items if applicable.
+            if (controller != null)
+            {
+                Film film = controller.CurrentFilm;
+                if (film != null)
+                {
+                    FilmInfo filmInfo = ViewController.GetFilmInfo(film.FilmId);
+                    if (filmInfo != null)
+                    {
+                        CreateAllExtraMenuItems(menu, filmInfo);
+                    }
+                }
+            }
+        }
+
+        private void CreateAllExtraMenuItems(NSMenu menu, FilmInfo filmInfo)
+        {
+            // Initialize private member variables.
+            _currentTag = _firstExtraMenuItemTag;
+            _extraFilmNumber = 0;
+
+            // Create the screened films items.
+            if (filmInfo.ScreenedFilms.Count > 0)
+            {
+                var screenedFilms = filmInfo.ScreenedFilms
+                    .Select(sf => ViewController.GetFilmById(sf.ScreenedFilmId))
+                    .ToList();
+                CreateExtraMenuItems(menu, screenedFilms, "Screened Films");
+            }
+
+            // Create the combination program items.
+            if (filmInfo.CombinationProgramIds.Count > 0)
+            {
+                var combinationFilms = filmInfo.CombinationProgramIds
+                    .Select(id => ViewController.GetFilmById(id))
+                    .ToList();
+                CreateExtraMenuItems(menu, combinationFilms, "Combination Program(s)");
+            }
+
+            // Add an inactive stub menu item if no extra films are available.
+            if (filmInfo.ScreenedFilms.Count == 0 && filmInfo.CombinationProgramIds.Count == 0)
+            {
+                var emptyList = new List<Film> { };
+                CreateExtraMenuItems(menu, emptyList, "No combinations involved");
+            }
+        }
+
+        private void CreateExtraMenuItems(NSMenu menu, List<Film> extraFilms, string headerTitle)
+        {
+            // Create the separator item.
+            _currentTag += 1;
+            NSMenuItem seperatorItem = NSMenuItem.SeparatorItem;
+            seperatorItem.Tag = _currentTag;
+            _enabledByTag.Add(_currentTag, false);
+            menu.AddItem(seperatorItem);
+
+            // Create the header item.
+            _currentTag += 1;
+            NSMenuItem headerItem = new NSMenuItem
+            {
+                Title = headerTitle,
+                Tag = _currentTag,
+                IndentationLevel = 1,
+            };
+            _enabledByTag.Add(_currentTag, false);
+            menu.AddItem(headerItem);
+
+            // Create an item for each extra film.
+            NSEventModifierMask mask = NSEventModifierMask.ControlKeyMask | NSEventModifierMask.CommandKeyMask;
+            foreach (var extraFilm in extraFilms)
+            {
+                _currentTag += 1;
+                _extraFilmNumber += 1;
+                NSMenuItem item = new NSMenuItem
+                {
+                    Title = extraFilm.ToString(),
+                    Tag = _currentTag,
+                    Action = new ObjCRuntime.Selector("NavigateToFilm:"),
+                    Identifier = extraFilm.FilmId.ToString(),
+                    KeyEquivalent = _extraFilmNumber.ToString(),
+                    KeyEquivalentModifierMask = mask,
+                };
+                _enabledByTag.Add(_currentTag, true);
+                menu.AddItem(item);
             }
         }
         #endregion

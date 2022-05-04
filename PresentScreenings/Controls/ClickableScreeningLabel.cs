@@ -32,7 +32,7 @@ namespace PresentScreenings.TableView
         #region Override Methods
         public override void DrawRect(CGRect dirtyRect)
         {
-            base.DrawRect(dirtyRect);
+                base.DrawRect(dirtyRect);
 
             // Use Core Graphic routines to draw the UI.
             using (CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
@@ -51,7 +51,7 @@ namespace PresentScreenings.TableView
                 ColorView.SetScreeningColor(_screening, context, true);
                 CTStringAttributes attrs = new CTStringAttributes();
                 attrs.ForegroundColorFromContext = true;
-                attrs.Font = ControlsFactory.StandardCtBondFont;
+                attrs.Font = ControlsFactory.StandardCtBoldFont;
                 var textPosition = new CGPoint(0, _lineHeight);
                 string[] lines = _screening.ToScreeningLabelString().Split('\n');
                 foreach (var line in lines)

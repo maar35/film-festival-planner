@@ -38,9 +38,6 @@ namespace PresentScreenings.TableView
         private Film _film;
         private FilmInfo _filmInfo;
         private NSTextField _summaryField;
-        private NSFont _originalSummaryFieldFont;
-        private NSColor _originalSummaryFieldColor;
-        private bool _summaryFieldFormatIsOriginal;
         private NSScrollView _summaryScrollView;
         private NSButton _cancelButton;
         private FilmScreeningControl _currentScreeningControl;
@@ -175,7 +172,7 @@ namespace PresentScreenings.TableView
             // Create a text box to contain the film info.
             var docRect = new CGRect(0, 0, _contentWidth, _summaryBoxHeight);
             _summaryField = new NSTextField(docRect);
-            InitiateSummaryFieldText();
+            PopulateSummaryFieldText();
             var fit = _summaryField.SizeThatFits(_summaryField.Frame.Size);
             _summaryField.SetFrameSize(fit);
 
@@ -232,42 +229,19 @@ namespace PresentScreenings.TableView
             View.AddSubview(websiteButton);
         }
 
-        private void InitiateSummaryFieldText()
+        private void PopulateSummaryFieldText()
         {
-            _summaryFieldFormatIsOriginal = true;
-            _originalSummaryFieldFont = _summaryField.Font;
-            _originalSummaryFieldColor = _summaryField.TextColor;
-            _summaryField.Editable = false;
+            _summaryField.Enabled = false;
             _summaryField.Selectable = true;
+            _summaryField.Action = new ObjCRuntime.Selector("FilmInfoClicked:");
             if (FilmInfoIsAvailable())
             {
-                SetSummaryFieldText(_filmInfo.ToString());
-            }
-            else
-            {
-                const string text = "Sorry, the URL button above is under construction.";
-                SetSummaryFieldText(text, true);
+                _summaryField.AttributedStringValue = _filmInfo.ToAttributedString();
             }
         }
 
-        private void SetSummaryFieldText(string text, bool alternativeFormat = false)
+        private void HandleClick(object sender, EventArgs e)
         {
-            if (alternativeFormat && _summaryFieldFormatIsOriginal)
-            {
-                _summaryField.Selectable = false;
-                _summaryField.Font = NSFont.LabelFontOfSize(24);
-                _summaryField.TextColor = NSColor.LightGray;
-                _summaryFieldFormatIsOriginal = false;
-            }
-            else if (! alternativeFormat && ! _summaryFieldFormatIsOriginal)
-            {
-                _summaryField.Selectable = true;
-                _summaryField.Font = _originalSummaryFieldFont;
-                _summaryField.TextColor = _originalSummaryFieldColor;
-                _summaryFieldFormatIsOriginal = true;
-            }
-            _summaryField.AttributedStringValue = FilmInfo.HtmlToAttributed(text);
-            ;
         }
 
         private bool FilmInfoIsAvailable()
@@ -293,6 +267,12 @@ namespace PresentScreenings.TableView
         void CancelGotoScreening(NSObject sender)
         {
             CloseDialog();
+        }
+
+        [Action("FilmInfoClicked:")]
+        void FilmInfoClicked(NSObject sender)
+        {
+            NSWorkspace.SharedWorkspace.OpenUrl(new NSUrl("https://iffr.com/nl/iffr/2022/films/science-around-us"));
         }
         #endregion
     }

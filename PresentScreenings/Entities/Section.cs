@@ -25,9 +25,9 @@ namespace PresentScreenings.TableView
         {
             _colorByName = new Dictionary<string, NSColor> { };
             _colorByName["black"] = NSColor.Black;
-            _colorByName["blue"] = NSColor.SystemBlueColor;
-            _colorByName["red"] = NSColor.SystemRedColor;
-            _colorByName["yellow"] = NSColor.SystemYellowColor;
+            _colorByName["blue"] = NSColor.SystemBlue;
+            _colorByName["red"] = NSColor.SystemRed;
+            _colorByName["yellow"] = NSColor.SystemYellow;
         }
 
         public Section() { }

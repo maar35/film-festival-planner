@@ -300,6 +300,23 @@ namespace PresentScreenings.TableView
             NavigateFilmScreening(screening);
         }
 
+        internal void NavigateToFilm(int filmId)
+        {
+            if (FilmInfoController != null)
+            {
+                FilmInfoController.CloseDialog();
+            }
+            Film film = ViewController.GetFilmById(filmId);
+            FilmsDialogController.SelectFilm(film);
+        }
+
+        [Action("NavigateToFilm:")]
+        internal void NavigateToFilm(NSObject sender)
+        {
+            int filmId = int.Parse(((NSMenuItem)sender).Identifier);
+            NavigateToFilm(filmId);
+        }
+
         [Action("ToggleAttendance:")]
         internal void ToggleAttendance(NSObject sender)
         {
