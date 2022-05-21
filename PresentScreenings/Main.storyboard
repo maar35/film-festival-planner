@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="19529" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
+<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="20037" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
     <dependencies>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="19529"/>
+        <deployment identifier="macosx"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="20037"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -1006,7 +1007,7 @@ Gw
             <objects>
                 <viewController title="Film Ratings" id="gJ5-Ju-597" customClass="FilmRatingDialogController" sceneMemberID="viewController">
                     <view key="view" misplaced="YES" id="elb-OS-w3T">
-                        <rect key="frame" x="0.0" y="0.0" width="912" height="742"/>
+                        <rect key="frame" x="0.0" y="0.0" width="912" height="718"/>
                         <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="gmW-ky-y0A">
@@ -1075,13 +1076,13 @@ DQ
                                 </connections>
                             </button>
                             <scrollView autohidesScrollers="YES" horizontalLineScroll="19" horizontalPageScroll="10" verticalLineScroll="19" verticalPageScroll="10" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="VCv-Jr-uiq">
-                                <rect key="frame" x="20" y="73" width="872" height="36"/>
+                                <rect key="frame" x="20" y="73" width="872" height="588"/>
                                 <clipView key="contentView" drawsBackground="NO" id="lfs-rW-7gy">
-                                    <rect key="frame" x="1" y="1" width="870" height="34"/>
+                                    <rect key="frame" x="1" y="1" width="870" height="586"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <subviews>
                                         <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="firstColumnOnly" columnSelection="YES" autosaveColumns="NO" rowSizeStyle="automatic" headerView="phV-Fb-8ew" viewBased="YES" id="yF0-fE-yMF">
-                                            <rect key="frame" x="0.0" y="0.0" width="870" height="19"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="870" height="563"/>
                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                             <size key="intercellSpacing" width="3" height="2"/>
                                             <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -1221,7 +1222,7 @@ DQ
                         <outlet property="_uncombineTitleButton" destination="Wfn-Xt-Gfg" id="oO0-bx-oS5"/>
                         <segue destination="aXh-o3-u1V" kind="sheet" identifier="CombineSheetSegue" id="2pB-eh-aEj"/>
                         <segue destination="xwY-ys-qMS" kind="sheet" identifier="UncombineSheetSegue" id="sre-cp-yPh"/>
-                        <segue destination="heZ-Uf-iae" kind="sheet" identifier="GoToScreeningSegue" id="Aco-xL-TKu"/>
+                        <segue destination="heZ-Uf-iae" kind="modal" identifier="GoToScreeningSegue" id="Aco-xL-TKu"/>
                     </connections>
                 </viewController>
                 <customObject id="Brq-Bq-Evi" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
@@ -1519,7 +1520,7 @@ Gw
         </scene>
     </scenes>
     <inferredMetricsTieBreakers>
-        <segue reference="GdS-O0-lhM"/>
+        <segue reference="Aco-xL-TKu"/>
         <segue reference="MQZ-rL-cxz"/>
     </inferredMetricsTieBreakers>
     <resources>
