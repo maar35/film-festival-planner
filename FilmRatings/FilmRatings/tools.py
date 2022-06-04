@@ -1,7 +1,7 @@
-# Tools tom support Film Rating data migrations.
+# Tools to support Film Rating data migrations.
+from django.core.exceptions import ObjectDoesNotExist
 import os
 import csv
-# from filmList.models import Film, FilmFan
 import filmList.models
 
 
@@ -22,10 +22,9 @@ class Festival:
 
         # Check the parameters.
         if name not in self.supported_names:
-            raise UnsupportedFestivalException(name)
-
+            raise UnsupportedFestivalError(name)
         if year < 2015 or year > 2030:
-            raise UnsupportedFestivalYearException(year)
+            raise UnsupportedFestivalYearError(year)
 
         # Assign the member variables.
         self.name = name
@@ -43,7 +42,7 @@ class Festival:
     def festival_data_dir(self):
         return os.path.join(self.festival_dir, 'FestivalPlan')
 
-    def read_ratings(self, rating_class):
+    def read_ratings(self):
         ratings_file = os.path.join(self.festival_data_dir, 'ratings.csv')
         fan_ratings = []
         with open(ratings_file, newline='') as csvfile:
@@ -55,24 +54,22 @@ class Festival:
                 rating = int(row[2])
                 try:
                     film = filmList.models.Film.films.get(film_id=film_id)
-                except Exception as e:
-                    print(f'Film not found: #{film_id}: {e}.')
+                except ObjectDoesNotExist:
+                    print(f'Film not found: #{film_id}.')
                     continue
-                print()
-                print(film)
                 try:
                     film_fan = filmList.models.FilmFan.film_fans.get(name=film_fan_name)
-                except IndexError:
+                except ObjectDoesNotExist:
                     print(f'Film fan not found: {film_fan_name}.')
                     continue
-                print(film_fan)
                 fan_rating = filmList.models.FilmFanFilmRating(film=film, film_fan=film_fan)
                 fan_rating.rating = rating
                 fan_ratings.append(fan_rating)
+        print(f'{len(fan_ratings)} fan ratings found.')
         return fan_ratings
 
 
-class UnsupportedFestivalException(Exception):
+class UnsupportedFestivalError(Exception):
 
     def __init__(self, festival_name):
         self.festival_name = festival_name
@@ -81,7 +78,7 @@ class UnsupportedFestivalException(Exception):
         return f'Festival named "{self.festival_name}" is not supported.'
 
 
-class UnsupportedFestivalYearException(Exception):
+class UnsupportedFestivalYearError(Exception):
 
     def __init__(self, year):
         self.year = year
