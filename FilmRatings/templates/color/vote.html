@@ -1,0 +1,21 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <form action="{% url 'color:vote' picked_color.id %}" method="post">
+        {% csrf_token %}
+        <fieldset>
+            <legend><h1>{{ picked_color.border_color }}</h1></legend>
+            {% if error_message %}
+                <p><strong>{{ error_message }}</strong></p>
+            {% endif %}
+            {% for color in colors %}
+                <input type="radio" name="choice" id="choice{{ forloop.counter }}" value="{{ color.id }}">
+                <label for="choice{{ forloop.counter }}">{{ color.border_color }}</label><br>
+            {% endfor %}
+        </fieldset>
+        <input type="submit" value="Vote">
+    </form>
+{% endblock %}

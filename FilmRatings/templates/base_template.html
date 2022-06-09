@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>{% block title %}Film Ratings Page{% endblock %}</title>
+        <style>
+          table,
+          th,
+          td {
+            padding: 10px;
+            border: 1px solid {{ border_color }};
+            border-collapse: collapse;
+          }
+        </style>
+    </head>
+
+    <body>
+        <hr>
+        <h2>{% block header %} Page Title {% endblock %}</h2>
+        <p><a href="{% url 'index' %}">index</a></p>
+        <hr>
+        {% block content %}
+            Body content
+        {% endblock %}
+    </body>
+
+    <footer>
+        <hr>
+        <small>
+            {% block footer %} ©MR {% endblock %}
+        </small>
+    </footer>
+</html>

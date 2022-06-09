@@ -1,0 +1,35 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <p>A Big Welcome to my new Film Rating app <em>{{ name }}</em>!</p>
+    <p>It's {{ hour }} o'clock.</p>
+    <br>
+    <h3>The Films and the Ratings</h3>
+    <table>
+        <thead>
+            <tr>
+                <td><b>Film</b></td>
+                <td><b>Duration</b></td>
+                {% for fan in fans %}
+                    <td><b>{{ fan }}</b></td>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for rating_cells in rating_rows %}
+            <tr>
+                {% for rating_cell in rating_cells %}
+                    {% if forloop.counter == 1 %}
+                        <td><a href="{{ rating_cell.url }}">{{ rating_cell.title }}</a></td>
+                    {% else %}
+                        <td>{{ rating_cell }}</td>
+                    {% endif %}
+                {% endfor %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

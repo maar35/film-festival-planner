@@ -1,0 +1,38 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <table>
+        <tbody>
+        <tr><td>Welcome to my Film Rating app, <em>{{ name }}</em>!</td></tr>
+        </tbody>
+    </table>
+    <br>
+    <h3>Site Links</h3>
+    <a href="{% url 'film_list' %}">Film Ratings List</a>
+    <br>
+    <a href="{% url 'color:html_color_index' %}">HTML based color picker index page</a>
+    <br>
+    <a href="{% url 'color:details' border_color.id %}">HTML based color details</a>
+    <br>
+    <a href="{% url 'color:vote' border_color.id %}">HTML based retry voting page</a>
+    <br>
+    <a href="{% url 'color:color' %}">Color picker</a>
+    <br>
+    <a href="{% url 'color:thanks' %}">Thank you page</a>
+{% endblock %}
+
+{% block footer %}
+    <p>It's {{ hour }} o'clock.</p>
+    <p>
+        {% for weekday in weekdays %}
+            {% if forloop.counter == weekday_number %}
+                <strong>{{ weekday }}</strong>
+            {% else %}
+                {{ weekday }}
+            {% endif %}
+        {% endfor %}
+    </p>
+{% endblock %}

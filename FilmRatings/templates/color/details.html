@@ -1,0 +1,29 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>All colors</h3>
+    <table>
+        <tbody>
+            {% for color in colors %}
+            <tr><td>{{ color.border_color }}</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <br>
+
+    <form action="{% url 'color:vote' picked_color.id %}" method="post">
+        {% csrf_token %}
+        <fieldset>
+            <legend><h1>{{ picked_color.border_color }}</h1></legend>
+            {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+            {% for color in colors %}
+                <input type="radio" name="choice" id="choice{{ forloop.counter }}" value="{{ color.id }}">
+                <label for="choice{{ forloop.counter }}">{{ color.border_color }}</label><br>
+            {% endfor %}
+        </fieldset>
+        <input type="submit" value="Process">
+    </form>
+{% endblock %}

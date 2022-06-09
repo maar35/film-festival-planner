@@ -1,15 +1,26 @@
-# Tools to support Film Rating data migrations.
 from django.core.exceptions import ObjectDoesNotExist
 import os
 import csv
 import filmList.models
+from color.models import TableColor
 
 
+# Test opportunity.
 def main():
     festival = Festival('MTMF', 2022)
     print(os.path.join(festival.festival_data_dir, 'ratings.csv'))
 
 
+# Define common parameters for base template.
+def add_base_context(param_dict):
+    base_param_dict = {
+        'border_color': TableColor.table_colors.get(id='1'),
+        'colors': TableColor.table_colors.order_by('id')
+    }
+    return {**base_param_dict, **param_dict}
+
+
+# Tools to support Film Rating data migrations.
 def base_dir():
     return os.path.expanduser('~/Documents/Film')
 
