@@ -1,0 +1,19 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    {% if partial_film_list %}
+        <table>
+            <tbody>
+            {% for film in partial_film_list %}
+                <tr><td><a href="{% url 'film_list:detail' film.film_id %}">{{ film.title }}</a></td></tr>
+            {% endfor %}
+            <tr><td>...</td></tr>
+            </tbody>
+        </table>
+    {% else %}
+        <p>No films are available.</p>
+    {% endif %}
+{% endblock %}}

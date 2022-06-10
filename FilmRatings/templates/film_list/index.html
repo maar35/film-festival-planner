@@ -11,17 +11,11 @@
     </table>
     <br>
     <h3>Site Links</h3>
-    <a href="{% url 'film_list' %}">Film Ratings List</a>
+    <a href="{% url 'film_list:film_list' %}">Film Ratings List</a>
     <br>
-    <a href="{% url 'color:html_color_index' %}">HTML based color picker index page</a>
-    <br>
-    <a href="{% url 'color:details' border_color.id %}">HTML based color details</a>
-    <br>
-    <a href="{% url 'color:vote' border_color.id %}">HTML based retry voting page</a>
+    <a href="{% url 'film_list:film_index' %}">Film Index</a>
     <br>
     <a href="{% url 'color:color' %}">Color picker</a>
-    <br>
-    <a href="{% url 'color:thanks' %}">Thank you page</a>
 {% endblock %}
 
 {% block footer %}

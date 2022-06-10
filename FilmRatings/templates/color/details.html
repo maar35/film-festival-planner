@@ -14,7 +14,7 @@
     </table>
     <br>
 
-    <form action="{% url 'color:vote' picked_color.id %}" method="post">
+    <form action="{% url 'color:vote' 2 %}" method="post">
         {% csrf_token %}
         <fieldset>
             <legend><h1>{{ picked_color.border_color }}</h1></legend>

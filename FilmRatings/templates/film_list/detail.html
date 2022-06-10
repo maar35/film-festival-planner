@@ -1,0 +1,19 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <form action="{% url 'film_list:vote' film.film_id %}" method="post">
+        {% csrf_token %}
+        <fieldset>
+            <legend><h3>{{ film.title }}</h3></legend>
+            {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+            {% for rating in film.filmfanfilmrating_set.all %}
+                <input type="radio" name="choice" id="choice{{ forloop.counter }}" value="{{ rating.id }}">
+                <label for="choice{{ forloop.counter }}">{{ rating }}</label><br>
+            {% endfor %}
+        </fieldset>
+        <input type="submit" value="Vote">
+    </form>
+{% endblock %}

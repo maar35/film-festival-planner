@@ -1,0 +1,20 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <table>
+        <tbody>
+        <tr><td><h3>{{ film.title }}</h3></td></tr>
+        </tbody>
+    </table>
+    <br>
+    <ul>
+    {% for rating in film.filmfanfilmrating_set.all %}
+        <li>{{ rating.film_fan }} -- {{ rating.rating }} vote{{ rating.rating|pluralize }}</li>
+    {% endfor %}
+    </ul>
+
+    <a href="{% url 'film_list:detail' film.film_id %}">Vote again?</a>
+{% endblock %}
