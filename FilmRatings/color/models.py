@@ -4,23 +4,15 @@ from django.db import models
 # Exercise class to change table border colors.
 class TableColor(models.Model):
     RED = 'red'
-    MAROON = 'maroon'
-    GREEN = 'green'
-    LIME = 'lime'
+    IVORY = 'ivory'
     BLUE = 'blue'
-    NAVY = 'navy'
-    BLACK = 'black'
     COLOR_CHOICES = [
         (RED, 'red'),
-        (MAROON, 'maroon'),
-        (GREEN, 'green'),
-        (LIME, 'lime'),
+        (IVORY, 'ivory'),
         (BLUE, 'blue'),
-        (NAVY, 'navy'),
-        (BLACK, 'black'),
     ]
 
-    border_color = models.CharField(max_length=10, choices=COLOR_CHOICES, default=LIME)
+    border_color = models.CharField(max_length=10, choices=COLOR_CHOICES, default=BLUE)
     picked_count = models.IntegerField(default=0)
     vote_count = models.IntegerField(default=0)
 

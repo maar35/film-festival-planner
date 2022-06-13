@@ -1,0 +1,18 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>{{ festival }} Details</h3>
+    <p>Border color: {{ border_color }}</p>
+    <br>
+    <table>
+        <tbody>
+        <tr><td>Festival</td><td>{{ festival.name }} {{ festival.year }}</td></tr>
+        <tr><td>From</td><td>{{ festival.start_date }}</td></tr>
+        <tr><td>Till</td><td>{{ festival.end_date }}</td></tr>
+        <tr><td>Color</td><td>{{ festival.border_color }}</td></tr>
+        </tbody>
+    </table>
+{% endblock %}

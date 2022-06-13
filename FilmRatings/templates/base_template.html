@@ -17,6 +17,7 @@
     <body>
         <hr>
         <h2>{% block header %} Page Title {% endblock %}</h2>
+        <p style="color:{{ border_color }}">{{ festival }}</p>
         <p><a href="{% url 'film_list:index' %}">index</a></p>
         <hr>
         {% block content %}

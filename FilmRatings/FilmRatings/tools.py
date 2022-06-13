@@ -2,7 +2,7 @@ from django.core.exceptions import ObjectDoesNotExist
 import os
 import csv
 import filmList.models
-from color.models import TableColor
+from festivals.models import Festival as FestivalEdition
 
 
 # Test opportunity.
@@ -13,11 +13,28 @@ def main():
 
 # Define common parameters for base template.
 def add_base_context(param_dict):
+    festivals = FestivalEdition.festivals.filter(is_current_festival=True)
+    if len(festivals) > 0:
+        festival = festivals[0]
+        border_color = festival.border_color
+    else:
+        festival = None
+        border_color = None
     base_param_dict = {
-        'border_color': TableColor.table_colors.get(id='1'),
-        'colors': TableColor.table_colors.order_by('id')
+        'border_color': border_color,
+        'festival': festival
     }
     return {**base_param_dict, **param_dict}
+
+
+# Maintain the current festival.
+def set_current_festival(festival):
+    current_festivals = FestivalEdition.festivals.filter(is_current_festival=True)
+    for current_festival in current_festivals:
+        current_festival.is_current_festival = False
+        current_festival.save()
+    festival.is_current_festival = True
+    festival.save()
 
 
 # Tools to support Film Rating data migrations.
