@@ -17,6 +17,11 @@
     <body>
         <hr>
         <h2>{% block header %} Page Title {% endblock %}</h2>
+        {% if logged_in_fan %}
+            <p>{{ logged_in_fan }}</p>
+        {% else %}
+            <p>No fan is logged in.</p>
+        {% endif %}
         <p style="color:{{ border_color }}">{{ festival }}</p>
         <p><a href="{% url 'film_list:index' %}">index</a></p>
         <hr>

@@ -4,17 +4,36 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
+    <h3><a href="{{ film.url }}">{{ film.title }}</a></h3>
+    <ul>
+        <li>Film#: {{ film.film_id }}</li>
+        <li>Duration: {{ film.duration }}</li>
+        <li>Section: {{ film.section }}</li>
+        <li>Medium category: {{ film.medium_category }}</li>
+    </ul>
+    <br>
     <table>
+        <thead>
+            <tr>
+                <td><b>Film fan</b></td>
+                <td><b>Rating</b></td>
+            </tr>
+        </thead>
         <tbody>
-        <tr><td><h3>{{ film.title }}</h3></td></tr>
+        <br>
+        {% for fan_row in fan_rows %}
+            <tr>
+                {% for fan_cell in fan_row %}
+                {% if forloop.counter == 1 and fan_cell == logged_in_fan %}
+                    <td><a href="{% url 'film_list:rating' film.film_id %}">{{ fan_cell }}</a></td>
+                {% else %}
+                    <td>{{ fan_cell }}</td>
+                {% endif %}
+                {% endfor %}
+            </tr>
+        {% endfor %}
         </tbody>
     </table>
     <br>
-    <ul>
-    {% for rating in film.filmfanfilmrating_set.all %}
-        <li>{{ rating.film_fan }} -- {{ rating.rating }} vote{{ rating.rating|pluralize }}</li>
-    {% endfor %}
-    </ul>
-
-    <a href="{% url 'film_list:detail' film.film_id %}">Vote again?</a>
+    <a href="{% url 'film_list:film_list' %}">Back to ratings</a>
 {% endblock %}

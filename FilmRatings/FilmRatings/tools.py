@@ -1,18 +1,15 @@
-from django.core.exceptions import ObjectDoesNotExist
-import os
 import csv
-import filmList.models
+import os
+
+from django.core.exceptions import ObjectDoesNotExist
+
 from festivals.models import Festival as FestivalEdition
-
-
-# Test opportunity.
-def main():
-    festival = Festival('MTMF', 2022)
-    print(os.path.join(festival.festival_data_dir, 'ratings.csv'))
+from filmList.models import Film, FilmFan, FilmFanFilmRating, current_fan
 
 
 # Define common parameters for base template.
 def add_base_context(param_dict):
+    logged_in_fan = current_fan()
     festivals = FestivalEdition.festivals.filter(is_current_festival=True)
     if len(festivals) > 0:
         festival = festivals[0]
@@ -22,7 +19,8 @@ def add_base_context(param_dict):
         border_color = None
     base_param_dict = {
         'border_color': border_color,
-        'festival': festival
+        'logged_in_fan': logged_in_fan,
+        'festival': festival,
     }
     return {**base_param_dict, **param_dict}
 
@@ -35,6 +33,15 @@ def set_current_festival(festival):
         current_festival.save()
     festival.is_current_festival = True
     festival.save()
+
+
+def set_current_fan(fan):
+    current_fans = FilmFan.film_fans.filter(is_logged_in=True)
+    for logging_out_fan in current_fans:
+        logging_out_fan.is_logged_in = False
+        logging_out_fan.save()
+    fan.is_logged_in = True
+    fan.save()
 
 
 # Tools to support Film Rating data migrations.
@@ -81,16 +88,16 @@ class Festival:
                 film_fan_name = row[1]
                 rating = int(row[2])
                 try:
-                    film = filmList.models.Film.films.get(film_id=film_id)
+                    film = Film.films.get(film_id=film_id)
                 except ObjectDoesNotExist:
                     print(f'Film not found: #{film_id}.')
                     continue
                 try:
-                    film_fan = filmList.models.FilmFan.film_fans.get(name=film_fan_name)
+                    film_fan = FilmFan.film_fans.get(name=film_fan_name)
                 except ObjectDoesNotExist:
                     print(f'Film fan not found: {film_fan_name}.')
                     continue
-                fan_rating = filmList.models.FilmFanFilmRating(film=film, film_fan=film_fan)
+                fan_rating = FilmFanFilmRating(film=film, film_fan=film_fan)
                 fan_rating.rating = rating
                 fan_ratings.append(fan_rating)
         print(f'{len(fan_ratings)} fan ratings found.')
@@ -113,7 +120,3 @@ class UnsupportedFestivalYearError(Exception):
 
     def __str__(self):
         return f'Year "{self.year}" is not supported.'
-
-
-if __name__ == '__main__':
-    main()

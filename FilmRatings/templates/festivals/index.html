@@ -10,7 +10,10 @@
         <table>
             <tbody>
             {% for festival in festival_list %}
-                <tr><td><a href="{% url 'festivals:detail_page' festival.id %}">{{ festival }}</a></td></tr>
+                <tr>
+                    <td><a href="{% url 'festivals:detail_page' festival.id %}">{{ festival }}</a></td>
+                    <td style="color:{{ festival.border_color }}">{{ festival.border_color }}</td>
+                </tr>
             {% endfor %}
             </tbody>
         </table>

@@ -1,10 +1,10 @@
-from django.views import generic
-from django.shortcuts import render
 from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from django.views import generic
 
-from festivals.models import Festival
-from festivals.forms.set_color import FestivalDetail
 from FilmRatings import tools
+from festivals.forms.set_color import FestivalDetail
+from festivals.models import Festival
 
 
 # Define generic view classes.
@@ -55,7 +55,7 @@ def detail(request, festival_id):
             print(f'In {title}: form not valid.')
     else:
         print('Nothing POSTed.')
-        form = Festival()
+        form = FestivalDetail()
 
     # Construct the context.
     context = tools.add_base_context({

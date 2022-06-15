@@ -22,7 +22,7 @@
             <tr>
                 {% for rating_cell in rating_cells %}
                     {% if forloop.counter == 1 %}
-                        <td><a href="{{ rating_cell.url }}">{{ rating_cell.title }}</a></td>
+                        <td><a href="{% url 'film_list:results' rating_cell.film_id %}">{{ rating_cell.title }}</a></td>
                     {% else %}
                         <td>{{ rating_cell }}</td>
                     {% endif %}

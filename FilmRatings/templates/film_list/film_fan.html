@@ -4,12 +4,12 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3>Color</h3>
-    <form action="{% url 'color:color' %}" method="POST">
+    <h3>Film Fan</h3>
+    <form action="{% url 'film_list:film_fan' %}" method="POST">
           {% csrf_token %}
           <table>
               {{ form.as_table }}
           </table>
-          <input type="submit" value="go" />
+          <input type="submit" value="Check in" />
     </form>
 {% endblock %}

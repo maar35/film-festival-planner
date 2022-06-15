@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 
 
@@ -34,11 +35,17 @@ def me():
     return fans[0] if len(fans) > 0 else None
 
 
+def current_fan():
+    logged_in_fans = FilmFan.film_fans.filter(is_logged_in=True)
+    return logged_in_fans[0] if len(logged_in_fans) == 1 else None
+
+
 class FilmFan(models.Model):
 
     # Define the fields.
-    name = models.CharField(max_length=16, primary_key=True, serialize=False)
+    name = models.CharField(max_length=16, unique=True)
     seq_nr = models.IntegerField(unique=True)
+    is_logged_in = models.BooleanField(default=False)
 
     # Default retrieval with .objects.all, with a manager it's .film_fans.all
     film_fans = models.Manager()
@@ -52,16 +59,23 @@ class FilmFan(models.Model):
     def initial(self):
         return self.name[:1] if self != me() else ""
 
+    def fan_rating_str(self, film):
+        try:
+            fan_rating = FilmFanFilmRating.fan_ratings.get(film=film, film_fan=self)
+        except (KeyError, ObjectDoesNotExist):
+            fan_rating = None
+        return f'{fan_rating.rating}' if fan_rating is not None else ''
+
 
 # Film Fan Film Rating table.
 class FilmFanFilmRating(models.Model):
 
     class Rating(models.IntegerChoices):
         UNRATED = 0
-        VERY_BAD = 1
-        BAD = 2
-        VERY_INSUFFICIENT = 3
-        INSUFFICIENT = 4
+        ALREADY_SEEN = 1
+        WILL_SEE = 2
+        VERY_BAD = 3
+        BAD = 4
         BELOW_MEDIOCRE = 5
         MEDIOCRE = 6
         INDECISIVE = 7
@@ -71,7 +85,7 @@ class FilmFanFilmRating(models.Model):
 
     # Define the fields.
     film = models.ForeignKey(Film, on_delete=models.CASCADE)
-    film_fan = models.ForeignKey(FilmFan, db_column='name', on_delete=models.CASCADE)
+    film_fan = models.ForeignKey(FilmFan, on_delete=models.CASCADE)
     rating = models.IntegerField(choices=Rating.choices)
 
     # Default retrieval with .objects.all, with a manager it's .fan_ratings.all
