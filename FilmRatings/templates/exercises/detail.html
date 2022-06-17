@@ -6,7 +6,7 @@
 {% block content %}
     <h3><a href="{{ film.url }}">{{ film.title }}</a> </h3>
     <br>
-    <form action="{% url 'film_list:vote' film.film_id %}" method="post">
+    <form action="{% url 'exercises:vote' film.film_id %}" method="post">
         {% csrf_token %}
         <fieldset>
             <legend><h3>{{ film.title }}</h3></legend>
