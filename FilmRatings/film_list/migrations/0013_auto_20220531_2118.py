@@ -7,7 +7,7 @@ from FilmRatings import tools
 def add_film_ratings(apps, schema_editor):
     # We get the model from the versioned app registry;
     # if we directly import it, it'll be the wrong version.
-    fan_rating_class = apps.get_model("filmList", "FilmFanFilmRating")
+    fan_rating_class = apps.get_model("film_list", "FilmFanFilmRating")
     db_alias = schema_editor.connection.alias
     # fan_ratings = tools.Festival('MTMF', 2022).read_ratings(fan_rating_class)
     fan_ratings = []
@@ -17,7 +17,7 @@ def add_film_ratings(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('filmList', '0012_rename_film_id_filmfanfilmrating_film'),
+        ('film_list', '0012_rename_film_id_filmfanfilmrating_film'),
     ]
 
     operations = [

@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('filmList', '0004_alter_film_url'),
+        ('film_list', '0004_alter_film_url'),
     ]
 
     operations = [

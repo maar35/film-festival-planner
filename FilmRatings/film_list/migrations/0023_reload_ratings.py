@@ -7,7 +7,7 @@ from FilmRatings import tools
 def reload_film_ratings(apps, schema_editor):
     # Get the model from the versioned app registry to be sure to get
     # the right version.
-    fan_rating_class = apps.get_model("filmList", "FilmFanFilmRating")
+    fan_rating_class = apps.get_model("film_list", "FilmFanFilmRating")
 
     # Get a reference to the database.
     db_alias = schema_editor.connection.alias
@@ -25,7 +25,7 @@ def reload_film_ratings(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('filmList', '0021_alter_filmfanfilmrating_film_fan'),
+        ('film_list', '0022_load_fans'),
     ]
 
     operations = [

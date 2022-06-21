@@ -59,12 +59,23 @@ class FilmFan(models.Model):
     def initial(self):
         return self.name[:1] if self != me() else ""
 
-    def fan_rating_str(self, film):
+    def fan_rating(self, film):
         try:
             fan_rating = FilmFanFilmRating.fan_ratings.get(film=film, film_fan=self)
         except (KeyError, ObjectDoesNotExist):
             fan_rating = None
+        return fan_rating
+
+    def fan_rating_str(self, film):
+        fan_rating = self.fan_rating(film)
         return f'{fan_rating.rating}' if fan_rating is not None else ''
+
+    def fan_rating_name(self, film):
+        fan_rating = self.fan_rating(film)
+        if fan_rating is None:
+            fan_rating = FilmFanFilmRating(film=film, film_fan=self, rating=0)
+        name_by_rating = dict(FilmFanFilmRating.Rating.choices)
+        return name_by_rating[fan_rating.rating]
 
 
 # Film Fan Film Rating table.

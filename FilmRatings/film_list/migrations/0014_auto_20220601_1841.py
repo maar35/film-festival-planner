@@ -7,7 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('filmList', '0013_auto_20220531_2118'),
+        ('film_list', '0013_auto_20220531_2118'),
     ]
 
     operations = [
@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='filmfanfilmrating',
             name='film_fan',
-            field=models.ForeignKey(db_column='name', on_delete=django.db.models.deletion.CASCADE, to='filmList.filmfan'),
+            field=models.ForeignKey(db_column='name', on_delete=django.db.models.deletion.CASCADE, to='film_list.filmfan'),
         ),
         migrations.AlterUniqueTogether(
             name='filmfanfilmrating',

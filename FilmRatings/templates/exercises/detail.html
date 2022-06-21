@@ -4,16 +4,21 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3><a href="{{ film.url }}">{{ film.title }}</a> </h3>
+    <h3>Question Details</h3>
+    <ul>
+        <li>Question text: {{ chosen_question.question_text }}</li>
+        <li>Publication: {{ chosen_question.pub_date }}</li>
+        <li>Number of choices: {{ chosen_question.choice_set.count }}</li>
+    </ul>
     <br>
-    <form action="{% url 'exercises:vote' film.film_id %}" method="post">
+    <form action="{% url 'exercises:vote' chosen_question.id %}" method="post">
         {% csrf_token %}
         <fieldset>
-            <legend><h3>{{ film.title }}</h3></legend>
+            <legend><h3>{{ chosen_question.question_text }}</h3></legend>
             {% if error_message %}<p style="color:{{ border_color }}"><strong>{{ error_message }}</strong></p>{% endif %}
-            {% for rating in film.filmfanfilmrating_set.all %}
-                <input type="radio" name="choice" id="choice{{ forloop.counter }}" value="{{ rating.id }}">
-                <label for="choice{{ forloop.counter }}">{{ rating }}</label><br>
+            {% for choice in chosen_question.choice_set.all %}
+                <input type="radio" name="choice" id="choice{{ forloop.counter }}" value="{{ choice.id }}">
+                <label for="choice{{ forloop.counter }}">{{ choice }}</label><br>
             {% endfor %}
         </fieldset>
         <input type="submit" value="Vote">

@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from festivals.models import Festival, FestivalBase
 
 # Register the models.

@@ -10,6 +10,7 @@
         <li>Duration: {{ film.duration }}</li>
         <li>Section: {{ film.section }}</li>
         <li>Medium category: {{ film.medium_category }}</li>
+        <li>Rating count: {{ film.filmfanfilmrating_set.count }}</li>
     </ul>
     <br>
     <table>
@@ -17,19 +18,19 @@
             <tr>
                 <td><b>Film fan</b></td>
                 <td><b>Rating</b></td>
+                <td><b>Meaning</b></td>
             </tr>
         </thead>
         <tbody>
-        <br>
         {% for fan_row in fan_rows %}
             <tr>
-                {% for fan_cell in fan_row %}
+            {% for fan_cell in fan_row %}
                 {% if forloop.counter == 1 and fan_cell == logged_in_fan %}
                     <td><a href="{% url 'film_list:rating' film.film_id %}">{{ fan_cell }}</a></td>
                 {% else %}
                     <td>{{ fan_cell }}</td>
                 {% endif %}
-                {% endfor %}
+            {% endfor %}
             </tr>
         {% endfor %}
         </tbody>

@@ -4,36 +4,12 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3><a href="{{ film.url }}">{{ film.title }}</a></h3>
+    <h3>Results after voting</h3>
     <ul>
-        <li>Film#: {{ film.film_id }}</li>
-        <li>Duration: {{ film.duration }}</li>
-        <li>Section: {{ film.section }}</li>
-        <li>Medium category: {{ film.medium_category }}</li>
+    {% for choice in question.choice_set.all %}
+        <li>{{ choice.choice_text }} --> {{ choice.votes }} vote{{ choice.votes | pluralize }}</li>
+    {% endfor %}
     </ul>
-    <br>
-    <table>
-        <thead>
-            <tr>
-                <td><b>Film fan</b></td>
-                <td><b>Rating</b></td>
-            </tr>
-        </thead>
-        <tbody>
-        <br>
-        {% for fan_row in fan_rows %}
-            <tr>
-                {% for fan_cell in fan_row %}
-                {% if forloop.counter == 1 and fan_cell == logged_in_fan %}
-                    <td><a href="{% url 'exercises:detail' film.film_id %}">{{ fan_cell }}</a></td>
-                {% else %}
-                    <td>{{ fan_cell }}</td>
-                {% endif %}
-                {% endfor %}
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    <br>
-    <a href="{% url 'exercises:film_index' %}">Back to film index</a>
+
+    <a href="{% url 'exercises:detail' question.id %}">Vote again?</a>
 {% endblock %}

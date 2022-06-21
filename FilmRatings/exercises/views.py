@@ -1,83 +1,94 @@
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
+from django.utils import timezone
 from django.views import generic
 
 from FilmRatings import tools
-from filmList.models import Film, FilmFan
+from film_list.models import Film, FilmFan
+from exercises.models import Question
 
 
 # Views only used in the tutorial.
-# (https://docs.djangoproject.com/en/3.2/intro/tutorial04/).
+# https://docs.djangoproject.com/en/3.2/intro/tutorial04/.
 
 # Generic view classes.
 
 
 class IndexView(generic.ListView):
-    template_name = 'exercises/film_index.html'
-    context_object_name = 'partial_film_list'
+    template_name = 'exercises/index.html'
+    context_object_name = 'latest_question_list'
 
     def get_queryset(self):
-        """Return a part of the films."""
-        return Film.films.order_by('seq_nr')[:20]
+        """
+        Return the last five published questions (not including those set to be
+        published in the future).
+        """
+        now = timezone.now()
+        return Question.objects.filter(pub_date__lte=now).order_by('-pub_date')[:5]
 
     def get_context_data(self, **kwargs):
+        film = Film.films.get(film_id=23)
         context = tools.add_base_context(super().get_context_data(**kwargs))
-        context['title'] = 'Films Index Exercise'
+        context['title'] = 'Questions Index Exercise'
+        context['film'] = film
         return context
 
 
 class DetailView(generic.DetailView):
-    model = Film
+    model = Question
     template_name = 'exercises/detail.html'
+    context_object_name = 'chosen_question'
+
+    def get_queryset(self):
+        """
+        Excludes any questions that aren't published yet.
+        """
+        return Question.objects.filter(pub_date__lte=timezone.now())
 
     def get_context_data(self, **kwargs):
         context = tools.add_base_context(super().get_context_data(**kwargs))
-        context['title'] = 'Film Rating Details Exercise'
+        context['title'] = 'Details Exercise'
         return context
 
 
 class ResultsView(generic.DetailView):
-    model = Film
+    model = Question
     template_name = 'exercises/results.html'
 
     def get_context_data(self, **kwargs):
-        film = self.object
-        fan_rows = []
-        fans = FilmFan.film_fans.all()
-        for fan in fans:
-            fan_row = [fan, fan.fan_rating_str(film)]
-            fan_rows.append(fan_row)
         context = tools.add_base_context(super().get_context_data(**kwargs))
-        context['title'] = 'Film Rating Results Exercise'
-        context['fan_rows'] = fan_rows
+        context['title'] = 'Results Exercise'
         return context
 
 
 # Old school view classes
 
-def vote(request, film_id):
-    title = f'Film Details Exercise - Empty Vote'
-    film = get_object_or_404(Film, film_id=film_id)
+def vote(request, question_id):
+    title = f'Details Exercise - Empty Vote'
+    question = get_object_or_404(Question, id=question_id)
+    print(f'@@ {title}: question_id={question_id} {question}')
     try:
-        choice = request.POST['choice']
-        # selected_rating = film.filmfanfilmrating_set.get(pk=choice)
+        choice_id = request.POST['choice']
+        print(f'@@ {title}: POSTed choice_id={choice_id}')
+        selected_choice = question.choice_set.get(id=choice_id)
     except KeyError:
         # Redisplay the film rating voting form.
         context = tools.add_base_context({
             'title': title,
-            'film': film,
-            'error_message': "First select a rating, you fool.",
+            'chosen_question': question,
+            'error_message': "First select a choice, you fool.",
         })
         return render(request, 'exercises/detail.html', context)
     else:
-        # selected_rating.vote_count += 1
-        # selected_rating.save()
+        print(f'@@ {title}: POST went fine, selected choice={selected_choice}')
+        selected_choice.votes += 1
+        selected_choice.save()
 
         # Always return an HttpResponseRedirect after successfully dealing
         # with POST data. This prevents data from being posted twice if a
         # user hits the Back button.
-        return HttpResponseRedirect(reverse('exercises:results', args=(film.film_id,)))
+        return HttpResponseRedirect(reverse('exercises:results', args=(question.id,)))
 
 
 # Working views that are replaced by generic views.
@@ -89,7 +100,7 @@ def vote(request, film_id):
 #         'title': title,
 #         'partial_film_list': partial_film_list
 #     })
-#     return render(request, 'exercises/film_index.html', context)
+#     return render(request, 'exercises/index.html', context)
 
 
 # def detail(request, film_id):

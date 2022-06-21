@@ -1,5 +1,5 @@
 from django import forms
-from filmList.models import FilmFanFilmRating
+from film_list.models import FilmFanFilmRating
 
 
 class Rating(forms.Form):

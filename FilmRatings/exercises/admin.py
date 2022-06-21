@@ -1,3 +1,7 @@
 from django.contrib import admin
 
-# Register your models here.
+from exercises.models import Question, Choice
+
+# Register the models.
+admin.site.register(Question)
+admin.site.register(Choice)

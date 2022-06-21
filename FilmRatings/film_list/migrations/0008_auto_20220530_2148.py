@@ -12,7 +12,7 @@ films_file = os.path.join(planner_dir, "films.csv")
 def add_films(apps, schema_editor):
     # We get the model from the versioned app registry;
     # if we directly import it, it'll be the wrong version.
-    film_class = apps.get_model("filmList", "Film")
+    film_class = apps.get_model("film_list", "Film")
     db_alias = schema_editor.connection.alias
     films = []
     in_header = True
@@ -38,7 +38,7 @@ def add_films(apps, schema_editor):
 def revert_add_films(apps, schema_editor):
     # add_films() reads all Film instances into the database,
     # so revert_add_films() should delete them.
-    film_class = apps.get_model("filmList", "Film")
+    film_class = apps.get_model("film_list", "Film")
     db_alias = schema_editor.connection.alias
     for film in film_class.films.all():
         film_class.objects.using(db_alias).filter(film_id=film.film).delete()
@@ -47,7 +47,7 @@ def revert_add_films(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('filmList', '0007_auto_20220530_1843'),
+        ('film_list', '0007_auto_20220530_1843'),
     ]
 
     operations = [

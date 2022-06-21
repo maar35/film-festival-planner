@@ -1,5 +1,5 @@
 from django import forms
-from filmList.models import FilmFan
+from film_list.models import FilmFan
 
 
 class User(forms.Form):

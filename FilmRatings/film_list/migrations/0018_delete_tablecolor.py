@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('filmList', '0017_tablecolor'),
+        ('film_list', '0017_tablecolor'),
     ]
 
     operations = [

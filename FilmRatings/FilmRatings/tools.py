@@ -4,7 +4,7 @@ import os
 from django.core.exceptions import ObjectDoesNotExist
 
 from festivals.models import Festival as FestivalEdition
-from filmList.models import Film, FilmFan, FilmFanFilmRating, current_fan
+from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan
 
 
 # Define common parameters for base template.

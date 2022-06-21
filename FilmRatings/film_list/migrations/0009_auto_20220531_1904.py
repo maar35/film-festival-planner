@@ -8,7 +8,7 @@ import django.db.models.manager
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('filmList', '0008_auto_20220530_2148'),
+        ('film_list', '0008_auto_20220530_2148'),
     ]
 
     operations = [
@@ -29,9 +29,9 @@ class Migration(migrations.Migration):
             name='FilmFanFilmRating',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('film_fan', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='filmList.filmfan')),
-                ('film_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='filmList.film')),
-                ('rating', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='filmList.filmrating')),
+                ('film_fan', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='film_list.filmfan')),
+                ('film_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='film_list.film')),
+                ('rating', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='film_list.filmrating')),
             ],
         ),
     ]
