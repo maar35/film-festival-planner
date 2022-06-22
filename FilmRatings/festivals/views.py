@@ -1,9 +1,10 @@
 from django.http import HttpResponseRedirect
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
+from django.urls import reverse
 from django.views import generic
 
 from FilmRatings import tools
-from festivals.forms.set_color import FestivalDetail
+from festivals.forms.set_festival import FestivalEdition
 from festivals.models import Festival
 
 
@@ -22,45 +23,30 @@ class IndexView(generic.ListView):
         return context
 
 
-class DetailView(generic.DetailView):
-    model = Festival
-    template_name = 'festivals/detail.html'
-
-    def get_context_data(self, **kwargs):
-        tools.set_current_festival(self.object)
-        context = tools.add_base_context(super().get_context_data(**kwargs))
-        context['title'] = 'Festival Details'
-        context['border_color'] = self.object.border_color
-        return context
-
-
 # Color picker view.
 def detail(request, festival_id):
 
     # Preset some parameters.
-    title = "Festival Color Picker"
+    title = "Festival Picker"
+    festival = get_object_or_404(Festival, id=festival_id)
 
     # Check the request.
-    print(f'In {title}, passed festival id is: {festival_id}.')
-    if "POST" == request.method:
-        form = FestivalDetail(request.POST)
+    if request.method == 'POST':
+        form = FestivalEdition(request.POST, initial={'festival': festival.id})
         if form.is_valid():
-            selected_color = form.cleaned_data['border_color']
-            print(f'In {title}, selected color is: {selected_color}.')
-            festival = Festival.festivals.get(pk=festival_id)
-            festival.border_color = selected_color
-            festival.save()
-            return HttpResponseRedirect('/film_list/film_list/')
+            selected_festival_id = form.cleaned_data['festival']
+            selected_festival = Festival.festivals.get(pk=selected_festival_id)
+            selected_festival.set_current_festival()
+            return HttpResponseRedirect(reverse('festivals:detail', args=[selected_festival_id]))
         else:
-            print(f'In {title}: form not valid.')
+            print(f'{title}: form not valid.')
     else:
-        print('Nothing POSTed.')
-        form = FestivalDetail()
+        form = FestivalEdition(initial={'festival': festival.id}, auto_id=False)
 
     # Construct the context.
     context = tools.add_base_context({
         "title": title,
-        "festival": Festival.festivals.get(pk=festival_id),
+        "festival_id": festival.id,
         "form": form,
     })
 

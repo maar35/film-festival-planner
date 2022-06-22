@@ -5,7 +5,6 @@ from django.utils import timezone
 from django.views import generic
 
 from FilmRatings import tools
-from film_list.models import Film, FilmFan
 from exercises.models import Question
 
 
@@ -28,10 +27,8 @@ class IndexView(generic.ListView):
         return Question.objects.filter(pub_date__lte=now).order_by('-pub_date')[:5]
 
     def get_context_data(self, **kwargs):
-        film = Film.films.get(film_id=23)
         context = tools.add_base_context(super().get_context_data(**kwargs))
         context['title'] = 'Questions Index Exercise'
-        context['film'] = film
         return context
 
 
@@ -67,10 +64,8 @@ class ResultsView(generic.DetailView):
 def vote(request, question_id):
     title = f'Details Exercise - Empty Vote'
     question = get_object_or_404(Question, id=question_id)
-    print(f'@@ {title}: question_id={question_id} {question}')
     try:
         choice_id = request.POST['choice']
-        print(f'@@ {title}: POSTed choice_id={choice_id}')
         selected_choice = question.choice_set.get(id=choice_id)
     except KeyError:
         # Redisplay the film rating voting form.
@@ -81,7 +76,6 @@ def vote(request, question_id):
         })
         return render(request, 'exercises/detail.html', context)
     else:
-        print(f'@@ {title}: POST went fine, selected choice={selected_choice}')
         selected_choice.votes += 1
         selected_choice.save()
 
@@ -89,35 +83,3 @@ def vote(request, question_id):
         # with POST data. This prevents data from being posted twice if a
         # user hits the Back button.
         return HttpResponseRedirect(reverse('exercises:results', args=(question.id,)))
-
-
-# Working views that are replaced by generic views.
-
-# def film_index(request):
-#     title = 'Film Index'
-#     partial_film_list = Film.films.order_by('-title')[:15]
-#     context = tools.add_base_context({
-#         'title': title,
-#         'partial_film_list': partial_film_list
-#     })
-#     return render(request, 'exercises/index.html', context)
-
-
-# def detail(request, film_id):
-#     title = 'Film Details'
-#     film = get_object_or_404(Film, pk=film_id)
-#     context = tools.add_base_context({
-#         'title': title,
-#         'film': film
-#     })
-#     return render(request, 'exercises/detail.html', context)
-
-
-# def results(request, film_id):
-#     title = 'Film Rating Results'
-#     film = get_object_or_404(Film, pk=film_id)
-#     context = tools.add_base_context({
-#         'title': title,
-#         'film': film
-#     })
-#     return render(request, 'exercises/results.html', context)

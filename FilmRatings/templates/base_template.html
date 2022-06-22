@@ -22,7 +22,11 @@
         {% else %}
             <p>No fan is logged in.</p>
         {% endif %}
-        <p style="color:{{ border_color }}">{{ festival }}</p>
+        {% if festival %}
+            <p style="color:{{ border_color }}">{{ festival }}</p>
+        {% else %}
+            <p>No festival selected.</p>
+        {% endif %}
         <p><a href="{% url 'film_list:index' %}">index</a></p>
         <hr>
         {% block content %}

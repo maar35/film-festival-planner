@@ -5,12 +5,12 @@
 
 {% block content %}
     <h3>Question Details</h3>
-    <ul>
-        <li>Question text: {{ chosen_question.question_text }}</li>
-        <li>Publication: {{ chosen_question.pub_date }}</li>
-        <li>Number of choices: {{ chosen_question.choice_set.count }}</li>
-    </ul>
-    <br>
+    <table>
+        <tr><td><b>Question text</b></td><td>{{ chosen_question.question_text }}</td></tr>
+        <tr><td><b>Publication</b></td><td>{{ chosen_question.pub_date }}</td></tr>
+        <tr><td><b>Number of choices</b></td><td>{{ chosen_question.choice_set.count }}</td></tr>
+    </table>
+    <br><br>
     <form action="{% url 'exercises:vote' chosen_question.id %}" method="post">
         {% csrf_token %}
         <fieldset>

@@ -28,6 +28,7 @@ class Migration(migrations.Migration):
         ('film_list', '0015_auto_20220601_1937'),
     ]
 
+    # Operation commented out in order to get a working test database.
     operations = [
         # migrations.RunPython(reload_film_ratings)
     ]

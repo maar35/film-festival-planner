@@ -19,6 +19,11 @@ class FestivalBase(models.Model):
 
 
 # Festival table, to keep festival information.
+def current_festival():
+    festivals = Festival.festivals.filter(is_current_festival=True)
+    return festivals[0] if len(festivals) == 1 else None
+
+
 class Festival(models.Model):
     TOMATO = 'tomato'
     RED = 'red'
@@ -74,3 +79,13 @@ class Festival(models.Model):
     def __str__(self):
         edition_str = '' if self.edition is None else f' - {self.edition} edition'
         return f'{self.base} {self.year}{edition_str}'
+
+    def set_current_festival(self):
+        current_festivals = Festival.festivals.filter(is_current_festival=True)
+        for festival in current_festivals:
+            festival.is_current_festival = False
+            festival.save()
+        print(f'@@ tools: making {self} the current festival.')
+        self.is_current_festival = True
+        self.save()
+

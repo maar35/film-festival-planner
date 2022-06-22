@@ -7,5 +7,5 @@ urlpatterns = [
     path('', views.IndexView.as_view(), name='index'),
 
     # Example: /festivals/5/
-    path('<int:pk>/', views.DetailView.as_view(), name='detail_page'),
+    path('<int:festival_id>/', views.detail, name='detail'),
 ]

@@ -77,6 +77,14 @@ class FilmFan(models.Model):
         name_by_rating = dict(FilmFanFilmRating.Rating.choices)
         return name_by_rating[fan_rating.rating]
 
+    def set_current_fan(self):
+        current_fans = FilmFan.film_fans.filter(is_logged_in=True)
+        for logging_out_fan in current_fans:
+            logging_out_fan.is_logged_in = False
+            logging_out_fan.save()
+        self.is_logged_in = True
+        self.save()
+
 
 # Film Fan Film Rating table.
 class FilmFanFilmRating(models.Model):

@@ -5,11 +5,14 @@
 
 {% block content %}
     <h3>Results after voting</h3>
-    <ul>
+    <table>
     {% for choice in question.choice_set.all %}
-        <li>{{ choice.choice_text }} --> {{ choice.votes }} vote{{ choice.votes | pluralize }}</li>
+        <tr>
+            <td><b>{{ choice.choice_text }}</b></td>
+            <td>{{ choice.votes }} vote{{ choice.votes | pluralize }}</td>
+        </tr>
     {% endfor %}
-    </ul>
-
+    </table>
+    <br><br>
     <a href="{% url 'exercises:detail' question.id %}">Vote again?</a>
 {% endblock %}
