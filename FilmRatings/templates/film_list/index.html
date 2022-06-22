@@ -1,0 +1,34 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <table>
+        <tbody>
+        <tr><td>Welcome to my Film Rating app, <em>{{ name }}</em>!</td></tr>
+        </tbody>
+    </table>
+    <br>
+    <h3>Site Links</h3>
+    <a href="{% url 'film_list:film_fan' %}">Film fans</a>
+    <br>
+    <a href="{% url 'festivals:index' %}">Festivals</a>
+    <br>
+    <a href="{% url 'film_list:film_list' %}">Film Ratings</a>
+    <br><br>
+    <a href="{% url 'exercises:index' %}">Exercises</a>
+{% endblock %}
+
+{% block footer %}
+    <p>It's {{ hour }} o'clock.</p>
+    <p>
+        {% for weekday in weekdays %}
+            {% if forloop.counter == weekday_number %}
+                <strong>{{ weekday }}</strong>
+            {% else %}
+                {{ weekday }}
+            {% endif %}
+        {% endfor %}
+    </p>
+{% endblock %}

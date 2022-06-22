@@ -1,15 +1,27 @@
-# Tools to support Film Rating data migrations.
-from django.core.exceptions import ObjectDoesNotExist
-import os
 import csv
-import filmList.models
+import os
+
+from django.core.exceptions import ObjectDoesNotExist
+
+from festivals.models import Festival as FestivalEdition, current_festival
+from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan
 
 
-def main():
-    festival = Festival('MTMF', 2022)
-    print(os.path.join(festival.festival_data_dir, 'ratings.csv'))
+# Define common parameters for base template.
+def add_base_context(param_dict):
+    logged_in_fan = current_fan()
+    festival = current_festival()
+    border_color = festival.border_color if festival is not None else None
+
+    base_param_dict = {
+        'border_color': border_color,
+        'logged_in_fan': logged_in_fan,
+        'festival': festival,
+    }
+    return {**base_param_dict, **param_dict}
 
 
+# Tools to support Film Rating data migrations.
 def base_dir():
     return os.path.expanduser('~/Documents/Film')
 
@@ -53,16 +65,16 @@ class Festival:
                 film_fan_name = row[1]
                 rating = int(row[2])
                 try:
-                    film = filmList.models.Film.films.get(film_id=film_id)
+                    film = Film.films.get(film_id=film_id)
                 except ObjectDoesNotExist:
                     print(f'Film not found: #{film_id}.')
                     continue
                 try:
-                    film_fan = filmList.models.FilmFan.film_fans.get(name=film_fan_name)
+                    film_fan = FilmFan.film_fans.get(name=film_fan_name)
                 except ObjectDoesNotExist:
                     print(f'Film fan not found: {film_fan_name}.')
                     continue
-                fan_rating = filmList.models.FilmFanFilmRating(film=film, film_fan=film_fan)
+                fan_rating = FilmFanFilmRating(film=film, film_fan=film_fan)
                 fan_rating.rating = rating
                 fan_ratings.append(fan_rating)
         print(f'{len(fan_ratings)} fan ratings found.')
@@ -85,7 +97,3 @@ class UnsupportedFestivalYearError(Exception):
 
     def __str__(self):
         return f'Year "{self.year}" is not supported.'
-
-
-if __name__ == '__main__':
-    main()

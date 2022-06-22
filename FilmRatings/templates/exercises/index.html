@@ -1,0 +1,22 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>Published Questions</h3>
+    {% if latest_question_list %}
+        <table>
+            <tbody>
+            {% for question in latest_question_list %}
+                <tr>
+                    <td><a href="{% url 'exercises:detail' question.id %}">{{ question.question_text }}</a></td>
+                    <td>{{ question.pub_date }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No questions are available.</p>
+    {% endif %}
+{% endblock %}}

@@ -1,0 +1,15 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>Film Fan</h3>
+    <form action="{% url 'film_list:film_fan' %}" method="POST">
+          {% csrf_token %}
+          <table>
+              {{ form.as_table }}
+          </table>
+          <input type="submit" value="Check in" />
+    </form>
+{% endblock %}

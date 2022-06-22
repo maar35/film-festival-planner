@@ -1,0 +1,26 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>Question Details</h3>
+    <table>
+        <tr><td><b>Question text</b></td><td>{{ chosen_question.question_text }}</td></tr>
+        <tr><td><b>Publication</b></td><td>{{ chosen_question.pub_date }}</td></tr>
+        <tr><td><b>Number of choices</b></td><td>{{ chosen_question.choice_set.count }}</td></tr>
+    </table>
+    <br><br>
+    <form action="{% url 'exercises:vote' chosen_question.id %}" method="post">
+        {% csrf_token %}
+        <fieldset>
+            <legend><h3>{{ chosen_question.question_text }}</h3></legend>
+            {% if error_message %}<p style="color:{{ border_color }}"><strong>{{ error_message }}</strong></p>{% endif %}
+            {% for choice in chosen_question.choice_set.all %}
+                <input type="radio" name="choice" id="choice{{ forloop.counter }}" value="{{ choice.id }}">
+                <label for="choice{{ forloop.counter }}">{{ choice }}</label><br>
+            {% endfor %}
+        </fieldset>
+        <input type="submit" value="Vote">
+    </form>
+{% endblock %}

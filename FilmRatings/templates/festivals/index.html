@@ -1,0 +1,24 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>Festivals</h3>
+    <br>
+    {% if festival_list %}
+        <table>
+            <tbody>
+            {% for festival in festival_list %}
+                <tr>
+                    <td><a href="{% url 'festivals:detail' festival.id %}">{{ festival }}</a></td>
+                    <td style="color:{{ festival.border_color }}">{{ festival.border_color }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No festivals are available.</p>
+    {% endif %}
+{% endblock %}}
+
