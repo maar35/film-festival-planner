@@ -1,0 +1,54 @@
+a,
+li a,
+td a {
+    color: green;
+}
+
+h1 {
+    color: ivory;
+    text-align: center;
+    font-family: copperplate;
+}
+
+p,
+label,
+h2,
+h3,
+li,
+table,
+th,
+td {
+    color: silver;
+    font-family: trebuchet ms;
+}
+
+b {
+    color: ivory;
+}
+
+table,
+th,
+td {
+    padding: 10px;
+    border-collapse: collapse;
+}
+
+select {
+    font-size: large
+}
+
+input[type=submit] {
+    width: 50%;
+    font-size: large;
+    background-color: green;
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+input[type=submit]:hover {
+    background-color: forestgreen;
+}

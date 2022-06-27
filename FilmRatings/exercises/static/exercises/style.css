@@ -1,0 +1,35 @@
+a,
+li a,
+td a {
+    color: green;
+}
+
+h1 {
+    color: red;
+    text-align: left;
+    font-family: trebuchet ms;
+}
+
+p,
+label,
+h2,
+h3,
+li,
+table,
+th,
+td {
+    color: yellow;
+    font-family: trebuchet ms;
+}
+
+b {
+    color: green;
+    font-family: trebuchet ms;
+}
+
+table,
+th,
+td {
+    padding: 10px;
+    border-collapse: collapse;
+}

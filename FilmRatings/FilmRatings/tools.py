@@ -12,9 +12,11 @@ def add_base_context(param_dict):
     logged_in_fan = current_fan()
     festival = current_festival()
     border_color = festival.border_color if festival is not None else None
+    background_image = festival.base.image if festival is not None else None
 
     base_param_dict = {
         'border_color': border_color,
+        'background_image': background_image,
         'logged_in_fan': logged_in_fan,
         'festival': festival,
     }

@@ -24,10 +24,10 @@
     </table>
     <br><br>
     <h3>Switch to another festival</h3>
-    <form action="{% url 'festivals:detail' festival_id %}" method="POST">
+    <form action="{% url 'festivals:detail' festival_id %}" method="post">
         {% csrf_token %}
         {{ form.as_p }}
-        <input type="submit" value="Switch" />
+        <input value="Switch" type="submit" />
     </form>
     <br><br>
     <a href="{% url 'festivals:index' %}">Back to festival index</a>

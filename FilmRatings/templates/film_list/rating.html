@@ -8,10 +8,8 @@
     <p><a href="{{ film.url }}">{{ film }}</a></p>
     <br>
     <form action="{% url 'film_list:rating' film.film_id %}" method="POST">
-          {% csrf_token %}
-          <table>
-              {{ form.as_table }}
-          </table>
-          <input type="submit" value="Rate" />
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" value="Rate" />
     </form>
 {% endblock %}

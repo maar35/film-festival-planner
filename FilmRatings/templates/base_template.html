@@ -3,31 +3,40 @@
     <head>
         <meta charset="UTF-8">
         <title>{% block title %}Film Ratings Page{% endblock %}</title>
+        {% load static %}
+        <link rel="stylesheet" type="text/css" href="{% static 'film_list/style.css' %}">
         <style>
-          table,
-          th,
-          td {
-            padding: 10px;
-            border: 1px solid {{ border_color }};
-            border-collapse: collapse;
-          }
+            table,
+            th,
+            td {
+                border: 1px solid {{ border_color }};
+            }
+            body {
+                background: black url("{% static background_image %}") no-repeat;
+            }
         </style>
     </head>
 
     <body>
         <hr>
-        <h2>{% block header %} Page Title {% endblock %}</h2>
-        {% if logged_in_fan %}
-            <p>{{ logged_in_fan }}</p>
-        {% else %}
-            <p>No fan is logged in.</p>
-        {% endif %}
-        {% if festival %}
-            <p style="color:{{ border_color }}">{{ festival }}</p>
-        {% else %}
-            <p>No festival selected.</p>
-        {% endif %}
-        <p><a href="{% url 'film_list:index' %}">index</a></p>
+        <h1>{% block header %} Page Title {% endblock %}</h1>
+        <p>
+            <span style="color:{{ border_color }}; text-align: left; width:49%; display: inline-block;">
+            {% if festival %}
+                {{ festival }}
+            {% else %}
+                No festival selected.
+            {% endif %}
+            </span>
+            <span style="text-align: right; width:50%; display: inline-block;">
+            {% if logged_in_fan %}
+                {{ logged_in_fan }}
+            {% else %}
+                No fan is logged in.
+            {% endif %}
+            </span>
+        </p>
+        <a href="{% url 'film_list:index' %}">index</a>
         <hr>
         {% block content %}
             Body content

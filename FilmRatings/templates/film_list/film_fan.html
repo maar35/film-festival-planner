@@ -7,9 +7,7 @@
     <h3>Film Fan</h3>
     <form action="{% url 'film_list:film_fan' %}" method="POST">
           {% csrf_token %}
-          <table>
-              {{ form.as_table }}
-          </table>
+          {{ form.as_p }}
           <input type="submit" value="Check in" />
     </form>
 {% endblock %}
