@@ -6,6 +6,7 @@ from django.db import models
 class FestivalBase(models.Model):
     mnemonic = models.CharField(max_length=10, primary_key=True, serialize=False)
     name = models.CharField(max_length=60)
+    image = models.CharField(max_length=200, null=True, blank=True)
 
     # Use a manager to retrieve data with .festivals.all() as opposed
     # to .objects.all().

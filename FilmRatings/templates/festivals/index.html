@@ -4,6 +4,7 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
+    {% load static %}
     <h3>Festivals</h3>
     <br>
     {% if festival_list %}
@@ -13,6 +14,7 @@
                 <tr>
                     <td><a href="{% url 'festivals:detail' festival.id %}">{{ festival }}</a></td>
                     <td style="color:{{ festival.border_color }}">{{ festival.border_color }}</td>
+                    <td><img src="{% static festival.base.image %}" alt="Imagine picture" width="42" height="26"></td>
                 </tr>
             {% endfor %}
             </tbody>
@@ -20,5 +22,6 @@
     {% else %}
         <p>No festivals are available.</p>
     {% endif %}
+    <br>
 {% endblock %}}
 

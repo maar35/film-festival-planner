@@ -1,8 +1,11 @@
 *.swp
 *.DS_Store
 *.pyc
+*.png
+*.jpeg
+*.jpg
+*.gif
 .vs/
-.png
 mono_crash.*
 PresentScreenings/bin/
 PresentScreenings/obj/
