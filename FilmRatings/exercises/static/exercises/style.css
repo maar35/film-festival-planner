@@ -1,15 +1,20 @@
+/* Color links green, conform Django style. */
 a,
 li a,
 td a {
     color: green;
 }
 
+/* Style the h1 header as to stand out within the page.
+The h1 header is meant to be used as page title only. */
 h1 {
     color: red;
-    text-align: left;
+    text-align: center;
     font-family: trebuchet ms;
 }
 
+/* Color most regular elements silver, as to contrast the dark
+background pictures. */
 p,
 label,
 h2,
@@ -18,15 +23,19 @@ li,
 table,
 th,
 td {
-    color: yellow;
+    color: silver;
     font-family: trebuchet ms;
 }
 
+/* Use b for table head cells. Color these cells a bit brighter than
+the regular cells. */
 b {
-    color: green;
+    color: ivory;
     font-family: trebuchet ms;
 }
 
+/* Static table styling. Color is dependant of the current festival
+and is set dynamically. */
 table,
 th,
 td {

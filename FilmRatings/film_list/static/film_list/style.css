@@ -1,15 +1,20 @@
+/* Color links green, conform Django style. */
 a,
 li a,
 td a {
     color: green;
 }
 
+/* Style the h1 header as to stand out within the page.
+The h1 header is meant to be used as page title only. */
 h1 {
     color: ivory;
     text-align: center;
     font-family: copperplate;
 }
 
+/* Color most regular elements silver, as to contrast the dark
+background pictures. */
 p,
 label,
 h2,
@@ -22,10 +27,14 @@ td {
     font-family: trebuchet ms;
 }
 
+/* Use b for table head cells. Color these cells a bit brighter than
+the regular cells. */
 b {
     color: ivory;
 }
 
+/* Static table styling. Color is dependant of the current festival
+and is set dynamically. */
 table,
 th,
 td {
@@ -33,22 +42,24 @@ td {
     border-collapse: collapse;
 }
 
+/* Make the select pop-up widget a bit larger than standard. */
 select {
     font-size: large
 }
 
+/* Completely customize the submit widget, among other things make it
+a bit larger. */
 input[type=submit] {
     width: 50%;
     font-size: large;
     background-color: green;
-    color: white;
+    color: ivory;
     padding: 14px 20px;
     margin: 8px 0;
     border: none;
     border-radius: 4px;
     cursor: pointer;
 }
-
 input[type=submit]:hover {
     background-color: forestgreen;
 }
