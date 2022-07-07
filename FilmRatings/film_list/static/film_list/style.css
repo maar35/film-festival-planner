@@ -16,6 +16,7 @@ h1 {
 /* Color most regular elements silver, as to contrast the dark
 background pictures. */
 p,
+small,
 label,
 h2,
 h3,
@@ -62,4 +63,11 @@ input[type=submit] {
 }
 input[type=submit]:hover {
     background-color: forestgreen;
+}
+
+/* Class selectors. */
+.error {
+    color: tomato;
+    background; ivory;
+    text-shadow: 4px 4px 3px green;
 }

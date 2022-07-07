@@ -40,12 +40,20 @@ def current_fan():
     return logged_in_fans[0] if len(logged_in_fans) == 1 else None
 
 
+def user_name_to_fan_name(user_name):
+    return f'{user_name[0].upper()}{user_name[1:]}'
+
+
 class FilmFan(models.Model):
 
     # Define the fields.
     name = models.CharField(max_length=16, unique=True)
     seq_nr = models.IntegerField(unique=True)
     is_logged_in = models.BooleanField(default=False)
+    represented_by_user = models.CharField(max_length=40, null=True, blank=True)
+
+    # TODO!
+    # is_current_fan = models.BooleanField(default=False)
 
     # Default retrieval with .objects.all, with a manager it's .film_fans.all
     film_fans = models.Manager()
@@ -77,12 +85,32 @@ class FilmFan(models.Model):
         name_by_rating = dict(FilmFanFilmRating.Rating.choices)
         return name_by_rating[fan_rating.rating]
 
-    def set_current_fan(self):
+    def is_admin(self):
+        return self.name == me().name
+
+    def can_switch_fan(self):
+        return self.is_admin() or self.represented_by_user is not None
+
+    def is_represented(self):
+        return self.represented_by_user is not None and user_name_to_fan_name(self.represented_by_user) != self.name
+
+    def set_current(self, user_name):
         current_fans = FilmFan.film_fans.filter(is_logged_in=True)
         for logging_out_fan in current_fans:
             logging_out_fan.is_logged_in = False
+            logging_out_fan.represented_by_user = None
             logging_out_fan.save()
         self.is_logged_in = True
+        if user_name is not None:
+            user_fan_name = user_name_to_fan_name(user_name)
+            user_fan = FilmFan.film_fans.get(name=user_fan_name)
+            if user_fan.is_admin():
+                self.represented_by_user = user_name
+        self.save()
+
+    def unset_current(self):
+        self.is_logged_in = False
+        self.represented_by_user = None
         self.save()
 
 

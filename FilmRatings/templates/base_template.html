@@ -5,6 +5,7 @@
         <title>{% block title %}Film Ratings Page{% endblock %}</title>
         {% load static %}
         <link rel="stylesheet" type="text/css" href="{% static 'film_list/style.css' %}">
+        <link rel="shortcut icon" type="image/png" href="{% static 'festivals/images/Mac-512.png' %}"/>
         <style>
             table,
             th,
@@ -29,10 +30,23 @@
             {% endif %}
             </span>
             <span style="text-align: right; width:50%; display: inline-block;">
-            {% if logged_in_fan %}
-                {{ logged_in_fan }}
+            {% if user.is_authenticated %}
+                {{ user.username }}
+                <a href="{% url 'authentication:logout' %}">Logout</a>
             {% else %}
-                No fan is logged in.
+                <a href="{% url 'authentication:login' %}">Login</a>
+            {% endif %}
+            </span>
+        </p><p>
+            <span style="text-align: right; width:99%; display: inline-block;">
+            {% if current_fan %}
+                {% if current_fan.is_represented %}
+                    {{ current_fan.represented_by_user }} represents {{ current_fan }}
+                {% else %}
+                    {{ current_fan }}
+                {% endif %}
+            {% else %}
+                No fan is active.
             {% endif %}
             </span>
         </p>

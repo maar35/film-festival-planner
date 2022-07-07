@@ -86,7 +86,6 @@ class Festival(models.Model):
         for festival in current_festivals:
             festival.is_current_festival = False
             festival.save()
-        print(f'@@ tools: making {self} the current festival.')
         self.is_current_festival = True
         self.save()
 

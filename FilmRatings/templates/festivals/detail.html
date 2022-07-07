@@ -27,7 +27,7 @@
     <form action="{% url 'festivals:detail' festival_id %}" method="post">
         {% csrf_token %}
         {{ form.as_p }}
-        <input value="Switch" type="submit" />
+        <input type="submit" value="Switch" />
     </form>
     <br><br>
     <a href="{% url 'festivals:index' %}">Back to festival index</a>

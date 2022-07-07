@@ -5,8 +5,10 @@ from exercises import views
 app_name = 'exercises'
 urlpatterns = [
 
+    # Index of published questions.
     path('index/', views.IndexView.as_view(), name='index'),
 
+    # Question details.
     path('<int:pk>/detail/', views.DetailView.as_view(), name='detail'),
 
     # Example: /exercises/5/vote/

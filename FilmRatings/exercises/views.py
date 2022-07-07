@@ -10,9 +10,10 @@ from exercises.models import Question
 
 # Views only used in the tutorial.
 # https://docs.djangoproject.com/en/3.2/intro/tutorial04/.
+# (and the course)
+
 
 # Generic view classes.
-
 
 class IndexView(generic.ListView):
     template_name = 'exercises/index.html'

@@ -3,13 +3,31 @@ import os
 
 from django.core.exceptions import ObjectDoesNotExist
 
-from festivals.models import Festival as FestivalEdition, current_festival
-from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan
+from festivals.models import current_festival
+from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan, user_name_to_fan_name
+
+
+# Login tools.
+def set_current_fan(user_name):
+    fan_name = user_name_to_fan_name(user_name)
+    fan = FilmFan.film_fans.get(name=fan_name)
+    fan.set_current(user_name)
+
+
+def set_current_fan_if_none(request):
+    user = request.user
+    if user.is_authenticated and current_fan() is None:
+        set_current_fan(user.username)
+
+
+def unset_current_fan():
+    fan = current_fan()
+    if fan is not None:
+        fan.unset_current()
 
 
 # Define common parameters for base template.
 def add_base_context(param_dict):
-    logged_in_fan = current_fan()
     festival = current_festival()
     border_color = festival.border_color if festival is not None else None
     background_image = festival.base.image if festival is not None else None
@@ -17,8 +35,8 @@ def add_base_context(param_dict):
     base_param_dict = {
         'border_color': border_color,
         'background_image': background_image,
-        'logged_in_fan': logged_in_fan,
         'festival': festival,
+        'current_fan': current_fan(),
     }
     return {**base_param_dict, **param_dict}
 
