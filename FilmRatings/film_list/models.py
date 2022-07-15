@@ -68,8 +68,10 @@ class FilmFan(models.Model):
     # Define the fields.
     name = models.CharField(max_length=16, unique=True)
     seq_nr = models.IntegerField(unique=True)
+    is_admin = models.BooleanField(default=False)
 
-    # Default retrieval with .objects.all, with a manager it's .film_fans.all
+    # Use a manager to retrieve data with .film_fans.all() as opposed
+    # to .objects.all().
     film_fans = models.Manager()
 
     class Meta:
@@ -99,9 +101,10 @@ class FilmFan(models.Model):
         name_by_rating = dict(FilmFanFilmRating.Rating.choices)
         return name_by_rating[fan_rating.rating]
 
-    def is_admin(self):
-        # Admin 'John' is added for test purposes only.
-        return self.name in [me().name, 'John']
+    # def is_admin_for_sure(self):
+    #     # Admin 'John' is added for test purposes only.
+    #     # return self.name in [me().name, 'John']
+    #     return self.is_admin
 
     def switch_current(self, session):
         session['fan_name'] = self.name

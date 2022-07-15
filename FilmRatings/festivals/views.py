@@ -26,7 +26,7 @@ class IndexView(generic.ListView):
         return context
 
 
-# Color picker view.
+# Festival details view.
 @login_required
 def detail(request, festival_id):
 

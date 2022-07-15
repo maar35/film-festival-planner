@@ -12,7 +12,7 @@ def user_is_admin(request):
     user_fan = get_user_fan(request.user)
     if user_fan is None:
         return False
-    return user_fan.is_admin()
+    return user_fan.is_admin
 
 
 def user_represents_fan(request, fan):
@@ -21,7 +21,7 @@ def user_represents_fan(request, fan):
     user_fan = get_user_fan(request.user)
     if user_fan is None:
         return False
-    return fan != user_fan and user_fan.is_admin()
+    return fan != user_fan and user_fan.is_admin
 
 
 def add_base_context(request, param_dict):
