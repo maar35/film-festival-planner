@@ -4,7 +4,7 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3>You are logged out now</h3>
+    <h3>We have set a test cookie</h3>
     <br>
-    <p>Thanks for visiting us!</p>
+    <p><a href="{% url 'authentication:check_test_cookie' %}">Check your cookie</a></p>
 {% endblock %}}

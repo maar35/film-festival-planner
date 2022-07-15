@@ -4,39 +4,39 @@ import os
 from django.core.exceptions import ObjectDoesNotExist
 
 from festivals.models import current_festival
-from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan, user_name_to_fan_name
-
-
-# Login tools.
-def set_current_fan(user_name):
-    fan_name = user_name_to_fan_name(user_name)
-    fan = FilmFan.film_fans.get(name=fan_name)
-    fan.set_current(user_name)
-
-
-def set_current_fan_if_none(request):
-    user = request.user
-    if user.is_authenticated and current_fan() is None:
-        set_current_fan(user.username)
-
-
-def unset_current_fan():
-    fan = current_fan()
-    if fan is not None:
-        fan.unset_current()
+from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan, get_user_fan
 
 
 # Define common parameters for base template.
-def add_base_context(param_dict):
-    festival = current_festival()
+def user_is_admin(request):
+    user_fan = get_user_fan(request.user)
+    if user_fan is None:
+        return False
+    return user_fan.is_admin()
+
+
+def user_represents_fan(request, fan):
+    if fan is None:
+        return False
+    user_fan = get_user_fan(request.user)
+    if user_fan is None:
+        return False
+    return fan != user_fan and user_fan.is_admin()
+
+
+def add_base_context(request, param_dict):
+    festival = current_festival(request.session)
     border_color = festival.border_color if festival is not None else None
     background_image = festival.base.image if festival is not None else None
+    fan = current_fan(request.session)
 
     base_param_dict = {
         'border_color': border_color,
         'background_image': background_image,
         'festival': festival,
-        'current_fan': current_fan(),
+        'current_fan': fan,
+        'user_is_admin': user_is_admin(request),
+        'user_represents_fan': user_represents_fan(request, fan),
     }
     return {**base_param_dict, **param_dict}
 

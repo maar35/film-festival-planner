@@ -4,7 +4,7 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3>Fan Ratings</h3>
+    <h3>Choose a rating for this film</h3>
     <p><a href="{{ film.url }}">{{ film }}</a></p>
     <br>
     <form action="{% url 'film_list:rating' film.film_id %}" method="post">

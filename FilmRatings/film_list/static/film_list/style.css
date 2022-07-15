@@ -65,6 +65,26 @@ input[type=submit]:hover {
     background-color: forestgreen;
 }
 
+/* Customize the text and password input widgets as to make the text
+larger and to create harmony with the submit widget. */
+input[type=password],
+input[type=text] {
+    font-size: large;
+    background-color: green;
+    color: ivory;
+    padding: 7px 20px;
+    border: none;
+    border-radius: 4px;
+}
+input[type=password]:hover,
+input[type=text]:hover {
+    background-color: forestgreen;
+}
+input[type=password]:focus,
+input[type=text]:focus {
+    background-color: darkgreen;
+}
+
 /* Class selectors. */
 .error {
     color: tomato;

@@ -4,8 +4,8 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    {% if current_fan.can_switch_fan %}
-        <h3>Film Fan</h3>
+    {% if user_is_admin %}
+        <h3>Film fan</h3>
         <form action="{% url 'film_list:film_fan' %}" method="post">
               {% csrf_token %}
               {{ form.as_p }}

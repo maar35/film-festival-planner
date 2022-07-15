@@ -1,4 +1,5 @@
 from datetime import date
+from http import HTTPStatus
 
 from django.test import TestCase
 from django.urls import reverse
@@ -17,7 +18,7 @@ def create_festival(mnemonic, start_date_str, end_date_str, edition=None):
     border_color = 'turquoise'
     return Festival.festivals.create(
         base=base, year=year, start_date=start_date, end_date=end_date,
-        border_color=border_color, is_current_festival=True, edition=edition
+        border_color=border_color, edition=edition
     )
 
 
@@ -36,7 +37,7 @@ class FestivalModelTests(TestCase):
         If no questions exist, an appropriate message is displayed.
         """
         response = self.client.get(reverse('festivals:index'))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertContains(response, "No festivals are available.")
         self.assertQuerysetEqual(response.context['festival_list'], [])
 

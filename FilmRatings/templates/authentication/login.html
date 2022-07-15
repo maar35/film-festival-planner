@@ -4,9 +4,12 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
+    {% if request.GET.next %}
+        <h2 class="error">Acces Denied.</h2>
+    {% endif %}
     <h3>Please enter your credentials</h3>
     {% if form.errors %}
-        <p class="error">Sorry, that's not a valid username or password</p>
+        <h2 class="error">That's not a valid username or password</h2>
         <p>Please try again.</p>
     {% endif %}
     <form action="{% url 'authentication:login' %}" method='post'>

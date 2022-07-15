@@ -12,4 +12,8 @@ urlpatterns = [
 
     # Logout redirect path.
     path('logged_out/', views.logout, name='logged_out'),
+
+    # Test cookies paths.
+    path('set_test_cookie', views.set_test_cookie, name='set_test_cookie'),
+    path('check_test_cookie', views.check_test_cookie, name='check_test_cookie'),
 ]

@@ -1,0 +1,15 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>We have checked your test cookie</h3>
+    <br>
+    {% if test_cookie_worked %}
+        <p>Your browser accepts cookies, thanks!</p>
+    {% else %}
+        <h2 class="error">Cookie not accepted</h2>
+        <p>In order to use the Film Rating site, you should accept our cookies.</p>
+    {% endif %}
+{% endblock %}}
