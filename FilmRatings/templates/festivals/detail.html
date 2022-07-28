@@ -4,7 +4,7 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3>Current Festival Details</h3>
+    <h3>Current festival details</h3>
     <table>
         <tbody>
         <tr><td><b>Festival</b></td><td>{{ festival.base.name }}</td></tr>
@@ -19,7 +19,7 @@
         </tr>
         <tr><td><b>From</b></td><td>{{ festival.start_date }}</td></tr>
         <tr><td><b>Till</b></td><td>{{ festival.end_date }}</td></tr>
-        <tr><td><b>Color</b></td><td>{{ festival.border_color }}</td></tr>
+        <tr><td><b>Color</b></td><td>{{ festival.festival_color }}</td></tr>
         </tbody>
     </table>
     <br><br>
@@ -27,7 +27,7 @@
     <form action="{% url 'festivals:detail' festival_id %}" method="post">
         {% csrf_token %}
         {{ form.as_p }}
-        <input value="Switch" type="submit" />
+        <input type="submit" value="Switch" />
     </form>
     <br><br>
     <a href="{% url 'festivals:index' %}">Back to festival index</a>

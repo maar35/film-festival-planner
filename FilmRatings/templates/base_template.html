@@ -5,11 +5,12 @@
         <title>{% block title %}Film Ratings Page{% endblock %}</title>
         {% load static %}
         <link rel="stylesheet" type="text/css" href="{% static 'film_list/style.css' %}">
+        <link rel="shortcut icon" type="image/png" href="{% static 'festivals/images/Mac-512.png' %}"/>
         <style>
             table,
             th,
             td {
-                border: 1px solid {{ border_color }};
+                border: 1px solid {{ festival_color }};
             }
             body {
                 background: black url("{% static background_image %}") no-repeat;
@@ -21,7 +22,7 @@
         <hr>
         <h1>{% block header %} Page Title {% endblock %}</h1>
         <p>
-            <span style="color:{{ border_color }}; text-align: left; width:49%; display: inline-block;">
+            <span style="color:{{ festival_color }}; text-align: left; width:49%; display: inline-block;">
             {% if festival %}
                 {{ festival }}
             {% else %}
@@ -29,10 +30,23 @@
             {% endif %}
             </span>
             <span style="text-align: right; width:50%; display: inline-block;">
-            {% if logged_in_fan %}
-                {{ logged_in_fan }}
+            {% if user.is_authenticated %}
+                {{ user.username }}
+                <a href="{% url 'authentication:logout' %}">Logout</a>
             {% else %}
-                No fan is logged in.
+                <a href="{% url 'authentication:login' %}">Login</a>
+            {% endif %}
+            </span>
+        </p><p>
+            <span style="text-align: right; width:99%; display: inline-block;">
+            {% if current_fan %}
+                {% if user_represents_fan %}
+                    {{ user.username }} represents {{ current_fan }}
+                {% else %}
+                    {{ current_fan }}
+                {% endif %}
+            {% else %}
+                No fan is active.
             {% endif %}
             </span>
         </p>

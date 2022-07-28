@@ -1,3 +1,5 @@
+import datetime
+
 from django.db import models
 
 
@@ -20,9 +22,32 @@ class FestivalBase(models.Model):
 
 
 # Festival table, to keep festival information.
-def current_festival():
-    festivals = Festival.festivals.filter(is_current_festival=True)
-    return festivals[0] if len(festivals) == 1 else None
+def default_festival(today=None):
+    nearest_festival = None
+    if today is None:
+        today = datetime.date.today()
+    coming_festivals = Festival.festivals.filter(end_date__gte=today).order_by('end_date')
+    if len(coming_festivals):
+        return coming_festivals[0]
+    past_festivals = Festival.festivals.filter(end_date__lt=today).order_by('-end_date')
+    if len(past_festivals):
+        return past_festivals[0]
+    return nearest_festival
+
+
+def set_current_festival(session):
+    festival = current_festival(session)
+    festival.set_current(session)
+
+
+def current_festival(session):
+    festival_id = session.get('festival')
+    if festival_id is None:
+        return default_festival()
+    festival = Festival.festivals.get(id=festival_id)
+    if festival is None:
+        return default_festival()
+    return festival
 
 
 class Festival(models.Model):
@@ -66,8 +91,7 @@ class Festival(models.Model):
     edition = models.CharField(max_length=16, null=True, blank=True)
     start_date = models.DateField()
     end_date = models.DateField()
-    border_color = models.CharField(max_length=10, choices=COLOR_CHOICES, default=GREEN)
-    is_current_festival = models.BooleanField(default=False)
+    festival_color = models.CharField(max_length=24, choices=COLOR_CHOICES, default=GREEN)
 
     # Use a manager to retrieve data with .festivals.all() as opposed
     # to .objects.all().
@@ -81,12 +105,5 @@ class Festival(models.Model):
         edition_str = '' if self.edition is None else f' - {self.edition} edition'
         return f'{self.base} {self.year}{edition_str}'
 
-    def set_current_festival(self):
-        current_festivals = Festival.festivals.filter(is_current_festival=True)
-        for festival in current_festivals:
-            festival.is_current_festival = False
-            festival.save()
-        print(f'@@ tools: making {self} the current festival.')
-        self.is_current_festival = True
-        self.save()
-
+    def set_current(self, session):
+        session['festival'] = self.id

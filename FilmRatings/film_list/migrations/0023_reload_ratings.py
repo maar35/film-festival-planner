@@ -28,6 +28,7 @@ class Migration(migrations.Migration):
         ('film_list', '0022_load_fans'),
     ]
 
+    # Operation commented out in order to get a working test database.
     operations = [
-        migrations.RunPython(reload_film_ratings)
+        # migrations.RunPython(reload_film_ratings)
     ]

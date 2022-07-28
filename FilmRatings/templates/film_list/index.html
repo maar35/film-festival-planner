@@ -10,14 +10,18 @@
         </tbody>
     </table>
     <br>
-    <h3>Site Links</h3>
+    <h3>Site links</h3>
     <a href="{% url 'film_list:film_fan' %}">Film fans</a>
     <br>
     <a href="{% url 'festivals:index' %}">Festivals</a>
     <br>
-    <a href="{% url 'film_list:film_list' %}">Film Ratings</a>
+    <a href="{% url 'film_list:film_list' %}">Film ratings</a>
     <br><br>
     <a href="{% url 'exercises:index' %}">Exercises</a>
+    <br><br>
+    <a href="{% url 'authentication:set_test_cookie' %}">Test cookies</a>
+    <br>
+    <a href="{% url 'festivals:test_default_festival' %}">Test nearest festival</a>
 {% endblock %}
 
 {% block footer %}

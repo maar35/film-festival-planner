@@ -4,7 +4,7 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3>Question Details</h3>
+    <h3>Question details</h3>
     <table>
         <tr><td><b>Question text</b></td><td>{{ chosen_question.question_text }}</td></tr>
         <tr><td><b>Publication</b></td><td>{{ chosen_question.pub_date }}</td></tr>
@@ -15,7 +15,7 @@
         {% csrf_token %}
         <fieldset>
             <legend><h3>{{ chosen_question.question_text }}</h3></legend>
-            {% if error_message %}<p style="color:{{ border_color }}"><strong>{{ error_message }}</strong></p>{% endif %}
+            {% if error_message %}<p style="color:{{ festival_color }}"><strong>{{ error_message }}</strong></p>{% endif %}
             {% for choice in chosen_question.choice_set.all %}
                 <input type="radio" name="choice" id="choice{{ forloop.counter }}" value="{{ choice.id }}">
                 <label for="choice{{ forloop.counter }}">{{ choice }}</label><br>

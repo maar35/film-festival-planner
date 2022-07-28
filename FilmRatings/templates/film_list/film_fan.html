@@ -4,10 +4,15 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3>Film Fan</h3>
-    <form action="{% url 'film_list:film_fan' %}" method="post">
-          {% csrf_token %}
-          {{ form.as_p }}
-          <input type="submit" value="Check in" />
-    </form>
+    {% if user_is_admin %}
+        <h3>Film fan</h3>
+        <form action="{% url 'film_list:film_fan' %}" method="post">
+              {% csrf_token %}
+              {{ form.as_p }}
+              <input type="submit" value="Set current fan" />
+        </form>
+    {% else %}
+        <h3>Not allowed</h3>
+        <p>Only an admin fan can rate for other fans.</p>
+    {% endif %}
 {% endblock %}
