@@ -101,11 +101,6 @@ class FilmFan(models.Model):
         name_by_rating = dict(FilmFanFilmRating.Rating.choices)
         return name_by_rating[fan_rating.rating]
 
-    # def is_admin_for_sure(self):
-    #     # Admin 'John' is added for test purposes only.
-    #     # return self.name in [me().name, 'John']
-    #     return self.is_admin
-
     def switch_current(self, session):
         session['fan_name'] = self.name
 
