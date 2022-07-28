@@ -26,12 +26,12 @@ def user_represents_fan(request, fan):
 
 def add_base_context(request, param_dict):
     festival = current_festival(request.session)
-    border_color = festival.border_color if festival is not None else None
+    festival_color = festival.festival_color if festival is not None else None
     background_image = festival.base.image if festival is not None else None
     fan = current_fan(request.session)
 
     base_param_dict = {
-        'border_color': border_color,
+        'festival_color': festival_color,
         'background_image': background_image,
         'festival': festival,
         'current_fan': fan,

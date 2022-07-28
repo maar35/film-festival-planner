@@ -8,7 +8,7 @@
     <br>
     {% if sample_date %}
         <h3>Previous results</h3>
-        <p>Sample date {{ sample_date }} resulted in <span style="color:{{ border_color }}">{{ festival }}</span>.</p>
+        <p>Sample date {{ sample_date }} resulted in <span style="color:{{ festival_color }}">{{ festival }}</span>.</p>
         <br>
     {% endif %}
     {% if festivals %}
@@ -16,8 +16,8 @@
             <tbody>
             {% for festival in festivals %}
                 <tr>
-                    <td style="color:{{ festival.border_color }}">{{ festival }}</td>
-                    <td style="color:{{ festival.border_color }}">{{ festival.border_color }}</td>
+                    <td style="color:{{ festival.festival_color }}">{{ festival }}</td>
+                    <td style="color:{{ festival.festival_color }}">{{ festival.festival_color }}</td>
                     <td>{{ festival.start_date | date:"Y-m-d" }}</td>
                     <td>{{ festival.end_date | date:"Y-m-d" }}</td>
                 </tr>

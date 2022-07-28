@@ -10,7 +10,7 @@
             table,
             th,
             td {
-                border: 1px solid {{ border_color }};
+                border: 1px solid {{ festival_color }};
             }
             body {
                 background: black url("{% static background_image %}") no-repeat;
@@ -22,7 +22,7 @@
         <hr>
         <h1>{% block header %} Page Title {% endblock %}</h1>
         <p>
-            <span style="color:{{ border_color }}; text-align: left; width:49%; display: inline-block;">
+            <span style="color:{{ festival_color }}; text-align: left; width:49%; display: inline-block;">
             {% if festival %}
                 {{ festival }}
             {% else %}

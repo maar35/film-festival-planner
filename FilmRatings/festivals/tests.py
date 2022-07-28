@@ -15,10 +15,10 @@ def create_festival(mnemonic, start_date_str, end_date_str, edition=None):
     start_date = date.fromisoformat(f'{start_date_str}')
     end_date = date.fromisoformat(f'{end_date_str}')
     year = start_date.year
-    border_color = 'turquoise'
+    festival_color = 'turquoise'
     return Festival.festivals.create(
         base=base, year=year, start_date=start_date, end_date=end_date,
-        border_color=border_color, edition=edition
+        festival_color=festival_color, edition=edition
     )
 
 

@@ -91,7 +91,7 @@ class Festival(models.Model):
     edition = models.CharField(max_length=16, null=True, blank=True)
     start_date = models.DateField()
     end_date = models.DateField()
-    border_color = models.CharField(max_length=10, choices=COLOR_CHOICES, default=GREEN)
+    festival_color = models.CharField(max_length=24, choices=COLOR_CHOICES, default=GREEN)
 
     # Use a manager to retrieve data with .festivals.all() as opposed
     # to .objects.all().

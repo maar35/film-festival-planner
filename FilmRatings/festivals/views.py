@@ -8,7 +8,7 @@ from django.views import generic
 
 from FilmRatings import tools
 from festivals.forms.set_festival import FestivalEdition, TestNearestFestival
-from festivals.models import Festival, default_festival, set_current_festival
+from festivals.models import Festival, default_festival
 
 
 # Define generic view classes.
