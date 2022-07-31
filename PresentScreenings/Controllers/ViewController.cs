@@ -491,6 +491,7 @@ namespace PresentScreenings.TableView
                     {
                         SetFilmFanFilmRating(filmId, filmFan, rating);
                         ReloadScreeningsView();
+                        control.Window.DocumentEdited = true;
                     }
                     else
                     {

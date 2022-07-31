@@ -72,6 +72,9 @@ namespace PresentScreenings.TableView
             // Inactivate screenings view actions.
             Presentor.RunningPopupsCount++;
 
+            // Set window delegate.
+            View.Window.Delegate = new AvailabilityWindowDelegate(View.Window);
+
             // Create the controls that were not defined in Xcode.
             PopulateDialogView();
 
@@ -82,9 +85,6 @@ namespace PresentScreenings.TableView
         public override void ViewWillDisappear()
         {
             base.ViewWillDisappear();
-
-            // Redraw the window title.
-            Presentor.SetWindowTitle();
 
             // Tell the app delegate we're gone.
             App.AvailabilityDialogControler = null;
@@ -97,23 +97,29 @@ namespace PresentScreenings.TableView
         #region Public Methods
         public void CloseDialog()
         {
+            // Save the availabilities when changed.
             if (_availablityChanged)
             {
-                // Save the availabilities.
-                App.WriteFilmFanAvailabilities();
-
-                // Trigger a local notification.
-                string title = "Availabilities saved";
-                string text = $"Film fan availabilites have been saved in {AppDelegate.DocumentsFolder}.";
-                AlertRaiser.RaiseNotification(title, text);
+                SaveAvailabilities();
             }
 
             // Close the dialog.
             Presentor.DismissViewController(this);
         }
+
+        public static void SaveAvailabilities()
+        {
+            // Save the availabilities.
+            App.WriteFilmFanAvailabilities();
+
+            // Trigger a local notification.
+            string title = "Availabilities Saved";
+            string text = $"Film fan availabilites have been saved in {AppDelegate.DocumentsFolder}.";
+            AlertRaiser.RaiseNotification(title, text);
+        }
         #endregion
 
-        #region Private Methods workiong wioth visual elements.
+        #region Private Methods working with visual elements.
         private void PopulateDialogView()
         {
             // Adapt the window width to the number of film fans.
@@ -351,12 +357,18 @@ namespace PresentScreenings.TableView
             }
         }
 
-        private void UpdateControls(string fan, bool includeDoneButton = false)
+        private void UpdateControls(string fan, bool availabiliyChanged = false)
         {
-            // Update the title of the Done/Save button if indicated.
-            if (includeDoneButton)
+            if (availabiliyChanged)
             {
+                // Update the title of the Done/Save button.
                 _doneButton.Title = _titleByChanged[_availablityChanged];
+
+                // Mark the window content as modified.
+                View.Window.DocumentEdited = true;
+
+                // Update the window title.
+                Presentor.SetWindowTitle();
             }
 
             // Update the All Days checkbox of this film fan.

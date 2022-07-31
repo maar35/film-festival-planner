@@ -29,7 +29,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
+        public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
         public NSTableView FilmRatingTableView => _filmRatingTableView;
         public NSButton WebLinkButton => _downloadFilmInfoButton;
         public NSButton DoneButton => _closeButton;
@@ -89,7 +89,6 @@ namespace PresentScreenings.TableView
             _goToScreeningButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
             WebLinkButton.Action = new ObjCRuntime.Selector("VisitFilmWebsite:");
             DoneButton.KeyEquivalent = ControlsFactory.EscapeKey;
-            DoneButton.StringValue = "Noot";
             SetOnlyFilmsWithScreeningsStates();
             SetTypeMatchMethodControlStates();
         }
@@ -107,6 +106,9 @@ namespace PresentScreenings.TableView
 
             // Inactivate screenings view actions.
             _presentor.RunningPopupsCount++;
+
+            // Set window delegate.
+            View.Window.Delegate = new FilmRatingWindowDelegate(View.Window);
 
             // Initialize the controls.
             SetFilmRatingDialogButtonStates();
@@ -486,20 +488,26 @@ namespace PresentScreenings.TableView
 
         public void CloseDialog()
         {
+            // Save the ratings when changed.
             if (FilmRating.RatingChanged)
             {
-                // Save the ratings.
-                App.WriteFilmFanFilmRatings();
-                FilmRating.RatingChanged = false;
-
-                // Trigger a local notification.
-                string title = "Ratings saved";
-                string text = $"Film fan ratings have been saved in {AppDelegate.DocumentsFolder}.";
-                AlertRaiser.RaiseNotification(title, text);
+                SaveRatings();
             }
 
             // Close the dialog.
             _presentor.DismissViewController(this);
+        }
+
+        public static void SaveRatings()
+        {
+            // Save the ratings.
+            App.WriteFilmFanFilmRatings();
+            FilmRating.RatingChanged = false;
+
+            // Trigger a local notification.
+            string title = "Ratings Saved";
+            string text = $"Film fan ratings have been saved in {AppDelegate.DocumentsFolder}.";
+            AlertRaiser.RaiseNotification(title, text);
         }
         #endregion
 

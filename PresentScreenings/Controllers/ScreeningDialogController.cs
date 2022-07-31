@@ -33,6 +33,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Members
+        private static bool _screeningInfoChanged;
         private nfloat _yCurr;
         private Screening _screening;
         private DaySchemaScreeningControl _senderControl;
@@ -40,6 +41,7 @@ namespace PresentScreenings.TableView
         private List<Screening> _filmScreenings;
         private FilmScreeningControl _screeningInfoControl;
         private Dictionary<string, AttendanceCheckbox> _attendanceCheckboxByFilmFan;
+        private Dictionary<bool, string> _titleByChanged = new Dictionary<bool, string> { };
         private NSView _sampleSubView;
         #endregion
 
@@ -62,6 +64,9 @@ namespace PresentScreenings.TableView
         {
             _filmScreenings = new List<Screening> { };
             _attendanceCheckboxByFilmFan = new Dictionary<string, AttendanceCheckbox> { };
+            _screeningInfoChanged = false;
+            _titleByChanged.Add(true, "Save");
+            _titleByChanged.Add(false, "Done");
         }
         #endregion
 
@@ -76,6 +81,9 @@ namespace PresentScreenings.TableView
 
             // Initialize the list of screenings.
             _filmScreenings = _screening.FilmScreenings;
+
+            // Set window delegate.
+            View.Window.Delegate = new ScreeningWindowDelegate(View.Window);
 
             // Populate the controls.
             SetControlValues();
@@ -284,11 +292,6 @@ namespace PresentScreenings.TableView
             View.AddSubview(websiteButton);
         }
 
-        private void CloseDialog()
-        {
-            _presentor.DismissViewController(this);
-        }
-
         private void HandleFilmFanRatingEditingBegan(NSComboBox comboBox, string filmFan)
         {
             _closeButton.Enabled = false;
@@ -300,6 +303,10 @@ namespace PresentScreenings.TableView
             Func<string, string> getControlValue = r => GetNewValueFromComboBox(comboBox, r);
             _presentor.SetRatingIfValid(comboBox, getControlValue, filmId, filmFan);
             _closeButton.Enabled = true;
+            if (FilmRating.RatingChanged)
+            {
+                _closeButton.Title = _titleByChanged[true];
+            }
         }
 
         private string GetNewValueFromComboBox(NSComboBox comboBox, string oldString)
@@ -336,6 +343,36 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
+        public void CloseDialog()
+        {
+            // Save the ratings when changed.
+            if (FilmRating.RatingChanged)
+            {
+                FilmRatingDialogController.SaveRatings();
+            }
+
+            // Save the screening info when changed.
+            if (_screeningInfoChanged)
+            {
+                SaveScreeningInfo();
+            }
+
+            // Close the dialog.
+            _presentor.DismissViewController(this);
+        }
+
+        public static void SaveScreeningInfo()
+        {
+            // Save the screening info.
+            ViewController.App.WriteScreeningInfo();
+            _screeningInfoChanged = false;
+
+            // Trigger a local notification.
+            string title = "Screening Info Saved";
+            string text = $"Screening info has been saved in {AppDelegate.DocumentsFolder}.";
+            AlertRaiser.RaiseNotification(title, text);
+        }
+
         public void PopulateDialog(DaySchemaScreeningControl sender)
         {
             _senderControl = sender;
@@ -345,18 +382,21 @@ namespace PresentScreenings.TableView
         public void ToggleTicketsBought()
         {
             _screening.TicketsBought = !_screening.TicketsBought;
+            _screeningInfoChanged = true;
             UpdateAttendances();
         }
 
         public void ToggleSoldOut()
         {
             _screening.SoldOut = !_screening.SoldOut;
+            _screeningInfoChanged = true;
             UpdateAttendances();
         }
 
         public void ToggleAttendance(string filmFan)
         {
             _screening.ToggleFilmFanAttendance(filmFan);
+            _screeningInfoChanged = true;
             UpdateAttendances();
             var attendanceState = AttendanceCheckbox.GetAttendanceState(_screening.FilmFanAttends(filmFan));
             _attendanceCheckboxByFilmFan[filmFan].State = attendanceState;
@@ -369,11 +409,14 @@ namespace PresentScreenings.TableView
             _presentor.ReloadScreeningsView();
             UpdateScreeningControls();
             _screeningInfoControl.ReDraw();
+            _closeButton.Title = _titleByChanged[true];
+            View.Window.DocumentEdited = true;
         }
 
         public void UpdateMovedScreeningInfo()
         {
             _labelTime.StringValue = _screening.ToLongTimeString();
+            _screeningInfoChanged = true;
             UpdateAttendances();
         }
         #endregion

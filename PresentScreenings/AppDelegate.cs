@@ -84,10 +84,8 @@ namespace PresentScreenings.TableView
         #region Override Methods
         public override void DidFinishLaunching(NSNotification notification)
         {
-            // Insert code here to initialize your application.
-
             // Initialize menu delegates.
-			_navigateMenu.AutoEnablesItems = false;
+            _navigateMenu.AutoEnablesItems = false;
             _navigateMenu.Delegate = new NavigateMenuDelegate(Controller);
             _screeningMenu.AutoEnablesItems = false;
             _screeningMenu.Delegate = new ScreeningMenuDelegate(this, _screeningMenu);
@@ -116,7 +114,24 @@ namespace PresentScreenings.TableView
 			// Insert code here to tear down your application
 		}
 
-		public override bool ApplicationShouldTerminateAfterLastWindowClosed(NSApplication sender)
+        ////[Obsolete]
+        //public override NSApplicationTerminateReply ApplicationShouldTerminate(NSApplication sender)
+        //{
+        //    // See if any window needs to be saved first
+        //    foreach (NSWindow window in NSApplication.SharedApplication.DangerousWindows)
+        //    {
+        //        if (window.Delegate != null && !window.Delegate.WindowShouldClose(this))
+        //        {
+        //            // Did the window terminate the close?
+        //            return NSApplicationTerminateReply.Cancel;
+        //        }
+        //    }
+
+        //    // Allow normal termination
+        //    return NSApplicationTerminateReply.Now;
+        //}
+
+        public override bool ApplicationShouldTerminateAfterLastWindowClosed(NSApplication sender)
 		{
 			return true;
 		}
@@ -155,9 +170,23 @@ namespace PresentScreenings.TableView
             }).ToList());
 
             // Write screenings summary.
-            string summaryFileName = Path.GetFileName(ScreeningsSummaryFile);
-            string summaryPath = Path.Combine(directory, summaryFileName);
-            new Screening().WriteListToFile(summaryPath, Controller.Plan.AttendedScreenings());
+            WriteScreeningsSummary(directory);
+        }
+
+        public void WriteScreeningInfo(string directory = null)
+        {
+            if (directory == null)
+            {
+                directory = DocumentsFolder;
+            }
+
+            // Save the screening info.
+            string screeningInfoFileName = Path.GetFileName(ScreeningInfoFile);
+            string screeningInfosPath = Path.Combine(directory, screeningInfoFileName);
+            new ScreeningInfo().WriteListToFile(screeningInfosPath, ScreeningsPlan.ScreeningInfos);
+
+            // Write screenings summary.
+            WriteScreeningsSummary(directory);
         }
         #endregion
 
@@ -202,14 +231,19 @@ namespace PresentScreenings.TableView
             WriteFilmFanFilmRatings(DocumentsFolder);
 
             // Write screening info.
-            string screeningInfoFileName = Path.GetFileName(ScreeningInfoFile);
-            string screeningInfosPath = Path.Combine(DocumentsFolder, screeningInfoFileName);
-            new ScreeningInfo().WriteListToFile(screeningInfosPath, ScreeningsPlan.ScreeningInfos);
+            WriteScreeningInfo(DocumentsFolder);
 
             // Display where the files have been stored.
             string title = "Festival Data Saved";
             string text = $"Files of {Festival}{FestivalYear} are saved in {DocumentsFolder}";
             AlertRaiser.RaiseNotification(title, text);
+        }
+
+        private void WriteScreeningsSummary(string directory)
+        {
+            string summaryFileName = Path.GetFileName(ScreeningsSummaryFile);
+            string summaryPath = Path.Combine(directory, summaryFileName);
+            new Screening().WriteListToFile(summaryPath, Controller.Plan.AttendedScreenings());
         }
         #endregion
 
