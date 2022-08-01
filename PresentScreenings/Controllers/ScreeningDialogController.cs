@@ -37,7 +37,7 @@ namespace PresentScreenings.TableView
         private nfloat _yCurr;
         private Screening _screening;
         private DaySchemaScreeningControl _senderControl;
-        private ViewController _presentor;
+        private static ViewController _presentor;
         private List<Screening> _filmScreenings;
         private FilmScreeningControl _screeningInfoControl;
         private Dictionary<string, AttendanceCheckbox> _attendanceCheckboxByFilmFan;
@@ -46,7 +46,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public ViewController Presentor
+        public static ViewController Presentor
         {
             get => _presentor;
             set => _presentor = (ViewController)value;
@@ -76,8 +76,8 @@ namespace PresentScreenings.TableView
             base.ViewWillAppear();
 
             // Tell the presentor we're alive.
-            _presentor.ScreeningInfoDialog = this;
-            _presentor.RunningPopupsCount += 1;
+            Presentor.ScreeningInfoDialog = this;
+            Presentor.RunningPopupsCount += 1;
 
             // Initialize the list of screenings.
             _filmScreenings = _screening.FilmScreenings;
@@ -100,10 +100,10 @@ namespace PresentScreenings.TableView
         public override void ViewWillDisappear()
         {
             // Tell the presentor we're gone.
-            _presentor.RunningPopupsCount--;
-            if (_presentor.RunningPopupsCount == 0)
+            Presentor.RunningPopupsCount--;
+            if (Presentor.RunningPopupsCount == 0)
             {
-                _presentor.ScreeningInfoDialog = null;
+                Presentor.ScreeningInfoDialog = null;
             }
         }
 
@@ -125,7 +125,7 @@ namespace PresentScreenings.TableView
 
         public override void GoToScreening(Screening screening)
         {
-            _presentor.GoToScreening(screening);
+            Presentor.GoToScreening(screening);
             CloseDialog();
         }
         #endregion
@@ -301,7 +301,7 @@ namespace PresentScreenings.TableView
         {
             int filmId = _screening.FilmId;
             Func<string, string> getControlValue = r => GetNewValueFromComboBox(comboBox, r);
-            _presentor.SetRatingIfValid(comboBox, getControlValue, filmId, filmFan);
+            Presentor.SetRatingIfValid(comboBox, getControlValue, filmId, filmFan);
             _closeButton.Enabled = true;
             if (FilmRating.RatingChanged)
             {
@@ -355,10 +355,11 @@ namespace PresentScreenings.TableView
             if (_screeningInfoChanged)
             {
                 SaveScreeningInfo();
+                Presentor.ScreeningInfoDirty = false;
             }
 
             // Close the dialog.
-            _presentor.DismissViewController(this);
+            Presentor.DismissViewController(this);
         }
 
         public static void SaveScreeningInfo()
@@ -405,8 +406,8 @@ namespace PresentScreenings.TableView
         public void UpdateAttendances()
         {
             _labelPresent.StringValue = _screening.AttendeesString();
-            _presentor.UpdateAttendanceStatus(_screening);
-            _presentor.ReloadScreeningsView();
+            Presentor.UpdateAttendanceStatus(_screening, false);
+            Presentor.ReloadScreeningsView();
             UpdateScreeningControls();
             _screeningInfoControl.ReDraw();
             _closeButton.Title = _titleByChanged[true];

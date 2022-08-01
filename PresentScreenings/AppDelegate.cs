@@ -114,22 +114,21 @@ namespace PresentScreenings.TableView
 			// Insert code here to tear down your application
 		}
 
-        ////[Obsolete]
-        //public override NSApplicationTerminateReply ApplicationShouldTerminate(NSApplication sender)
-        //{
-        //    // See if any window needs to be saved first
-        //    foreach (NSWindow window in NSApplication.SharedApplication.DangerousWindows)
-        //    {
-        //        if (window.Delegate != null && !window.Delegate.WindowShouldClose(this))
-        //        {
-        //            // Did the window terminate the close?
-        //            return NSApplicationTerminateReply.Cancel;
-        //        }
-        //    }
+        public override NSApplicationTerminateReply ApplicationShouldTerminate(NSApplication sender)
+        {
+            // See if any window needs to be saved first
+            foreach (NSWindow window in NSApplication.SharedApplication.Windows)
+            {
+                if (window.Delegate != null && !window.Delegate.WindowShouldClose(this))
+                {
+                    // Did the window terminate the close?
+                    return NSApplicationTerminateReply.Cancel;
+                }
+            }
 
-        //    // Allow normal termination
-        //    return NSApplicationTerminateReply.Now;
-        //}
+            // Allow normal termination.
+            return NSApplicationTerminateReply.Now;
+        }
 
         public override bool ApplicationShouldTerminateAfterLastWindowClosed(NSApplication sender)
 		{
@@ -237,6 +236,9 @@ namespace PresentScreenings.TableView
             string title = "Festival Data Saved";
             string text = $"Files of {Festival}{FestivalYear} are saved in {DocumentsFolder}";
             AlertRaiser.RaiseNotification(title, text);
+
+            // Unset the dirty window indicator.
+            Controller.View.Window.DocumentEdited = false;
         }
 
         private void WriteScreeningsSummary(string directory)

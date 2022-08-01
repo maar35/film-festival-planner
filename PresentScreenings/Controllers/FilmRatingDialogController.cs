@@ -23,6 +23,7 @@ namespace PresentScreenings.TableView
 
         #region Private Variables
         bool _textBeingEdited = false;
+        static bool _screeningInfoChanged = false;
         ViewController _presentor;
         FilmTableDataSource _filmTableDataSource;
         Dictionary<bool, string> _titleByChanged;
@@ -42,6 +43,16 @@ namespace PresentScreenings.TableView
                 SetFilmRatingDialogButtonStates();
             }
         }
+        public bool ScreeningInfoChanged
+        {
+            get => _screeningInfoChanged;
+            private set
+            {
+                _screeningInfoChanged = value;
+                View.Window.DocumentEdited = value;
+            }
+        }
+        public static bool ScreeningInfoChangedInRatingDialog { get => _screeningInfoChanged; }
         public static bool TypeMatchFromBegin { get; set; } = true;
         public static bool OnlyFilmsWithScreenings { get; set; } = false;
         public static Subsection FilteredSubsection { get; set; } = null;
@@ -275,6 +286,7 @@ namespace PresentScreenings.TableView
             }
 
             // Update the screenings' film ID.
+            ScreeningInfoChanged = true;
             foreach (var screening in screeningsToGetNewFilmId)
             {
                 screening.FilmId = mainFilmId;
@@ -296,6 +308,7 @@ namespace PresentScreenings.TableView
             List<Screening> screenings = e.Screenings;
 
             // Restore the original film ID in each of the given screenings.
+            ScreeningInfoChanged = true;
             foreach (var screening in screenings)
             {
                 screening.FilmId = screening.OriginalFilmId;
@@ -326,7 +339,7 @@ namespace PresentScreenings.TableView
             // Update the screening states.
             foreach (var screening in screenings)
             {
-                _presentor.UpdateAttendanceStatus(screening);
+                _presentor.UpdateAttendanceStatus(screening, false);
             }
             _presentor.ReloadScreeningsView();
         }
@@ -364,7 +377,7 @@ namespace PresentScreenings.TableView
             _uncombineTitleButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             _goToScreeningButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             DoneButton.Enabled = !TextBeingEdited;
-            DoneButton.Title = _titleByChanged[FilmRating.RatingChanged];
+            DoneButton.Title = _titleByChanged[FilmRating.RatingChanged || ScreeningInfoChanged];
             WebLinkButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             WebLinkButton.ToolTip = OneFilmSelected() ? ControlsFactory.VisitWebsiteButtonToolTip(CurrentFilm) : string.Empty;
         }
@@ -492,6 +505,13 @@ namespace PresentScreenings.TableView
             if (FilmRating.RatingChanged)
             {
                 SaveRatings();
+            }
+
+            // Save the screening info when changed.
+            if (ScreeningInfoChanged)
+            {
+                ScreeningDialogController.SaveScreeningInfo();
+                _presentor.ScreeningInfoDirty = false;
             }
 
             // Close the dialog.

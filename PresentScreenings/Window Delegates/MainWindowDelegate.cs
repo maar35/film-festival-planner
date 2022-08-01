@@ -2,14 +2,14 @@
 
 namespace PresentScreenings.TableView
 {
-    public class ScreeningWindowDelegate : NSWindowDelegate
+    public class MainWindowDelegate : NSWindowDelegate
     {
         #region Computed Properties
         public NSWindow Window { get; set; }
         #endregion
 
         #region Constructors
-        public ScreeningWindowDelegate(NSWindow window)
+        public MainWindowDelegate(NSWindow window)
         {
             Window = window;
         }
@@ -32,9 +32,10 @@ namespace PresentScreenings.TableView
         #region Private methods
         private void SaveAction(NSWindowDelegate windowDelegate)
         {
-            var window = (windowDelegate as ScreeningWindowDelegate).Window;
-            var viewController = window.ContentViewController as ScreeningDialogController;
-            viewController.CloseDialog();
+            ScreeningDialogController.SaveScreeningInfo();
+            var window = (windowDelegate as MainWindowDelegate).Window;
+            var viewController = window.ContentViewController as ViewController;
+            viewController.DismissController(viewController);
         }
         #endregion
     }

@@ -1,9 +1,14 @@
-﻿using AppKit;
+﻿using System;
+using System.Collections.Generic;
+using AppKit;
 
 namespace PresentScreenings.TableView
 {
     public class FilmRatingWindowDelegate : NSWindowDelegate
     {
+        #region Private Members
+        private Dictionary<Tuple<bool, bool>, string> _subjectByRatingScreeningInfoChanged;
+        #endregion
         #region Computed Properties
         public NSWindow Window { get; set; }
         #endregion
@@ -12,6 +17,10 @@ namespace PresentScreenings.TableView
         public FilmRatingWindowDelegate(NSWindow window)
         {
             Window = window;
+            _subjectByRatingScreeningInfoChanged = new Dictionary<Tuple<bool, bool>, string> { };
+            _subjectByRatingScreeningInfoChanged[new Tuple<bool, bool>(true, true)] = "ratings and screening info";
+            _subjectByRatingScreeningInfoChanged[new Tuple<bool, bool>(true, false)] = "film ratings";
+            _subjectByRatingScreeningInfoChanged[new Tuple<bool, bool>(false, true)] = "screening info";
         }
         #endregion
 
@@ -22,8 +31,13 @@ namespace PresentScreenings.TableView
             if (Window.DocumentEdited)
             {
 
-                string messageText = "Save Film Ratings";
-                string informativeText = "Save film ratings before closing window?";
+                string messageText = "Save Changed Data";
+                string subject = _subjectByRatingScreeningInfoChanged[
+                    new Tuple<bool, bool>(
+                        FilmRating.RatingChanged,
+                        FilmRatingDialogController.ScreeningInfoChangedInRatingDialog
+                    )];
+                string informativeText = $"Save {subject} before closing window?";
                 return AlertRaiser.RunDirtyWindowAlert(messageText, informativeText, this, SaveAction);
             }
             return true;

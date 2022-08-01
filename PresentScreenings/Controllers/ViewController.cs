@@ -15,6 +15,7 @@ namespace PresentScreenings.TableView
     public partial class ViewController : GoToScreeningDialog, IScreeningProvider
     {
         #region Private Members
+        private bool _screeningInfoDirty = false;
         private TimeSpan _pause = AppDelegate.PauseBetweenOnDemandScreenings;
         private ScreeningsPlan _plan = null;
         private ScreeningsTableView _mainView = null;
@@ -44,6 +45,16 @@ namespace PresentScreenings.TableView
             {
                 _clickableLabelsMenuItem = value;
                 SetClickableLabelsMenuItemState();
+            }
+        }
+
+        internal bool ScreeningInfoDirty
+        {
+            get => _screeningInfoDirty;
+            set
+            {
+                _screeningInfoDirty = value;
+                View.Window.DocumentEdited = _screeningInfoDirty;
             }
         }
 
@@ -112,6 +123,9 @@ namespace PresentScreenings.TableView
         {
             base.ViewDidAppear();
             SetWindowTitle();
+
+            // Set window delegate.
+            View.Window.Delegate = new MainWindowDelegate(View.Window);
         }
 
         public override void PrepareForSegue(NSStoryboardSegue segue, NSObject sender)
@@ -124,7 +138,7 @@ namespace PresentScreenings.TableView
                 case "ScreeningsToScreeningInfo:":
                     var dialog = segue.DestinationController as ScreeningDialogController;
                     dialog.PopulateDialog((DaySchemaScreeningControl)sender);
-                    dialog.Presentor = this;
+                    ScreeningDialogController.Presentor = this;
                     break;
                 case "ScreeningsToFilmInfo":
                     var filmInfoDialog = segue.DestinationController as FilmInfoDialogController;
@@ -517,11 +531,15 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods working with Screening Attendance
-        public void UpdateAttendanceStatus(Screening screening)
+        public void UpdateAttendanceStatus(Screening screening, bool setDirty = true)
         {
             UpdateOneAttendanceStatus(screening);
             UpdateOneAttendanceStatus(OverlappingScreenings(screening, true));
             UpdateOneAttendanceStatus(ScreeningsWithSameFilm(screening));
+            if (setDirty)
+            {
+                ScreeningInfoDirty = true;
+            }
         }
 
         public void UpdateOneAttendanceStatus(List<Screening> screenings)
