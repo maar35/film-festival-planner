@@ -47,9 +47,9 @@ namespace PresentScreenings.TableView
             get => CombinationWindowDelegate.ScreeningInfoChanged;
             private set
             {
+                View.Window.DocumentEdited = value;
                 if (value)
                 {
-                    View.Window.DocumentEdited = true;
                     CombinationWindowDelegate.ScreeningInfoChanged = true;
                 }
             }
@@ -174,11 +174,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        //private void SaveAction(NSWindowDelegate windowDelegate)
-        //{
-        //    CloseDialog();
-        //}
-
         private void CreateScreeningCountColumn()
         {
             CreateColumn("#Screenings", _screeningCountWidth, _screeningCountMaxWidth);

@@ -127,7 +127,7 @@ namespace PresentScreenings.TableView
             SetWindowTitle();
 
             // Set window delegate.
-            View.Window.Delegate = new CombinationWindowDelegate(View.Window, SaveAction);
+            View.Window.Delegate = new CombinationWindowDelegate(View.Window, Close);
         }
 
         public override void PrepareForSegue(NSStoryboardSegue segue, NSObject sender)
@@ -159,7 +159,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        private void SaveAction()
+        private void Close()
         {
             // Save changed data.
             CombinationWindowDelegate.SaveChangedData();
@@ -334,6 +334,11 @@ namespace PresentScreenings.TableView
         static public NSCellStateValue GetNSCellStateValue(bool shouldBeOn)
         {
             return shouldBeOn ? NSCellStateValue.On : NSCellStateValue.Off;
+        }
+
+        internal void UnsetScreeningInfoChanged()
+        {
+            ScreeningInfoChanged = false;
         }
         #endregion
 

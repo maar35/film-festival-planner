@@ -5,10 +5,10 @@ namespace PresentScreenings.TableView
 {
     public class BaseWindowDelegate : NSWindowDelegate
     {
-        #region Computed Properties
-        public NSWindow Window { get; set; }
-        public Action SaveAction { get; set; }
-        public string Subject { get; set; }
+        #region Properties
+        protected NSWindow Window { get; set; }
+        protected Action SaveAction { get; set; }
+        protected string Subject { get; set; }
         #endregion
 
         #region Constructors

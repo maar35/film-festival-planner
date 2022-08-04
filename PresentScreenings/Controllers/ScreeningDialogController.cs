@@ -363,7 +363,7 @@ namespace PresentScreenings.TableView
             // Save the screening info.
             ViewController.App.WriteScreeningInfo();
             CombinationWindowDelegate.ScreeningInfoChanged = false;
-            Presentor.ScreeningInfoChanged = false;
+            Presentor?.UnsetScreeningInfoChanged();
 
             // Trigger a local notification.
             string title = "Screening Info Saved";
