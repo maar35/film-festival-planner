@@ -15,7 +15,6 @@ namespace PresentScreenings.TableView
     public partial class ViewController : GoToScreeningDialog, IScreeningProvider
     {
         #region Private Members
-        private bool _screeningInfoDirty = false;
         private TimeSpan _pause = AppDelegate.PauseBetweenOnDemandScreenings;
         private ScreeningsPlan _plan = null;
         private ScreeningsTableView _mainView = null;
@@ -48,13 +47,16 @@ namespace PresentScreenings.TableView
             }
         }
 
-        internal bool ScreeningInfoDirty
+        internal bool ScreeningInfoChanged
         {
-            get => _screeningInfoDirty;
+            get => CombinationWindowDelegate.ScreeningInfoChanged;
             set
             {
-                _screeningInfoDirty = value;
-                View.Window.DocumentEdited = _screeningInfoDirty;
+                View.Window.DocumentEdited = value;
+                if (value)
+                {
+                    CombinationWindowDelegate.ScreeningInfoChanged = true;
+                }
             }
         }
 
@@ -125,7 +127,7 @@ namespace PresentScreenings.TableView
             SetWindowTitle();
 
             // Set window delegate.
-            View.Window.Delegate = new MainWindowDelegate(View.Window);
+            View.Window.Delegate = new CombinationWindowDelegate(View.Window, SaveAction);
         }
 
         public override void PrepareForSegue(NSStoryboardSegue segue, NSObject sender)
@@ -157,6 +159,15 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
+        private void SaveAction()
+        {
+            // Save changed data.
+            CombinationWindowDelegate.SaveChangedData();
+
+            // Close the dialog.
+            DismissController(this);
+        }
+
         private void SetCurrScreening(Screening screening)
         {
             _plan.SetCurrScreening(screening);
@@ -538,7 +549,7 @@ namespace PresentScreenings.TableView
             UpdateOneAttendanceStatus(ScreeningsWithSameFilm(screening));
             if (setDirty)
             {
-                ScreeningInfoDirty = true;
+                ScreeningInfoChanged = true;
             }
         }
 

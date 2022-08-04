@@ -95,7 +95,7 @@ namespace PresentScreenings.TableView
             }
         }
 
-        public static bool RunDirtyWindowAlert(string messageText, string informativeText, NSWindowDelegate windowDelegate, Action<NSWindowDelegate> saveAction)
+        public static bool RunDirtyWindowAlert(string messageText, string informativeText, Action saveAction)
         {
             // Create a critical alert.
             var alert = new NSAlert()
@@ -115,7 +115,7 @@ namespace PresentScreenings.TableView
             {
                 case 1000:
                     // Save.
-                    saveAction(windowDelegate);
+                    saveAction();
                     return true;
                 case 1001:
                     // Cancel.

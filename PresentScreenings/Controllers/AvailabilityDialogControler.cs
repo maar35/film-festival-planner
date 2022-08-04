@@ -36,7 +36,6 @@ namespace PresentScreenings.TableView
         private float _yCurr;
         private NSButton _doneButton;
         private NSView _sampleView;
-        private Dictionary<bool, string> _titleByChanged = new Dictionary<bool, string> { };
         private Dictionary<string, NSButton> _checkboxByFan = new Dictionary<string, NSButton> { };
         private Dictionary<string, Dictionary<DateTime, NSButton>> _checkboxByDayByFan = new Dictionary<string, Dictionary<DateTime, NSButton>> { };
         #endregion
@@ -53,8 +52,6 @@ namespace PresentScreenings.TableView
         #region Constructors
         public AvailabilityDialogControler(IntPtr handle) : base(handle)
         {
-            _titleByChanged.Add(true, "Save");
-            _titleByChanged.Add(false, "Done");
         }
         #endregion
 
@@ -73,7 +70,7 @@ namespace PresentScreenings.TableView
             Presentor.RunningPopupsCount++;
 
             // Set window delegate.
-            View.Window.Delegate = new AvailabilityWindowDelegate(View.Window);
+            View.Window.Delegate = new BaseWindowDelegate(View.Window, CloseDialog, "availabilities");
 
             // Create the controls that were not defined in Xcode.
             PopulateDialogView();
@@ -348,7 +345,7 @@ namespace PresentScreenings.TableView
         private void UpdateControls()
         {
             // Update the title of the Done/Save button.
-            _doneButton.Title = _titleByChanged[_availablityChanged];
+            _doneButton.Title = ControlsFactory.TitleByChanged[_availablityChanged];
 
             // Update the states of the checkboxes.
             foreach (var fan in ScreeningInfo.FilmFans)
@@ -362,7 +359,7 @@ namespace PresentScreenings.TableView
             if (availabiliyChanged)
             {
                 // Update the title of the Done/Save button.
-                _doneButton.Title = _titleByChanged[_availablityChanged];
+                _doneButton.Title = ControlsFactory.TitleByChanged[_availablityChanged];
 
                 // Mark the window content as modified.
                 View.Window.DocumentEdited = true;

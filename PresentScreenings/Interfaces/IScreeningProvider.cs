@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Foundation;
+﻿using System.Collections.Generic;
 
 namespace PresentScreenings.TableView
 {

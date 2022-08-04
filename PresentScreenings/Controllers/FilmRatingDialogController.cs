@@ -22,11 +22,9 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Variables
-        bool _textBeingEdited = false;
-        static bool _screeningInfoChanged = false;
-        ViewController _presentor;
-        FilmTableDataSource _filmTableDataSource;
-        Dictionary<bool, string> _titleByChanged;
+        private bool _textBeingEdited = false;
+        private ViewController _presentor;
+        private FilmTableDataSource _filmTableDataSource;
         #endregion
 
         #region Properties
@@ -43,16 +41,20 @@ namespace PresentScreenings.TableView
                 SetFilmRatingDialogButtonStates();
             }
         }
+
         public bool ScreeningInfoChanged
         {
-            get => _screeningInfoChanged;
+            get => CombinationWindowDelegate.ScreeningInfoChanged;
             private set
             {
-                _screeningInfoChanged = value;
-                View.Window.DocumentEdited = value;
+                if (value)
+                {
+                    View.Window.DocumentEdited = true;
+                    CombinationWindowDelegate.ScreeningInfoChanged = true;
+                }
             }
         }
-        public static bool ScreeningInfoChangedInRatingDialog { get => _screeningInfoChanged; }
+
         public static bool TypeMatchFromBegin { get; set; } = true;
         public static bool OnlyFilmsWithScreenings { get; set; } = false;
         public static Subsection FilteredSubsection { get; set; } = null;
@@ -68,9 +70,6 @@ namespace PresentScreenings.TableView
         #region Constructors
         public FilmRatingDialogController(IntPtr handle) : base(handle)
         {
-            _titleByChanged = new Dictionary<bool, string> { };
-            _titleByChanged.Add(false, "Close");
-            _titleByChanged.Add(true, "Save");
         }
         #endregion
 
@@ -119,7 +118,7 @@ namespace PresentScreenings.TableView
             _presentor.RunningPopupsCount++;
 
             // Set window delegate.
-            View.Window.Delegate = new FilmRatingWindowDelegate(View.Window);
+            View.Window.Delegate = new CombinationWindowDelegate(View.Window, CloseDialog);
 
             // Initialize the controls.
             SetFilmRatingDialogButtonStates();
@@ -175,6 +174,11 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
+        //private void SaveAction(NSWindowDelegate windowDelegate)
+        //{
+        //    CloseDialog();
+        //}
+
         private void CreateScreeningCountColumn()
         {
             CreateColumn("#Screenings", _screeningCountWidth, _screeningCountMaxWidth);
@@ -377,7 +381,7 @@ namespace PresentScreenings.TableView
             _uncombineTitleButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             _goToScreeningButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             DoneButton.Enabled = !TextBeingEdited;
-            DoneButton.Title = _titleByChanged[FilmRating.RatingChanged || ScreeningInfoChanged];
+            DoneButton.Title = ControlsFactory.TitleByChanged[FilmRating.RatingChanged || ScreeningInfoChanged];
             WebLinkButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             WebLinkButton.ToolTip = OneFilmSelected() ? ControlsFactory.VisitWebsiteButtonToolTip(CurrentFilm) : string.Empty;
         }
@@ -501,18 +505,8 @@ namespace PresentScreenings.TableView
 
         public void CloseDialog()
         {
-            // Save the ratings when changed.
-            if (FilmRating.RatingChanged)
-            {
-                SaveRatings();
-            }
-
-            // Save the screening info when changed.
-            if (ScreeningInfoChanged)
-            {
-                ScreeningDialogController.SaveScreeningInfo();
-                _presentor.ScreeningInfoDirty = false;
-            }
+            // Save changed data.
+            CombinationWindowDelegate.SaveChangedData();
 
             // Close the dialog.
             _presentor.DismissViewController(this);

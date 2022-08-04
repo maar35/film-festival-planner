@@ -183,10 +183,9 @@
     <Compile Include="Table Classes\ScreenigsTableRowView.cs" />
     <Compile Include="Controls\SubsectionControl.cs" />
     <Compile Include="Controls\PointingHandControl.cs" />
-    <Compile Include="Window Delegates\AvailabilityWindowDelegate.cs" />
-    <Compile Include="Window Delegates\FilmRatingWindowDelegate.cs" />
-    <Compile Include="Window Delegates\ScreeningWindowDelegate.cs" />
-    <Compile Include="Window Delegates\MainWindowDelegate.cs" />
+    <Compile Include="Window Delegates\BaseWindowDelegate.cs" />
+    <Compile Include="Utilities\StringByBoolBool.cs" />
+    <Compile Include="Window Delegates\CombinationWindowDelegate.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />
