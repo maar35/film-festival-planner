@@ -82,6 +82,7 @@
     <Folder Include="Exceptions\" />
     <Folder Include="Event Arguments\" />
     <Folder Include="Utilities\" />
+    <Folder Include="Window Delegates\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Info.plist" />
@@ -182,6 +183,9 @@
     <Compile Include="Table Classes\ScreenigsTableRowView.cs" />
     <Compile Include="Controls\SubsectionControl.cs" />
     <Compile Include="Controls\PointingHandControl.cs" />
+    <Compile Include="Window Delegates\BaseWindowDelegate.cs" />
+    <Compile Include="Utilities\StringByBoolBool.cs" />
+    <Compile Include="Window Delegates\CombinationWindowDelegate.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

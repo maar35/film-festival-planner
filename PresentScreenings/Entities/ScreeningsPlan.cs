@@ -242,7 +242,7 @@ namespace PresentScreenings.TableView
                 .Where(s => s.Abbreviation == screenString)
                 .First();
 
-            // Return the Screening or subclass, dependant of the screen type.
+            // Return the Screening or subclass, dependent of the screen type.
             return screen.Type == Screen.ScreenType.OnLine ? new OnLineScreening(line)
                 : screen.Type == Screen.ScreenType.OnDemand ? new OnDemandScreening(line)
                 : new Screening(line);

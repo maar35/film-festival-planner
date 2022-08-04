@@ -95,6 +95,35 @@ namespace PresentScreenings.TableView
             }
         }
 
+        public static bool RunDirtyWindowAlert(string messageText, string informativeText, Action saveAction)
+        {
+            // Create a critical alert.
+            var alert = new NSAlert()
+            {
+                AlertStyle = NSAlertStyle.Critical,
+                MessageText = messageText,
+                InformativeText = informativeText,
+            };
+            alert.AddButton("Save");
+            alert.AddButton("Cancel");
+
+            // Run the alert.
+            var result = alert.RunModal();
+
+            // Take action based on result.
+            switch (result)
+            {
+                case 1000:
+                    // Save.
+                    saveAction();
+                    return true;
+                case 1001:
+                    // Cancel.
+                    return false;
+            }
+            return false;
+        }
+
         public static void WriteError(Exception ex, Exception ex2 = null)
         {
             WriteText(ErrorFile, ErrorString(ex, ex2));

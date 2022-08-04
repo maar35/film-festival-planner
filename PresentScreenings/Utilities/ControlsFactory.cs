@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using AppKit;
 using CoreAnimation;
@@ -36,13 +37,17 @@ namespace PresentScreenings.TableView
         public static nfloat StandardFontSize => NSFont.SystemFontSize;
         public static NSFont StandardFont => NSFont.SystemFontOfSize(StandardFontSize);
         public static NSFont StandardBoldFont => NSFont.BoldSystemFontOfSize(StandardFontSize);
-        public static CTFont StandardCtFont = new CTFont(".AppleSytemUIFont", 14);
+        public static CTFont StandardCtFont => new CTFont(".AppleSytemUIFont", 14);
         public static CTFont StandardCtBoldFont => new CTFont(".AppleSystemUIFontBold", StandardFontSize);
+        public static Dictionary<bool, string> TitleByChanged { get; private set; }
         #endregion
 
         #region Constructors
         static ControlsFactory()
         {
+            TitleByChanged = new Dictionary<bool, string> { };
+            TitleByChanged.Add(false, "Close");
+            TitleByChanged.Add(true, "Save");
         }
         #endregion
 

@@ -47,6 +47,19 @@ namespace PresentScreenings.TableView
             }
         }
 
+        internal bool ScreeningInfoChanged
+        {
+            get => CombinationWindowDelegate.ScreeningInfoChanged;
+            set
+            {
+                View.Window.DocumentEdited = value;
+                if (value)
+                {
+                    CombinationWindowDelegate.ScreeningInfoChanged = true;
+                }
+            }
+        }
+
         private bool ScreeningSelected
         {
             set => _controlByScreening[_plan.CurrScreening].Selected = value;
@@ -112,6 +125,9 @@ namespace PresentScreenings.TableView
         {
             base.ViewDidAppear();
             SetWindowTitle();
+
+            // Set window delegate.
+            View.Window.Delegate = new CombinationWindowDelegate(View.Window, Close);
         }
 
         public override void PrepareForSegue(NSStoryboardSegue segue, NSObject sender)
@@ -124,7 +140,7 @@ namespace PresentScreenings.TableView
                 case "ScreeningsToScreeningInfo:":
                     var dialog = segue.DestinationController as ScreeningDialogController;
                     dialog.PopulateDialog((DaySchemaScreeningControl)sender);
-                    dialog.Presentor = this;
+                    ScreeningDialogController.Presentor = this;
                     break;
                 case "ScreeningsToFilmInfo":
                     var filmInfoDialog = segue.DestinationController as FilmInfoDialogController;
@@ -143,6 +159,15 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
+        private void Close()
+        {
+            // Save changed data.
+            CombinationWindowDelegate.SaveChangedData();
+
+            // Close the dialog.
+            DismissController(this);
+        }
+
         private void SetCurrScreening(Screening screening)
         {
             _plan.SetCurrScreening(screening);
@@ -309,6 +334,11 @@ namespace PresentScreenings.TableView
         static public NSCellStateValue GetNSCellStateValue(bool shouldBeOn)
         {
             return shouldBeOn ? NSCellStateValue.On : NSCellStateValue.Off;
+        }
+
+        internal void UnsetScreeningInfoChanged()
+        {
+            ScreeningInfoChanged = false;
         }
         #endregion
 
@@ -491,6 +521,7 @@ namespace PresentScreenings.TableView
                     {
                         SetFilmFanFilmRating(filmId, filmFan, rating);
                         ReloadScreeningsView();
+                        control.Window.DocumentEdited = true;
                     }
                     else
                     {
@@ -516,11 +547,15 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods working with Screening Attendance
-        public void UpdateAttendanceStatus(Screening screening)
+        public void UpdateAttendanceStatus(Screening screening, bool setDirty = true)
         {
             UpdateOneAttendanceStatus(screening);
             UpdateOneAttendanceStatus(OverlappingScreenings(screening, true));
             UpdateOneAttendanceStatus(ScreeningsWithSameFilm(screening));
+            if (setDirty)
+            {
+                ScreeningInfoChanged = true;
+            }
         }
 
         public void UpdateOneAttendanceStatus(List<Screening> screenings)

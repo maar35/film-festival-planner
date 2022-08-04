@@ -21,13 +21,11 @@ namespace PresentScreenings.TableView
         private const float _xMargin = ControlsFactory.HorizontalMargin;
         private const float _yMargin = ControlsFactory.BigVerticalMargin;
         private const float _xBetweenLabels = ControlsFactory.HorizontalPixelsBetweenLabels;
-        private const float _xBetweenControls = ControlsFactory.HorizontalPixelsBetweenControls;
         private const float _yBetweenViews = ControlsFactory.VerticalPixelsBetweenViews;
         private const float _yBetweenLabels = ControlsFactory.VerticalPixelsBetweenLabels;
         private const float _labelHeight = ControlsFactory.StandardLabelHeight;
         private const float _imageButtonWidth = ControlsFactory.StandardImageButtonWidth;
         private const float _buttonHeight = ControlsFactory.StandardButtonHeight;
-        private const float _imageSide = ControlsFactory.StandardButtonImageSide;
         private const float _yControlsDistance = ControlsFactory.VerticalPixelsBetweenControls;
         private const float _subsectionLabelWidth = ControlsFactory.SubsectionLabelWidth;
         #endregion
@@ -36,7 +34,7 @@ namespace PresentScreenings.TableView
         private nfloat _yCurr;
         private Screening _screening;
         private DaySchemaScreeningControl _senderControl;
-        private ViewController _presentor;
+        private static ViewController _presentor;
         private List<Screening> _filmScreenings;
         private FilmScreeningControl _screeningInfoControl;
         private Dictionary<string, AttendanceCheckbox> _attendanceCheckboxByFilmFan;
@@ -44,10 +42,23 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public ViewController Presentor
+        public static ViewController Presentor
         {
             get => _presentor;
             set => _presentor = (ViewController)value;
+        }
+
+        public bool ScreeningInfoChanged
+        {
+            get => CombinationWindowDelegate.ScreeningInfoChanged;
+            private set
+            {
+                View.Window.DocumentEdited = value;
+                if (value)
+                {
+                    CombinationWindowDelegate.ScreeningInfoChanged = true;
+                }
+            }
         }
         #endregion
 
@@ -71,11 +82,14 @@ namespace PresentScreenings.TableView
             base.ViewWillAppear();
 
             // Tell the presentor we're alive.
-            _presentor.ScreeningInfoDialog = this;
-            _presentor.RunningPopupsCount += 1;
+            Presentor.ScreeningInfoDialog = this;
+            Presentor.RunningPopupsCount += 1;
 
             // Initialize the list of screenings.
             _filmScreenings = _screening.FilmScreenings;
+
+            // Set window delegate.
+            View.Window.Delegate = new CombinationWindowDelegate(View.Window, CloseDialog);
 
             // Populate the controls.
             SetControlValues();
@@ -92,10 +106,10 @@ namespace PresentScreenings.TableView
         public override void ViewWillDisappear()
         {
             // Tell the presentor we're gone.
-            _presentor.RunningPopupsCount--;
-            if (_presentor.RunningPopupsCount == 0)
+            Presentor.RunningPopupsCount--;
+            if (Presentor.RunningPopupsCount == 0)
             {
-                _presentor.ScreeningInfoDialog = null;
+                Presentor.ScreeningInfoDialog = null;
             }
         }
 
@@ -117,7 +131,7 @@ namespace PresentScreenings.TableView
 
         public override void GoToScreening(Screening screening)
         {
-            _presentor.GoToScreening(screening);
+            Presentor.GoToScreening(screening);
             CloseDialog();
         }
         #endregion
@@ -284,11 +298,6 @@ namespace PresentScreenings.TableView
             View.AddSubview(websiteButton);
         }
 
-        private void CloseDialog()
-        {
-            _presentor.DismissViewController(this);
-        }
-
         private void HandleFilmFanRatingEditingBegan(NSComboBox comboBox, string filmFan)
         {
             _closeButton.Enabled = false;
@@ -298,8 +307,12 @@ namespace PresentScreenings.TableView
         {
             int filmId = _screening.FilmId;
             Func<string, string> getControlValue = r => GetNewValueFromComboBox(comboBox, r);
-            _presentor.SetRatingIfValid(comboBox, getControlValue, filmId, filmFan);
+            Presentor.SetRatingIfValid(comboBox, getControlValue, filmId, filmFan);
             _closeButton.Enabled = true;
+            if (FilmRating.RatingChanged)
+            {
+                _closeButton.Title = ControlsFactory.TitleByChanged[true];
+            }
         }
 
         private string GetNewValueFromComboBox(NSComboBox comboBox, string oldString)
@@ -336,6 +349,28 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
+        public void CloseDialog()
+        {
+            // Save changed data.
+            CombinationWindowDelegate.SaveChangedData();
+
+            // Close the dialog.
+            Presentor.DismissViewController(this);
+        }
+
+        public static void SaveScreeningInfo()
+        {
+            // Save the screening info.
+            ViewController.App.WriteScreeningInfo();
+            CombinationWindowDelegate.ScreeningInfoChanged = false;
+            Presentor?.UnsetScreeningInfoChanged();
+
+            // Trigger a local notification.
+            string title = "Screening Info Saved";
+            string text = $"Screening info has been saved in {AppDelegate.DocumentsFolder}.";
+            AlertRaiser.RaiseNotification(title, text);
+        }
+
         public void PopulateDialog(DaySchemaScreeningControl sender)
         {
             _senderControl = sender;
@@ -365,10 +400,12 @@ namespace PresentScreenings.TableView
         public void UpdateAttendances()
         {
             _labelPresent.StringValue = _screening.AttendeesString();
-            _presentor.UpdateAttendanceStatus(_screening);
-            _presentor.ReloadScreeningsView();
+            Presentor.UpdateAttendanceStatus(_screening, false);
+            Presentor.ReloadScreeningsView();
             UpdateScreeningControls();
             _screeningInfoControl.ReDraw();
+            _closeButton.Title = ControlsFactory.TitleByChanged[true];
+            ScreeningInfoChanged = true;
         }
 
         public void UpdateMovedScreeningInfo()
