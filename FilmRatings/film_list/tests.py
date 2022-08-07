@@ -9,6 +9,7 @@ from django.http import HttpRequest
 from django.test import TestCase
 from django.urls import reverse
 
+from festivals.tests import create_festival
 from film_list import views
 from .models import Film, FilmFan, me, FilmFanFilmRating
 
@@ -18,7 +19,8 @@ def create_film(film_id, title, minutes, seq_nr=-1):
     Create a film with the given arguments in the database.
     """
     duration = timedelta(minutes=minutes)
-    return Film.films.create(film_id=film_id, seq_nr=seq_nr, title=title, duration=duration)
+    festival = create_festival('IFFR', '2021-01-27', '2021-02-06')
+    return Film.films.create(festival_id=festival.id, film_id=film_id, seq_nr=seq_nr, title=title, duration=duration)
 
 
 def new_film(film_id, title, minutes, seq_nr=-1):
@@ -141,7 +143,7 @@ class FilmModelTests(TestCase):
         """
         # Arrange.
         created_film = create_film(film_id=4422, title='The Wrong Answer', minutes=66)
-        url = reverse('film_list:results', args=(created_film.film_id,))
+        url = reverse('film_list:results', args=(created_film.id,))
 
         # Act.
         response = self.client.get(url)
@@ -298,11 +300,11 @@ class RatingModelTests(TestCase):
         """
         Rating 7 has meaning INDECISIVE.
         """
-
         # Arrange.
         rating_value = 7
         rating_meaning = 'Indecisive'
-        film = Film(film_id=-1, seq_nr=-1, title='A Test Movie', duration=timedelta(minutes=666))
+        festival = create_festival('IDFA', '2022-07-17', '2022-07-27')
+        film = Film(festival_id=festival.id, film_id=-1, seq_nr=-1, title='A Test Movie', duration=timedelta(minutes=666))
         film.save()
         fan = me()
         rating = FilmFanFilmRating(film=film, film_fan=fan, rating=rating_value)
@@ -313,3 +315,27 @@ class RatingModelTests(TestCase):
 
         # Assert.
         self.assertEqual(rating_meaning, rating_name)
+
+    def test_ratings_can_have_same_film_id_but_not_same_festival_id(self):
+        """
+        Two ratings can only have films with identical film_id if
+        festivals are different.
+        """
+        # Arrange.
+        fan = me()
+        rating_value = 7
+        festival_1 = create_festival('IDFA', '2021-07-17', '2021-07-27')
+        festival_2 = create_festival('MTMF', '2022-04-17', '2022-04-27')
+        film_1 = Film(festival_id=festival_1.id, film_id=1, seq_nr=1, title='Test Movie', duration=timedelta(minutes=6))
+        film_2 = Film(festival_id=festival_2.id, film_id=1, seq_nr=1, title='Movie Two', duration=timedelta(minutes=77))
+        film_1.save()
+        film_2.save()
+        rating_1 = FilmFanFilmRating(film=film_1, film_fan=fan, rating=rating_value)
+        rating_2 = FilmFanFilmRating(film=film_2, film_fan=fan, rating=rating_value)
+        rating_1.save()
+
+        # Act.
+        rating_2.save()
+
+        # Assert.
+        self.assertEqual(rating_1.film.film_id, rating_2.film.film_id)

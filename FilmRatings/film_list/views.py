@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.views import generic
 
 from FilmRatings import tools
+from festivals.models import current_festival
 from film_list.forms.set_film_fan import User
 from film_list.forms.set_rating import Rating
 from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan
@@ -89,7 +90,8 @@ def film_list(request):
     # Set simple parameters.
     title = 'Film Rating List'
     fan_list = FilmFan.film_fans.all()
-    films = Film.films.order_by('seq_nr')
+    festival = current_festival(request.session)
+    films = Film.films.filter(festival=festival).order_by('seq_nr')
 
     # Get the table rows.
     rating_rows = []
