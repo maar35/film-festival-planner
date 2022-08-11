@@ -21,5 +21,5 @@ urlpatterns = [
 
     # Allows the current user to rate a specific film.
     # Example: /film_ist/5/rating/
-    path('<int:film_id>/rating/', views.rating, name='rating'),
+    path('<int:film_pk>/rating/', views.rating, name='rating'),
 ]

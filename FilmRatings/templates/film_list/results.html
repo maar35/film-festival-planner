@@ -26,7 +26,7 @@
             <tr>
             {% for fan_cell in fan_row %}
                 {% if forloop.counter == 1 and fan_cell == current_fan %}
-                    <td><a href="{% url 'film_list:rating' film.film_id %}">{{ fan_cell }}</a></td>
+                    <td><a href="{% url 'film_list:rating' film.id %}">{{ fan_cell }}</a></td>
                 {% else %}
                     <td>{{ fan_cell }}</td>
                 {% endif %}

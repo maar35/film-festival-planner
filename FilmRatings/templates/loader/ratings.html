@@ -4,11 +4,43 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3>Pick a festival to load date from</h3>
-    <br>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <input type="submit" value="Load">
-    </form>
+    {% if user_is_admin %}
+        <h3>Pick a festival to load data from</h3>
+        <br>
+        {% if festivals %}
+            <table>
+                <thead>
+                    <tr>
+                        <td><b>Festival</b></td>
+                        <td><b>#Films on file</b></td>
+                        <td><b>#Ratings on file</b></td>
+                        <td><b>#Films</b></td>
+                        <td><b>#Ratings</b></td>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for festival in festivals %}
+                    <tr>
+                        <td style="color:{{ festival.color }}">{{ festival.str }}</td>
+                        <td>{{ festival.film_count_on_file }}</td>
+                        <td>{{ festival.rating_count_on_file }}</td>
+                        <td>{{ festival.film_count }}</td>
+                        <td>{{ festival.rating_count }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <br>
+        {% else %}
+            <p>No festivals are available.</p>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <input type="submit" value="Load">
+        </form>
+    {% else %}
+        <h2 class="error">Not allowed</h2>
+        <p>Only an admin fan can load festival data.</p>
+    {% endif %}
 {% endblock %}}

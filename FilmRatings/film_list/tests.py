@@ -129,7 +129,7 @@ class FilmModelTests(TestCase):
         request.session = get_session_with_fan(regular_fan)
 
         # Act.
-        response = views.rating(request, created_film.film_id)
+        response = views.rating(request, created_film.id)
 
         # Assert.
         self.assertIs(logged_in, True)
@@ -283,7 +283,7 @@ class FilmFanModelTests(TestCase):
         request.session = get_session_with_fan(regular_fan)
 
         # Act.
-        response = views.rating(request, film.film_id)
+        response = views.rating(request, film.id)
 
         # Assert.
         self.assertIs(logged_in, True)

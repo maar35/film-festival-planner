@@ -1,6 +1,10 @@
+import csv
 import datetime
+import os
 
 from django.db import models
+
+# from FilmRatings.tools import base_dir
 
 
 # FestivalBase table, to keep information that is invariant for
@@ -10,8 +14,7 @@ class FestivalBase(models.Model):
     name = models.CharField(max_length=60)
     image = models.CharField(max_length=200, null=True, blank=True)
 
-    # Use a manager to retrieve data with .festivals.all() as opposed
-    # to .objects.all().
+    # Define a manager.
     festival_bases = models.Manager()
 
     class Meta:
@@ -48,6 +51,10 @@ def current_festival(session):
     if festival is None:
         return default_festival()
     return festival
+
+
+def base_dir():
+    return os.path.expanduser('~/Documents/Film')
 
 
 class Festival(models.Model):
@@ -93,8 +100,7 @@ class Festival(models.Model):
     end_date = models.DateField()
     festival_color = models.CharField(max_length=24, choices=COLOR_CHOICES, default=GREEN)
 
-    # Use a manager to retrieve data with .festivals.all() as opposed
-    # to .objects.all().
+    # Define a manager.
     festivals = models.Manager()
 
     class Meta:
@@ -104,6 +110,30 @@ class Festival(models.Model):
     def __str__(self):
         edition_str = '' if self.edition is None else f' - {self.edition} edition'
         return f'{self.base} {self.year}{edition_str}'
+
+    @property
+    def festival_dir(self):
+        return os.path.join(base_dir(), f'{self.base.mnemonic}', f'{self.base.mnemonic}{self.year}')
+
+    @property
+    def planner_data_dir(self):
+        return os.path.join(self.festival_dir, '_planner_data')
+
+    @property
+    def festival_data_dir(self):
+        return os.path.join(self.festival_dir, 'FestivalPlan')
+
+    @property
+    def films_file(self):
+        return  os.path.join(self.planner_data_dir, 'films.csv')
+
+    @property
+    def ratings_file(self):
+        return os.path.join(self.festival_data_dir, 'ratings.csv')
+
+    @property
+    def ratings_cache(self):
+        return os.path.join(self.festival_data_dir, 'ratings_cache.csv')
 
     def set_current(self, session):
         session['festival'] = self.id
