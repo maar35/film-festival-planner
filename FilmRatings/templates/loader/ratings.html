@@ -6,7 +6,12 @@
 {% block content %}
     {% if user_is_admin %}
         <h3>Pick a festival to load data from</h3>
-        {% if festivals %}
+        {% if unexpected_error %}
+            <h2 class="error">Unexpected error</h2>
+            <p>{{ unexpected_error }}</p>
+            <br>
+        {% endif %}
+        {% if festival_items %}
             <form method="post">
                 {% csrf_token %}
                 {{ form.as_p }}
@@ -22,15 +27,15 @@
                     </tr>
                 </thead>
                 <tbody>
-                {% for festival in festivals %}
+                {% for festival_item in festival_items %}
                     <tr>
-                        <td style="color:{{ festival.color }}">{{ festival.str }}</td>
-                        <td>{{ festival.film_count_on_file }}</td>
-                        <td>{{ festival.rating_count_on_file }}</td>
-                        <td>{{ festival.film_count }}</td>
-                        <td>{{ festival.rating_count }}</td>
+                        <td style="color:{{ festival_item.color }}">{{ festival_item.str }}</td>
+                        <td>{{ festival_item.film_count_on_file }}</td>
+                        <td>{{ festival_item.rating_count_on_file }}</td>
+                        <td>{{ festival_item.film_count }}</td>
+                        <td>{{ festival_item.rating_count }}</td>
                         <td style="padding: 2px 8px">
-                            <input type="submit" value="Load" name="{{ festival.submit_name }}" style="width: 100%; padding: 2px 15px; margin: 2px 0; font-size: small;">
+                            <input type="submit" value="Load" name="{{ festival_item.submit_name }}" style="width: 100%; padding: 2px 15px; margin: 2px 0; font-size: small;">
                         </td>
                     </tr>
                 {% endfor %}

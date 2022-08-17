@@ -54,12 +54,12 @@ class LoaderViewsTests(ViewsTestCase):
         self.post_data = {f'festival_{self.festival.id}': ['Load'], 'keep_ratings': []}
 
         # Create working directories for films and ratings.
-        self.create_planner_data_dir(verbose=False)
-        self.create_festival_data_dir(verbose=False)
+        self.create_planner_data_dir()
+        self.create_festival_data_dir()
 
     def tearDown(self):
         super(LoaderViewsTests, self).tearDown()
-        self.remove_festival_data(verbose=False)
+        self.remove_festival_data()
 
     @property
     def base_festival_mnemonic(self):
@@ -68,20 +68,14 @@ class LoaderViewsTests(ViewsTestCase):
     def create_festival(self, start_data_str, end_date_str):
         return create_festival(self.base_festival_mnemonic, start_data_str, end_date_str)
 
-    def create_planner_data_dir(self, verbose=True):
+    def create_planner_data_dir(self):
         os.makedirs(self.festival.planner_data_dir)
-        if verbose:
-            print(f'\nCreated {self.festival.planner_data_dir}')
 
-    def create_festival_data_dir(self, verbose=True):
+    def create_festival_data_dir(self):
         os.makedirs(self.festival.festival_data_dir)
-        if verbose:
-            print(f'Created {self.festival.festival_data_dir}')
 
-    def remove_festival_data(self, verbose=True):
+    def remove_festival_data(self):
         base_dir = self.festival.festival_base_dir
-        if verbose:
-            print(f'Removing {base_dir}')
         shutil.rmtree(base_dir)
 
     def assert_reading_from_file(self, get_response, post_response, redirect_response):

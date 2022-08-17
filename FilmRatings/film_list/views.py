@@ -77,8 +77,6 @@ def film_fan(request):
             fan = FilmFan.film_fans.get(name=selected_fan)
             fan.switch_current(request.session)
             return HttpResponseRedirect(reverse('film_list:index'))
-        else:
-            print(f'{title}: form not valid.')
     else:
         form = User(initial={'current_fan': current_fan(request.session)}, auto_id=False)
 
@@ -148,8 +146,6 @@ def rating(request, film_pk):
                 print(f'{title}: zero rating deleted.')
 
             return HttpResponseRedirect(reverse('film_list:results', args=[film_pk]))
-        else:
-            print(f'{title}: form not valid.')
     else:
         try:
             current_rating = FilmFanFilmRating.fan_ratings.get(film=film, film_fan=fan)

@@ -6,7 +6,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
-from FilmRatings.tools import initialize_load_log, add_load_log, add_base_context, get_load_log
+from FilmRatings.tools import initialize_load_log, add_load_log, add_base_context
 from festivals.models import Festival, current_festival
 from film_list.models import Film, FilmFan, FilmFanFilmRating
 from loader.forms.loader_forms import Loader
@@ -20,7 +20,7 @@ def load_festival_ratings(request):
     title = 'Load Ratings'
     festivals = Festival.festivals.order_by('-start_date')
     submit_name_prefix = 'festival_'
-    festival_data = [{
+    festival_items = [{
         'str': festival,
         'submit_name': f'{submit_name_prefix}{festival.id}',
         'color': festival.festival_color,
@@ -31,7 +31,7 @@ def load_festival_ratings(request):
     } for festival in festivals]
     context = add_base_context(request, {
         'title': title,
-        'festivals': festival_data,
+        'festival_items': festival_items,
     })
 
     # Check the request.
@@ -52,9 +52,7 @@ def load_festival_ratings(request):
                 load_rating_data(request.session, festival, keep_ratings)
                 return HttpResponseRedirect(reverse('film_list:film_list'))
             else:
-                print(f"{title}: can't identify submit widget.")
-        else:
-            print(f'{title}: form not valid.')
+                context['unexpected_error'] = "Can't identify submit widget."
     else:
         form = Loader(initial={'festival': current_festival(request.session).id})
 
@@ -79,6 +77,7 @@ class BaseLoader:
         Initialize the member variables
         :param session: Session to store the log as a cookie
         :param festival: Film Festival to allow derived classes to filter data
+        :param file_required: Boolean to indicate whether the input file is required
         """
         self.session = session
         self.festival = festival
