@@ -3,14 +3,11 @@ import os
 import shutil
 from http import HTTPStatus
 
-from django.http import HttpRequest
-from django.test import TestCase
 from django.urls import reverse
 
-from authentication.tests import set_up_user_with_fan
 from festivals.tests import create_festival
 from film_list.models import FilmFanFilmRating
-from film_list.tests import create_film, get_session_with_fan, login
+from film_list.tests import create_film, ViewsTestCase
 from loader import views
 from loader.views import FilmLoader, RatingLoader
 
@@ -45,18 +42,10 @@ def serialize_rating(rating):
     return fields
 
 
-class LoaderViewsTests(TestCase):
+class LoaderViewsTests(ViewsTestCase):
 
     def setUp(self):
         super(LoaderViewsTests, self).setUp()
-
-        # Set up an admin user.
-        self.admin_fan, self.admin_user, self.admin_credentials = \
-            set_up_user_with_fan('frank', 'pyjama-people', seq_nr=-1, is_admin=True)
-
-        # Set up a regular user.
-        self.regular_fan, self.regular_user, self.regular_credentials = \
-            set_up_user_with_fan('jim', 'actor-alone', seq_nr=-2)
 
         # Set up a festival. Needed to render any page in the app.
         self.festival = self.create_festival('2023-02-16', '2023-02-26')
@@ -94,15 +83,6 @@ class LoaderViewsTests(TestCase):
         if verbose:
             print(f'Removing {base_dir}')
         shutil.rmtree(base_dir)
-
-    def get_admin_request(self):
-        logged_in = login(self, self.admin_credentials)
-        request = HttpRequest()
-        request.user = self.admin_user
-        request.session = get_session_with_fan(self.admin_fan)
-        self.assertIs(logged_in, True)
-        self.assertIs(self.admin_fan.is_admin, True)
-        return request
 
     def assert_reading_from_file(self, get_response, post_response, redirect_response):
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
@@ -194,7 +174,7 @@ class LoaderViewsTests(TestCase):
             film_writer.writerow(serialize_film(film))
 
         rating_1 = create_rating(film, self.admin_fan, 10)
-        rating_2 = create_rating(film, self.regular_fan, 8)
+        _ = create_rating(film, self.regular_fan, 8)
         with open(self.festival.ratings_file, 'w', newline='') as csv_ratings_file:
             rating_writer = csv.writer(csv_ratings_file, delimiter=';', quotechar='"')
             rating_writer.writerow(RatingLoader.expected_header)
@@ -219,17 +199,12 @@ class LoaderViewsTests(TestCase):
         """
         A non-admin fan can't load data.
         """
-        logged_in = login(self, self.regular_credentials)
-        request = HttpRequest()
-        request.user = self.regular_user
-        request.session = get_session_with_fan(self.regular_fan)
+        request = self.get_regular_fan_request()
 
         # Act.
         get_response = views.load_festival_ratings(request)
 
         # Assert.
-        self.assertIs(logged_in, True)
-        self.assertIs(self.regular_fan.is_admin, False)
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
         self.assertContains(get_response, 'Not allowed')
         self.assertNotContains(get_response, '#Ratings on file')

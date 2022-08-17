@@ -32,21 +32,6 @@ def new_film(film_id, title, minutes, seq_nr=-1):
     return Film(film_id=film_id, seq_nr=seq_nr, title=title, duration=duration)
 
 
-def login(test_case, credentials):
-    return test_case.client.login(
-        username=credentials['username'],
-        password=credentials['password']
-    )
-
-
-def get_session_with_fan(fan):
-    session_store = import_module(settings.SESSION_ENGINE).SessionStore
-    session = session_store()
-    session['fan_name'] = fan.name
-    session.create()
-    return session
-
-
 class FilmModelTests(TestCase):
     pass
 
@@ -140,10 +125,25 @@ class RatingModelTests(TestCase):
         self.assertEqual(rating_1.film.film_id, rating_2.film.film_id)
 
 
-class FilmListViewsTests(TestCase):
+def login(self, credentials):
+    return self.client.login(
+        username=credentials['username'],
+        password=credentials['password']
+    )
+
+
+def get_session_with_fan(fan):
+    session_store = import_module(settings.SESSION_ENGINE).SessionStore
+    session = session_store()
+    session['fan_name'] = fan.name
+    session.create()
+    return session
+
+
+class ViewsTestCase(TestCase):
 
     def setUp(self):
-        super(FilmListViewsTests, self).setUp()
+        super(ViewsTestCase, self).setUp()
 
         # Set up an admin user.
         self.admin_fan, self.admin_user, self.admin_credentials = \
@@ -160,16 +160,19 @@ class FilmListViewsTests(TestCase):
         request.session = get_session_with_fan(fan)
         self.assertIs(logged_in, True)
         return request
-
+    
     def get_admin_request(self):
         request = self.get_request(self.admin_fan, self.admin_user, self.admin_credentials)
         self.assertIs(self.admin_fan.is_admin, True)
         return request
-
+    
     def get_regular_fan_request(self):
         request = self.get_request(self.regular_fan, self.regular_user, self.regular_credentials)
         self.assertIs(self.regular_fan.is_admin, False)
         return request
+
+
+class FilmListViewsTests(ViewsTestCase):
 
     def test_rating_of_hacked_film_without_login(self):
         """
