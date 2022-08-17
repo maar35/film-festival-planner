@@ -5,6 +5,16 @@
 
 {% block content %}
     <h3>Film list with ratings</h3>
+    {% if load_results %}
+        <h3 style="color:{{ festival_color }}; margin-bottom: 2px">Load results</h3>
+        <small>
+        {% for load_result in load_results %}
+            <p style="padding-left: 40px; padding-top: 1px; padding-bottom: 0px; margin-top: 0px; margin-bottom: 0px;">
+                {{ load_result }}
+            </p>
+        {% endfor %}
+        </small>
+    {% endif %}
     <br>
     <table>
         <thead>
@@ -21,7 +31,7 @@
             <tr>
                 {% for rating_cell in rating_cells %}
                     {% if forloop.counter == 1 %}
-                        <td><a href="{% url 'film_list:results' rating_cell.film_id %}">{{ rating_cell.title }}</a></td>
+                        <td><a href="{% url 'film_list:results' rating_cell.id %}">{{ rating_cell.title }}</a></td>
                     {% else %}
                         <td>{{ rating_cell }}</td>
                     {% endif %}

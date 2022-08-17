@@ -7,7 +7,7 @@
     <h3>Choose a rating for this film</h3>
     <p><a href="{{ film.url }}">{{ film }}</a></p>
     <br>
-    <form action="{% url 'film_list:rating' film.film_id %}" method="post">
+    <form action="{% url 'film_list:rating' film.id %}" method="post">
         {% csrf_token %}
         {{ form.as_p }}
         <input type="submit" value="Rate" />

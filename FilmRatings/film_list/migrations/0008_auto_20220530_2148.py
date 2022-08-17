@@ -50,6 +50,7 @@ class Migration(migrations.Migration):
         ('film_list', '0007_auto_20220530_1843'),
     ]
 
+    # Operation commented out in order to get a working test database.
     operations = [
-        migrations.RunPython(add_films, revert_add_films)
+        # migrations.RunPython(add_films, revert_add_films)
     ]

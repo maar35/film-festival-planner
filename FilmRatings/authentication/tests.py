@@ -6,7 +6,22 @@ from django.test import TestCase
 from django.urls import reverse
 
 from festivals.models import Festival, FestivalBase
-from film_list.models import FilmFan
+from film_list.models import FilmFan, user_name_to_fan_name
+
+
+def set_up_user_with_fan(username, password, seq_nr=-1, is_admin=False):
+    fan_name = user_name_to_fan_name(username)
+    fan = FilmFan.film_fans.create(name=fan_name, seq_nr=seq_nr, is_admin=is_admin)
+    fan.save()
+    credentials = {
+        'username': username,
+        'password': password,
+    }
+    user = User.objects.create_user(username=credentials['username'])
+    user.set_password(credentials['password'])
+    user.is_active = True
+    user.save()
+    return fan, user, credentials
 
 
 class AuthenticationViewsTest(TestCase):
@@ -15,16 +30,8 @@ class AuthenticationViewsTest(TestCase):
         super(AuthenticationViewsTest, self).setUp()
         
         # Set up a registered fan.
-        self.registered_fan = FilmFan.film_fans.create(name='Mick', seq_nr=1943)
-        self.registered_fan.save()
-        self.credentials = {
-            'username': 'mick',
-            'password': 'shot-away',
-        }
-        self.registered_user = User.objects.create_user(username=self.credentials['username'])
-        self.registered_user.set_password(self.credentials['password'])
-        self.registered_user.is_active = True
-        self.registered_user.save()
+        self.registered_fan, self.registered_user, self.credentials = \
+            set_up_user_with_fan('mick', 'shot-away', seq_nr=1943)
 
         # Set up an unregistered user.
         self.attacking_fan = 'Brian'
@@ -32,7 +39,6 @@ class AuthenticationViewsTest(TestCase):
             'username': 'brian',
             'password': 'harmonica',
         }
-        self.attacking_user = User.objects.create_user(username=self.attack_credentials['username'])
 
         # Set up a festival. Needed to render any page in the app.
         festival_base = FestivalBase.festival_bases.create(

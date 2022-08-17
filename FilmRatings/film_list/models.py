@@ -1,11 +1,15 @@
 from django.db import models
 
+from festivals.models import Festival
+
 
 # Film table.
 class Film(models.Model):
 
     # Define the fields.
-    film_id = models.IntegerField(primary_key=True, serialize=False)
+    id = models.AutoField(primary_key=True)
+    festival = models.ForeignKey(Festival, on_delete=models.CASCADE)
+    film_id = models.IntegerField()
     seq_nr = models.IntegerField()
     sort_title = models.CharField(max_length=128)
     title = models.CharField(max_length=128)
@@ -15,17 +19,18 @@ class Film(models.Model):
     medium_category = models.CharField(max_length=32)
     url = models.URLField(max_length=200)
 
-    # Default retrieval with .objects.all, with a manager it's .films.all
+    # Define a manager.
     films = models.Manager()
 
     class Meta:
-        db_table = "films"
+        db_table = 'films'
+        unique_together = ('festival', 'film_id')
 
     def __str__(self):
         return f"{self.title} ({self.duration.total_seconds() / 60:.0f}')"
 
     def duration_str(self):
-        return ":".join(f"{self.duration}".split(":")[:2])
+        return ':'.join(f'{self.duration}'.split(':')[:2])
 
 
 # Film Fan table.
@@ -70,8 +75,7 @@ class FilmFan(models.Model):
     seq_nr = models.IntegerField(unique=True)
     is_admin = models.BooleanField(default=False)
 
-    # Use a manager to retrieve data with .film_fans.all() as opposed
-    # to .objects.all().
+    # Define a manager.
     film_fans = models.Manager()
 
     class Meta:
@@ -126,7 +130,7 @@ class FilmFanFilmRating(models.Model):
     film_fan = models.ForeignKey(FilmFan, on_delete=models.CASCADE)
     rating = models.IntegerField(choices=Rating.choices)
 
-    # Default retrieval with .objects.all, with a manager it's .fan_ratings.all
+    # Define a manager.
     fan_ratings = models.Manager()
 
     class Meta:

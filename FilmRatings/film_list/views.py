@@ -6,7 +6,8 @@ from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
 
-from FilmRatings import tools
+from FilmRatings.tools import unset_load_log, add_base_context, get_load_log
+from festivals.models import current_festival
 from film_list.forms.set_film_fan import User
 from film_list.forms.set_rating import Rating
 from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan
@@ -25,10 +26,15 @@ class ResultsView(generic.DetailView):
         for fan in fans:
             fan_row = [fan, fan.fan_rating_str(film), fan.fan_rating_name(film)]
             fan_rows.append(fan_row)
-        context = tools.add_base_context(self.request, super().get_context_data(**kwargs))
+        context = add_base_context(self.request, super().get_context_data(**kwargs))
         context['title'] = 'Film Rating Results'
         context['fan_rows'] = fan_rows
         return context
+
+    def dispatch(self, request, *args, **kwargs):
+        response = super().dispatch(request, *args, **kwargs)
+        unset_load_log(request.session)
+        return response
 
 
 # General index page.
@@ -42,8 +48,11 @@ def index(request):
     fan = current_fan(request.session)
     user_name = fan if fan is not None else "Guest"
 
+    # Unset load results cookie.
+    unset_load_log(request.session)
+
     # Construct the parameters.
-    context = tools.add_base_context(request, {
+    context = add_base_context(request, {
         "title": title,
         "hour": time_string,
         "name": user_name,
@@ -68,13 +77,11 @@ def film_fan(request):
             fan = FilmFan.film_fans.get(name=selected_fan)
             fan.switch_current(request.session)
             return HttpResponseRedirect(reverse('film_list:index'))
-        else:
-            print(f'{title}: form not valid.')
     else:
         form = User(initial={'current_fan': current_fan(request.session)}, auto_id=False)
 
     # Construct the context.
-    context = tools.add_base_context(request, {
+    context = add_base_context(request, {
         'title': title,
         'form': form,
     })
@@ -89,7 +96,8 @@ def film_list(request):
     # Set simple parameters.
     title = 'Film Rating List'
     fan_list = FilmFan.film_fans.all()
-    films = Film.films.order_by('seq_nr')
+    festival = current_festival(request.session)
+    films = Film.films.filter(festival=festival).order_by('seq_nr')
 
     # Get the table rows.
     rating_rows = []
@@ -105,10 +113,11 @@ def film_list(request):
         rating_rows.append(rating_cells)
 
     # Construct the context.
-    context = tools.add_base_context(request, {
-        "title": title,
-        "fans": fan_list,
-        "rating_rows": rating_rows,
+    context = add_base_context(request, {
+        'title': title,
+        'fans': fan_list,
+        'rating_rows': rating_rows,
+        'load_results': get_load_log(request.session)
     })
 
     return render(request, "film_list/film_list.html", context)
@@ -116,10 +125,10 @@ def film_list(request):
 
 # rating picker view.
 @login_required
-def rating(request, film_id):
+def rating(request, film_pk):
     # Preset some parameters.
     title = "Rating Picker"
-    film = get_object_or_404(Film, film_id=film_id)
+    film = get_object_or_404(Film, id=film_pk)
     fan = current_fan(request.session)
 
     # Check the request.
@@ -136,9 +145,7 @@ def rating(request, film_id):
                 zero_ratings.delete()
                 print(f'{title}: zero rating deleted.')
 
-            return HttpResponseRedirect(reverse('film_list:results', args=[film_id]))
-        else:
-            print(f'{title}: form not valid.')
+            return HttpResponseRedirect(reverse('film_list:results', args=[film_pk]))
     else:
         try:
             current_rating = FilmFanFilmRating.fan_ratings.get(film=film, film_fan=fan)
@@ -148,7 +155,7 @@ def rating(request, film_id):
             form = Rating(initial={'fan_rating': current_rating.rating}, auto_id=False)
 
     # Construct the context.
-    context = tools.add_base_context(request, {
+    context = add_base_context(request, {
         'title': title,
         'film': film,
         'form': form,

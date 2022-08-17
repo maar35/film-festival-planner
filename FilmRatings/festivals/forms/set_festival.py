@@ -10,4 +10,6 @@ class FestivalEdition(forms.Form):
 
 
 class TestNearestFestival(forms.Form):
-    sample_date = forms.DateField(widget=forms.TextInput(attrs={'autofocus': 'autofocus'}))
+    sample_date = forms.DateField(
+        widget=forms.SelectDateWidget(years=[2019, 2020, 2021, 2022, 2023, 2024, 2025])
+    )

@@ -25,6 +25,7 @@ urlpatterns = [
     path('authentication/', include('authentication.urls')),
     path('film_list/', include('film_list.urls')),
     path('festivals/', include('festivals.urls')),
+    path('loader/', include('loader.urls')),
     path('exercises/', include('exercises.urls')),
 ]
 

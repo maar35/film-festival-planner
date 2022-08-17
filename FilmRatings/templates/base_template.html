@@ -22,14 +22,14 @@
         <hr>
         <h1>{% block header %} Page Title {% endblock %}</h1>
         <p>
-            <span style="color:{{ festival_color }}; text-align: left; width:49%; display: inline-block;">
+            <span style="color:{{ festival_color }}; text-align: left; width: 49%; display: inline-block;">
             {% if festival %}
                 {{ festival }}
             {% else %}
                 No festival selected.
             {% endif %}
             </span>
-            <span style="text-align: right; width:50%; display: inline-block;">
+            <span style="text-align: right; width: 50%; display: inline-block;">
             {% if user.is_authenticated %}
                 {{ user.username }}
                 <a href="{% url 'authentication:logout' %}">Logout</a>
@@ -38,7 +38,10 @@
             {% endif %}
             </span>
         </p><p>
-            <span style="text-align: right; width:99%; display: inline-block;">
+            <span style="text-align: left; width: 49%; display: inline-block;">
+                <a href="{% url 'film_list:index' %}">index</a>
+            </span>
+            <span style="text-align: right; width: 50%; display: inline-block;">
             {% if current_fan %}
                 {% if user_represents_fan %}
                     {{ user.username }} represents {{ current_fan }}
@@ -50,7 +53,6 @@
             {% endif %}
             </span>
         </p>
-        <a href="{% url 'film_list:index' %}">index</a>
         <hr>
         {% block content %}
             Body content

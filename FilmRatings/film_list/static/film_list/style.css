@@ -44,7 +44,7 @@ td {
 }
 
 /* Make the select pop-up widget a bit larger than standard. */
-select {
+select, checkbox {
     font-size: large
 }
 

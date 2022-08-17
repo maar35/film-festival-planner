@@ -42,8 +42,6 @@ def detail(request, festival_id):
             selected_festival = Festival.festivals.get(pk=selected_festival_id)
             selected_festival.set_current(request.session)
             return HttpResponseRedirect(reverse('festivals:detail', args=[selected_festival_id]))
-        else:
-            print(f'{title}: form not valid.')
     else:
         form = FestivalEdition(initial={'festival': festival.id}, auto_id=False)
 
@@ -81,8 +79,6 @@ def test_default_festival(request):
             session['sample_date'] = str(sample_date)
             session['default_festival'] = str(festival)
             return HttpResponseRedirect(reverse('festivals:test_default_festival'))
-        else:
-            print(f'{title}: form not valid.')
     else:
         initial_date = session.get('sample_date', datetime.date.today())
         form = TestNearestFestival(initial={'sample_date': initial_date})
