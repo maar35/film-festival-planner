@@ -4,8 +4,6 @@ import os
 
 from django.db import models
 
-# from FilmRatings.tools import base_dir
-
 
 # FestivalBase table, to keep information that is invariant for
 # festival editions.
@@ -112,8 +110,12 @@ class Festival(models.Model):
         return f'{self.base} {self.year}{edition_str}'
 
     @property
+    def festival_base_dir(self):
+        return os.path.join(base_dir(), self.base.mnemonic)
+
+    @property
     def festival_dir(self):
-        return os.path.join(base_dir(), f'{self.base.mnemonic}', f'{self.base.mnemonic}{self.year}')
+        return os.path.join(self.festival_base_dir, f'{self.base.mnemonic}{self.year}')
 
     @property
     def planner_data_dir(self):
@@ -125,7 +127,7 @@ class Festival(models.Model):
 
     @property
     def films_file(self):
-        return  os.path.join(self.planner_data_dir, 'films.csv')
+        return os.path.join(self.planner_data_dir, 'films.csv')
 
     @property
     def ratings_file(self):

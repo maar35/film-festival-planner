@@ -19,8 +19,10 @@ def load_festival_ratings(request):
     # Construct the context.
     title = 'Load Ratings'
     festivals = Festival.festivals.order_by('-start_date')
+    submit_name_prefix = 'festival_'
     festival_data = [{
         'str': festival,
+        'submit_name': f'{submit_name_prefix}{festival.id}',
         'color': festival.festival_color,
         'film_count_on_file': film_count_on_file(festival),
         'film_count': Film.films.filter(festival=festival).count,
@@ -34,14 +36,23 @@ def load_festival_ratings(request):
 
     # Check the request.
     if request.method == 'POST':
+        festival_indicator = None
+        names = [f'{submit_name_prefix}{festival.id}' for festival in festivals]
+        for name in names:
+            if name in request.POST:
+                festival_indicator = name
+                break
         form = Loader(request.POST)
         if form.is_valid():
-            festival_id = form.cleaned_data['festival']
-            keep_ratings = form.cleaned_data['keep_ratings']
-            festival = Festival.festivals.get(pk=festival_id)
-            festival.set_current(request.session)
-            load_rating_data(request.session, festival, keep_ratings)
-            return HttpResponseRedirect(reverse('film_list:film_list'))
+            if festival_indicator is not None:
+                keep_ratings = form.cleaned_data['keep_ratings']
+                festival_id = int(festival_indicator.strip(submit_name_prefix))
+                festival = Festival.festivals.get(pk=festival_id)
+                festival.set_current(request.session)
+                load_rating_data(request.session, festival, keep_ratings)
+                return HttpResponseRedirect(reverse('film_list:film_list'))
+            else:
+                print(f"{title}: can't identify submit widget.")
         else:
             print(f'{title}: form not valid.')
     else:
@@ -57,14 +68,13 @@ def load_rating_data(session, festival, keep_ratings):
         RatingLoader(session, festival, keep_ratings).load_ratings()
 
 
-# Helper class.
 class BaseLoader:
     """
     Base class for loading objects such as films or ratings from CSV files.
     """
     expected_header = None
 
-    def __init__(self, session, festival):
+    def __init__(self, session, festival, file_required=True):
         """
         Initialize the member variables
         :param session: Session to store the log as a cookie
@@ -72,6 +82,7 @@ class BaseLoader:
         """
         self.session = session
         self.festival = festival
+        self.file_required = file_required
         self.object_name = None
         self.objects_on_file = None
 
@@ -103,7 +114,8 @@ class BaseLoader:
                         object_list.append(object_read)
 
         except FileNotFoundError:
-            self.add_log(f'File {objects_file} not found.')
+            if self.file_required:
+                self.add_log(f'File {objects_file} not found.')
             return False
 
         except ValueError:
@@ -221,7 +233,7 @@ class RatingLoader(BaseLoader):
     expected_header = ['filmid', 'filmfan', 'rating']
 
     def __init__(self, session, festival, keep_ratings):
-        super().__init__(session, festival)
+        super().__init__(session, festival, file_required=False)
         self.keep_ratings = keep_ratings
         self.object_name = 'rating'
         self.ratings_file = self.festival.ratings_file
@@ -248,6 +260,7 @@ class RatingLoader(BaseLoader):
 
         # Read the ratings from file.
         if not self.read_objects(ratings_file, self.ratings):
+            self.add_log('No ratings read.')
             return False
 
         # Log results

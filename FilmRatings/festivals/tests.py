@@ -34,7 +34,7 @@ class FestivalModelTests(TestCase):
 
     def test_no_festivals(self):
         """
-        If no questions exist, an appropriate message is displayed.
+        If no festival exist, an appropriate message is displayed.
         """
         response = self.client.get(reverse('festivals:index'))
         self.assertEqual(response.status_code, HTTPStatus.OK)
