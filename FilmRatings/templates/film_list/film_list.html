@@ -7,15 +7,30 @@
     <h3>Film list with ratings</h3>
     {% if load_results %}
         <h3 style="color:{{ festival_color }}; margin-bottom: 2px">Load results</h3>
-        <small>
         {% for load_result in load_results %}
-            <p style="padding-left: 40px; padding-top: 1px; padding-bottom: 0px; margin-top: 0px; margin-bottom: 0px;">
-                {{ load_result }}
-            </p>
+            <p class="log">{{ load_result }}</p>
         {% endfor %}
-        </small>
+    {% endif %}
+    {% if unexpected_error %}
+        <h3 class="error">Unexpected error</h3>
+        {% for message in unexpected_error %}
+            <p class="log">{{ message }}</p>
+        {% endfor %}
     {% endif %}
     <br>
+    {% if action.new_rating %}
+        <p>
+        {% if action.old_rating == '-' %}
+            {{ current_fan }} gave <em style="color:{{ festival_color }}">{{ action.rated_film }}</em> a rating of <em style="color:{{ festival_color }}"> {{ action.new_rating }}</em>
+        {% else %}
+            {{ current_fan }} changed rating {{ action.old_rating }} of <em style="color:{{ festival_color }}">{{ action.rated_film }}</em> into <em style="color:{{ festival_color }}"> {{ action.new_rating }}</em>
+        {% endif %}
+        {{ action.action_time|timesince }} ago
+        </p>
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
     <table>
         <thead>
             <tr>
@@ -31,14 +46,32 @@
             <tr>
                 {% for rating_cell in rating_cells %}
                     {% if forloop.counter == 1 %}
-                        <td><a href="{% url 'film_list:results' rating_cell.id %}">{{ rating_cell.title }}</a></td>
-                    {% else %}
+                        <td><a href="{% url 'film_list:results' rating_cell.id %}">
+                            {{ rating_cell.title }}
+                        </a></td>
+                    {% elif forloop.counter == 2 %}
                         <td>{{ rating_cell }}</td>
+                    {% elif rating_cell.is_current_fan %}
+                        <td class="dropdown">
+                            <span class="dropbtn">
+                                {{ rating_cell.rating }}
+                            </span>
+                            <div class="dropdown-content">
+                                {% for choice in rating_cell.choices %}
+                                    <input type="submit" value="{{ choice.label }}" name="{{ choice.submit_name }}">
+                                {% endfor %}
+                            </div>
+                        </td>
+                    {% else %}
+                        <td style="text-align: center">
+                            {{ rating_cell.rating }}
+                        </td>
                     {% endif %}
                 {% endfor %}
             </tr>
         {% endfor %}
         </tbody>
     </table>
+    </form>
     <br>
 {% endblock %}

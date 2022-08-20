@@ -19,6 +19,14 @@ def unset_load_log(session):
     session['load_results'] = None
 
 
+# Support printing form errors.
+def wrap_up_form_errors(form_errors):
+    messages = ['Form is invalid']
+    for subject, errors in form_errors.items():
+        messages.append(f'{subject}: {",".join([error for error in errors])}')
+    return messages
+
+
 # Define common parameters for base template.
 def user_is_admin(request):
     user_fan = get_user_fan(request.user)

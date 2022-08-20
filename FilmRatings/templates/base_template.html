@@ -6,17 +6,88 @@
         {% load static %}
         <link rel="stylesheet" type="text/css" href="{% static 'film_list/style.css' %}">
         <link rel="shortcut icon" type="image/png" href="{% static 'festivals/images/Mac-512.png' %}"/>
-        <style>
-            table,
-            th,
-            td {
-                border: 1px solid {{ festival_color }};
-            }
-            body {
-                background: black url("{% static background_image %}") no-repeat;
-            }
-        </style>
     </head>
+    <style>
+        table,
+        th,
+        td {
+            border: 1px solid {{ festival_color }};
+        }
+        body {
+            background: black url("{% static background_image %}") no-repeat;
+        }
+
+        /* TEMP do static stuff here 'cuz the static file works in a voodoo-like way */
+        /* Style for log items */
+        .log {
+            font-size: small;
+            padding-left: 40px;
+            padding-top: 1px;
+            padding-bottom: 0px;
+            margin-top: 0px;
+            margin-bottom: 0px;
+        }
+
+        /* Style The Dropdown Button */
+        .dropbtn {
+            background-color: green;
+            color: silver;
+            padding: 6px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* The container <div> - needed to position the dropdown content */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+            background-color: green;
+            text-align: center;
+            width: 70%;
+            height: 15px;
+        }
+        .dropdown:hover {
+            background-color: darkgreen;
+        }
+
+        /* Dropdown Content (Hidden by Default) */
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            cursor: pointer;
+            background-color: orange;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            /* top: 50px; */
+            min-width: 240px;
+            width : 240px;
+            padding: 12px 16px;
+            z-index: 1;
+        }
+
+        /* Links inside the dropdown */
+        .dropdown-content input {
+            color: ivory;
+            background-color: forestgreen;
+            width: 100%;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+        .dropdown-content input:hover {
+            background-color: darkgreen
+        }
+
+        /* Show the dropdown menu on hover */
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        /* Change the background color of the dropdown button when the dropdown content is shown */
+        .dropdown:hover .dropbtn {
+            background-color: darkgreen;
+        }
+    </style>
 
     <body>
         <hr>
@@ -25,6 +96,18 @@
             <span style="color:{{ festival_color }}; text-align: left; width: 49%; display: inline-block;">
             {% if festival %}
                 {{ festival }}
+                {% now "Y-m-d" as today_as_date %}
+                {% if today_as_date < festival.start_date|date:"Y-m-d" %}
+                    <span style="color: ivory"> starts in {{ festival.start_date|timeuntil }}</span>
+                {% elif today_as_date == festival.start_date|date:"Y-m-d" %}
+                    <span style="color: ivory"> started today!</span>
+                {% elif today_as_date == festival.end_date|date:"Y-m-d" %}
+                    <span style="color: ivory"> last day!</span>
+                {% elif today_as_date > festival.end_date|date:"Y-m-d" %}
+                    <span style="color: silver"> ended {{ festival.end_date|timesince }} ago</span>
+                {% else %}
+                    <span style="color:ivory"> still going on {{ festival.end_date|timeuntil }}!</span>
+                {% endif %}
             {% else %}
                 No festival selected.
             {% endif %}
