@@ -21,7 +21,7 @@
     {% if action.new_rating %}
         <p>
         {% if action.old_rating == '-' %}
-            {{ current_fan }} gave <em style="color:{{ festival_color }}">{{ action.rated_film }}</em> a rating of <em style="color:{{ festival_color }}"> {{ action.new_rating }}</em>
+            {{ current_fan }} gave <em style="color:{{ festival_color }}">{{ action.rated_film }}</em> a rating of <em style="color:{{ festival_color }}"> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% else %}
             {{ current_fan }} changed rating {{ action.old_rating }} of <em style="color:{{ festival_color }}">{{ action.rated_film }}</em> into <em style="color:{{ festival_color }}"> {{ action.new_rating }}</em>
         {% endif %}
@@ -31,13 +31,15 @@
     <form method="post">
         {% csrf_token %}
         {{ form.as_p }}
+    <div class="no-select">
     <table>
+<!-- style="position: sticky; top: 0; background-color: #00000060; border: 3px solid {{ festival_color }};"-->
         <thead>
             <tr>
-                <td><b>Film</b></td>
-                <td><b>Duration</b></td>
+                <td class="sticky"><b>Film</b></td>
+                <td class="sticky"><b>Duration</b></td>
                 {% for fan in fans %}
-                    <td><b>{{ fan }}</b></td>
+                    <td class="sticky"><b>{{ fan }}</b></td>
                 {% endfor %}
             </tr>
         </thead>
@@ -53,12 +55,12 @@
                         <td>{{ rating_cell }}</td>
                     {% elif rating_cell.is_current_fan %}
                         <td class="dropdown">
-                            <span class="dropbtn">
+                            <span class="drop-button">
                                 {{ rating_cell.rating }}
                             </span>
                             <div class="dropdown-content">
                                 {% for choice in rating_cell.choices %}
-                                    <input type="submit" value="{{ choice.label }}" name="{{ choice.submit_name }}">
+                                    <input type="submit" value="{{ choice.value | stringformat:'2d' }}  {{ choice.rating_name }}" name="{{ choice.submit_name }}">
                                 {% endfor %}
                             </div>
                         </td>
@@ -72,6 +74,7 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
     </form>
     <br>
 {% endblock %}

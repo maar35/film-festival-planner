@@ -137,15 +137,6 @@ def film_list(request):
     return render(request, "film_list/film_list.html", context)
 
 
-def get_submitted_name(request, submit_names):
-    submitted_name = None
-    for submit_name in submit_names:
-        if submit_name in request.POST:
-            submitted_name = submit_name
-            break
-    return submitted_name
-
-
 def get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_names):
 
     # Initialize.
@@ -169,7 +160,8 @@ def get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_n
             if is_current_fan:
                 for value, name in FilmFanFilmRating.Rating.choices:
                     choice = {
-                        'label': f'{value} - {name}',
+                        'value': value,
+                        'rating_name': name,
                         'submit_name': f'{submit_name_prefix}{film.id}_{value}'
                     }
                     choices.append(choice)
@@ -184,6 +176,15 @@ def get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_n
 
         # Append a row to the table rows.
         rating_rows.append(rating_cells)
+
+
+def get_submitted_name(request, submit_names):
+    submitted_name = None
+    for submit_name in submit_names:
+        if submit_name in request.POST:
+            submitted_name = submit_name
+            break
+    return submitted_name
 
 
 def get_rating_str(film, fan):
@@ -205,9 +206,12 @@ def update_rating(session, film, fan, rating_value):
     zero_ratings = FilmFanFilmRating.fan_ratings.filter(film=film, film_fan=fan, rating=0)
     if len(zero_ratings) > 0:
         zero_ratings.delete()
+    choices = FilmFanFilmRating.Rating.choices
+    new_rating_name = [name for value, name in choices if value == int(new_rating.rating)][0]
     rating_action = {
         'old_rating': old_rating_str,
         'new_rating': str(new_rating.rating),
+        'new_rating_name': new_rating_name,
         'rated_film': str(new_rating.film),
         'action_time': datetime.datetime.now().isoformat(),
     }
