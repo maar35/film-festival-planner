@@ -1,6 +1,7 @@
 from datetime import timedelta
 from http import HTTPStatus
 from importlib import import_module
+import re
 
 import django.http
 from django.conf import settings
@@ -11,7 +12,7 @@ from django.urls import reverse
 from authentication.tests import set_up_user_with_fan
 from festivals.tests import create_festival
 from film_list import views
-from .models import Film, FilmFan, me, FilmFanFilmRating
+from .models import Film, FilmFan, me, FilmFanFilmRating, current_fan, get_rating_name
 
 
 def create_film(film_id, title, minutes, seq_nr=-1, festival=None):
@@ -140,6 +141,15 @@ def get_session_with_fan(fan):
     return session
 
 
+def get_request_with_session(request_with_session, method_is_post=False, post_data=None):
+    request = HttpRequest()
+    request.method = 'POST' if method_is_post else 'GET'
+    request.user = request_with_session.user
+    request.session = request_with_session.session
+    request.POST = post_data
+    return request
+
+
 class ViewsTestCase(TestCase):
 
     def setUp(self):
@@ -173,6 +183,19 @@ class ViewsTestCase(TestCase):
 
 
 class FilmListViewsTests(ViewsTestCase):
+
+    @staticmethod
+    def rating_post_data(film, rating_value=0):
+        return {f'rating_{film.id}_{rating_value}': ['label']}
+
+    def assert_rating_action_redirect(self, user, get_response, post_response, redirect_response):
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertContains(get_response, user.username)
+        self.assertContains(get_response, self.regular_fan.name)
+        self.assertContains(get_response, self.admin_fan.name)
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertURLEqual(post_response.url, reverse('film_list:film_list'))
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
 
     def test_rating_of_hacked_film_without_login(self):
         """
@@ -323,3 +346,99 @@ class FilmListViewsTests(ViewsTestCase):
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertContains(response, f"{self.admin_credentials['username']} represents")
         self.assertContains(response, self.regular_fan.name)
+
+    def test_logged_in_fan_can_add_rating(self):
+        """
+        A logged in fan can add a rating to a film.
+        """
+        # Arrange.
+        get_request = self.get_admin_request()
+        get_response = views.film_list(get_request)
+
+        film = create_film(film_id=2001, title='Odysseus in Trouble', minutes=128)
+        fan = self.admin_fan
+        rating_value = 9
+        rating_name = get_rating_name(rating_value)
+        post_data = self.rating_post_data(film, rating_value=rating_value)
+        post_request = get_request_with_session(get_request, method_is_post=True, post_data=post_data)
+        post_response = views.film_list(post_request)
+
+        # Act.
+        redirect_response = views.film_list(get_request_with_session(post_request))
+
+        # Assert.
+        self.assert_rating_action_redirect(get_request.user, get_response, post_response, redirect_response)
+        self.assertContains(redirect_response, f'{self.admin_fan.name} gave')
+        self.assertNotContains(redirect_response, 'Unexpected error')
+        log_re = re.compile(f'{fan.name} gave.*{film.title}.*a rating of.* {rating_value}'
+                            + r' \(' + f'{rating_name}' + r'\)')
+        self.assertRegex(redirect_response.content.decode('utf-8'), log_re)
+
+    def test_logged_in_fan_can_change_rating(self):
+        """
+        A logged in fan can change an existing rating of a film.
+        """
+        # Arrange.
+        get_request = self.get_regular_fan_request()
+        get_response = views.film_list(get_request)
+
+        film = create_film(film_id=1948, title='Big Brothers', minutes=110)
+        fan = current_fan(get_request.session)
+        old_rating_value = 8
+        FilmFanFilmRating.fan_ratings.create(film=film, film_fan=fan, rating=old_rating_value)
+        new_rating_value = 3
+        new_rating_name = get_rating_name(new_rating_value)
+        post_data = self.rating_post_data(film, rating_value=new_rating_value)
+
+        post_request = get_request_with_session(get_request, method_is_post=True, post_data=post_data)
+        post_response = views.film_list(post_request)
+
+        # Act.
+        redirect_response = views.film_list(get_request_with_session(post_request))
+
+        # Assert.
+        self.assert_rating_action_redirect(get_request.user, get_response, post_response, redirect_response)
+        log_re = re.compile(f'{fan.name} changed rating {old_rating_value} of.*{film.title}.*into.* {new_rating_value}'
+                            + r' \(' + f'{new_rating_name}' + r'\)')
+        self.assertRegex(redirect_response.content.decode('utf-8'), log_re)
+
+    def test_logged_in_fan_can_remove_rating_in_detail_view(self):
+        """
+        A logged in fan can remove a rating from the film detail view.
+        """
+        # Arrange.
+        film = create_film(film_id=1999, title='The Prince and the Price', minutes=98)
+        fan = self.regular_fan
+        rating_value = 6
+        FilmFanFilmRating.fan_ratings.create(film=film, film_fan=fan, rating=rating_value)
+        rating = FilmFanFilmRating.fan_ratings.get(film=film, film_fan=fan)
+        self.assertEqual(rating.rating, rating_value)
+
+        get_request = self.get_regular_fan_request()
+        get_response = views.rating(get_request, film.id)
+
+        new_rating_value = 0
+        post_data = {'fan_rating': f'{new_rating_value}'}
+        post_request = get_request_with_session(get_request, method_is_post=True, post_data=post_data)
+        post_response = views.rating(post_request, film.id)
+
+        # Act.
+        redirect_request = get_request_with_session(get_request)
+        results_view = views.ResultsView()
+        results_view.object = film
+        results_view.setup(redirect_request)
+        context = results_view.get_context_data()
+        redirect_response = results_view.render_to_response(context)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertContains(get_response, self.regular_user.username)
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertURLEqual(post_response.url, reverse('film_list:results', args=[film.id]))
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        self.assertContains(redirect_response, self.regular_fan.name)
+        self.assertContains(redirect_response, self.admin_fan.name)
+        with self.assertRaisesMessage(FilmFanFilmRating.DoesNotExist, 'FilmFanFilmRating matching query does not exist'):
+            _ = FilmFanFilmRating.fan_ratings.get(film=film, film_fan=fan)
+        log_re = re.compile(f'{fan.name}' + r'</a></td>\s*<td></td>\s*<td>Unrated</td>')
+        self.assertRegex(redirect_response.content.decode('utf-8'), log_re, re.DOTALL)

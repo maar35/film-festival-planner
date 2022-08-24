@@ -11,7 +11,7 @@ from festivals.models import current_festival
 from film_list.forms.pick_rating import PickRating
 from film_list.forms.set_film_fan import User
 from film_list.forms.set_rating import Rating
-from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan
+from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan, get_rating_name
 
 
 # Define generic view classes.
@@ -129,9 +129,9 @@ def film_list(request):
 
                 return HttpResponseRedirect(reverse('film_list:film_list'))
             else:
-                context['unexpected_error'] = ["Can't identify submit widget."]
+                context['unexpected_errors'] = ["Can't identify submit widget."]
         else:
-            context['unexpected_error'] = wrap_up_form_errors(form.errors)
+            context['unexpected_errors'] = wrap_up_form_errors(form.errors)
 
     context['load_results'] = get_load_log(session)
     return render(request, "film_list/film_list.html", context)
@@ -206,8 +206,7 @@ def update_rating(session, film, fan, rating_value):
     zero_ratings = FilmFanFilmRating.fan_ratings.filter(film=film, film_fan=fan, rating=0)
     if len(zero_ratings) > 0:
         zero_ratings.delete()
-    choices = FilmFanFilmRating.Rating.choices
-    new_rating_name = [name for value, name in choices if value == int(new_rating.rating)][0]
+    new_rating_name = get_rating_name(new_rating.rating)
     rating_action = {
         'old_rating': old_rating_str,
         'new_rating': str(new_rating.rating),

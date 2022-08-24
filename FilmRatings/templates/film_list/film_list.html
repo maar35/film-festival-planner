@@ -11,10 +11,10 @@
             <p class="log">{{ load_result }}</p>
         {% endfor %}
     {% endif %}
-    {% if unexpected_error %}
+    {% if unexpected_errors %}
         <h3 class="error">Unexpected error</h3>
-        {% for message in unexpected_error %}
-            <p class="log">{{ message }}</p>
+        {% for error in unexpected_errors %}
+            <p class="log">{{ error }}</p>
         {% endfor %}
     {% endif %}
     <br>
@@ -22,8 +22,10 @@
         <p>
         {% if action.old_rating == '-' %}
             {{ current_fan }} gave <em style="color:{{ festival_color }}">{{ action.rated_film }}</em> a rating of <em style="color:{{ festival_color }}"> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
+        {% elif action.new_rating == '0' %}
+            {{ current_fan }} removed rating {{ action.old_rating }} of <em style="color:{{ festival_color }}">{{ action.rated_film }}</em>
         {% else %}
-            {{ current_fan }} changed rating {{ action.old_rating }} of <em style="color:{{ festival_color }}">{{ action.rated_film }}</em> into <em style="color:{{ festival_color }}"> {{ action.new_rating }}</em>
+            {{ current_fan }} changed rating {{ action.old_rating }} of <em style="color:{{ festival_color }}">{{ action.rated_film }}</em> into <em style="color:{{ festival_color }}"> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% endif %}
         {{ action.action_time|timesince }} ago
         </p>
