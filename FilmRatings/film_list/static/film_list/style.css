@@ -44,7 +44,7 @@ td {
 }
 
 /* Make the select pop-up widget a bit larger than standard. */
-select, checkbox {
+select {
     font-size: large
 }
 
@@ -90,4 +90,5 @@ input[type=text]:focus {
     color: tomato;
     background; ivory;
     text-shadow: 4px 4px 3px green;
+    margin-bottom: 2px;
 }

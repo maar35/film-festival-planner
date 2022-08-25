@@ -6,15 +6,15 @@ from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
 
-from FilmRatings.tools import unset_load_log, add_base_context, get_load_log
+from FilmRatings.tools import unset_load_log, add_base_context, get_load_log, wrap_up_form_errors
 from festivals.models import current_festival
+from film_list.forms.pick_rating import PickRating
 from film_list.forms.set_film_fan import User
 from film_list.forms.set_rating import Rating
-from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan
+from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan, get_rating_name
 
 
 # Define generic view classes.
-
 class ResultsView(generic.DetailView):
     model = Film
     template_name = 'film_list/results.html'
@@ -93,39 +93,133 @@ def film_fan(request):
 @login_required
 def film_list(request):
 
-    # Set simple parameters.
+    # Initialize.
     title = 'Film Rating List'
+    submit_name_prefix = 'rating_'
+    session = request.session
+    logged_in_fan = current_fan(session)
     fan_list = FilmFan.film_fans.all()
-    festival = current_festival(request.session)
-    films = Film.films.filter(festival=festival).order_by('seq_nr')
 
     # Get the table rows.
     rating_rows = []
-    for film in films:
-        rating_cells = [film, film.duration_str()]
-        for fan in fan_list:
-            try:
-                fan_rating = FilmFanFilmRating.fan_ratings.get(film=film, film_fan=fan)
-            except (KeyError, FilmFanFilmRating.DoesNotExist):
-                fan_rating = None
-            rating_str = f'{fan_rating.rating}' if fan_rating is not None else ''
-            rating_cells.append(f'{rating_str}')
-        rating_rows.append(rating_cells)
+    submit_names = []
+    get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_names)
 
     # Construct the context.
     context = add_base_context(request, {
         'title': title,
         'fans': fan_list,
         'rating_rows': rating_rows,
-        'load_results': get_load_log(request.session)
     })
+    if 'rating_action' in session:
+        action = session['rating_action']
+        context['action'] = action
+        context['action']['action_time'] = datetime.datetime.fromisoformat(action['action_time'])
 
+    # Check the request.
+    if request.method == 'POST':
+        unset_load_log(session)
+        form = PickRating(request.POST)
+        if form.is_valid():
+            submitted_name = get_submitted_name(request, submit_names)
+            if submitted_name is not None:
+                [film_pk, rating_value] = submitted_name.strip(submit_name_prefix).split('_')
+                film = Film.films.get(id=film_pk)
+                update_rating(session, film, logged_in_fan, rating_value)
+
+                return HttpResponseRedirect(reverse('film_list:film_list'))
+            else:
+                context['unexpected_errors'] = ["Can't identify submit widget."]
+        else:
+            context['unexpected_errors'] = wrap_up_form_errors(form.errors)
+
+    context['load_results'] = get_load_log(session)
     return render(request, "film_list/film_list.html", context)
+
+
+def get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_names):
+
+    # Initialize.
+    festival = current_festival(session)
+    films = Film.films.filter(festival=festival).order_by('seq_nr')
+    logged_in_fan = current_fan(session)
+
+    # Create a rating row for each film.
+    for film in films:
+
+        # Set the row to contain film, film duration and film fans.
+        rating_cells = [film, film.duration_str()]
+        for fan in fan_list:
+
+            # Set a rating string to display.
+            rating_str = get_rating_str(film, fan)
+
+            # Set the rating choices if this fan is the current fan.
+            choices = []
+            if fan == logged_in_fan:
+                for value, name in FilmFanFilmRating.Rating.choices:
+                    choice = {
+                        'value': value,
+                        'rating_name': name,
+                        'submit_name': f'{submit_name_prefix}{film.id}_{value}'
+                    }
+                    choices.append(choice)
+                    submit_names.append(choice['submit_name'])
+
+            # Append a rating cell to the current row.
+            rating_cells.append({
+                'rating': rating_str,
+                'fan': fan,
+                'choices': choices
+            })
+
+        # Append a row to the table rows.
+        rating_rows.append(rating_cells)
+
+
+def get_submitted_name(request, submit_names):
+    submitted_name = None
+    for submit_name in submit_names:
+        if submit_name in request.POST:
+            submitted_name = submit_name
+            break
+    return submitted_name
+
+
+def get_rating_str(film, fan):
+    try:
+        fan_rating = FilmFanFilmRating.fan_ratings.get(film=film, film_fan=fan)
+    except (KeyError, FilmFanFilmRating.DoesNotExist):
+        fan_rating = None
+    rating_str = f'{fan_rating.rating}' if fan_rating is not None else '-'
+    return rating_str
+
+
+def update_rating(session, film, fan, rating_value):
+    old_rating_str = get_rating_str(film, fan)
+    new_rating, created = FilmFanFilmRating.fan_ratings.update_or_create(
+        film=film,
+        film_fan=fan,
+        defaults={'rating': rating_value},
+    )
+    zero_ratings = FilmFanFilmRating.fan_ratings.filter(film=film, film_fan=fan, rating=0)
+    if len(zero_ratings) > 0:
+        zero_ratings.delete()
+    new_rating_name = get_rating_name(new_rating.rating)
+    rating_action = {
+        'old_rating': old_rating_str,
+        'new_rating': str(new_rating.rating),
+        'new_rating_name': new_rating_name,
+        'rated_film': str(new_rating.film),
+        'action_time': datetime.datetime.now().isoformat(),
+    }
+    session['rating_action'] = rating_action
 
 
 # rating picker view.
 @login_required
 def rating(request, film_pk):
+
     # Preset some parameters.
     title = "Rating Picker"
     film = get_object_or_404(Film, id=film_pk)
@@ -136,15 +230,7 @@ def rating(request, film_pk):
         form = Rating(request.POST)
         if form.is_valid():
             selected_rating = form.cleaned_data['fan_rating']
-            obj, created = FilmFanFilmRating.fan_ratings.update_or_create(
-                film=film, film_fan=fan,
-                defaults={'rating': selected_rating},
-            )
-            zero_ratings = FilmFanFilmRating.fan_ratings.filter(film=film, film_fan=fan, rating=0)
-            if len(zero_ratings) > 0:
-                zero_ratings.delete()
-                print(f'{title}: zero rating deleted.')
-
+            update_rating(request.session, film, fan, selected_rating)
             return HttpResponseRedirect(reverse('film_list:results', args=[film_pk]))
     else:
         try:

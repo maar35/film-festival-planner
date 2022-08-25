@@ -110,6 +110,15 @@ class FilmFan(models.Model):
 
 
 # Film Fan Film Rating table.
+def get_rating_name(rating_value):
+    choices = FilmFanFilmRating.Rating.choices
+    try:
+        name = [name for value, name in choices if value == int(rating_value)][0]
+    except IndexError:
+        name = None
+    return name
+
+
 class FilmFanFilmRating(models.Model):
 
     class Rating(models.IntegerChoices):
