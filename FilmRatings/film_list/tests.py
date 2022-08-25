@@ -368,9 +368,8 @@ class FilmListViewsTests(ViewsTestCase):
 
         # Assert.
         self.assert_rating_action_redirect(get_request.user, get_response, post_response, redirect_response)
-        self.assertContains(redirect_response, f'{self.admin_fan.name} gave')
         self.assertNotContains(redirect_response, 'Unexpected error')
-        log_re = re.compile(f'{fan.name} gave.*{film.title}.*a rating of.* {rating_value}'
+        log_re = re.compile(f'{fan.name}' + r'\s+' + f'gave.*{film.title}.*a rating of.* {rating_value}'
                             + r' \(' + f'{rating_name}' + r'\)')
         self.assertRegex(redirect_response.content.decode('utf-8'), log_re)
 
@@ -398,7 +397,8 @@ class FilmListViewsTests(ViewsTestCase):
 
         # Assert.
         self.assert_rating_action_redirect(get_request.user, get_response, post_response, redirect_response)
-        log_re = re.compile(f'{fan.name} changed rating {old_rating_value} of.*{film.title}.*into.* {new_rating_value}'
+        log_re = re.compile(f'{fan.name}' + r'\s+'
+                            + f'changed rating {old_rating_value} of.*{film.title}.*into.* {new_rating_value}'
                             + r' \(' + f'{new_rating_name}' + r'\)')
         self.assertRegex(redirect_response.content.decode('utf-8'), log_re)
 

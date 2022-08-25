@@ -29,7 +29,7 @@
             changed rating {{ action.old_rating }} of <em>{{ action.rated_film }}</em> into <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% endif %}
         {% now "Y-m-d H:i:s" as the_time %}
-        {% if the_time >= action.action_time|date:"Y-m-d H:i:s" %}
+        {% if the_time <= action.action_time|date:"Y-m-d H:i:s" %}
             less than a minute ago
         {% else %}
             {{ action.action_time|timesince }} ago
