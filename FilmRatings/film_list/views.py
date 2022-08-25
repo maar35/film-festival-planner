@@ -155,9 +155,8 @@ def get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_n
             rating_str = get_rating_str(film, fan)
 
             # Set the rating choices if this fan is the current fan.
-            is_current_fan = fan == logged_in_fan
             choices = []
-            if is_current_fan:
+            if fan == logged_in_fan:
                 for value, name in FilmFanFilmRating.Rating.choices:
                     choice = {
                         'value': value,
@@ -170,7 +169,7 @@ def get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_n
             # Append a rating cell to the current row.
             rating_cells.append({
                 'rating': rating_str,
-                'is_current_fan': is_current_fan,
+                'fan': fan,
                 'choices': choices
             })
 

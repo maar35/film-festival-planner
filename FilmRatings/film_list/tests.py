@@ -440,5 +440,5 @@ class FilmListViewsTests(ViewsTestCase):
         self.assertContains(redirect_response, self.admin_fan.name)
         with self.assertRaisesMessage(FilmFanFilmRating.DoesNotExist, 'FilmFanFilmRating matching query does not exist'):
             _ = FilmFanFilmRating.fan_ratings.get(film=film, film_fan=fan)
-        log_re = re.compile(f'{fan.name}' + r'</a></td>\s*<td></td>\s*<td>Unrated</td>')
-        self.assertRegex(redirect_response.content.decode('utf-8'), log_re, re.DOTALL)
+        current_fan_row_re = re.compile(f'{fan.name}' + r'</a></td>\s*<td></td>\s*<td>Unrated</td>')
+        self.assertRegex(redirect_response.content.decode('utf-8'), current_fan_row_re, re.DOTALL)
