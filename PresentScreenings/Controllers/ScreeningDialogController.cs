@@ -304,6 +304,20 @@ namespace PresentScreenings.TableView
             websiteButton.Enabled = true;
             View.AddSubview(websiteButton);
         }
+
+        private void TryShowFilmInfo(NSObject sender)
+        {
+            var film = _screening.Film;
+            if (ViewController.FilmInfoIsAvailable(film))
+            {
+                PerformSegue("ScreeningToFilmInfo", sender);
+            }
+            else
+            {
+                Presentor.PerformSegue("ScreeningsToFilmInfo", sender);
+                CloseDialog();
+            }
+        }
         #endregion
 
         #region Public Methods

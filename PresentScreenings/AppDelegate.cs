@@ -148,28 +148,18 @@ namespace PresentScreenings.TableView
             new FilmFanAvailability().WriteListToFile(availabilitiesPath, ScreeningsPlan.Availabilities);
         }
 
-        public void WriteFilmFanFilmRatings(string directory = null)
+        public void WriteRatingsSheet(string directory = null)
         {
             if (directory == null)
             {
                 directory = DocumentsFolder;
             }
-
-            // Save the ratings.
-            string ratingsFileName = Path.GetFileName(RatingsFile);
-            string ratingsPath = Path.Combine(directory, ratingsFileName);
-            new FilmFanFilmRating().WriteListToFile(ratingsPath, ScreeningsPlan.FilmFanFilmRatings);
-
-            // Write ratings sheet.
             string sheetFileName = Path.GetFileName(RatingsSheetFile);
             string sheetPath = Path.Combine(directory, sheetFileName);
             new Film().WriteListToFile(sheetPath, ScreeningsPlan.Films.Where(f =>
             {
                 return f.Duration >= FilmRatingDialogController.MinimalDuration;
             }).ToList());
-
-            // Write screenings summary.
-            WriteScreeningsSummary(directory);
         }
 
         public void WriteScreeningInfo(string directory = null)
@@ -226,8 +216,8 @@ namespace PresentScreenings.TableView
             // Write film fan availability.
             WriteFilmFanAvailabilities(DocumentsFolder);
 
-            // Write film ratings.
-            WriteFilmFanFilmRatings(DocumentsFolder);
+            // Write the ratings sheet.
+            WriteRatingsSheet(DocumentsFolder);
 
             // Write screening info.
             WriteScreeningInfo(DocumentsFolder);

@@ -40,16 +40,13 @@ namespace PresentScreenings.TableView
                 // Check if the static indicators have been cleared in the
                 // application termation process without clearing the non-static
                 // Document Edited flags.
-                if (!FilmRating.RatingChanged && !ScreeningInfoChanged)
+                if (!ScreeningInfoChanged)
                 {
                     return true;
                 }
 
                 // Set the text in the save dialog depending on what changed.
-                Subject = _subjectByRatingScreeningInfoChanged.Get(
-                    FilmRating.RatingChanged,
-                    ScreeningInfoChanged
-                );
+                Subject = "screening info";
 
                 // Save the changed data.
                 return base.WindowShouldClose(sender);
@@ -61,12 +58,6 @@ namespace PresentScreenings.TableView
         #region Public Mathods
         public static void SaveChangedData()
         {
-            // Save the ratings when changed.
-            if (FilmRating.RatingChanged)
-            {
-                FilmRatingDialogController.SaveRatings();
-            }
-
             // Save the screening info when changed.
             if (ScreeningInfoChanged)
             {

@@ -37,16 +37,6 @@ namespace PresentScreenings.TableView
         {
             return false;
         }
-
-        public override string WriteHeader()
-        {
-            return "filmid;filmfan;rating";
-        }
-
-        public override string Serialize()
-        {
-            return string.Join(";", FilmId.ToString(), FilmFan, Rating.ToString());
-        }
         #endregion
     }
 }

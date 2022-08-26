@@ -91,7 +91,7 @@ namespace PresentScreenings.TableView
             CreateFilmFanRatingColumns();
             CreateDescriptionColumn();
 
-            // Polulate the controls
+            // Populate the controls.
             _onlyFilmsWithScreeningsCheckBox.Action = new ObjCRuntime.Selector("ToggleOnlyFilmsWithScreenings:");
             _typeMatchMethodCheckBox.Action = new ObjCRuntime.Selector("ToggleTypeMatchMethod:");
             _combineTitlesButton.Action = new ObjCRuntime.Selector("SelectTitlesToCombine:");
@@ -505,18 +505,6 @@ namespace PresentScreenings.TableView
 
             // Close the dialog.
             _presentor.DismissViewController(this);
-        }
-
-        public static void SaveRatings()
-        {
-            // Save the ratings.
-            App.WriteFilmFanFilmRatings();
-            FilmRating.RatingChanged = false;
-
-            // Trigger a local notification.
-            string title = "Ratings Saved";
-            string text = $"Film fan ratings have been saved in {AppDelegate.DocumentsFolder}.";
-            AlertRaiser.RaiseNotification(title, text);
         }
         #endregion
 
