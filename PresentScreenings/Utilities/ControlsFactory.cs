@@ -128,16 +128,6 @@ namespace PresentScreenings.TableView
             return box;
         }
 
-        public static NSComboBox NewRatingComboBox(CGRect frame, NSFont font)
-        {
-            var comboBox = new NSComboBox(frame);
-            comboBox.Add(FilmRating.Values.Select(str => new NSString(str)).ToArray());
-            comboBox.Alignment = NSTextAlignment.Right;
-            comboBox.Font = font;
-            comboBox.AutoresizesSubviews = true;
-            return comboBox;
-        }
-
         public static NSScrollView NewStandardScrollView(CGRect frame, NSView documentView, bool useWindowBackgroundColor = false, bool debug = false)
         {
             var scrollView = new NSScrollView(frame);

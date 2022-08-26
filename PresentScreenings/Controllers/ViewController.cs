@@ -507,37 +507,6 @@ namespace PresentScreenings.TableView
             }
         }
 
-        public void SetRatingIfValid(NSTextField control, Func<string, string> GetControlValue, int filmId, string filmFan)
-        {
-            FilmRating rating = GetFilmFanFilmRating(filmId, filmFan);
-            string oldRatingString = rating.Value;
-            string newRatingString;
-            try
-            {
-                newRatingString = GetControlValue(oldRatingString);
-                if (newRatingString != oldRatingString)
-                {
-                    if (rating.SetRating(newRatingString))
-                    {
-                        SetFilmFanFilmRating(filmId, filmFan, rating);
-                        ReloadScreeningsView();
-                        control.Window.DocumentEdited = true;
-                    }
-                    else
-                    {
-                        control.StringValue = rating.Value;
-                        throw new IllegalRatingException(newRatingString);
-                    }
-                }
-
-            }
-            catch (IllegalRatingException ex)
-            {
-                string informativeText = $"'{ex.Message}' is not a valid rating.\n{filmFan}'s rating of '{GetFilmById(filmId)}' remains {oldRatingString}.";
-                AlertRaiser.RunInformationalAlert("Rating Not Changed", informativeText);
-            }
-        }
-
         public static FilmRating GetMaxRating(Film film)
         {
             var ratings = ScreeningInfo.FilmFans.Select(f => GetFilmFanFilmRating(film, f));

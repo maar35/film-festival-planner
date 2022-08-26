@@ -28,6 +28,9 @@ namespace PresentScreenings.TableView
         private const float _buttonHeight = ControlsFactory.StandardButtonHeight;
         private const float _yControlsDistance = ControlsFactory.VerticalPixelsBetweenControls;
         private const float _subsectionLabelWidth = ControlsFactory.SubsectionLabelWidth;
+        private const float _boxHeight = _labelHeight - 4;
+        private const float _boxWidth = _labelHeight;
+
         #endregion
 
         #region Private Members
@@ -208,23 +211,25 @@ namespace PresentScreenings.TableView
         private void CreateFilmFanControls()
         {
             // Clone the Rating combo box.
-            var comboBoxFrame = _comboboxRating.Frame;
-            var comboBoxFont = _comboboxRating.Font;
+            var ratingBoxFrame = _comboboxRating.Frame;
+            ratingBoxFrame.Width = _boxWidth;
+            ratingBoxFrame.Height = _boxHeight;
 
             // Dispose the original Rating combo box.
             _comboboxRating.RemoveFromSuperview();
             _comboboxRating.Dispose();
 
-            // Initialize the vertical postion of run-time created controls.
-            _yCurr = comboBoxFrame.Y;
-
             // Initialze values to construct the Attendance checkboxes.
             var checkBoxFrame = _checkboxIAttend.Frame;
-            var checkBoxShift = comboBoxFrame.Y - checkBoxFrame.Y;
+            var checkBoxFont = _checkboxIAttend.Font;
+            var checkBoxShift = ratingBoxFrame.Y - checkBoxFrame.Y + _yBetweenLabels;
 
             // Dispose the original Attendance check box.
             _checkboxIAttend.RemoveFromSuperview();
             _checkboxIAttend.Dispose();
+
+            // Initialize the vertical postion of run-time created controls.
+            _yCurr = ratingBoxFrame.Y;
 
             nfloat yDelta = 0;
             foreach (var filmfan in ScreeningInfo.FilmFans)
@@ -233,22 +238,24 @@ namespace PresentScreenings.TableView
                 _yCurr -= yDelta;
                 if (yDelta == 0)
                 {
-                    yDelta = comboBoxFrame.Height + _yControlsDistance;
+                    yDelta = ratingBoxFrame.Height + _yControlsDistance;
                 }
 
-                // Create the Rating combobox for this film fan.
-                comboBoxFrame.Y = _yCurr;
-                var fanRatingComboBox = ControlsFactory.NewRatingComboBox(comboBoxFrame, comboBoxFont);
-                fanRatingComboBox.EditingBegan += (s, e) => HandleFilmFanRatingEditingBegan(fanRatingComboBox, filmfan);
-                fanRatingComboBox.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(fanRatingComboBox, filmfan);
-                fanRatingComboBox.StringValue = ViewController.GetFilmFanFilmRating(_screening.FilmId, filmfan).ToString();
-                View.AddSubview(fanRatingComboBox);
+                // Create the Rating box for this film fan.
+                ratingBoxFrame.Y = _yCurr;
+                var fanRatingLabel = ControlsFactory.NewStandardLabel(ratingBoxFrame, true);
+                fanRatingLabel.Alignment = NSTextAlignment.Right;
+                fanRatingLabel.StringValue = ViewController.GetFilmFanFilmRating(_screening.FilmId, filmfan).ToString();
+                View.AddSubview(fanRatingLabel);
 
                 // Create the Attendance checkbox for this film fan.
                 checkBoxFrame.Y = _yCurr - checkBoxShift;
-                var fanCheckbox = new AttendanceCheckbox(checkBoxFrame);
-                fanCheckbox.Title = filmfan;
-                fanCheckbox.State = AttendanceCheckbox.GetAttendanceState(_screening.FilmFanAttends(filmfan));
+                var fanCheckbox = new AttendanceCheckbox(checkBoxFrame)
+                {
+                    Title = filmfan,
+                    Font = checkBoxFont,
+                    State = AttendanceCheckbox.GetAttendanceState(_screening.FilmFanAttends(filmfan))
+                };
                 fanCheckbox.Activated += (s, e) => ToggleAttendance(filmfan);
                 View.AddSubview(fanCheckbox);
 
@@ -296,55 +303,6 @@ namespace PresentScreenings.TableView
             var websiteButton = ControlsFactory.NewVisitWebsiteButton(xCurr, yCurr, CurrentFilm);
             websiteButton.Enabled = true;
             View.AddSubview(websiteButton);
-        }
-
-        private void HandleFilmFanRatingEditingBegan(NSComboBox comboBox, string filmFan)
-        {
-            _closeButton.Enabled = false;
-        }
-
-        private void HandleFilmFanRatingEditingEnded(NSComboBox comboBox, string filmFan)
-        {
-            int filmId = _screening.FilmId;
-            Func<string, string> getControlValue = r => GetNewValueFromComboBox(comboBox, r);
-            Presentor.SetRatingIfValid(comboBox, getControlValue, filmId, filmFan);
-            _closeButton.Enabled = true;
-            if (FilmRating.RatingChanged)
-            {
-                _closeButton.Title = ControlsFactory.TitleByChanged[true];
-            }
-        }
-
-        private string GetNewValueFromComboBox(NSComboBox comboBox, string oldString)
-        {
-            string comboBoxString = comboBox.StringValue;
-            if (comboBox.SelectedValue == null)
-            {
-                if (!comboBox.Values.Any(v => v.ToString() == comboBoxString))
-                {
-                    comboBox.StringValue = oldString;
-                    throw new IllegalRatingException(comboBoxString);
-                }
-            }
-            else
-            {
-                comboBoxString = comboBox.SelectedValue.ToString();
-            }
-            return comboBoxString;
-        }
-
-        private void TryShowFilmInfo(NSObject sender)
-        {
-            var film = _screening.Film;
-            if (ViewController.FilmInfoIsAvailable(film))
-            {
-                PerformSegue("ScreeningToFilmInfo", sender);
-            }
-            else
-            {
-                Presentor.PerformSegue("ScreeningsToFilmInfo", sender);
-                CloseDialog();
-            }
         }
         #endregion
 

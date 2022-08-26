@@ -376,7 +376,7 @@ namespace PresentScreenings.TableView
             _uncombineTitleButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             _goToScreeningButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             DoneButton.Enabled = !TextBeingEdited;
-            DoneButton.Title = ControlsFactory.TitleByChanged[FilmRating.RatingChanged || ScreeningInfoChanged];
+            DoneButton.Title = ControlsFactory.TitleByChanged[ScreeningInfoChanged];
             WebLinkButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             WebLinkButton.ToolTip = OneFilmSelected() ? ControlsFactory.VisitWebsiteButtonToolTip(CurrentFilm) : string.Empty;
         }
