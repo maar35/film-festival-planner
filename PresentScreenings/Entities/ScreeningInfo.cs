@@ -62,12 +62,13 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Calculated Properties
+        public static bool ScreeningInfoChanged { get; internal set; }
         public int CombinedFilmId { get; set; }
         public static string Me => "Maarten";
         public static List<string> FilmFans => new List<string> { Me, "Adrienne", "Manfred", "Piggel", "Rijk" };
         public static List<string> MyFriends => FilmFans.Skip(1).ToList();
-        public bool IAttend { get => Attendees.Contains(Me); }
-        public List<string> AttendingFriends { get => Attendees.Where(f => f != Me).ToList(); }
+        public bool IAttend => Attendees.Contains(Me);
+        public List<string> AttendingFriends => Attendees.Where(f => f != Me).ToList();
         public static Dictionary<string, bool> StringToBool { get; private set; }
         public static Dictionary<bool, string> BoolToString { get; private set; }
         #endregion
@@ -93,6 +94,7 @@ namespace PresentScreenings.TableView
             StringToBool.Add("ONWAAR", false);
             StringToBool.Add("WAAR", true);
             BoolToString = StringToBool.ToDictionary(x => x.Value, x => x.Key);
+            ScreeningInfoChanged = false;
         }
 
         public ScreeningInfo() { }

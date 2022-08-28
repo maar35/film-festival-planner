@@ -49,13 +49,13 @@ namespace PresentScreenings.TableView
 
         internal bool ScreeningInfoChanged
         {
-            get => CombinationWindowDelegate.ScreeningInfoChanged;
+            get => View.Window.DocumentEdited;
             set
             {
                 View.Window.DocumentEdited = value;
                 if (value)
                 {
-                    CombinationWindowDelegate.ScreeningInfoChanged = true;
+                    ScreeningInfo.ScreeningInfoChanged = true;
                 }
             }
         }
@@ -127,7 +127,7 @@ namespace PresentScreenings.TableView
             SetWindowTitle();
 
             // Set window delegate.
-            View.Window.Delegate = new CombinationWindowDelegate(View.Window, Close);
+            View.Window.Delegate = new ScreeningRelatedWindowDelegate(View.Window, Close);
         }
 
         public override void PrepareForSegue(NSStoryboardSegue segue, NSObject sender)
@@ -162,7 +162,7 @@ namespace PresentScreenings.TableView
         private void Close()
         {
             // Save changed data.
-            CombinationWindowDelegate.SaveChangedData();
+            ScreeningDialogController.SaveScreeningInfo();
 
             // Close the dialog.
             DismissController(this);
@@ -334,11 +334,6 @@ namespace PresentScreenings.TableView
         static public NSCellStateValue GetNSCellStateValue(bool shouldBeOn)
         {
             return shouldBeOn ? NSCellStateValue.On : NSCellStateValue.Off;
-        }
-
-        internal void UnsetScreeningInfoChanged()
-        {
-            ScreeningInfoChanged = false;
         }
         #endregion
 

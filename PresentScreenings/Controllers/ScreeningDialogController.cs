@@ -53,13 +53,13 @@ namespace PresentScreenings.TableView
 
         public bool ScreeningInfoChanged
         {
-            get => CombinationWindowDelegate.ScreeningInfoChanged;
+            get => View.Window.DocumentEdited;
             private set
             {
                 View.Window.DocumentEdited = value;
                 if (value)
                 {
-                    CombinationWindowDelegate.ScreeningInfoChanged = true;
+                    ScreeningInfo.ScreeningInfoChanged = true;
                 }
             }
         }
@@ -92,7 +92,7 @@ namespace PresentScreenings.TableView
             _filmScreenings = _screening.FilmScreenings;
 
             // Set window delegate.
-            View.Window.Delegate = new CombinationWindowDelegate(View.Window, CloseDialog);
+            View.Window.Delegate = new ScreeningRelatedWindowDelegate(View.Window, CloseDialog);
 
             // Populate the controls.
             SetControlValues();
@@ -323,8 +323,14 @@ namespace PresentScreenings.TableView
         #region Public Methods
         public void CloseDialog()
         {
-            // Save changed data.
-            CombinationWindowDelegate.SaveChangedData();
+            if (ScreeningInfoChanged)
+            {
+                // Save the screening info.
+                SaveScreeningInfo();
+
+                // Unset the Document Edited flag of the presentor.
+                Presentor.ScreeningInfoChanged = false;
+            }
 
             // Close the dialog.
             Presentor.DismissViewController(this);
@@ -334,8 +340,7 @@ namespace PresentScreenings.TableView
         {
             // Save the screening info.
             ViewController.App.WriteScreeningInfo();
-            CombinationWindowDelegate.ScreeningInfoChanged = false;
-            Presentor?.UnsetScreeningInfoChanged();
+            ScreeningInfo.ScreeningInfoChanged = false;
 
             // Trigger a local notification.
             string title = "Screening Info Saved";

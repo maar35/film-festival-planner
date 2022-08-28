@@ -23,7 +23,7 @@ namespace PresentScreenings.TableView
 
         #region Private Variables
         private bool _textBeingEdited = false;
-        private ViewController _presentor;
+        private static ViewController _presentor;
         private FilmTableDataSource _filmTableDataSource;
         #endregion
 
@@ -44,13 +44,13 @@ namespace PresentScreenings.TableView
 
         public bool ScreeningInfoChanged
         {
-            get => CombinationWindowDelegate.ScreeningInfoChanged;
+            get => View.Window.DocumentEdited;
             private set
             {
                 View.Window.DocumentEdited = value;
                 if (value)
                 {
-                    CombinationWindowDelegate.ScreeningInfoChanged = true;
+                    ScreeningInfo.ScreeningInfoChanged = true;
                 }
             }
         }
@@ -118,7 +118,7 @@ namespace PresentScreenings.TableView
             _presentor.RunningPopupsCount++;
 
             // Set window delegate.
-            View.Window.Delegate = new CombinationWindowDelegate(View.Window, CloseDialog);
+            View.Window.Delegate = new ScreeningRelatedWindowDelegate(View.Window, CloseDialog);
 
             // Initialize the controls.
             SetFilmRatingDialogButtonStates();
@@ -500,8 +500,14 @@ namespace PresentScreenings.TableView
 
         public void CloseDialog()
         {
-            // Save changed data.
-            CombinationWindowDelegate.SaveChangedData();
+            if (ScreeningInfoChanged)
+            {
+                // Save the screening info.
+                ScreeningDialogController.SaveScreeningInfo();
+
+                // Unset the Document Edited flag of the presentor.
+                _presentor.ScreeningInfoChanged = false;
+            }
 
             // Close the dialog.
             _presentor.DismissViewController(this);
