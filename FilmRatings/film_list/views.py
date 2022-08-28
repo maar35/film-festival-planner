@@ -1,17 +1,19 @@
 import datetime
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
+from django.views.generic import FormView
 
 from FilmRatings.tools import unset_load_log, add_base_context, get_load_log, wrap_up_form_errors
-from festivals.models import current_festival
-from film_list.forms.pick_rating import PickRating
-from film_list.forms.set_film_fan import User
-from film_list.forms.set_rating import Rating
+from festivals.models import current_festival, Festival
+from film_list.forms.model_forms import Rating, User
+from film_list.forms.slug_forms import PickRating, SaveRatingsForm
 from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan, get_rating_name
+from loader.views import rating_count_on_file
 
 
 # Define generic view classes.
@@ -34,6 +36,41 @@ class ResultsView(generic.DetailView):
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
         unset_load_log(request.session)
+        return response
+
+
+# @login_required
+class SaveView(LoginRequiredMixin, FormView):
+    model = Festival
+    template_name = 'film_list/save.html'
+    form_class = SaveRatingsForm
+    success_url = '/film_list/film_list/'
+
+    def get_context_data(self, **kwargs):
+        session = self.request.session
+        festival = current_festival(session)
+        festival_items = {
+            'festival': festival,
+            'film_count': len(Film.films.filter(festival=festival)),
+            'rating_count': len(FilmFanFilmRating.fan_ratings.filter(film__festival=festival)),
+            'rating_count_on_file': rating_count_on_file(festival),
+            'ratings_file': festival.ratings_file,
+        }
+        context = add_base_context(self.request, super().get_context_data(**kwargs))
+        context['title'] = 'Save Ratings'
+        context['festival_items'] = festival_items
+        context['load_results'] = get_load_log(session)
+        unset_load_log(session)
+        return context
+
+    def form_valid(self, form):
+        session = self.request.session
+        festival = current_festival(session)
+        form.save_ratings(session, festival)
+        return super().form_valid(form)
+
+    def dispatch(self, request, *args, **kwargs):
+        response = super().dispatch(request, *args, **kwargs)
         return response
 
 

@@ -165,7 +165,7 @@ class FilmLoader(BaseLoader):
 
         # Save ratings if the Keep Ratings flag is set.
         if self.keep_ratings:
-            if not self.save_ratings():
+            if not self.save_ratings(self.festival.ratings_cache):
                 return False
 
         # Delete existing films of the given festival.
@@ -208,12 +208,12 @@ class FilmLoader(BaseLoader):
         film.url = row[8]
         return film
 
-    def save_ratings(self):
+    def save_ratings(self, file):
         festival = self.festival
         ratings = FilmFanFilmRating.fan_ratings.filter(film__festival_id=festival.id)
 
         try:
-            with open(festival.ratings_cache, 'w', newline='') as csvfile:
+            with open(file, 'w', newline='') as csvfile:
                 rating_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
                 rating_writer.writerow(RatingLoader.expected_header)
                 for rating in ratings:

@@ -1,0 +1,32 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <span style="text-align: left; width: 49%; display: inline-block;">
+        <h3>Save ratings of {{ festival }}</h3>
+    </span>
+    <span style="text-align: right; width: 50%; display: inline-block;">
+        <a href="{% url 'film_list:film_list' %}">Back to ratings list</a>
+    </span>
+    {% if user_is_admin %}
+        <table>
+            <tbody>
+                <tr><td><b>Festival</b></td><td>{{ festival_items.festival }}</td></tr>
+                <tr><td><b>#Films</b></td><td>{{ festival_items.film_count }}</td></tr>
+                <tr><td><b>#Ratings</b></td><td>{{ festival_items.rating_count }}</td></tr>
+                <tr><td><b>#Ratings on file</b></td><td>{{ festival_items.rating_count_on_file }}</td></tr>
+                <tr><td><b>File</b></td><td>{{ festival_items.ratings_file }}</td></tr>
+            </tbody>
+        </table>
+        <br>
+        <form method="post">
+            {% csrf_token %}
+            <input type="submit"; value="Save {{ festival_items.rating_count }} ratings">
+        </form>
+    {% else %}
+        <h2 class="error">Not allowed</h2>
+        <p>Only an admin fan can save ratings.</p>
+    {% endif %}
+{% endblock %}
