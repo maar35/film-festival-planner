@@ -784,6 +784,12 @@ namespace PresentScreenings.TableView
             NSWorkspace.SharedWorkspace.OpenUrl(new NSUrl(url));
         }
 
+        public void ReloadRatings()
+        {
+            Plan.ReadRatings();
+            App.FilmsDialogController?.ReloadRatings();
+        }
+
         public void ToggleTicketsBought()
         {
             Screening screening = _plan.CurrScreening;

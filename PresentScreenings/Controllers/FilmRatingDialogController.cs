@@ -32,6 +32,7 @@ namespace PresentScreenings.TableView
         public NSTableView FilmRatingTableView => _filmRatingTableView;
         public NSButton WebLinkButton => _downloadFilmInfoButton;
         public NSButton DoneButton => _closeButton;
+        public NSButton ReloadButton => _reloadButton;
         public bool TextBeingEdited
         {
             get => _textBeingEdited;
@@ -97,6 +98,7 @@ namespace PresentScreenings.TableView
             _combineTitlesButton.Action = new ObjCRuntime.Selector("SelectTitlesToCombine:");
             _uncombineTitleButton.Action = new ObjCRuntime.Selector("ShowTitlesToUncombine:");
             _goToScreeningButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
+            ReloadButton.Action = new ObjCRuntime.Selector("ReloadRatings:");
             WebLinkButton.Action = new ObjCRuntime.Selector("VisitFilmWebsite:");
             DoneButton.KeyEquivalent = ControlsFactory.EscapeKey;
             SetOnlyFilmsWithScreeningsStates();
@@ -189,7 +191,7 @@ namespace PresentScreenings.TableView
             const float width = _FilmFanRatingWidth;
             foreach (string filmFan in ScreeningInfo.FilmFans)
             {
-                CreateColumn(filmFan, width, width);
+                CreateColumn(filmFan, width, width, true);
             }
         }
 
@@ -198,7 +200,7 @@ namespace PresentScreenings.TableView
             CreateColumn("Description", _descriptionWidth, _descriptionMaxWidth);
         }
 
-        private void CreateColumn(string title, float width, float maxWidth)
+        private void CreateColumn(string title, float width, float maxWidth, bool rightAlign=false)
         {
             var sortDescriptor = new NSSortDescriptor(title, false, new ObjCRuntime.Selector("compare:"));
             var newColumn = new NSTableColumn
@@ -207,8 +209,12 @@ namespace PresentScreenings.TableView
                 Width = width,
                 MaxWidth = maxWidth,
                 Identifier = title,
-                SortDescriptorPrototype = sortDescriptor
+                SortDescriptorPrototype = sortDescriptor,
             };
+            if (rightAlign)
+            {
+                newColumn.HeaderCell.Alignment = NSTextAlignment.Right;
+            }
             _filmRatingTableView.AddColumn(newColumn);
             CGRect frame = _filmRatingTableView.Frame;
             nfloat newRight = frame.X;
@@ -327,7 +333,7 @@ namespace PresentScreenings.TableView
         {
             // Update the data source.
             SetFilmsWithScreenings();
-            _filmRatingTableView.ReloadData();
+            ReloadRatings();
 
             // Update the button states.
             SetFilmRatingDialogButtonStates();
@@ -352,6 +358,13 @@ namespace PresentScreenings.TableView
             }
             return screeningList;
         }
+
+        private void SortRatings()
+        {
+            _filmTableDataSource.Sort(
+                _filmTableDataSource.SortedBy,
+                _filmTableDataSource.SortedAscending);
+        }
         #endregion
 
         #region Public Methods
@@ -375,6 +388,7 @@ namespace PresentScreenings.TableView
             _combineTitlesButton.Enabled = MultipleFilmsSelected() && !TextBeingEdited;
             _uncombineTitleButton.Enabled = OneFilmSelected() && !TextBeingEdited;
             _goToScreeningButton.Enabled = OneFilmSelected() && !TextBeingEdited;
+            ReloadButton.Enabled = true;
             DoneButton.Enabled = !TextBeingEdited;
             DoneButton.Title = ControlsFactory.TitleByChanged[ScreeningInfoChanged];
             WebLinkButton.Enabled = OneFilmSelected() && !TextBeingEdited;
@@ -459,8 +473,7 @@ namespace PresentScreenings.TableView
             // Resort the data.
             if (!OnlyFilmsWithScreenings)
             {
-                _filmTableDataSource.Sort(_filmTableDataSource.SortedBy,
-                                          _filmTableDataSource.SortedAscending);
+                SortRatings();
             }
 
             // Update the data source.
@@ -487,14 +500,28 @@ namespace PresentScreenings.TableView
             // Resort the data.
             if (FilteredSubsection == null)
             {
-                _filmTableDataSource.Sort(_filmTableDataSource.SortedBy,
-                                          _filmTableDataSource.SortedAscending);
+                SortRatings();
             }
 
             // Update the data source.
             _filmRatingTableView.ReloadData();
 
             // Try to select the stored films.
+            SelectFilms(selectedFilms);
+        }
+
+        public void ReloadRatings()
+        {
+            // Store the current selection of films.
+            var selectedFilms = GetSelectedFilms();
+
+            // Reload the ratings.
+            _filmRatingTableView.ReloadData();
+
+            // Resort the data.
+            SortRatings();
+
+            // Select the stored films.
             SelectFilms(selectedFilms);
         }
 

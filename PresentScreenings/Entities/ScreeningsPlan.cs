@@ -69,8 +69,7 @@ namespace PresentScreenings.TableView
             Films.Sort();
 
             // Read film ratings.
-            FilmFanFilmRatings = new FilmFanFilmRating()
-                .ReadListFromFile(AppDelegate.RatingsFile, line => new FilmFanFilmRating(line));
+            ReadRatings();
 
             // Read screening info.
             ScreeningInfos = new ScreeningInfo()
@@ -92,6 +91,12 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Public Methods
+        public void ReadRatings()
+        {
+            FilmFanFilmRatings = new FilmFanFilmRating()
+                .ReadListFromFile(AppDelegate.RatingsFile, line => new FilmFanFilmRating(line));
+        }
+
         public void InitializeDays()
         {
             // Initialize the days, screens and screens per day dictionaries.

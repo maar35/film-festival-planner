@@ -48,6 +48,7 @@ namespace PresentScreenings.TableView
         public ScreeningMenuDelegate ScreeningMenuDelegate => (ScreeningMenuDelegate)_screeningMenu.Delegate;
         public NSMenuItem ToggleOnlyFilmsWithScreeningsMenuItem => _filmsMenu.ItemWithTag(FilmsMenuDelegate.ToggleOnlyFilmsWithScreeningsMenuItemTag);
         public NSMenuItem ToggleTypeMatchMenuItem => _filmsMenu.ItemWithTag(FilmsMenuDelegate.ToggleTypeMatchMethodMenuItemTag);
+        public NSMenuItem ReloadRatingsMenuItemTag => _filmsMenu.ItemWithTag(FilmsMenuDelegate.ReloadRatingsMenuItemTag);
         #endregion
 
         #region Constructors
@@ -98,6 +99,7 @@ namespace PresentScreenings.TableView
             _showScreeningsMenuItem.Action = new Selector("ShowFilmInfo:");
             _combineTitlesMenuItem.Action = new Selector("SelectTitlesToCombine:");
             _uncombineTitleMenuItem.Action = new Selector("ShowTitlesToUncombine:");
+            ReloadRatingsMenuItemTag.Action = new Selector("ReloadRatings:");
             ToggleOnlyFilmsWithScreeningsMenuItem.Action = new Selector("ToggleOnlyFilmsWithScreenings:");
             ToggleTypeMatchMenuItem.Action = new Selector("ToggleTypeMatchMethod:");
 
@@ -260,6 +262,12 @@ namespace PresentScreenings.TableView
         internal void VisitFilmWebsite(NSObject sender)
         {
             ViewController.VisitFilmWebsite(Controller.CurrentFilm);
+        }
+
+        [Action("ReloadRatings:")]
+        internal void ReloadRatings(NSObject sender)
+        {
+            Controller.ReloadRatings();
         }
 
         partial void ToggleTicketsBought(Foundation.NSObject sender)
