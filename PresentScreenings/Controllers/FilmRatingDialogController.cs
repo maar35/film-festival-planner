@@ -22,7 +22,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Variables
-        private bool _textBeingEdited = false;
         private static ViewController _presentor;
         private FilmTableDataSource _filmTableDataSource;
         #endregion
@@ -33,15 +32,6 @@ namespace PresentScreenings.TableView
         public NSButton WebLinkButton => _downloadFilmInfoButton;
         public NSButton DoneButton => _closeButton;
         public NSButton ReloadButton => _reloadButton;
-        public bool TextBeingEdited
-        {
-            get => _textBeingEdited;
-            set
-            {
-                _textBeingEdited = value;
-                SetFilmRatingDialogButtonStates();
-            }
-        }
 
         public bool ScreeningInfoChanged
         {
@@ -385,13 +375,13 @@ namespace PresentScreenings.TableView
 
         public void SetFilmRatingDialogButtonStates()
         {
-            _combineTitlesButton.Enabled = MultipleFilmsSelected() && !TextBeingEdited;
-            _uncombineTitleButton.Enabled = OneFilmSelected() && !TextBeingEdited;
-            _goToScreeningButton.Enabled = OneFilmSelected() && !TextBeingEdited;
+            _combineTitlesButton.Enabled = MultipleFilmsSelected();
+            _uncombineTitleButton.Enabled = OneFilmSelected();
+            _goToScreeningButton.Enabled = OneFilmSelected();
             ReloadButton.Enabled = true;
-            DoneButton.Enabled = !TextBeingEdited;
+            DoneButton.Enabled = true;
             DoneButton.Title = ControlsFactory.TitleByChanged[ScreeningInfoChanged];
-            WebLinkButton.Enabled = OneFilmSelected() && !TextBeingEdited;
+            WebLinkButton.Enabled = OneFilmSelected();
             WebLinkButton.ToolTip = OneFilmSelected() ? ControlsFactory.VisitWebsiteButtonToolTip(CurrentFilm) : string.Empty;
         }
 

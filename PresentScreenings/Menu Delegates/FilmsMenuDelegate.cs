@@ -93,7 +93,6 @@ namespace PresentScreenings.TableView
                         item.Enabled = screeningInfoController != null
                                         || viewController.RunningPopupsCount == 0
                                         || (ratingController != null
-                                            && !ratingController.TextBeingEdited
                                             && ratingController.OneFilmSelected()
                                             && filmInfoController == null);
                         break;
@@ -101,7 +100,6 @@ namespace PresentScreenings.TableView
                         item.Enabled = screeningInfoController != null
                                         || viewController.RunningPopupsCount == 0
                                         || (ratingController != null
-                                            && !ratingController.TextBeingEdited
                                             && ratingController.OneFilmSelected())
                                         || filmInfoController != null
                                         || (analyserController != null
@@ -109,14 +107,12 @@ namespace PresentScreenings.TableView
                         break;
                     case _combineTitlesMenuItemTag:
                         item.Enabled = ratingController != null
-                                        && !ratingController.TextBeingEdited
                                         && ratingController.MultipleFilmsSelected()
                                         && filmInfoController == null;
                         ;
                         break;
                     case _uncombineTitleMenuItemTag:
                         item.Enabled = ratingController != null
-                                        && !ratingController.TextBeingEdited
                                         && ratingController.OneFilmSelected()
                                         && filmInfoController == null;
                         ;
