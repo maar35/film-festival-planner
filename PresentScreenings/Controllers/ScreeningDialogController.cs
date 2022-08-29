@@ -149,6 +149,7 @@ namespace PresentScreenings.TableView
             var isAvailable = ViewController.FilmInfoIsAvailable(_screening.Film);
             _filmInfoButton.Image = imageByAvailability[isAvailable];
             _filmInfoButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
+            _filmInfoButton.ToolTip = ControlsFactory.FilmInfoButtonToolTip(CurrentFilm);
 
             // Select the sending screening control in the screenings table.
             _senderControl.Selected = true;

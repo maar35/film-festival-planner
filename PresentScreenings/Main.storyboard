@@ -388,7 +388,7 @@
                                                 <segue destination="gJ5-Ju-597" kind="modal" identifier="FilmRatingSegue" id="MQZ-rL-cxz"/>
                                             </connections>
                                         </menuItem>
-                                        <menuItem title="Reload ratings" tag="508" keyEquivalent="R" id="9qV-kX-1Q7"/>
+                                        <menuItem title="Reload Ratings" tag="508" keyEquivalent="R" id="9qV-kX-1Q7"/>
                                         <menuItem isSeparatorItem="YES" id="Og0-Cw-Lcf"/>
                                         <menuItem title="Hide Films Without Screenings" tag="502" keyEquivalent="h" id="qTz-fl-Zzb">
                                             <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
@@ -1115,11 +1115,11 @@ DQ
                                                     <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                     <prototypeCellViews>
                                                         <tableCellView id="mfG-jo-sdk">
-                                                            <rect key="frame" x="2" y="1" width="273" height="17"/>
+                                                            <rect key="frame" x="2" y="1" width="272" height="17"/>
                                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                             <subviews>
                                                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="8cP-O0-MnO">
-                                                                    <rect key="frame" x="0.0" y="1" width="277" height="16"/>
+                                                                    <rect key="frame" x="0.0" y="1" width="276" height="16"/>
                                                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Table View Cell" id="MVX-PR-TOF">
                                                                         <font key="font" metaFont="system"/>
                                                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1152,11 +1152,11 @@ DQ
                                                     <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                     <prototypeCellViews>
                                                         <tableCellView id="eI1-bD-ViS">
-                                                            <rect key="frame" x="279" y="1" width="54" height="17"/>
+                                                            <rect key="frame" x="279" y="1" width="53" height="17"/>
                                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                             <subviews>
                                                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="6A6-gM-YDx">
-                                                                    <rect key="frame" x="0.0" y="1" width="54" height="16"/>
+                                                                    <rect key="frame" x="0.0" y="1" width="53" height="16"/>
                                                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Table View Cell" id="Ywl-n1-AWJ">
                                                                         <font key="font" metaFont="system"/>
                                                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>

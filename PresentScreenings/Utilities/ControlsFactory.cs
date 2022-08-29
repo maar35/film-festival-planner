@@ -34,6 +34,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
+        public static string ReloadButtonToolTip => "Reload ratings";
         public static nfloat StandardFontSize => NSFont.SystemFontSize;
         public static NSFont StandardFont => NSFont.SystemFontOfSize(StandardFontSize);
         public static NSFont StandardBoldFont => NSFont.BoldSystemFontOfSize(StandardFontSize);
@@ -119,6 +120,11 @@ namespace PresentScreenings.TableView
         public static string VisitWebsiteButtonToolTip(Film film)
         {
             return $"Visit the web site of {film}";
+        }
+
+        public static string FilmInfoButtonToolTip(Film film)
+        {
+            return $"Get more info of {film}";
         }
 
         public static NSButton NewCheckbox(CGRect frame)

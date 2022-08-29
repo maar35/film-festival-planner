@@ -18,7 +18,7 @@ namespace PresentScreenings.TableView
         const float _screeningCountMaxWidth = 80;
         const float _subsectionWidth = 72;
         const float _subsectionMaxWidth = 200;
-        const float _FilmFanRatingWidth = 60;
+        const float _filmFanRatingWidth = 60;
         #endregion
 
         #region Private Variables
@@ -30,6 +30,7 @@ namespace PresentScreenings.TableView
         public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
         public NSTableView FilmRatingTableView => _filmRatingTableView;
         public NSButton WebLinkButton => _downloadFilmInfoButton;
+        public NSButton FilmInfoButton => _goToScreeningButton;
         public NSButton DoneButton => _closeButton;
         public NSButton ReloadButton => _reloadButton;
 
@@ -87,7 +88,7 @@ namespace PresentScreenings.TableView
             _typeMatchMethodCheckBox.Action = new ObjCRuntime.Selector("ToggleTypeMatchMethod:");
             _combineTitlesButton.Action = new ObjCRuntime.Selector("SelectTitlesToCombine:");
             _uncombineTitleButton.Action = new ObjCRuntime.Selector("ShowTitlesToUncombine:");
-            _goToScreeningButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
+            FilmInfoButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
             ReloadButton.Action = new ObjCRuntime.Selector("ReloadRatings:");
             WebLinkButton.Action = new ObjCRuntime.Selector("VisitFilmWebsite:");
             DoneButton.KeyEquivalent = ControlsFactory.EscapeKey;
@@ -178,7 +179,7 @@ namespace PresentScreenings.TableView
 
         private void CreateFilmFanRatingColumns()
         {
-            const float width = _FilmFanRatingWidth;
+            const float width = _filmFanRatingWidth;
             foreach (string filmFan in ScreeningInfo.FilmFans)
             {
                 CreateColumn(filmFan, width, width, true);
@@ -377,8 +378,10 @@ namespace PresentScreenings.TableView
         {
             _combineTitlesButton.Enabled = MultipleFilmsSelected();
             _uncombineTitleButton.Enabled = OneFilmSelected();
-            _goToScreeningButton.Enabled = OneFilmSelected();
+            FilmInfoButton.Enabled = OneFilmSelected();
+            FilmInfoButton.ToolTip = ControlsFactory.FilmInfoButtonToolTip(CurrentFilm);
             ReloadButton.Enabled = true;
+            ReloadButton.ToolTip = ControlsFactory.ReloadButtonToolTip;
             DoneButton.Enabled = true;
             DoneButton.Title = ControlsFactory.TitleByChanged[ScreeningInfoChanged];
             WebLinkButton.Enabled = OneFilmSelected();
