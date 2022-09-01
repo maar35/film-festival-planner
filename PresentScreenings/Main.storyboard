@@ -382,12 +382,13 @@
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <menu key="submenu" title="Film" id="H0R-t1-cOF">
                                     <items>
-                                        <menuItem title="Edit Film Ratings" tag="501" keyEquivalent="r" id="l2M-r4-jN4">
+                                        <menuItem title="View Film Ratings" tag="501" keyEquivalent="r" id="l2M-r4-jN4">
                                             <connections>
                                                 <action selector="ShowFilmRatings:" target="Voe-Tx-rLC" id="774-Ma-XW6"/>
                                                 <segue destination="gJ5-Ju-597" kind="modal" identifier="FilmRatingSegue" id="MQZ-rL-cxz"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem title="Reload Ratings" tag="508" keyEquivalent="R" id="9qV-kX-1Q7"/>
                                         <menuItem isSeparatorItem="YES" id="Og0-Cw-Lcf"/>
                                         <menuItem title="Hide Films Without Screenings" tag="502" keyEquivalent="h" id="qTz-fl-Zzb">
                                             <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
@@ -1007,7 +1008,7 @@ Gw
             <objects>
                 <viewController title="Film Ratings" id="gJ5-Ju-597" customClass="FilmRatingDialogController" sceneMemberID="viewController">
                     <view key="view" misplaced="YES" id="elb-OS-w3T">
-                        <rect key="frame" x="0.0" y="0.0" width="912" height="718"/>
+                        <rect key="frame" x="0.0" y="0.0" width="912" height="875"/>
                         <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="gmW-ky-y0A">
@@ -1051,19 +1052,20 @@ DQ
                                 </connections>
                             </button>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="HT7-GE-9go">
-                                <rect key="frame" x="572" y="13" width="45" height="32"/>
+                                <rect key="frame" x="571" y="13" width="46" height="32"/>
                                 <constraints>
-                                    <constraint firstAttribute="width" constant="31" id="98X-s4-YDh"/>
+                                    <constraint firstAttribute="width" constant="32" id="98X-s4-YDh"/>
                                 </constraints>
                                 <buttonCell key="cell" type="push" bezelStyle="rounded" image="NSInfo" imagePosition="overlaps" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="biI-DY-BAG">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
                                 </buttonCell>
                             </button>
-                            <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="KcU-Ml-kPa">
-                                <rect key="frame" x="527" y="13" width="47" height="32"/>
+                            <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="KcU-Ml-kPa" userLabel="Visit Film Website Button">
+                                <rect key="frame" x="527" y="13" width="46" height="32"/>
                                 <constraints>
-                                    <constraint firstAttribute="width" constant="33" id="kck-1a-Sny"/>
+                                    <constraint firstAttribute="width" relation="greaterThanOrEqual" constant="32" id="Vsy-J6-JDv"/>
+                                    <constraint firstAttribute="width" constant="32" id="kck-1a-Sny"/>
                                 </constraints>
                                 <buttonCell key="cell" type="push" bezelStyle="rounded" image="NSNetwork" imagePosition="overlaps" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="2OM-Ro-Zrz">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
@@ -1075,16 +1077,26 @@ DQ
                                     <action selector="DownloadFilmInfo:" target="gJ5-Ju-597" id="6mj-t5-RRl"/>
                                 </connections>
                             </button>
-                            <scrollView autohidesScrollers="YES" horizontalLineScroll="19" horizontalPageScroll="10" verticalLineScroll="19" verticalPageScroll="10" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="VCv-Jr-uiq">
-                                <rect key="frame" x="20" y="73" width="872" height="588"/>
+                            <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="npH-Y6-RkO" userLabel="Reload Button">
+                                <rect key="frame" x="483" y="13" width="46" height="32"/>
+                                <constraints>
+                                    <constraint firstAttribute="width" constant="32" id="jJg-vR-aGH"/>
+                                </constraints>
+                                <buttonCell key="cell" type="push" bezelStyle="rounded" image="NSRefreshTemplate" imagePosition="overlaps" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="yAb-rA-w85">
+                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                </buttonCell>
+                            </button>
+                            <scrollView misplaced="YES" autohidesScrollers="YES" horizontalLineScroll="19" horizontalPageScroll="10" verticalLineScroll="19" verticalPageScroll="10" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="VCv-Jr-uiq">
+                                <rect key="frame" x="20" y="73" width="872" height="782"/>
                                 <clipView key="contentView" drawsBackground="NO" id="lfs-rW-7gy">
-                                    <rect key="frame" x="1" y="1" width="870" height="586"/>
+                                    <rect key="frame" x="1" y="1" width="870" height="780"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <subviews>
                                         <tableView verticalHuggingPriority="750" allowsExpansionToolTips="YES" columnAutoresizingStyle="firstColumnOnly" columnSelection="YES" autosaveColumns="NO" rowSizeStyle="automatic" headerView="phV-Fb-8ew" viewBased="YES" id="yF0-fE-yMF">
-                                            <rect key="frame" x="0.0" y="0.0" width="870" height="563"/>
+                                            <rect key="frame" x="0.0" y="0.0" width="870" height="757"/>
                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                                            <size key="intercellSpacing" width="3" height="2"/>
+                                            <size key="intercellSpacing" width="5" height="2"/>
                                             <color key="backgroundColor" name="controlBackgroundColor" catalog="System" colorSpace="catalog"/>
                                             <tableViewGridLines key="gridStyleMask" vertical="YES"/>
                                             <color key="gridColor" name="gridColor" catalog="System" colorSpace="catalog"/>
@@ -1103,11 +1115,11 @@ DQ
                                                     <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                     <prototypeCellViews>
                                                         <tableCellView id="mfG-jo-sdk">
-                                                            <rect key="frame" x="1" y="1" width="273" height="17"/>
+                                                            <rect key="frame" x="2" y="1" width="272" height="17"/>
                                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                             <subviews>
                                                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="8cP-O0-MnO">
-                                                                    <rect key="frame" x="0.0" y="1" width="277" height="16"/>
+                                                                    <rect key="frame" x="0.0" y="1" width="276" height="16"/>
                                                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Table View Cell" id="MVX-PR-TOF">
                                                                         <font key="font" metaFont="system"/>
                                                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1140,11 +1152,11 @@ DQ
                                                     <tableColumnResizingMask key="resizingMask" resizeWithTable="YES" userResizable="YES"/>
                                                     <prototypeCellViews>
                                                         <tableCellView id="eI1-bD-ViS">
-                                                            <rect key="frame" x="277" y="1" width="54" height="17"/>
+                                                            <rect key="frame" x="279" y="1" width="53" height="17"/>
                                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                             <subviews>
                                                                 <textField verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="6A6-gM-YDx">
-                                                                    <rect key="frame" x="0.0" y="1" width="54" height="16"/>
+                                                                    <rect key="frame" x="0.0" y="1" width="53" height="16"/>
                                                                     <textFieldCell key="cell" lineBreakMode="truncatingTail" sendsActionOnEndEditing="YES" title="Table View Cell" id="Ywl-n1-AWJ">
                                                                         <font key="font" metaFont="system"/>
                                                                         <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -1193,6 +1205,7 @@ DQ
                             <constraint firstItem="Utj-eZ-Fhm" firstAttribute="leading" secondItem="HT7-GE-9go" secondAttribute="trailing" constant="12" symbolic="YES" id="4T0-WL-Im2"/>
                             <constraint firstItem="HT7-GE-9go" firstAttribute="leading" secondItem="KcU-Ml-kPa" secondAttribute="trailing" constant="12" symbolic="YES" id="HrV-VZ-lbx"/>
                             <constraint firstItem="Wfn-Xt-Gfg" firstAttribute="leading" secondItem="Utj-eZ-Fhm" secondAttribute="trailing" constant="12" symbolic="YES" id="HvR-Zc-UNb"/>
+                            <constraint firstItem="KcU-Ml-kPa" firstAttribute="leading" secondItem="npH-Y6-RkO" secondAttribute="trailing" constant="12" symbolic="YES" id="SWA-VU-fQb"/>
                             <constraint firstItem="VCv-Jr-uiq" firstAttribute="leading" secondItem="elb-OS-w3T" secondAttribute="leading" constant="20" symbolic="YES" id="Wz5-m3-lHG"/>
                             <constraint firstItem="gmW-ky-y0A" firstAttribute="leading" secondItem="Wfn-Xt-Gfg" secondAttribute="trailing" constant="12" symbolic="YES" id="bJ6-B1-Rrr"/>
                             <constraint firstItem="0B2-hy-eMi" firstAttribute="baseline" secondItem="KcU-Ml-kPa" secondAttribute="baseline" id="g2l-4b-YVm"/>
@@ -1203,6 +1216,7 @@ DQ
                             <constraint firstItem="VCv-Jr-uiq" firstAttribute="top" secondItem="elb-OS-w3T" secondAttribute="top" constant="9" id="nTR-yw-j6g"/>
                             <constraint firstItem="VCv-Jr-uiq" firstAttribute="trailing" secondItem="gmW-ky-y0A" secondAttribute="trailing" id="oIX-SV-Ee9"/>
                             <constraint firstItem="e2i-1j-ym4" firstAttribute="top" secondItem="VCv-Jr-uiq" secondAttribute="bottom" constant="8" symbolic="YES" id="p2J-gb-bUb"/>
+                            <constraint firstAttribute="bottom" secondItem="npH-Y6-RkO" secondAttribute="bottom" constant="20" symbolic="YES" id="v5k-qJ-J9B"/>
                             <constraint firstItem="e2i-1j-ym4" firstAttribute="leading" secondItem="0B2-hy-eMi" secondAttribute="leading" id="vpa-XO-evT"/>
                             <constraint firstItem="0B2-hy-eMi" firstAttribute="top" secondItem="e2i-1j-ym4" secondAttribute="bottom" constant="10" id="xYg-Iz-gH0"/>
                             <constraint firstItem="KcU-Ml-kPa" firstAttribute="baseline" secondItem="HT7-GE-9go" secondAttribute="baseline" id="y1V-C2-L5g"/>
@@ -1218,6 +1232,7 @@ DQ
                         <outlet property="_filmRatingTableView" destination="yF0-fE-yMF" id="5OU-9l-7zD"/>
                         <outlet property="_goToScreeningButton" destination="HT7-GE-9go" id="OJh-nz-Ogb"/>
                         <outlet property="_onlyFilmsWithScreeningsCheckBox" destination="e2i-1j-ym4" id="9HX-tO-a3A"/>
+                        <outlet property="_reloadButton" destination="npH-Y6-RkO" id="4Xf-hI-Ivr"/>
                         <outlet property="_typeMatchMethodCheckBox" destination="0B2-hy-eMi" id="g6n-JU-vfR"/>
                         <outlet property="_uncombineTitleButton" destination="Wfn-Xt-Gfg" id="oO0-bx-oS5"/>
                         <segue destination="aXh-o3-u1V" kind="sheet" identifier="CombineSheetSegue" id="2pB-eh-aEj"/>
@@ -1227,7 +1242,7 @@ DQ
                 </viewController>
                 <customObject id="Brq-Bq-Evi" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="552.5" y="691"/>
+            <point key="canvasLocation" x="580" y="608.5"/>
         </scene>
         <!--Combine Titles-->
         <scene sceneID="bHF-hp-bF2">
@@ -1528,6 +1543,7 @@ Gw
         <image name="NSFolderSmart" width="32" height="32"/>
         <image name="NSInfo" width="32" height="32"/>
         <image name="NSNetwork" width="32" height="32"/>
+        <image name="NSRefreshTemplate" width="14" height="16"/>
         <sound name="Glass"/>
     </resources>
 </document>

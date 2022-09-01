@@ -20,6 +20,7 @@ namespace PresentScreenings.TableView
         private const int _visitFilmWebsiteMenuItemTag = 505;
         private const int _combineTitlesMenuItemTag = 506;
         private const int _uncombineTitleMenuItemTag = 507;
+        private const int _reloadRatingsMenuItemTag = 508;
         private const int _firstExtraMenuItemTag = 520;
         private int _currentTag;
         private int _extraFilmNumber;
@@ -30,6 +31,7 @@ namespace PresentScreenings.TableView
         #region Properties
         public static int ToggleOnlyFilmsWithScreeningsMenuItemTag => _toggleOnlyFilmsWithScreeningsMenuItemTag;
         public static int ToggleTypeMatchMethodMenuItemTag => _toggleTypeMatchMethodMenuItemTag;
+        public static int ReloadRatingsMenuItemTag => _reloadRatingsMenuItemTag;
         #endregion
 
         #region Constructors
@@ -83,16 +85,14 @@ namespace PresentScreenings.TableView
                         item.Enabled = ratingController == null && viewController.ViewIsActive();
                         break;
                     case _toggleOnlyFilmsWithScreeningsMenuItemTag:
-                        item.Enabled = ratingController != null;
-                        break;
                     case _toggleTypeMatchMethodMenuItemTag:
-                        item.Enabled = ratingController != null;
+                    case _reloadRatingsMenuItemTag:
+                        item.Enabled = ratingController != null && filmInfoController == null;
                         break;
                     case _showFilmInfoMenuItemTag:
                         item.Enabled = screeningInfoController != null
                                         || viewController.RunningPopupsCount == 0
                                         || (ratingController != null
-                                            && !ratingController.TextBeingEdited
                                             && ratingController.OneFilmSelected()
                                             && filmInfoController == null);
                         break;
@@ -100,7 +100,6 @@ namespace PresentScreenings.TableView
                         item.Enabled = screeningInfoController != null
                                         || viewController.RunningPopupsCount == 0
                                         || (ratingController != null
-                                            && !ratingController.TextBeingEdited
                                             && ratingController.OneFilmSelected())
                                         || filmInfoController != null
                                         || (analyserController != null
@@ -108,13 +107,15 @@ namespace PresentScreenings.TableView
                         break;
                     case _combineTitlesMenuItemTag:
                         item.Enabled = ratingController != null
-                                        && !ratingController.TextBeingEdited
-                                        && ratingController.MultipleFilmsSelected();
+                                        && ratingController.MultipleFilmsSelected()
+                                        && filmInfoController == null;
+                        ;
                         break;
                     case _uncombineTitleMenuItemTag:
                         item.Enabled = ratingController != null
-                                        && !ratingController.TextBeingEdited
-                                        && ratingController.OneFilmSelected();
+                                        && ratingController.OneFilmSelected()
+                                        && filmInfoController == null;
+                        ;
                         break;
                     default:
                         item.Enabled = false;

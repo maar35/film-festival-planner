@@ -4,11 +4,16 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3>Film list with ratings</h3>
-    {% if load_results %}
-        <h3 style="color:{{ festival_color }}; margin-bottom: 2px">Load results</h3>
-        {% for load_result in load_results %}
-            <p class="log">{{ load_result }}</p>
+    <span style="text-align: left; width: 49%; display: inline-block;">
+        <h3>Film list with ratings</h3>
+    </span>
+    <span style="text-align: right; width: 50%; display: inline-block;">
+        <a href="{% url 'film_list:save' festival.id %}">Save ratings</a>
+    </span>
+    {% if log %}
+        <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
+        {% for result in log.results %}
+            <p class="log">{{ result }}</p>
         {% endfor %}
     {% endif %}
     {% if unexpected_errors %}

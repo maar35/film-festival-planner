@@ -18,12 +18,11 @@ namespace PresentScreenings.TableView
         const float _screeningCountMaxWidth = 80;
         const float _subsectionWidth = 72;
         const float _subsectionMaxWidth = 200;
-        const float _FilmFanRatingWidth = 60;
+        const float _filmFanRatingWidth = 60;
         #endregion
 
         #region Private Variables
-        private bool _textBeingEdited = false;
-        private ViewController _presentor;
+        private static ViewController _presentor;
         private FilmTableDataSource _filmTableDataSource;
         #endregion
 
@@ -31,26 +30,19 @@ namespace PresentScreenings.TableView
         public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
         public NSTableView FilmRatingTableView => _filmRatingTableView;
         public NSButton WebLinkButton => _downloadFilmInfoButton;
+        public NSButton FilmInfoButton => _goToScreeningButton;
         public NSButton DoneButton => _closeButton;
-        public bool TextBeingEdited
-        {
-            get => _textBeingEdited;
-            set
-            {
-                _textBeingEdited = value;
-                SetFilmRatingDialogButtonStates();
-            }
-        }
+        public NSButton ReloadButton => _reloadButton;
 
         public bool ScreeningInfoChanged
         {
-            get => CombinationWindowDelegate.ScreeningInfoChanged;
+            get => View.Window.DocumentEdited;
             private set
             {
                 View.Window.DocumentEdited = value;
                 if (value)
                 {
-                    CombinationWindowDelegate.ScreeningInfoChanged = true;
+                    ScreeningInfo.ScreeningInfoChanged = true;
                 }
             }
         }
@@ -91,12 +83,13 @@ namespace PresentScreenings.TableView
             CreateFilmFanRatingColumns();
             CreateDescriptionColumn();
 
-            // Polulate the controls
+            // Populate the controls.
             _onlyFilmsWithScreeningsCheckBox.Action = new ObjCRuntime.Selector("ToggleOnlyFilmsWithScreenings:");
             _typeMatchMethodCheckBox.Action = new ObjCRuntime.Selector("ToggleTypeMatchMethod:");
             _combineTitlesButton.Action = new ObjCRuntime.Selector("SelectTitlesToCombine:");
             _uncombineTitleButton.Action = new ObjCRuntime.Selector("ShowTitlesToUncombine:");
-            _goToScreeningButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
+            FilmInfoButton.Action = new ObjCRuntime.Selector("ShowFilmInfo:");
+            ReloadButton.Action = new ObjCRuntime.Selector("ReloadRatings:");
             WebLinkButton.Action = new ObjCRuntime.Selector("VisitFilmWebsite:");
             DoneButton.KeyEquivalent = ControlsFactory.EscapeKey;
             SetOnlyFilmsWithScreeningsStates();
@@ -118,7 +111,7 @@ namespace PresentScreenings.TableView
             _presentor.RunningPopupsCount++;
 
             // Set window delegate.
-            View.Window.Delegate = new CombinationWindowDelegate(View.Window, CloseDialog);
+            View.Window.Delegate = new ScreeningRelatedWindowDelegate(View.Window, CloseDialog);
 
             // Initialize the controls.
             SetFilmRatingDialogButtonStates();
@@ -186,10 +179,10 @@ namespace PresentScreenings.TableView
 
         private void CreateFilmFanRatingColumns()
         {
-            const float width = _FilmFanRatingWidth;
+            const float width = _filmFanRatingWidth;
             foreach (string filmFan in ScreeningInfo.FilmFans)
             {
-                CreateColumn(filmFan, width, width);
+                CreateColumn(filmFan, width, width, true);
             }
         }
 
@@ -198,7 +191,7 @@ namespace PresentScreenings.TableView
             CreateColumn("Description", _descriptionWidth, _descriptionMaxWidth);
         }
 
-        private void CreateColumn(string title, float width, float maxWidth)
+        private void CreateColumn(string title, float width, float maxWidth, bool rightAlign=false)
         {
             var sortDescriptor = new NSSortDescriptor(title, false, new ObjCRuntime.Selector("compare:"));
             var newColumn = new NSTableColumn
@@ -207,8 +200,12 @@ namespace PresentScreenings.TableView
                 Width = width,
                 MaxWidth = maxWidth,
                 Identifier = title,
-                SortDescriptorPrototype = sortDescriptor
+                SortDescriptorPrototype = sortDescriptor,
             };
+            if (rightAlign)
+            {
+                newColumn.HeaderCell.Alignment = NSTextAlignment.Right;
+            }
             _filmRatingTableView.AddColumn(newColumn);
             CGRect frame = _filmRatingTableView.Frame;
             nfloat newRight = frame.X;
@@ -327,7 +324,7 @@ namespace PresentScreenings.TableView
         {
             // Update the data source.
             SetFilmsWithScreenings();
-            _filmRatingTableView.ReloadData();
+            ReloadRatings();
 
             // Update the button states.
             SetFilmRatingDialogButtonStates();
@@ -352,6 +349,13 @@ namespace PresentScreenings.TableView
             }
             return screeningList;
         }
+
+        private void SortRatings()
+        {
+            _filmTableDataSource.Sort(
+                _filmTableDataSource.SortedBy,
+                _filmTableDataSource.SortedAscending);
+        }
         #endregion
 
         #region Public Methods
@@ -372,12 +376,15 @@ namespace PresentScreenings.TableView
 
         public void SetFilmRatingDialogButtonStates()
         {
-            _combineTitlesButton.Enabled = MultipleFilmsSelected() && !TextBeingEdited;
-            _uncombineTitleButton.Enabled = OneFilmSelected() && !TextBeingEdited;
-            _goToScreeningButton.Enabled = OneFilmSelected() && !TextBeingEdited;
-            DoneButton.Enabled = !TextBeingEdited;
-            DoneButton.Title = ControlsFactory.TitleByChanged[FilmRating.RatingChanged || ScreeningInfoChanged];
-            WebLinkButton.Enabled = OneFilmSelected() && !TextBeingEdited;
+            _combineTitlesButton.Enabled = MultipleFilmsSelected();
+            _uncombineTitleButton.Enabled = OneFilmSelected();
+            FilmInfoButton.Enabled = OneFilmSelected();
+            FilmInfoButton.ToolTip = ControlsFactory.FilmInfoButtonToolTip(CurrentFilm);
+            ReloadButton.Enabled = true;
+            ReloadButton.ToolTip = ControlsFactory.ReloadButtonToolTip;
+            DoneButton.Enabled = true;
+            DoneButton.Title = ControlsFactory.TitleByChanged[ScreeningInfoChanged];
+            WebLinkButton.Enabled = OneFilmSelected();
             WebLinkButton.ToolTip = OneFilmSelected() ? ControlsFactory.VisitWebsiteButtonToolTip(CurrentFilm) : string.Empty;
         }
 
@@ -459,8 +466,7 @@ namespace PresentScreenings.TableView
             // Resort the data.
             if (!OnlyFilmsWithScreenings)
             {
-                _filmTableDataSource.Sort(_filmTableDataSource.SortedBy,
-                                          _filmTableDataSource.SortedAscending);
+                SortRatings();
             }
 
             // Update the data source.
@@ -487,8 +493,7 @@ namespace PresentScreenings.TableView
             // Resort the data.
             if (FilteredSubsection == null)
             {
-                _filmTableDataSource.Sort(_filmTableDataSource.SortedBy,
-                                          _filmTableDataSource.SortedAscending);
+                SortRatings();
             }
 
             // Update the data source.
@@ -498,25 +503,34 @@ namespace PresentScreenings.TableView
             SelectFilms(selectedFilms);
         }
 
+        public void ReloadRatings()
+        {
+            // Store the current selection of films.
+            var selectedFilms = GetSelectedFilms();
+
+            // Reload the ratings.
+            _filmRatingTableView.ReloadData();
+
+            // Resort the data.
+            SortRatings();
+
+            // Select the stored films.
+            SelectFilms(selectedFilms);
+        }
+
         public void CloseDialog()
         {
-            // Save changed data.
-            CombinationWindowDelegate.SaveChangedData();
+            if (ScreeningInfoChanged)
+            {
+                // Save the screening info.
+                ScreeningDialogController.SaveScreeningInfo();
+
+                // Unset the Document Edited flag of the presentor.
+                _presentor.ScreeningInfoChanged = false;
+            }
 
             // Close the dialog.
             _presentor.DismissViewController(this);
-        }
-
-        public static void SaveRatings()
-        {
-            // Save the ratings.
-            App.WriteFilmFanFilmRatings();
-            FilmRating.RatingChanged = false;
-
-            // Trigger a local notification.
-            string title = "Ratings Saved";
-            string text = $"Film fan ratings have been saved in {AppDelegate.DocumentsFolder}.";
-            AlertRaiser.RaiseNotification(title, text);
         }
         #endregion
 

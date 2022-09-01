@@ -2,21 +2,21 @@ from festivals.models import current_festival
 from film_list.models import current_fan, get_user_fan
 
 
-# Support load_results cookie.
-def initialize_load_log(session):
-    session['load_results'] = []
+# Support log cookie.
+def initialize_log(session, action='Load'):
+    session['log'] = {'results': [], 'action': action}
 
 
-def add_load_log(session, text):
-    session['load_results'].append(text)
+def add_log(session, text):
+    session['log']['results'].append(text)
 
 
-def get_load_log(session):
-    return session.get('load_results')
+def get_log(session):
+    return session.get('log')
 
 
-def unset_load_log(session):
-    session['load_results'] = None
+def unset_log(session):
+    session['log'] = None
 
 
 # Support printing form errors.

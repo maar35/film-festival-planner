@@ -1,7 +1,7 @@
+import re
 from datetime import timedelta
 from http import HTTPStatus
 from importlib import import_module
-import re
 
 import django.http
 from django.conf import settings
@@ -352,10 +352,12 @@ class FilmListViewsTests(ViewsTestCase):
         A logged in fan can add a rating to a film.
         """
         # Arrange.
+        festival = create_festival('NFF', '2024-07-11', '2024-07-20')
+        film = create_film(film_id=2001, title='Odysseus in Trouble', minutes=128, festival=festival)
+
         get_request = self.get_admin_request()
         get_response = views.film_list(get_request)
 
-        film = create_film(film_id=2001, title='Odysseus in Trouble', minutes=128)
         fan = self.admin_fan
         rating_value = 9
         rating_name = get_rating_name(rating_value)
@@ -378,10 +380,11 @@ class FilmListViewsTests(ViewsTestCase):
         A logged in fan can change an existing rating of a film.
         """
         # Arrange.
+        film = create_film(film_id=1948, title='Big Brothers', minutes=110)
+
         get_request = self.get_regular_fan_request()
         get_response = views.film_list(get_request)
 
-        film = create_film(film_id=1948, title='Big Brothers', minutes=110)
         fan = current_fan(get_request.session)
         old_rating_value = 8
         FilmFanFilmRating.fan_ratings.create(film=film, film_fan=fan, rating=old_rating_value)
@@ -442,3 +445,41 @@ class FilmListViewsTests(ViewsTestCase):
             _ = FilmFanFilmRating.fan_ratings.get(film=film, film_fan=fan)
         current_fan_row_re = re.compile(f'{fan.name}' + r'</a></td>\s*<td></td>\s*<td>Unrated</td>')
         self.assertRegex(redirect_response.content.decode('utf-8'), current_fan_row_re, re.DOTALL)
+
+    def test_non_admin_cannot_save_ratings(self):
+        """
+        A non-admin fan can't save ratings.
+        """
+        # Arrange.
+        festival = create_festival('IDFA', '2023-11-19', '2023-11-28')
+        get_request = self.get_regular_fan_request()
+        save_view = views.SaveView()
+        save_view.object = festival
+        save_view.setup(get_request)
+        context = save_view.get_context_data()
+
+        # Act.
+        get_response = save_view.render_to_response(context)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertContains(get_response, 'Not allowed')
+
+    def test_admin_can_open_save_ratings_page(self):
+        """
+        A logged in admin fan has access to the save ratings page.
+        """
+        # Arrange.
+        festival = create_festival('IDFA', '2023-11-19', '2023-11-28')
+        get_request = self.get_admin_request()
+        save_view = views.SaveView()
+        save_view.object = festival
+        save_view.setup(get_request)
+        context = save_view.get_context_data()
+
+        # Act.
+        get_response = save_view.render_to_response(context)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertNotContains(get_response, 'Not allowed')

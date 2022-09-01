@@ -34,6 +34,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
+        public static string ReloadButtonToolTip => "Reload ratings";
         public static nfloat StandardFontSize => NSFont.SystemFontSize;
         public static NSFont StandardFont => NSFont.SystemFontOfSize(StandardFontSize);
         public static NSFont StandardBoldFont => NSFont.BoldSystemFontOfSize(StandardFontSize);
@@ -121,21 +122,16 @@ namespace PresentScreenings.TableView
             return $"Visit the web site of {film}";
         }
 
+        public static string FilmInfoButtonToolTip(Film film)
+        {
+            return $"Get more info of {film}";
+        }
+
         public static NSButton NewCheckbox(CGRect frame)
         {
             var box = NewStandardButton(frame);
             box.SetButtonType(NSButtonType.Switch);
             return box;
-        }
-
-        public static NSComboBox NewRatingComboBox(CGRect frame, NSFont font)
-        {
-            var comboBox = new NSComboBox(frame);
-            comboBox.Add(FilmRating.Values.Select(str => new NSString(str)).ToArray());
-            comboBox.Alignment = NSTextAlignment.Right;
-            comboBox.Font = font;
-            comboBox.AutoresizesSubviews = true;
-            return comboBox;
         }
 
         public static NSScrollView NewStandardScrollView(CGRect frame, NSView documentView, bool useWindowBackgroundColor = false, bool debug = false)

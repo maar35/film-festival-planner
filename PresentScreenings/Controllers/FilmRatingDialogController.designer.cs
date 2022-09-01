@@ -31,6 +31,9 @@ namespace PresentScreenings.TableView
 		AppKit.NSButton _onlyFilmsWithScreeningsCheckBox { get; set; }
 
 		[Outlet]
+		AppKit.NSButton _reloadButton { get; set; }
+
+		[Outlet]
 		AppKit.NSButton _typeMatchMethodCheckBox { get; set; }
 
 		[Outlet]
@@ -44,6 +47,11 @@ namespace PresentScreenings.TableView
 			if (_closeButton != null) {
 				_closeButton.Dispose ();
 				_closeButton = null;
+			}
+
+			if (_reloadButton != null) {
+				_reloadButton.Dispose ();
+				_reloadButton = null;
 			}
 
 			if (_combineTitlesButton != null) {
@@ -66,14 +74,14 @@ namespace PresentScreenings.TableView
 				_goToScreeningButton = null;
 			}
 
-			if (_typeMatchMethodCheckBox != null) {
-				_typeMatchMethodCheckBox.Dispose ();
-				_typeMatchMethodCheckBox = null;
-			}
-
 			if (_onlyFilmsWithScreeningsCheckBox != null) {
 				_onlyFilmsWithScreeningsCheckBox.Dispose ();
 				_onlyFilmsWithScreeningsCheckBox = null;
+			}
+
+			if (_typeMatchMethodCheckBox != null) {
+				_typeMatchMethodCheckBox.Dispose ();
+				_typeMatchMethodCheckBox = null;
 			}
 
 			if (_uncombineTitleButton != null) {

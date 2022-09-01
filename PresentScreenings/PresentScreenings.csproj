@@ -153,8 +153,6 @@
     <Compile Include="Table Classes\FilmTableDelegate.cs" />
     <Compile Include="Table Classes\ScreeningsTableDelegate.cs" />
     <Compile Include="Table Classes\FilmOutlineDelegate.cs" />
-    <Compile Include="Exceptions\IllegalRatingException.cs" />
-    <Compile Include="Controls\RatingField.cs" />
     <Compile Include="Exceptions\IllegalFilmInfoCatagoryException.cs" />
     <Compile Include="Interfaces\IFilmOutlinable.cs" />
     <Compile Include="Event Arguments\CombineTitlesEventArgs.cs" />
@@ -185,7 +183,7 @@
     <Compile Include="Controls\PointingHandControl.cs" />
     <Compile Include="Window Delegates\BaseWindowDelegate.cs" />
     <Compile Include="Utilities\StringByBoolBool.cs" />
-    <Compile Include="Window Delegates\CombinationWindowDelegate.cs" />
+    <Compile Include="Window Delegates\ScreeningRelatedWindowDelegate.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

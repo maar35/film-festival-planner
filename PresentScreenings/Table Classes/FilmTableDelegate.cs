@@ -119,11 +119,11 @@ namespace PresentScreenings.TableView
                 default:
                     if (ScreeningInfo.FilmFans.Contains(tableColumn.Title))
                     {
-                        var friendRatingField = (RatingField)view;
-                        PopulateFilmFanFilmRating(ref friendRatingField, film, tableColumn.Title, row);
-                        friendRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, tableColumn.Title).ToString();
-                        friendRatingField.Tag = row;
-                        return friendRatingField;
+                        var fanRatingField = (NSTextField)view;
+                        PopulateFilmFanFilmRating(ref fanRatingField);
+                        fanRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, tableColumn.Title).ToString();
+                        fanRatingField.Tag = row;
+                        return fanRatingField;
                     }
                     break;
             }
@@ -230,22 +230,20 @@ namespace PresentScreenings.TableView
             }
         }
 
-        private void PopulateFilmFanFilmRating(ref RatingField box, Film film, string filmFan, nint row)
+        private void PopulateFilmFanFilmRating(ref NSTextField box)
         {
             if (box == null)
             {
-                box = new RatingField(_dialogController)
+                box = new NSTextField()
                 {
                     Identifier = _cellIdentifier,
                     BackgroundColor = NSColor.Clear,
                     Bordered = false,
                     Selectable = false,
-                    Editable = true,
+                    Editable = false,
                     Alignment = NSTextAlignment.Right,
                 };
             }
-            var ratingField = box;
-            box.EditingEnded += (s, e) => HandleFilmFanRatingEditingEnded(ratingField, filmFan);
         }
 
         private static NSColor DurationTextColor(TimeSpan duration)
@@ -260,13 +258,6 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        private void HandleFilmFanRatingEditingEnded(NSTextField field, string filmFan)
-        {
-            int filmId = _dataSource.Films[(int)field.Tag].FilmId;
-            _controller.SetRatingIfValid(field, r => field.StringValue, filmId, filmFan);
-            _dialogController.SetFilmRatingDialogButtonStates();
-        }
-
         private void SubsectionControlActivated(Film film)
         {
             _dialogController.ToggleSubsectionFilter(film.Subsection);

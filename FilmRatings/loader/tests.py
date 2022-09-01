@@ -1,15 +1,18 @@
 import csv
 import os
+import re
 import shutil
 from http import HTTPStatus
 
+from django.test import RequestFactory
 from django.urls import reverse
 
-from festivals.tests import create_festival
+from festivals.tests import create_festival, base_festival_mnemonic
 from film_list.models import FilmFanFilmRating
-from film_list.tests import create_film, ViewsTestCase
+from film_list.tests import create_film, ViewsTestCase, get_request_with_session
+from film_list.views import SaveView, film_list
 from loader import views
-from loader.views import FilmLoader, RatingLoader
+from loader.forms.loader_forms import FilmLoader, RatingLoader
 
 
 def create_rating(film, fan, rating):
@@ -61,12 +64,9 @@ class LoaderViewsTests(ViewsTestCase):
         super(LoaderViewsTests, self).tearDown()
         self.remove_festival_data()
 
-    @property
-    def base_festival_mnemonic(self):
-        return 'Berlinale'
-
-    def create_festival(self, start_data_str, end_date_str):
-        return create_festival(self.base_festival_mnemonic, start_data_str, end_date_str)
+    @staticmethod
+    def create_festival(start_data_str, end_date_str):
+        return create_festival(base_festival_mnemonic(), start_data_str, end_date_str)
 
     def create_planner_data_dir(self):
         os.makedirs(self.festival.planner_data_dir)
@@ -287,3 +287,47 @@ class LoaderViewsTests(ViewsTestCase):
         self.assertContains(redirect_response, 'films read')
         self.assertContains(redirect_response, 'Bad value in file')
         self.assertContains(redirect_response, 'No ratings read')
+
+    def test_admin_can_save_ratings(self):
+        """
+        An admin fan can save ratings.
+        """
+        # Arrange.
+        film_1 = create_film(1, 'Ich bin ein Hamburger', 86, festival=self.festival)
+        film_2 = create_film(2, 'Böse Banken', 127, festival=self.festival)
+        rating_1 = create_rating(film_1, self.admin_fan, 5)
+        rating_2 = create_rating(film_1, self.regular_fan, 4)
+        rating_3 = create_rating(film_2, self.regular_fan, 8)
+
+        request = self.get_admin_request()
+        save_view = SaveView()
+        save_view.object = self.festival
+        save_view.setup(request)
+        context = save_view.get_context_data()
+        get_response = save_view.render_to_response(context)
+
+        post_request = get_request_with_session(request, method_is_post=True, post_data={'dummy_field': 'None'})
+        save_view.object = self.festival
+        save_view.setup(post_request)
+        post_data = {'dummy_field': ''}
+        factory = RequestFactory()
+        post_request = factory.post(f'/film_list/{self.festival.id}/save/', data=post_data)
+        post_request.user = self.admin_user
+        post_request.session = request.session
+
+        # Act.
+        post_response = SaveView.as_view()(post_request)
+
+        # Assert.
+        redirect_request = get_request_with_session(request)
+        redirect_response = film_list(redirect_request)
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertNotContains(get_response, 'Not allowed')
+        self.assertContains(get_response, 'Save 3 ratings')
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertURLEqual(post_response.url, reverse('film_list:film_list'))
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        self.assertContains(redirect_response, 'Save results')
+        self.assertContains(redirect_response, '3 existing ratings saved.')
+        log_re = re.compile(r'\b3 existing ratings saved')
+        self.assertRegex(redirect_response.content.decode('utf-8'), log_re)
