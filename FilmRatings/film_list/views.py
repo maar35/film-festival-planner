@@ -39,7 +39,6 @@ class ResultsView(generic.DetailView):
         return response
 
 
-# @login_required
 class SaveView(LoginRequiredMixin, FormView):
     model = Festival
     template_name = 'film_list/save.html'
@@ -68,10 +67,6 @@ class SaveView(LoginRequiredMixin, FormView):
         festival = current_festival(session)
         form.save_ratings(session, festival)
         return super().form_valid(form)
-
-    def dispatch(self, request, *args, **kwargs):
-        response = super().dispatch(request, *args, **kwargs)
-        return response
 
 
 # General index page.

@@ -3,12 +3,12 @@ from film_list.models import current_fan, get_user_fan
 
 
 # Support load_results cookie.
-def initialize_load_log(session):
-    session['load_results'] = []
+def initialize_load_log(session, action='Load'):
+    session['load_results'] = {'results': [], 'action': action}
 
 
 def add_load_log(session, text):
-    session['load_results'].append(text)
+    session['load_results']['results'].append(text)
 
 
 def get_load_log(session):

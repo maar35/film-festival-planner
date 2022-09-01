@@ -22,6 +22,10 @@ def create_festival(mnemonic, start_date_str, end_date_str, edition=None):
     )
 
 
+def base_festival_mnemonic():
+    return 'Berlinale'
+
+
 class FestivalModelTests(TestCase):
 
     def test_number_of_festivals_migrated(self):

@@ -11,9 +11,9 @@
         <a href="{% url 'film_list:save' festival.id %}">Save ratings</a>
     </span>
     {% if load_results %}
-        <h3 style="color:{{ festival_color }}; margin-bottom: 2px">Load results</h3>
-        {% for load_result in load_results %}
-            <p class="log">{{ load_result }}</p>
+        <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ load_results.action }} results</h3>
+        {% for result in load_results.results %}
+            <p class="log">{{ result }}</p>
         {% endfor %}
     {% endif %}
     {% if unexpected_errors %}

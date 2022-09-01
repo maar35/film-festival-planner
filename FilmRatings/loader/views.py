@@ -220,7 +220,7 @@ class FilmLoader(BaseLoader):
                     row = [rating.film.film_id, rating.film_fan.name, rating.rating]
                     rating_writer.writerow(row)
         except FileNotFoundError:
-            self.add_log(f'Cache file {festival.ratings_cache} not found.')
+            self.add_log(f'File {file} not found.')
             return False
         else:
             self.add_log(f'{len(ratings)} existing ratings saved.')

@@ -13,7 +13,7 @@ class SaveRatingsForm(forms.Form):
 
     @staticmethod
     def save_ratings(session, festival):
-        initialize_load_log(session)
+        initialize_load_log(session, 'Save')
         add_load_log(session, f'Saving the {festival} ratings.')
         if not FilmLoader(session, festival, True).save_ratings(festival.ratings_file):
             add_load_log(session, f'Failed to save the {festival} ratings.')
