@@ -8,10 +8,10 @@ from django.urls import reverse
 from django.views import generic
 from django.views.generic import FormView
 
-from FilmRatings.tools import unset_load_log, add_base_context, get_load_log, wrap_up_form_errors
+from FilmRatings.tools import unset_log, add_base_context, get_log, wrap_up_form_errors
 from festivals.models import current_festival, Festival
 from film_list.forms.model_forms import Rating, User
-from film_list.forms.slug_forms import PickRating, SaveRatingsForm
+from film_list.forms.unbound_forms import PickRating, SaveRatingsForm
 from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan, get_rating_name
 from loader.views import rating_count_on_file
 
@@ -35,7 +35,7 @@ class ResultsView(generic.DetailView):
 
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
-        unset_load_log(request.session)
+        unset_log(request.session)
         return response
 
 
@@ -58,8 +58,8 @@ class SaveView(LoginRequiredMixin, FormView):
         context = add_base_context(self.request, super().get_context_data(**kwargs))
         context['title'] = 'Save Ratings'
         context['festival_items'] = festival_items
-        context['load_results'] = get_load_log(session)
-        unset_load_log(session)
+        context['log'] = get_log(session)
+        unset_log(session)
         return context
 
     def form_valid(self, form):
@@ -81,7 +81,7 @@ def index(request):
     user_name = fan if fan is not None else "Guest"
 
     # Unset load results cookie.
-    unset_load_log(request.session)
+    unset_log(request.session)
 
     # Construct the parameters.
     context = add_base_context(request, {
@@ -150,7 +150,7 @@ def film_list(request):
 
     # Check the request.
     if request.method == 'POST':
-        unset_load_log(session)
+        unset_log(session)
         form = PickRating(request.POST)
         if form.is_valid():
             submitted_name = get_submitted_name(request, submit_names)
@@ -165,7 +165,7 @@ def film_list(request):
         else:
             context['unexpected_errors'] = wrap_up_form_errors(form.errors)
 
-    context['load_results'] = get_load_log(session)
+    context['log'] = get_log(session)
     return render(request, "film_list/film_list.html", context)
 
 

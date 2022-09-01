@@ -119,11 +119,11 @@ namespace PresentScreenings.TableView
                 default:
                     if (ScreeningInfo.FilmFans.Contains(tableColumn.Title))
                     {
-                        var friendRatingField = (NSTextField)view;
-                        PopulateFilmFanFilmRating(ref friendRatingField);
-                        friendRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, tableColumn.Title).ToString();
-                        friendRatingField.Tag = row;
-                        return friendRatingField;
+                        var fanRatingField = (NSTextField)view;
+                        PopulateFilmFanFilmRating(ref fanRatingField);
+                        fanRatingField.StringValue = ViewController.GetFilmFanFilmRating(film, tableColumn.Title).ToString();
+                        fanRatingField.Tag = row;
+                        return fanRatingField;
                     }
                     break;
             }

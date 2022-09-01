@@ -12,7 +12,7 @@ from film_list.models import FilmFanFilmRating
 from film_list.tests import create_film, ViewsTestCase, get_request_with_session
 from film_list.views import SaveView, film_list
 from loader import views
-from loader.views import FilmLoader, RatingLoader
+from loader.forms.loader_forms import FilmLoader, RatingLoader
 
 
 def create_rating(film, fan, rating):

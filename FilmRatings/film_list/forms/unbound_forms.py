@@ -1,7 +1,7 @@
 from django import forms
 
-from FilmRatings.tools import initialize_load_log, add_load_log
-from loader.views import FilmLoader
+from FilmRatings.tools import initialize_log, add_log
+from loader.forms.loader_forms import FilmLoader
 
 
 class PickRating(forms.Form):
@@ -13,7 +13,7 @@ class SaveRatingsForm(forms.Form):
 
     @staticmethod
     def save_ratings(session, festival):
-        initialize_load_log(session, 'Save')
-        add_load_log(session, f'Saving the {festival} ratings.')
+        initialize_log(session, 'Save')
+        add_log(session, f'Saving the {festival} ratings.')
         if not FilmLoader(session, festival, True).save_ratings(festival.ratings_file):
-            add_load_log(session, f'Failed to save the {festival} ratings.')
+            add_log(session, f'Failed to save the {festival} ratings.')
