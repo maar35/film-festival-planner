@@ -184,6 +184,11 @@
     <Compile Include="Window Delegates\BaseWindowDelegate.cs" />
     <Compile Include="Utilities\StringByBoolBool.cs" />
     <Compile Include="Window Delegates\ScreeningRelatedWindowDelegate.cs" />
+    <Compile Include="Controllers\MainWindowController.cs" />
+    <Compile Include="Controllers\MainWindowController.designer.cs">
+      <DependentUpon>MainWindowController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\ActivatableToolbarItem.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

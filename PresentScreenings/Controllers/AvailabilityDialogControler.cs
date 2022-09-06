@@ -366,6 +366,10 @@ namespace PresentScreenings.TableView
 
                 // Update the window title.
                 Presentor.SetWindowTitle();
+
+                // Update the screening warnings.
+                Presentor.UpdateWarnings();
+                Presentor.ReloadScreeningsView();
             }
 
             // Update the All Days checkbox of this film fan.

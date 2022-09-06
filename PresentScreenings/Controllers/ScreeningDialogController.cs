@@ -28,8 +28,10 @@ namespace PresentScreenings.TableView
         private const float _buttonHeight = ControlsFactory.StandardButtonHeight;
         private const float _yControlsDistance = ControlsFactory.VerticalPixelsBetweenControls;
         private const float _subsectionLabelWidth = ControlsFactory.SubsectionLabelWidth;
-        private const float _boxHeight = _labelHeight - 4;
-        private const float _boxWidth = _labelHeight;
+        private const float _warningLabelHeight = _labelHeight + 2;
+        private const float _warningLabelVerticalPositionCorrection = 6;
+        private const float _ratingBoxHeight = _labelHeight - 4;
+        private const float _ratingBoxWidth = _labelHeight;
 
         #endregion
 
@@ -41,6 +43,7 @@ namespace PresentScreenings.TableView
         private List<Screening> _filmScreenings;
         private FilmScreeningControl _screeningInfoControl;
         private Dictionary<string, AttendanceCheckbox> _attendanceCheckboxByFilmFan;
+        private NSTextField _warningLabel = null;
         private NSView _sampleSubView;
         #endregion
 
@@ -101,6 +104,7 @@ namespace PresentScreenings.TableView
             CreateSubsectionLabel();
             CreateFilmFanControls();
             CreateScreeningsScrollView();
+            CreateWarningLabel();
 
             // Disable Resizing.
             DisableResizing(this, _sampleSubView);
@@ -213,8 +217,8 @@ namespace PresentScreenings.TableView
         {
             // Clone the Rating combo box.
             var ratingBoxFrame = _comboboxRating.Frame;
-            ratingBoxFrame.Width = _boxWidth;
-            ratingBoxFrame.Height = _boxHeight;
+            ratingBoxFrame.Width = _ratingBoxWidth;
+            ratingBoxFrame.Height = _ratingBoxHeight;
 
             // Dispose the original Rating combo box.
             _comboboxRating.RemoveFromSuperview();
@@ -306,18 +310,13 @@ namespace PresentScreenings.TableView
             View.AddSubview(websiteButton);
         }
 
-        private void TryShowFilmInfo(NSObject sender)
+        private void CreateWarningLabel()
         {
-            var film = _screening.Film;
-            if (ViewController.FilmInfoIsAvailable(film))
-            {
-                PerformSegue("ScreeningToFilmInfo", sender);
-            }
-            else
-            {
-                Presentor.PerformSegue("ScreeningsToFilmInfo", sender);
-                CloseDialog();
-            }
+            var yLabel = _closeButton.Frame.Y + _warningLabelVerticalPositionCorrection;
+            var width = View.Frame.Width - 2 * _xMargin - _closeButton.Frame.Width - _imageButtonWidth;
+            var warningBox = new CGRect(_xMargin, yLabel, width, _warningLabelHeight);
+            _warningLabel = ControlsFactory.NewScreeningWarningLabel(warningBox, _screening);
+            View.AddSubview(_warningLabel);
         }
         #endregion
 
@@ -358,28 +357,35 @@ namespace PresentScreenings.TableView
         public void ToggleTicketsBought()
         {
             _screening.TicketsBought = !_screening.TicketsBought;
-            UpdateAttendances();
+            UpdateScreeningInfo();
         }
 
         public void ToggleSoldOut()
         {
             _screening.SoldOut = !_screening.SoldOut;
-            UpdateAttendances();
+            UpdateScreeningInfo();
         }
 
         public void ToggleAttendance(string filmFan)
         {
             _screening.ToggleFilmFanAttendance(filmFan);
-            UpdateAttendances();
+            UpdateScreeningInfo();
             var attendanceState = AttendanceCheckbox.GetAttendanceState(_screening.FilmFanAttends(filmFan));
             _attendanceCheckboxByFilmFan[filmFan].State = attendanceState;
         }
 
-        public void UpdateAttendances()
+        public void UpdateWarning()
+        {
+            Presentor.UpdateWarning(_screening);
+            ControlsFactory.UpdateScreeningWarningLabel(_warningLabel, _screening);
+        }
+
+        public void UpdateScreeningInfo()
         {
             _labelPresent.StringValue = _screening.AttendeesString();
             Presentor.UpdateAttendanceStatus(_screening, false);
             Presentor.ReloadScreeningsView();
+            UpdateWarning();
             UpdateScreeningControls();
             _screeningInfoControl.ReDraw();
             _closeButton.Title = ControlsFactory.TitleByChanged[true];
@@ -389,7 +395,7 @@ namespace PresentScreenings.TableView
         public void UpdateMovedScreeningInfo()
         {
             _labelTime.StringValue = _screening.ToLongTimeString();
-            UpdateAttendances();
+            UpdateScreeningInfo();
         }
         #endregion
 

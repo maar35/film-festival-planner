@@ -41,6 +41,7 @@ namespace PresentScreenings.TableView
         public static CTFont StandardCtFont => new CTFont(".AppleSytemUIFont", 14);
         public static CTFont StandardCtBoldFont => new CTFont(".AppleSystemUIFontBold", StandardFontSize);
         public static Dictionary<bool, string> TitleByChanged { get; private set; }
+        public static Dictionary<ScreeningInfo.Warning, string> StringByWarning { get; private set; }
         #endregion
 
         #region Constructors
@@ -49,10 +50,15 @@ namespace PresentScreenings.TableView
             TitleByChanged = new Dictionary<bool, string> { };
             TitleByChanged.Add(false, "Close");
             TitleByChanged.Add(true, "Save");
+            StringByWarning = new Dictionary<ScreeningInfo.Warning, string> { };
+            StringByWarning.Add(ScreeningInfo.Warning.NoWarning, "No warning");
+            StringByWarning.Add(ScreeningInfo.Warning.SameMovie, "Attending the same film more than once");
+            StringByWarning.Add(ScreeningInfo.Warning.TimeOverlap, "Screening overlaps an attended screening");
+            StringByWarning.Add(ScreeningInfo.Warning.Unavailable, $"{ScreeningInfo.Me} is not available this day");
         }
         #endregion
 
-        #region Public Methods
+        #region Public Methods that deliver controls.
         public static NSTextField NewStandardLabel(CGRect frame, bool useWindowBackgroundColor = false)
         {
             var label = new NSTextField(frame)
@@ -78,6 +84,18 @@ namespace PresentScreenings.TableView
             label.TextColor = film.SubsectionColor;
             label.ToolTip = film.SubsectionDescription;
             label.Bordered = true;
+
+            return label;
+        }
+
+        public static NSTextField NewScreeningWarningLabel(CGRect frame, Screening screening)
+        {
+            var label = NewStandardLabel(frame);
+            //var image = NSImage.ImageNamed("NSCaution");
+            label.Font = StandardFont;
+            label.Alignment = NSTextAlignment.Center;
+            label.Bordered = false;
+            UpdateScreeningWarningLabel(label, screening);
 
             return label;
         }
@@ -115,16 +133,6 @@ namespace PresentScreenings.TableView
         public static NSButton NewVisitWebsiteButton(nfloat x, nfloat y, Film film)
         {
             return NewVisitWebsiteButton((float)x, (float)y, film);
-        }
-
-        public static string VisitWebsiteButtonToolTip(Film film)
-        {
-            return $"Visit the web site of {film}";
-        }
-
-        public static string FilmInfoButtonToolTip(Film film)
-        {
-            return $"Get more info of {film}";
         }
 
         public static NSButton NewCheckbox(CGRect frame)
@@ -166,6 +174,47 @@ namespace PresentScreenings.TableView
             }
 
             return scrollView;
+        }
+        #endregion
+
+        #region Public Methods that handle strings.
+        public static string GlobalWarningsString(int warningCount)
+        {
+            string pluralString = warningCount == 1 ? string.Empty : "s";
+            string countString = warningCount == 0 ? "No" : warningCount.ToString();
+            string label = $"{countString} Warning{pluralString}";
+            return label;
+        }
+
+        public static string ScreeningWarningString(Screening screening)
+        {
+            return StringByWarning[screening.Warning];
+        }
+
+        public static void UpdateScreeningWarningLabel(NSTextField label, Screening screening)
+        {
+            if (screening.Warning == ScreeningInfo.Warning.NoWarning)
+            {
+                label.StringValue = string.Empty;
+                label.TextColor = NSColor.Black;
+                label.BackgroundColor = NSColor.WindowBackground;
+            }
+            else
+            {
+                label.StringValue = ScreeningWarningString(screening);
+                label.TextColor = NSColor.Blue;
+                label.BackgroundColor = NSColor.SystemOrange;
+            }
+        }
+
+        public static string VisitWebsiteButtonToolTip(Film film)
+        {
+            return $"Visit the web site of {film}";
+        }
+
+        public static string FilmInfoButtonToolTip(Film film)
+        {
+            return $"Get more info of {film}";
         }
         #endregion
     }

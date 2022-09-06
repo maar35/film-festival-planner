@@ -37,6 +37,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
+        public MainWindowController MainWindowController { get; set; }
         public ViewController Controller { get; set; } = null;
         public AnalyserDialogController AnalyserDialogController { get; set; }
         public AvailabilityDialogControler AvailabilityDialogControler { get; set; }

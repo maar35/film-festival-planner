@@ -134,8 +134,9 @@ namespace PresentScreenings.TableView
                     _controller.UpdateAttendanceStatus(screening);
                     _plannedScreenings.Add(screening);
                 }
-                _controller.ReloadScreeningsView();
+                _controller.ReloadScreeningsView(false);
             }
+            _controller.UpdateWarnings();
             _controller.GoToDay(orgDay);
         }
 

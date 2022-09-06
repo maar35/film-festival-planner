@@ -96,7 +96,7 @@ namespace PresentScreenings.TableView
                 }
 
                 // Draw Sold Out symbol.
-                if(Screening.SoldOut)
+                if (Screening.SoldOut)
                 {
                     ColorView.DrawSoldOutSymbol(context, Selected, clickableRect);
                 }

@@ -35,6 +35,7 @@ namespace PresentScreenings.TableView
         public static TimeSpan EarliestTime => new TimeSpan(ScreeningsTableView.FirstDisplayedHour, 0, 0);
         public static TimeSpan EarlyTime => new TimeSpan(ScreeningsTableView.FirstDisplayedHour + 1, 0, 0);
         public static TimeSpan LatestTime => new TimeSpan(ScreeningsTableView.LastDisplayedHour - 1, 59, 0);
+        public List<Screening> ScreeningsWithWarnings { get; private set; }
         #endregion
 
         #region Computed Properties
@@ -185,13 +186,38 @@ namespace PresentScreenings.TableView
         {
             _mainView.HeadersView.DrawCurrDay(_plan);
             SetWindowTitle();
+            SetToolbarItemsStatus();
             InitializeScreeningControls();
-            ReloadScreeningsView();
+            ReloadScreeningsView(false);
         }
 
         private void InitializeScreeningControls()
         {
             _controlByScreening = new Dictionary<Screening, DaySchemaScreeningControl> { };
+        }
+
+        private void SetToolbarItemsStatus()
+        {
+            var toolBar = View.Window.Toolbar;
+            var items = toolBar.VisibleItems;
+            foreach (var item in items)
+            {
+                if (item is ActivatableToolbarItem activatableItem)
+                {
+                    switch (activatableItem.Identifier)
+                    {
+                        case "PreviousDay":
+                            activatableItem.Active = Plan.NextDayExists(-1);
+                            break;
+                        case "NextDay":
+                            activatableItem.Active = Plan.NextDayExists(1);
+                            break;
+                        case "Alerts":
+                            UpdateWarnings();
+                            break;
+                    }
+                }
+            }
         }
 
         private void DisposeColorLabels()
@@ -317,9 +343,13 @@ namespace PresentScreenings.TableView
             return RunningPopupsCount == 0;
         }
 
-        public void ReloadScreeningsView()
+        public void ReloadScreeningsView(bool updateWarnings=true)
         {
             TableView.ReloadData();
+            if (updateWarnings)
+            {
+                UpdateWarnings();
+            }
         }
 
         public void AddScreeningControl(Screening screening, DaySchemaScreeningControl control)
@@ -329,6 +359,26 @@ namespace PresentScreenings.TableView
                 _controlByScreening.Remove(screening);
             }
             _controlByScreening.Add(screening, control);
+        }
+
+        public void UpdateWarnings()
+        {
+            // Update the warning status for all screenings.
+            foreach (var screening in ScreeningsPlan.Screenings)
+            {
+                UpdateWarning(screening);
+            }
+
+            // Set the list of screenings with warnings.
+            ScreeningsWithWarnings = ScreeningsPlan.Screenings
+                .Where(s => s.Warning != ScreeningInfo.Warning.NoWarning)
+                .ToList();
+
+            // Update the Alerts toolbar item.
+            int warningCount = ScreeningsWithWarnings.Count();
+            ActivatableToolbarItem activatableItem = App.MainWindowController.AlertToolbarItem;
+            activatableItem.Active = warningCount > 0;
+            activatableItem.Label = ControlsFactory.GlobalWarningsString(warningCount);
         }
 
         static public NSCellStateValue GetNSCellStateValue(bool shouldBeOn)
@@ -795,7 +845,7 @@ namespace PresentScreenings.TableView
             Screening screening = _plan.CurrScreening;
             screening.TicketsBought = !screening.TicketsBought;
             UpdateAttendanceStatus(screening);
-            ReloadScreeningsView();
+            ReloadScreeningsView(false);
         }
 
         public void ToggleSoldOut()
@@ -803,7 +853,7 @@ namespace PresentScreenings.TableView
             Screening screening = _plan.CurrScreening;
             screening.SoldOut = !screening.SoldOut;
             UpdateAttendanceStatus(screening);
-            ReloadScreeningsView();
+            ReloadScreeningsView(false);
         }
 
         public void ToggleAttendance(string filmfan)
@@ -854,7 +904,7 @@ namespace PresentScreenings.TableView
         }
 
         [Action("ShowFilmRatings:")]
-        internal void ShowFilmRating(NSObject sender)
+        internal void ShowFilmRatings(NSObject sender)
         {
             PerformSegue("FilmRatingSegue", sender);
         }
