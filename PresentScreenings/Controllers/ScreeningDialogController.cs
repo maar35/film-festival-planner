@@ -2,11 +2,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using Foundation;
+using System.Text;
 using AppKit;
 using CoreGraphics;
-using System.Text;
+using Foundation;
 
 namespace PresentScreenings.TableView
 {
@@ -26,17 +25,25 @@ namespace PresentScreenings.TableView
         private const float _labelHeight = ControlsFactory.StandardLabelHeight;
         private const float _imageButtonWidth = ControlsFactory.StandardImageButtonWidth;
         private const float _buttonHeight = ControlsFactory.StandardButtonHeight;
-        private const float _yControlsDistance = ControlsFactory.VerticalPixelsBetweenControls;
+        private const float _yBetweenControls = ControlsFactory.VerticalPixelsBetweenControls;
         private const float _subsectionLabelWidth = ControlsFactory.SubsectionLabelWidth;
         private const float _warningLabelHeight = _labelHeight + 2;
         private const float _warningLabelVerticalPositionCorrection = 6;
+        private const float _warningImageSide = _warningLabelHeight;
         private const float _ratingBoxHeight = _labelHeight - 4;
         private const float _ratingBoxWidth = _labelHeight;
 
         #endregion
 
         #region Private Members
-        private nfloat _yCurr;
+        private nfloat _contentWidth;
+        private CGRect _warningImageRect;
+        private CGRect _warningLabelFrame;
+        private CGPoint _webSiteButtonOrigin;
+        private CGRect _ratingFrame;
+        private CGRect _attendanceFrame;
+        private nfloat _fanControlsShift;
+        private CGRect _scrollViewFrame;
         private Screening _screening;
         private DaySchemaScreeningControl _senderControl;
         private static ViewController _presentor;
@@ -44,6 +51,7 @@ namespace PresentScreenings.TableView
         private FilmScreeningControl _screeningInfoControl;
         private Dictionary<string, AttendanceCheckbox> _attendanceCheckboxByFilmFan;
         private NSTextField _warningLabel = null;
+        private NSImageView _warningImageView = null;
         private NSView _sampleSubView;
         #endregion
 
@@ -97,6 +105,9 @@ namespace PresentScreenings.TableView
             // Set window delegate.
             View.Window.Delegate = new ScreeningRelatedWindowDelegate(View.Window, CloseDialog);
 
+            // Set up the dialog layoput.
+            SetUpLayout();
+
             // Populate the controls.
             SetControlValues();
 
@@ -105,6 +116,7 @@ namespace PresentScreenings.TableView
             CreateFilmFanControls();
             CreateScreeningsScrollView();
             CreateWarningLabel();
+            CreateWarningImage();
 
             // Disable Resizing.
             DisableResizing(this, _sampleSubView);
@@ -204,6 +216,50 @@ namespace PresentScreenings.TableView
             return builder.ToString();
         }
 
+        private void SetUpLayout()
+        {
+            _contentWidth = View.Frame.Width - 2 * _xMargin;
+
+            // Set up frames for film fan controls.
+            var xRating = _comboboxRating.Frame.X;
+            var yRating = _comboboxRating.Frame.Y;
+            _ratingFrame = new CGRect(xRating, yRating, _ratingBoxWidth, _ratingBoxHeight);
+
+            _attendanceFrame = _checkboxIAttend.Frame;
+            _attendanceFrame.Y = _checkboxIAttend.Frame.Y - _yBetweenLabels;
+
+            // The original rating combo box and attendance checkbox can be
+            // disposed now.
+            _comboboxRating.RemoveFromSuperview();
+            _comboboxRating.Dispose();
+            _checkboxIAttend.RemoveFromSuperview();
+            _checkboxIAttend.Dispose();
+
+            // Set up a frame for the screenings scroll view.
+            _fanControlsShift = _ratingFrame.Height + _yBetweenControls;
+            var fanCount = ScreeningInfo.FilmFans.Count;
+            var fanControlsHeight = fanCount * _fanControlsShift - _yBetweenControls;
+            var yScrollerTop = _ratingFrame.Y - fanControlsHeight - _yBetweenControls;
+            var scrollerHeight = yScrollerTop - _yBetweenViews - _buttonHeight - _yMargin;
+            var yScroller = yScrollerTop - scrollerHeight;
+            _scrollViewFrame = new CGRect(_xMargin, yScroller, _contentWidth, scrollerHeight);
+
+            // Set up warning image frame.
+            var yImage = _closeButton.Frame.Y + _warningLabelVerticalPositionCorrection;
+            _warningImageRect = new CGRect(_xMargin, yImage, _warningImageSide, _warningImageSide);
+
+            // Set up warning label frame.
+            var yLabel = yImage;
+            var width = _contentWidth - _closeButton.Frame.Width - _imageButtonWidth - _warningImageSide - _xBetweenLabels;
+            var xLabel = _xMargin + _warningImageSide + _xBetweenLabels;
+            _warningLabelFrame = new CGRect(xLabel, yLabel, width, _warningLabelHeight);
+
+            // Set up origin for button to visit film site.
+            var xWeb = _closeButton.Frame.X - _imageButtonWidth;
+            var yWeb = _closeButton.Frame.Y;
+            _webSiteButtonOrigin = new CGPoint(xWeb, yWeb);
+        }
+
         private void CreateSubsectionLabel()
         {
             var frame = _labelTitle.Frame;
@@ -215,47 +271,20 @@ namespace PresentScreenings.TableView
 
         private void CreateFilmFanControls()
         {
-            // Clone the Rating combo box.
-            var ratingBoxFrame = _comboboxRating.Frame;
-            ratingBoxFrame.Width = _ratingBoxWidth;
-            ratingBoxFrame.Height = _ratingBoxHeight;
+            // Set the font for the Attendance checkboxes.
+            var checkBoxFont = _checkboxTicketsBought.Font;
 
-            // Dispose the original Rating combo box.
-            _comboboxRating.RemoveFromSuperview();
-            _comboboxRating.Dispose();
-
-            // Initialze values to construct the Attendance checkboxes.
-            var checkBoxFrame = _checkboxIAttend.Frame;
-            var checkBoxFont = _checkboxIAttend.Font;
-            var checkBoxShift = ratingBoxFrame.Y - checkBoxFrame.Y + _yBetweenLabels;
-
-            // Dispose the original Attendance check box.
-            _checkboxIAttend.RemoveFromSuperview();
-            _checkboxIAttend.Dispose();
-
-            // Initialize the vertical postion of run-time created controls.
-            _yCurr = ratingBoxFrame.Y;
-
-            nfloat yDelta = 0;
+            // Create the fan controls.
             foreach (var filmfan in ScreeningInfo.FilmFans)
             {
-                // Update the vertical position.
-                _yCurr -= yDelta;
-                if (yDelta == 0)
-                {
-                    yDelta = ratingBoxFrame.Height + _yControlsDistance;
-                }
-
                 // Create the Rating box for this film fan.
-                ratingBoxFrame.Y = _yCurr;
-                var fanRatingLabel = ControlsFactory.NewStandardLabel(ratingBoxFrame, true);
+                var fanRatingLabel = ControlsFactory.NewStandardLabel(_ratingFrame, true);
                 fanRatingLabel.Alignment = NSTextAlignment.Right;
                 fanRatingLabel.StringValue = ViewController.GetFilmFanFilmRating(_screening.FilmId, filmfan).ToString();
                 View.AddSubview(fanRatingLabel);
 
                 // Create the Attendance checkbox for this film fan.
-                checkBoxFrame.Y = _yCurr - checkBoxShift;
-                var fanCheckbox = new AttendanceCheckbox(checkBoxFrame)
+                var fanCheckbox = new AttendanceCheckbox(_attendanceFrame)
                 {
                     Title = filmfan,
                     Font = checkBoxFont,
@@ -266,6 +295,10 @@ namespace PresentScreenings.TableView
 
                 // Link the checkbox to the film fan.
                 _attendanceCheckboxByFilmFan.Add(filmfan, fanCheckbox);
+
+                // Shift the frames.
+                _ratingFrame.Y -= _fanControlsShift;
+                _attendanceFrame.Y -= _fanControlsShift;
             }
         }
 
@@ -276,16 +309,11 @@ namespace PresentScreenings.TableView
 
             // Create the screenings view.
             var xScreenings = screenings.Count * (_labelHeight + _yBetweenLabels);
-            var contentWidth = this.View.Frame.Width - 2 * _xMargin;
-            var screeningsViewFrame = new CGRect(0, 0, contentWidth, xScreenings);
+            var screeningsViewFrame = new CGRect(0, 0, _contentWidth, xScreenings);
             var screeningsView = new NSView(screeningsViewFrame);
 
             // Create the scroll view.
-            _yCurr -= _yBetweenViews;
-            var scrollViewHeight = _yCurr - _yBetweenViews - _buttonHeight - _yMargin;
-            _yCurr -= scrollViewHeight;
-            var scrollViewFrame = new CGRect(_xMargin, _yCurr, contentWidth, scrollViewHeight);
-            var scrollView = ControlsFactory.NewStandardScrollView(scrollViewFrame, screeningsView, true);
+            var scrollView = ControlsFactory.NewStandardScrollView(_scrollViewFrame, screeningsView, true);
             View.AddSubview(scrollView);
 
             // Display the screenings.
@@ -300,23 +328,21 @@ namespace PresentScreenings.TableView
 
         private void CreateVisitFilmWebsiteButton()
         {
-            // Set the position.
-            var xCurr = _closeButton.Frame.X - _imageButtonWidth;
-            var yCurr = _closeButton.Frame.Y;
-
-            // Create the Website Button.
-            var websiteButton = ControlsFactory.NewVisitWebsiteButton(xCurr, yCurr, CurrentFilm);
+            var websiteButton = ControlsFactory.NewVisitWebsiteButton(_webSiteButtonOrigin, CurrentFilm);
             websiteButton.Enabled = true;
             View.AddSubview(websiteButton);
         }
 
         private void CreateWarningLabel()
         {
-            var yLabel = _closeButton.Frame.Y + _warningLabelVerticalPositionCorrection;
-            var width = View.Frame.Width - 2 * _xMargin - _closeButton.Frame.Width - _imageButtonWidth;
-            var warningBox = new CGRect(_xMargin, yLabel, width, _warningLabelHeight);
-            _warningLabel = ControlsFactory.NewScreeningWarningLabel(warningBox, _screening);
+            _warningLabel = ControlsFactory.NewScreeningWarningLabel(_warningLabelFrame, _screening);
             View.AddSubview(_warningLabel);
+        }
+
+        private void CreateWarningImage()
+        {
+            _warningImageView = ControlsFactory.NewWarningImageView(_warningImageRect);
+            ControlsFactory.UpdateWarningImage(View, _warningImageView, _screening);
         }
         #endregion
 
@@ -378,6 +404,7 @@ namespace PresentScreenings.TableView
         {
             Presentor.UpdateWarning(_screening);
             ControlsFactory.UpdateScreeningWarningLabel(_warningLabel, _screening);
+            ControlsFactory.UpdateWarningImage(View, _warningImageView, _screening);
         }
 
         public void UpdateScreeningInfo()

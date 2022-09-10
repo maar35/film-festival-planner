@@ -300,7 +300,7 @@ namespace PresentScreenings.TableView
 
         private void UncombineScreeningTitles(UncombineTitlesEventArgs e)
         {
-            // Get the screenings from the event args.
+            // Get the screenings from the event arguments.
             List<Screening> screenings = e.Screenings;
 
             // Restore the original film ID in each of the given screenings.

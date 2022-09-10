@@ -2,6 +2,8 @@
 using System;
 using AppKit;
 using CoreGraphics;
+using CoreText;
+using Foundation;
 
 namespace PresentScreenings.TableView
 {
@@ -39,6 +41,18 @@ namespace PresentScreenings.TableView
         private static readonly NSColor ClickPadTextColorUnselected = NSColor.Red;
         private static readonly NSColor soldOutColorSelected = NSColor.FromRgb(219, 176, 38);
         private static readonly NSColor soldOutColorUnselected = NSColor.FromRgb(176, 79, 38);
+        private static readonly NSColor _warningBackgroundColor = NSColor.FromRgb(255, 242, 0);
+        private static CTStringAttributes _stringAttributes;
+        private static string _automaticallyPlannedSymbol = ControlsFactory.AutomaticallyPlannedSymbol;
+        private const float _clickpadMinSideToDrawAll = ControlsFactory.ClickpadMinSideToDrawAllElements;
+        private const float _clickpadRightMargin = ControlsFactory.ClickpadRightMargin;
+        private const float _clickpadTopMargin = ControlsFactory.ClickpadTopMargin;
+        private const float _labelLineHeight = ControlsFactory.LabelLineHeight;
+        private const float _progressNeedleMargin = 2;
+        #endregion
+
+        #region Properties
+        public static NSColor WarningBackgroundColor => _warningBackgroundColor;
         #endregion
 
         #region Constructors
@@ -70,7 +84,7 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
-        #region Public members
+        #region Public Methods working with colors
         public static void SetScreeningColor(Screening screening, NSTextField label)
         {
             var status = screening.Status;
@@ -120,6 +134,63 @@ namespace PresentScreenings.TableView
         {
             return selected ? soldOutColorSelected : soldOutColorUnselected;
         }
+        #endregion
+
+        #region Public Methods that draw on click pads
+        public static void DrawStandardClickpad(CGContext context, Screening screening, CGRect frame, bool selected)
+        {
+            // Assume the frame is a square.
+            var side = frame.Height;
+
+            // Color the control surface.
+            DrawClickPad(context, frame, selected);
+
+            // Draw a frame if something's wrong with the tickets.
+            if (ScreeningInfo.TicketStatusNeedsAttention(screening))
+            {
+                DrawTicketAvalabilityFrame(context, screening, side);
+            }
+
+            // Draw a progress bar if the screening is on-demand.
+            if (screening is OnDemandScreening onDemandScreening)
+            {
+                DrawOnDemandAvailabilityStatus(context, onDemandScreening, side, selected);
+            }
+
+            // Draw the Sold Out symbol.
+            if (screening.SoldOut)
+            {
+                DrawSoldOutSymbol(context, selected, frame);
+            }
+
+            // Draw a warning symbol if feasible.
+            if (screening.Warning != ScreeningInfo.Warning.NoWarning)
+            {
+                DrawWarningMiniature(context, side);
+            }
+
+            // Switch context to text drawing.
+            InitializeCoreText(context, selected, side);
+
+            // Draw the Automatically Planned symbol.
+            if (screening.AutomaticallyPlanned)
+            {
+                DrawAutomaticallyPlannedSymbol(context, screening, side);
+            }
+
+            // Draw the rating of the film.
+            DrawRating(context, screening, side);
+        }
+
+        private static void DrawClickPad(CGContext context, CGRect clickRect, bool Selected)
+        {
+            var gpath = new CGPath();
+            gpath.AddRect(clickRect);
+            ClickPadBackgroundColor(Selected).SetFill();
+            gpath.CloseSubpath();
+            context.AddPath(gpath);
+            context.DrawPath(CGPathDrawingMode.Fill);
+        }
 
         public static void DrawSoldOutSymbol(CGContext g, bool selected, CGRect rect)
         {
@@ -168,7 +239,7 @@ namespace PresentScreenings.TableView
         {
             // Establish some base dimensions.
             const int maxDaysInRuler = 5;
-            const int margin = 2;
+            var margin = _progressNeedleMargin;
             nfloat w = side - 2 * margin;
             nfloat h = side - 2 * margin;
             nfloat x = margin;
@@ -214,14 +285,100 @@ namespace PresentScreenings.TableView
                     {
                         needlePath.AddLines(new CGPoint[]
                         {
-                    new CGPoint(i*wPeriod, y + h*1/16),
-                    new CGPoint(i*wPeriod, y + h*3/16)
+                            new CGPoint(i*wPeriod, y + h*1/16),
+                            new CGPoint(i*wPeriod, y + h*3/16)
                         });
                     }
                     context.AddPath(needlePath);
                 }
             }
             context.DrawPath(CGPathDrawingMode.FillStroke);
+        }
+
+        public static void DrawWarningMiniature(CGContext context, nfloat side)
+        {
+            if (side >= _clickpadMinSideToDrawAll)
+            {
+                nfloat x = side * 1 / 16;
+                nfloat y = side * 4 / 16;
+                context.SetLineWidth(1);
+                NSColor.Black.SetStroke();
+                WarningBackgroundColor.SetFill();
+                var trianglePath = new CGPath();
+                trianglePath.AddLines(new CGPoint[]{
+                    new CGPoint(x + side*1/16, y + side*1/16),
+                    new CGPoint(x + side*4/16, y + side*7/16),
+                    new CGPoint(x + side*7/16, y + side*1/16)
+                });
+                trianglePath.CloseSubpath();
+                context.AddPath(trianglePath);
+                context.DrawPath(CGPathDrawingMode.FillStroke);
+                var barPath = new CGPath();
+                barPath.AddLines(new CGPoint[]{
+                    new CGPoint(x + side*4/16, y + side*2/16),
+                    new CGPoint(x + side*4/16, y + side*5/16)
+                });
+                barPath.CloseSubpath();
+                context.AddPath(barPath);
+                context.DrawPath(CGPathDrawingMode.Stroke);
+            }
+        }
+
+        public static void InitializeCoreText(CGContext context, bool selected, nfloat side)
+        {
+            var yShift = 3;
+            context.TranslateCTM(-1, yShift);
+            NSColor textColor = ClickPadTextColor(selected);
+            context.SetTextDrawingMode(CGTextDrawingMode.Fill);
+            context.SetFillColor(textColor.CGColor);
+            _stringAttributes = new CTStringAttributes
+            {
+                ForegroundColorFromContext = true,
+                Font = ControlsFactory.StandardCtBoldFont,
+            };
+        }
+
+        public static void DrawRating(CGContext context, Screening screening, nfloat side)
+        {
+            if (side >=_clickpadMinSideToDrawAll)
+            {
+                var film = ViewController.GetFilmById(screening.FilmId);
+                var rating = ViewController.GetMaxRating(film);
+                if (rating.IsGreaterOrEqual(FilmRating.LowestSuperRating) || rating.Equals(FilmRating.Unrated))
+                {
+                    var x = side - _clickpadRightMargin;
+                    var y = side - _clickpadTopMargin - _labelLineHeight;
+                    DrawText(context, rating.ToString(), x, y);
+                }
+            }
+        }
+
+        public static void DrawAutomaticallyPlannedSymbol(CGContext context, Screening screening, nfloat side)
+        {
+            if (side >= _clickpadMinSideToDrawAll)
+            {
+                var x = side - _clickpadRightMargin;
+                var yUnmovable = side - _clickpadTopMargin - 2 * _labelLineHeight;
+                var yMovable = side * 4 / 16;
+                var y = screening is OnDemandScreening ? yMovable : yUnmovable;
+                DrawText(context, _automaticallyPlannedSymbol, x, y);
+            }
+            else
+            {
+                var x = side / 3;
+                var y = side - _labelLineHeight;
+                DrawText(context, _automaticallyPlannedSymbol, x, y);
+            }
+        }
+
+        public static void DrawText(CGContext context, string text, nfloat x, nfloat y)
+        {
+            context.TextPosition = new CGPoint(x, y);
+            var attributedString = new NSAttributedString(text, _stringAttributes);
+            using (var textLine = new CTLine(attributedString))
+            {
+                textLine.Draw(context);
+            }
         }
         #endregion
     }

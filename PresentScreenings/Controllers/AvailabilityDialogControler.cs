@@ -76,7 +76,7 @@ namespace PresentScreenings.TableView
             PopulateDialogView();
 
             // Set constraints of the in-code generated UI elements.
-            Presentor.DisableResizing(this, _sampleView);
+            GoToScreeningDialog.DisableResizing(this, _sampleView);
         }
 
         public override void ViewWillDisappear()

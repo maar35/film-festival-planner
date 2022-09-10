@@ -21,6 +21,9 @@ namespace PresentScreenings.TableView
 		[Outlet]
 		Foundation.NSObject _previousDayToolbarItem { get; set; }
 
+		[Outlet]
+		AppKit.NSToolbarItem _saveToolbarItem { get; set; }
+
 		[Action ("ShowFilmRatings:")]
 		partial void ShowFilmRatings (Foundation.NSObject sender);
 
@@ -29,9 +32,9 @@ namespace PresentScreenings.TableView
 		
 		void ReleaseDesignerOutlets ()
 		{
-			if (_previousDayToolbarItem != null) {
-				_previousDayToolbarItem.Dispose ();
-				_previousDayToolbarItem = null;
+			if (_alerToolbarItem != null) {
+				_alerToolbarItem.Dispose ();
+				_alerToolbarItem = null;
 			}
 
 			if (_nextDayToolbarItem != null) {
@@ -39,9 +42,14 @@ namespace PresentScreenings.TableView
 				_nextDayToolbarItem = null;
 			}
 
-			if (_alerToolbarItem != null) {
-				_alerToolbarItem.Dispose ();
-				_alerToolbarItem = null;
+			if (_saveToolbarItem != null) {
+				_saveToolbarItem.Dispose ();
+				_saveToolbarItem = null;
+			}
+
+			if (_previousDayToolbarItem != null) {
+				_previousDayToolbarItem.Dispose ();
+				_previousDayToolbarItem = null;
 			}
 		}
 	}

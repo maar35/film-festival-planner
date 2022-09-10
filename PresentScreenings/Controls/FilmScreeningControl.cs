@@ -56,54 +56,11 @@ namespace PresentScreenings.TableView
             base.DrawRect(dirtyRect);
 
             // Use Core Graphic routines to draw our UI
-			using (CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
+            using (CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
             {
-                // Color the control surface
-                FillControlRect(context);
-
-                // Draw a frame if something's wrong with the tickets
-                if (ScreeningInfo.TicketStatusNeedsAttention(_screening))
-                {
-					ColorView.DrawTicketAvalabilityFrame(context, _screening, Frame.Width);
-                }
-
-                // Draw a progress bar if the screening is on-demand.
-                if (_screening is OnDemandScreening onDemandScreening)
-                {
-                    ColorView.DrawOnDemandAvailabilityStatus(context, onDemandScreening, Frame.Width, Selected);
-                }
-
-                // Draw Sold Out Symbol
-                if (_screening.SoldOut)
-                {
-                    ColorView.DrawSoldOutSymbol(context, Selected, Frame);
-                }
-
-                // Draw the Automatically Planned symbol.
-                if (_screening.AutomaticallyPlanned)
-                {
-                    DaySchemaScreeningControl.InitializeCoreText(context, Selected);
-                    DaySchemaScreeningControl.DrawText(
-                        context,
-                        DaySchemaScreeningControl.AutomaticallyPlannedSymbol,
-                        Frame.Width / 3,
-                        _yVisualCorrection + (Frame.Height - ControlsFactory.StandardFontSize) / 2);
-                }
+                CGRect clickpadFrame = new CGRect(0, 0, Frame.Width, Frame.Height);
+                ColorView.DrawStandardClickpad(context, _screening, clickpadFrame, Selected);
             }
-        }
-        #endregion
-
-        #region Private Methods
-        void FillControlRect(CGContext g)
-        {
-            var path = new CGPath();
-            nfloat w = Frame.Width;
-            nfloat h = Frame.Height;
-            path.AddRect(new CGRect(0, 0, w, h));
-            ColorView.ClickPadBackgroundColor(Selected).SetFill();
-            path.CloseSubpath();
-            g.AddPath(path);
-            g.DrawPath(CGPathDrawingMode.Fill);
         }
         #endregion
 

@@ -17,6 +17,7 @@ namespace PresentScreenings.TableView
 		public ActivatableToolbarItem PreviousDayToolbarItem => (ActivatableToolbarItem)_previousDayToolbarItem;
 		public ActivatableToolbarItem NextDayToolbarItem => (ActivatableToolbarItem)_nextDayToolbarItem;
 		public ActivatableToolbarItem AlertToolbarItem => (ActivatableToolbarItem)_alerToolbarItem;
+		public NSToolbarItem SaveToolbarItem => _saveToolbarItem;
 		#endregion
 
 		#region Constructors
@@ -38,27 +39,34 @@ namespace PresentScreenings.TableView
 			PreviousDayToolbarItem.Active = App.Controller.Plan.NextDayExists(-1);
 			NextDayToolbarItem.Action = new ObjCRuntime.Selector("NavigateToNextDay:");
 			NextDayToolbarItem.Active = App.Controller.Plan.NextDayExists(1);
+			SaveToolbarItem.Action = new ObjCRuntime.Selector("SaveData:");
 			App.Controller.UpdateWarnings();
 		}
-		#endregion
+        #endregion
 
-		#region Custom Actions
-		partial void ShowScreeningInfo(Foundation.NSObject sender)
+        #region Custom Actions
+        partial void ShowScreeningInfo(Foundation.NSObject sender)
         {
 			App.Controller.ShowScreeningInfo();
         }
 
 		[Action("NavigateToPreviousDay:")]
-		void NavigateToPreviousDay(NSObject sender)
+        private void NavigateToPreviousDay(NSObject sender)
 		{
 			App.Controller.SetNextDay(-1);
 		}
 
 		[Action("NavigateToNextDay:")]
-		void NavigateToNextDay(NSObject sender)
+        private void NavigateToNextDay(NSObject sender)
         {
 			App.Controller.SetNextDay(1);
 		}
+
+		[Action("SaveData:")]
+		private void SaveData(NSObject sender)
+        {
+			App.RunSaveDialog();
+        }
 		#endregion
 	}
 }

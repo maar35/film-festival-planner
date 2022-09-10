@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using AppKit;
 using CoreAnimation;
 using CoreGraphics;
 using CoreText;
-using Foundation;
 
 namespace PresentScreenings.TableView
 {
@@ -13,6 +11,7 @@ namespace PresentScreenings.TableView
     {
         #region Public Constants
         public const float HorizontalMargin = 20;
+        public const float SmallHorizontalMargin = 5;
         public const float SmallVerticalMargin = 8;
         public const float BigVerticalMargin = 12;
         public const float HorizontalPixelsBetweenControls = 12;
@@ -20,20 +19,29 @@ namespace PresentScreenings.TableView
         public const float VerticalPixelsBetweenControls = 4;
         public const float VerticalPixelsBetweenLabels = 2;
         public const float VerticalPixelsBetweenViews = 12;
+        public const float VerticalTextOffset = 3;
+        public const float WideVerticalPixelsBetweenLabels = 8;
         public const float StandardButtonWidth = 94;
         public const float StandardButtonHeight = 32;
         public const float StandardLabelWidth = 128;
         public const float StandardLabelHeight = 19;
         public const float StandardLineHeight = 17;
+        public const float LabelLineHeight = 16;
+        public const float BigScreeningLabelHeight = 40;
         public const float SmallControlWidth = 64;
+        public const float StandardImageSide = 48;
         public const float StandardButtonImageSide = 20;
         public const float StandardImageButtonWidth = 47;
         public const float SubsectionLabelWidth = 72;
+        public const float ClickpadMinSideToDrawAllElements = 32;
+        public const float ClickpadRightMargin = 16;
+        public const float ClickpadTopMargin = 1;
         public const string EscapeKey = "\x1b";
         public const string EnterKey = "\r";
         #endregion
 
         #region Properties
+        public static string AutomaticallyPlannedSymbol => "𝛑"; // MATHEMATICAL BOLD SMALL PI = 𝛑
         public static string ReloadButtonToolTip => "Reload ratings";
         public static nfloat StandardFontSize => NSFont.SystemFontSize;
         public static NSFont StandardFont => NSFont.SystemFontOfSize(StandardFontSize);
@@ -53,7 +61,7 @@ namespace PresentScreenings.TableView
             StringByWarning = new Dictionary<ScreeningInfo.Warning, string> { };
             StringByWarning.Add(ScreeningInfo.Warning.NoWarning, "No warning");
             StringByWarning.Add(ScreeningInfo.Warning.SameMovie, "Attending the same film more than once");
-            StringByWarning.Add(ScreeningInfo.Warning.TimeOverlap, "Screening overlaps an attended screening");
+            StringByWarning.Add(ScreeningInfo.Warning.TimeOverlap, "Overlap with an attended screening");
             StringByWarning.Add(ScreeningInfo.Warning.Unavailable, $"{ScreeningInfo.Me} is not available this day");
         }
         #endregion
@@ -91,13 +99,22 @@ namespace PresentScreenings.TableView
         public static NSTextField NewScreeningWarningLabel(CGRect frame, Screening screening)
         {
             var label = NewStandardLabel(frame);
-            //var image = NSImage.ImageNamed("NSCaution");
             label.Font = StandardFont;
             label.Alignment = NSTextAlignment.Center;
             label.Bordered = false;
             UpdateScreeningWarningLabel(label, screening);
 
             return label;
+        }
+
+        public static NSImageView NewWarningImageView(CGRect frame)
+        {
+            var imageView = new NSImageView(frame);
+            var warningImage = NSImage.ImageNamed("NSCaution");
+            imageView.Image = warningImage;
+            imageView.ImageScaling = NSImageScale.ProportionallyUpOrDown;
+
+            return imageView;
         }
 
         public static NSButton NewStandardButton(CGRect frame)
@@ -130,9 +147,9 @@ namespace PresentScreenings.TableView
             return websiteButton;
         }
 
-        public static NSButton NewVisitWebsiteButton(nfloat x, nfloat y, Film film)
+        public static NSButton NewVisitWebsiteButton(CGPoint origin, Film film)
         {
-            return NewVisitWebsiteButton((float)x, (float)y, film);
+            return NewVisitWebsiteButton((float)origin.X, (float)origin.Y, film);
         }
 
         public static NSButton NewCheckbox(CGRect frame)
@@ -196,14 +213,32 @@ namespace PresentScreenings.TableView
             if (screening.Warning == ScreeningInfo.Warning.NoWarning)
             {
                 label.StringValue = string.Empty;
-                label.TextColor = NSColor.Black;
                 label.BackgroundColor = NSColor.WindowBackground;
+                label.TextColor = NSColor.Black;
             }
             else
             {
                 label.StringValue = ScreeningWarningString(screening);
-                label.TextColor = NSColor.Blue;
-                label.BackgroundColor = NSColor.SystemOrange;
+                label.BackgroundColor = ColorView.WarningBackgroundColor;
+                label.TextColor = NSColor.Black;
+            }
+        }
+
+        public static void UpdateWarningImage(NSView superView, NSImageView imageView, Screening screening)
+        {
+            if (screening.Warning == ScreeningInfo.Warning.NoWarning)
+            {
+                if (imageView.Superview != null)
+                {
+                    imageView.RemoveFromSuperview();
+                }
+            }
+            else
+            {
+                if (imageView.Superview == null)
+                {
+                    superView.AddSubview(imageView);
+                }
             }
         }
 

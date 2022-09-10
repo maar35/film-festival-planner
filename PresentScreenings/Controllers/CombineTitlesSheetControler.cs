@@ -78,7 +78,7 @@ namespace PresentScreenings.TableView
             CreateTitlesScrollView();
 
             // Disable resizing.
-            Presentor.DisableResizing(this, _sampleView);
+            GoToScreeningDialog.DisableResizing(this, _sampleView);
         }
 
         public override void ViewWillDisappear()

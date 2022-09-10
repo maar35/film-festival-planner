@@ -21,10 +21,6 @@ namespace PresentScreenings.TableView
         {
         }
 
-        public ActivatableToolbarItem(string title) : base (title)
-        {
-        }
-
         public override void Validate()
         {
             base.Validate();

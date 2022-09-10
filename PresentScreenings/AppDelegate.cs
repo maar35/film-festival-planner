@@ -180,16 +180,8 @@ namespace PresentScreenings.TableView
             // Write screenings summary.
             WriteScreeningsSummary(directory);
         }
-        #endregion
 
-        #region Private Methods
-        private static string GetDocumentsPath()
-        {
-            string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-            return homeFolder + $"/Documents/Film/{Festival}/{Festival}{FestivalYear}/FestivalPlan";
-        }
-
-        private void RunSaveDialog()
+        public void RunSaveDialog()
         {
             // Create the Save alert.
             string alertTitle = "Save Festival Data";
@@ -212,6 +204,14 @@ namespace PresentScreenings.TableView
             {
                 SaveFestivalData();
             }
+        }
+        #endregion
+
+        #region Private Methods
+        private static string GetDocumentsPath()
+        {
+            string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            return homeFolder + $"/Documents/Film/{Festival}/{Festival}{FestivalYear}/FestivalPlan";
         }
 
         private void SaveFestivalData()

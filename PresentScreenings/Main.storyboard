@@ -19,6 +19,19 @@
             </objects>
             <point key="canvasLocation" x="848" y="-447"/>
         </scene>
+        <!--Warnings-->
+        <scene sceneID="zaB-ZY-8HB">
+            <objects>
+                <viewController title="Warnings" id="aUd-aq-JEN" customClass="WarningsDialogControler" sceneMemberID="viewController">
+                    <view key="view" id="nak-2m-ZLm">
+                        <rect key="frame" x="0.0" y="0.0" width="450" height="442"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                    </view>
+                </viewController>
+                <customObject id="gNi-Xh-dnz" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="82" y="-518"/>
+        </scene>
         <!--Application-->
         <scene sceneID="JPo-4y-FX3">
             <objects>
@@ -424,6 +437,12 @@ DQ
                                                 <action selector="ShowScreeningInfo:" target="Voe-Tx-rLC" id="Kna-6U-yif"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem title="Show Screening Warnings" tag="202" keyEquivalent="w" id="cS1-gW-lMD">
+                                            <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
+                                            <connections>
+                                                <segue destination="aUd-aq-JEN" kind="modal" identifier="WarningsSegue" id="A9d-mW-jFP"/>
+                                            </connections>
+                                        </menuItem>
                                         <menuItem isSeparatorItem="YES" id="KFc-Ms-vYF"/>
                                         <menuItem title="Tickets Bought" tag="204" keyEquivalent="t" id="MON-Uj-84c">
                                             <connections>
@@ -453,7 +472,7 @@ DQ
                                         <menuItem title="Analyser" tag="602" keyEquivalent="a" id="PcA-wG-doO">
                                             <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
                                             <connections>
-                                                <segue destination="2J9-kI-94e" kind="modal" id="503-hk-Pu3"/>
+                                                <segue destination="2J9-kI-94e" kind="modal" identifier="AnaliserSeque" id="503-hk-Pu3"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem title="Fan Availability" tag="603" keyEquivalent="f" id="Yml-iL-gya">
@@ -629,17 +648,19 @@ DQ
                                     <size key="minSize" width="32" height="25"/>
                                     <size key="maxSize" width="32" height="25"/>
                                 </toolbarItem>
-                                <toolbarItem implicitItemIdentifier="AD973818-8200-424E-9342-FD000255BE7B" explicitItemIdentifier="Alerts" label="Alerts" paletteLabel="Alerts" tag="31" image="NSCaution" bordered="YES" id="CRw-L3-CgV" customClass="ActivatableToolbarItem">
+                                <toolbarItem implicitItemIdentifier="AD973818-8200-424E-9342-FD000255BE7B" explicitItemIdentifier="Alerts" label="Alerts" paletteLabel="Alerts" tag="31" image="NSCaution" bordered="YES" id="CRw-L3-CgV" userLabel="Alerts Toolbar Item" customClass="ActivatableToolbarItem">
                                     <size key="minSize" width="32" height="25"/>
                                     <size key="maxSize" width="32" height="25"/>
+                                    <connections>
+                                        <segue destination="aUd-aq-JEN" kind="modal" identifier="ToolbarToWarningsSegue" id="iOi-9I-5EY"/>
+                                    </connections>
                                 </toolbarItem>
-                                <toolbarItem implicitItemIdentifier="2D91F8D7-77E5-4F05-B681-40370846ACEA" label="Save" paletteLabel="Save" tag="11" image="internaldrive.fill" catalog="system" bordered="YES" id="5A9-2S-gQh">
+                                <toolbarItem implicitItemIdentifier="2D91F8D7-77E5-4F05-B681-40370846ACEA" label="Save…" paletteLabel="Save…" tag="11" image="internaldrive.fill" catalog="system" bordered="YES" id="5A9-2S-gQh">
                                     <size key="minSize" width="30" height="25"/>
                                     <size key="maxSize" width="30" height="25"/>
                                 </toolbarItem>
                             </allowedToolbarItems>
                             <defaultToolbarItems>
-                                <toolbarItem reference="zQz-Zi-f2c"/>
                                 <toolbarItem reference="5A9-2S-gQh"/>
                                 <toolbarItem reference="h1j-oA-8xX"/>
                                 <toolbarItem reference="N3M-9a-8le"/>
@@ -647,7 +668,6 @@ DQ
                                 <toolbarItem reference="VIZ-Ms-rld"/>
                                 <toolbarItem reference="h1j-oA-8xX"/>
                                 <toolbarItem reference="CRw-L3-CgV"/>
-                                <toolbarItem reference="zQz-Zi-f2c"/>
                             </defaultToolbarItems>
                         </toolbar>
                         <connections>
@@ -659,6 +679,7 @@ DQ
                         <outlet property="_alerToolbarItem" destination="CRw-L3-CgV" id="1RI-Yh-Pmu"/>
                         <outlet property="_nextDayToolbarItem" destination="46Y-1l-WwT" id="7Bz-kb-eXE"/>
                         <outlet property="_previousDayToolbarItem" destination="N3M-9a-8le" id="1ZK-KP-r84"/>
+                        <outlet property="_saveToolbarItem" destination="5A9-2S-gQh" id="fif-5c-3RW"/>
                         <outlet property="nextDayToolbarItem" destination="46Y-1l-WwT" id="XuO-wv-BVL"/>
                         <outlet property="previousDayToolbarItem" destination="N3M-9a-8le" id="fzW-iF-iy8"/>
                         <segue destination="XfG-lQ-9wD" kind="relationship" relationship="window.shadowedContentViewController" id="cq2-FE-JQM"/>
@@ -1595,7 +1616,8 @@ Gw
     </scenes>
     <inferredMetricsTieBreakers>
         <segue reference="GdS-O0-lhM"/>
-        <segue reference="MQZ-rL-cxz"/>
+        <segue reference="stv-Qv-IFe"/>
+        <segue reference="iOi-9I-5EY"/>
     </inferredMetricsTieBreakers>
     <resources>
         <image name="NSActionTemplate" width="15" height="15"/>

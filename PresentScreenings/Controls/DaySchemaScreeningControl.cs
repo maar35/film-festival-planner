@@ -1,8 +1,6 @@
 ﻿using System;
 using AppKit;
 using CoreGraphics;
-using CoreText;
-using Foundation;
 
 namespace PresentScreenings.TableView
 {
@@ -18,7 +16,6 @@ namespace PresentScreenings.TableView
         #region Private Variables
         private static nfloat _xExtension;
         private bool _selected = false;
-        private static CTStringAttributes _stringAttributes;
         #endregion
 
         #region Application Access
@@ -27,9 +24,8 @@ namespace PresentScreenings.TableView
 
         #region Properties
         public static bool UseCoreGraphics { get; set; }
-        public static string AutomaticallyPlannedSymbol { get; } = "𝛑"; // MATHEMATICAL BOLD SMALL PI = 𝛑
         public Screening Screening { get; }
-        public CGRect ClickPadRect { get; }
+        public CGRect ClickpadRect { get; }
         public CGRect LabelRect { get; }
         public bool Selected { get => _selected; set => SetSelected(value); }
         #endregion
@@ -43,7 +39,7 @@ namespace PresentScreenings.TableView
 
             // Initialize properties.
             Screening = screening;
-            ClickPadRect = new CGRect(0, 0, _xExtension - 2, Frame.Height);
+            ClickpadRect = new CGRect(0, 0, _xExtension - 2, Frame.Height);
             LabelRect = new CGRect(_xExtension, 0, Frame.Width - _xExtension, Frame.Height);
 
             // Add a control depending whether core graphics are used to draw
@@ -74,80 +70,9 @@ namespace PresentScreenings.TableView
             base.DrawRect(dirtyRect);
 
             // Use Core Graphics routines to draw our UI.
-            var side = Frame.Height;
             using (CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
             {
-                // Define the clickable rect.
-                var clickableRect = ClickPadRect;
-
-                // Draw the clickable rect.
-                DrawClickRect(context, clickableRect);
-
-                // Draw a frame if something's wrong with tickets.
-                if (ScreeningInfo.TicketStatusNeedsAttention(Screening))
-                {
-                    ColorView.DrawTicketAvalabilityFrame(context, Screening, side);
-                }
-
-                // Draw a progress bar if the screening is on-demand.
-                if (Screening is OnDemandScreening onDemandScreening)
-                {
-                    ColorView.DrawOnDemandAvailabilityStatus(context, onDemandScreening, side, Selected);
-                }
-
-                // Draw Sold Out symbol.
-                if (Screening.SoldOut)
-                {
-                    ColorView.DrawSoldOutSymbol(context, Selected, clickableRect);
-                }
-
-                // Draw a warning symbol.
-                if (Screening.Warning != ScreeningInfo.Warning.NoWarning)
-                {
-                    DrawWarningMiniature(context, side);
-                }
-
-                // Initialize CoreText settings.
-                InitializeCoreText(context, Selected);
-
-                // Draw Automatically Planned symbol.
-                if (Screening.AutomaticallyPlanned)
-                {
-                    DrawAutomaticallyPlannedSymbol(context, side);
-                }
-
-                // Draw the rating of the film
-                var film = ViewController.GetFilmById(Screening.FilmId);
-                var rating = ViewController.GetMaxRating(film);
-                if (rating.IsGreaterOrEqual(FilmRating.LowestSuperRating) || rating.Equals(FilmRating.Unrated))
-                {
-                    DrawRating(context, side, rating);
-                }
-            }
-        }
-        #endregion
-
-        #region Public Methods
-        public static void InitializeCoreText(CGContext context, bool selected)
-        {
-            context.TranslateCTM(-1, ScreeningsView.VerticalTextOffset);
-            NSColor textColor = ColorView.ClickPadTextColor(selected);
-            context.SetTextDrawingMode(CGTextDrawingMode.Fill);
-            context.SetFillColor(textColor.CGColor);
-            _stringAttributes = new CTStringAttributes
-            {
-                ForegroundColorFromContext = true,
-                Font = ControlsFactory.StandardCtBoldFont,
-            };
-        }
-
-        public static void DrawText(CGContext context, string text, nfloat x, nfloat y)
-        {
-            context.TextPosition = new CGPoint(x, y);
-            var attributedString = new NSAttributedString(text, _stringAttributes);
-            using (var textLine = new CTLine(attributedString))
-            {
-                textLine.Draw(context);
+                ColorView.DrawStandardClickpad(context, Screening, ClickpadRect, Selected);
             }
         }
         #endregion
@@ -170,53 +95,6 @@ namespace PresentScreenings.TableView
 
             // Force a redraw.
             NeedsDisplay = true;
-        }
-
-        private void DrawClickRect(CGContext context, CGRect clickRect)
-        {
-            var gpath = new CGPath();
-            gpath.AddRect(clickRect);
-            ColorView.ClickPadBackgroundColor(Selected).SetFill();
-            gpath.CloseSubpath();
-            context.AddPath(gpath);
-            context.DrawPath(CGPathDrawingMode.Fill);
-        }
-
-        private void DrawWarningMiniature(CGContext context, nfloat side)
-        {
-            nfloat x = side*1/16;
-            nfloat y = side*4/16;
-            context.SetLineWidth(1);
-            NSColor.Black.SetStroke();
-            NSColor.Yellow.SetFill();
-            var trianglePath = new CGPath();
-            trianglePath.AddLines(new CGPoint[]{
-                new CGPoint(x + side*1/16, y + side*1/16),
-                new CGPoint(x + side*4/16, y + side*7/16),
-                new CGPoint(x + side*7/16, y + side*1/16)
-            });
-            trianglePath.CloseSubpath();
-            context.AddPath(trianglePath);
-            context.DrawPath(CGPathDrawingMode.FillStroke);
-            var barPath = new CGPath();
-            barPath.AddLines(new CGPoint[]{
-                new CGPoint(x + side*4/16, y + side*2/16),
-                new CGPoint(x + side*4/16, y + side*5/16)
-            });
-            barPath.CloseSubpath();
-            context.AddPath(barPath);
-            context.DrawPath(CGPathDrawingMode.Stroke);
-        }
-
-        private void DrawRating(CGContext context, nfloat side, FilmRating rating)
-        {
-            DrawText(context, rating.ToString(), side/2, ScreeningsView.ScreeningControlLineHeight);
-        }
-
-        private void DrawAutomaticallyPlannedSymbol(CGContext context, nfloat side)
-        {
-            nfloat y = Screening is OnDemandScreening ? side*4/16 : 0;
-            DrawText(context, AutomaticallyPlannedSymbol, side/2, y);
         }
 
         private static CGRect GetExtendedRect(CGRect screeningRect)

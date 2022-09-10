@@ -13,7 +13,7 @@ namespace PresentScreenings.TableView
     public class ClickableScreeningLabel : PointingHandControl
     {
         #region Private Constants
-        private const float _lineHeight = ScreeningsView.ScreeningControlLineHeight;
+        private const float _lineHeight = ControlsFactory.StandardLineHeight;
         #endregion
 
         #region Private Members
@@ -46,7 +46,7 @@ namespace PresentScreenings.TableView
                 context.DrawPath(CGPathDrawingMode.Fill);
 
                 // Draw screening information.
-                context.TranslateCTM(2, ScreeningsView.VerticalTextOffset);
+                context.TranslateCTM(2, ControlsFactory.VerticalTextOffset);
                 context.SetTextDrawingMode(CGTextDrawingMode.Fill);
                 ColorView.SetScreeningColor(_screening, context, true);
                 CTStringAttributes attrs = new CTStringAttributes();

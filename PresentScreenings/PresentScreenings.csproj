@@ -189,6 +189,10 @@
       <DependentUpon>MainWindowController.cs</DependentUpon>
     </Compile>
     <Compile Include="Controls\ActivatableToolbarItem.cs" />
+    <Compile Include="Controllers\WarningsDialogControler.cs" />
+    <Compile Include="Controllers\WarningsDialogControler.designer.cs">
+      <DependentUpon>WarningsDialogControler.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

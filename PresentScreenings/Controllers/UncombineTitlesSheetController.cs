@@ -19,15 +19,15 @@ namespace PresentScreenings.TableView
     {
         #region Private Constants
         const float _xMargin = ControlsFactory.HorizontalMargin;
-        const float _xScrollerMargin = 5;
+        const float _xScrollerMargin = ControlsFactory.SmallHorizontalMargin;
         const float _cancelButtonWidth = ControlsFactory.StandardButtonWidth;
         const float _xControlsDistance = ControlsFactory.HorizontalPixelsBetweenControls;
         const float _yMargin = ControlsFactory.SmallVerticalMargin;
         const float _labelHeight = ControlsFactory.StandardLabelHeight;
-        const float _screeningHeight = 46;
+        const float _screeningHeight = ControlsFactory.BigScreeningLabelHeight;
         const float _buttonHeight = ControlsFactory.StandardButtonHeight;
         const float _yLabelsDistance = ControlsFactory.VerticalPixelsBetweenLabels;
-        const float _separateHeight = 8;
+        const float _separateHeight = ControlsFactory.WideVerticalPixelsBetweenLabels;
         const float _yScreeningSpace = _screeningHeight + _yLabelsDistance;
         #endregion
 
@@ -95,7 +95,7 @@ namespace PresentScreenings.TableView
             CreateUncombineButton();
 
             // Disable resizing.
-            Presentor.DisableResizing(this, _sampleView);
+            GoToScreeningDialog.DisableResizing(this, _sampleView);
         }
 
         public override void ViewWillDisappear()
