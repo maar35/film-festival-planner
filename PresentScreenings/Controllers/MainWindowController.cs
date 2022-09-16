@@ -17,6 +17,7 @@ namespace PresentScreenings.TableView
 		public ActivatableToolbarItem PreviousDayToolbarItem => (ActivatableToolbarItem)_previousDayToolbarItem;
 		public ActivatableToolbarItem NextDayToolbarItem => (ActivatableToolbarItem)_nextDayToolbarItem;
 		public ActivatableToolbarItem AlertToolbarItem => (ActivatableToolbarItem)_alerToolbarItem;
+		public ActivatableToolbarItem TicketsAlertToolbarItem => (ActivatableToolbarItem)_ticketAlertsToolbarItem;
 		public NSToolbarItem SaveToolbarItem => _saveToolbarItem;
 		#endregion
 

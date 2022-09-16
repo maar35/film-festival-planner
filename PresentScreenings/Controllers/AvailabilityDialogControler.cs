@@ -368,7 +368,6 @@ namespace PresentScreenings.TableView
                 Presentor.SetWindowTitle();
 
                 // Update the screening warnings.
-                Presentor.UpdateWarnings();
                 Presentor.ReloadScreeningsView();
             }
 

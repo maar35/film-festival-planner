@@ -113,10 +113,14 @@ namespace PresentScreenings.TableView
         #region Private Methods
         private void GetScreenings()
         {
-            _screenings = _presentor.ScreeningsWithWarnings;
-            _screenings
-                .OrderBy(s => s.Film.SortedTitle)
-                .ThenBy(s => s.StartTime)
+            List<Screening> screenings = _presentor.ScreeningsWithWarnings;
+            screenings.AddRange(_presentor.ScreeningsWithTicketsToBuy);
+            screenings.AddRange(_presentor.ScreeningsWithTicketsToSell);
+            var screeningComparer = new ScreeningEqualityComparer();
+            _screenings = screenings
+                .Distinct(screeningComparer)
+                .OrderBy(s => s.StartTime)
+                .ThenBy(s => s.Screen.ToString())
                 .ToList();
         }
 
@@ -214,7 +218,11 @@ namespace PresentScreenings.TableView
                 docView.AddSubview(gotoButton);
 
                 // Add the screening label.
-                var screeningLabel = new ScreeningLabel(screeningRect, screening, true);
+                var screeningLabel = new ClickableScreeningLabel(
+                    screeningRect,
+                    screening,
+                    true,
+                    GoToScreening);
                 docView.AddSubview(screeningLabel);
 
                 // Add the warning label.

@@ -36,6 +36,8 @@ namespace PresentScreenings.TableView
         public static TimeSpan EarlyTime => new TimeSpan(ScreeningsTableView.FirstDisplayedHour + 1, 0, 0);
         public static TimeSpan LatestTime => new TimeSpan(ScreeningsTableView.LastDisplayedHour - 1, 59, 0);
         public List<Screening> ScreeningsWithWarnings { get; private set; }
+        public List<Screening> ScreeningsWithTicketsToBuy { get; private set; }
+        public List<Screening> ScreeningsWithTicketsToSell { get; private set; }
         #endregion
 
         #region Computed Properties
@@ -343,12 +345,12 @@ namespace PresentScreenings.TableView
             return RunningPopupsCount == 0;
         }
 
-        public void ReloadScreeningsView(bool updateWarnings=true)
+        public void ReloadScreeningsView(bool updateWarnings=true, bool ticketStatusOnly=false)
         {
             TableView.ReloadData();
             if (updateWarnings)
             {
-                UpdateWarnings();
+                UpdateWarnings(ticketStatusOnly);
             }
         }
 
@@ -361,12 +363,15 @@ namespace PresentScreenings.TableView
             _controlByScreening.Add(screening, control);
         }
 
-        public void UpdateWarnings()
+        public void UpdateWarnings(bool ticketStatusOnly=false)
         {
-            // Update the warning status for all screenings.
-            foreach (var screening in ScreeningsPlan.Screenings)
+            if (!ticketStatusOnly)
             {
-                UpdateWarning(screening);
+                // Update the warning status for all screenings.
+                foreach (var screening in ScreeningsPlan.Screenings)
+                {
+                    UpdateWarning(screening);
+                }
             }
 
             // Set the list of screenings with warnings.
@@ -374,11 +379,26 @@ namespace PresentScreenings.TableView
                 .Where(s => s.Warning != ScreeningInfo.Warning.NoWarning)
                 .ToList();
 
-            // Update the Alerts toolbar item.
+            // Set the lists of screenings with ticket problems.
+            ScreeningsWithTicketsToBuy = ScreeningsPlan.Screenings
+                .Where(s => s.TicketStatus == ScreeningInfo.TicketsStatus.MustBuyTickets)
+                .ToList();
+            ScreeningsWithTicketsToSell = ScreeningsPlan.Screenings
+                .Where(s => s.TicketStatus == ScreeningInfo.TicketsStatus.MustSellTickets)
+                .ToList();
+
+            // Update the Screening Warnings toolbar item.
             int warningCount = ScreeningsWithWarnings.Count();
             ActivatableToolbarItem activatableItem = App.MainWindowController.AlertToolbarItem;
             activatableItem.Active = warningCount > 0;
             activatableItem.Label = ControlsFactory.GlobalWarningsString(warningCount);
+
+            // Update the Ticket Problems toolbar item.
+            int buyCount = ScreeningsWithTicketsToBuy.Count;
+            int sellCount = ScreeningsWithTicketsToSell.Count; ;
+            var problemsToolbarItem = App.MainWindowController.TicketsAlertToolbarItem;
+            problemsToolbarItem.Active = buyCount + sellCount > 0;
+            problemsToolbarItem.Label = ControlsFactory.TicketProblemsString(buyCount, sellCount);
         }
 
         static public NSCellStateValue GetNSCellStateValue(bool shouldBeOn)
@@ -845,7 +865,7 @@ namespace PresentScreenings.TableView
             Screening screening = _plan.CurrScreening;
             screening.TicketsBought = !screening.TicketsBought;
             UpdateAttendanceStatus(screening);
-            ReloadScreeningsView(false);
+            ReloadScreeningsView(true, true);
         }
 
         public void ToggleSoldOut()

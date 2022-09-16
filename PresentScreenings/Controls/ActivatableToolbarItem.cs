@@ -17,7 +17,7 @@ namespace PresentScreenings.TableView
         {
         }
 
-        public ActivatableToolbarItem(NSObjectFlag t) : base (t)
+        public ActivatableToolbarItem(NSObjectFlag t) : base(t)
         {
         }
 

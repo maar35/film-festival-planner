@@ -197,10 +197,39 @@ namespace PresentScreenings.TableView
         #region Public Methods that handle strings.
         public static string GlobalWarningsString(int warningCount)
         {
-            string pluralString = warningCount == 1 ? string.Empty : "s";
-            string countString = warningCount == 0 ? "No" : warningCount.ToString();
-            string label = $"{countString} Warning{pluralString}";
-            return label;
+            string warningString = CountString(warningCount, "Warning");
+            return warningString;
+        }
+
+        public static string TicketProblemsString(int toBuyTicketsCount, int toSellTicketsCount)
+        {
+            string problemString;
+            if (toBuyTicketsCount > 0 && toSellTicketsCount == 0)
+            {
+                problemString = CountString(toBuyTicketsCount, "screening") + " must be bought";
+            }
+            else if (toBuyTicketsCount == 0 && toSellTicketsCount > 0)
+            {
+                problemString = CountString(toSellTicketsCount, "screening") + " must be sold";
+            }
+            else if (toBuyTicketsCount > 0 && toSellTicketsCount > 0)
+            {
+                string sellString = CountString(toSellTicketsCount, "screening");
+                problemString = $"Sell {sellString}, buy {toBuyTicketsCount}";
+            }
+            else
+            {
+                problemString = "No ticket problems";
+            }
+            return problemString;
+        }
+
+        public static string CountString(int count, string word)
+        {
+            string pluralString = count == 1 ? string.Empty : "s";
+            string countString = count == 0 ? "No" : count.ToString();
+            string countWithWordString = $"{countString} {word}{pluralString}";
+            return countWithWordString;
         }
 
         public static string ScreeningWarningString(Screening screening)

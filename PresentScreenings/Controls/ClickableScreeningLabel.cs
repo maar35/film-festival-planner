@@ -1,4 +1,5 @@
-﻿using AppKit;
+﻿using System;
+using AppKit;
 using CoreGraphics;
 using CoreText;
 using Foundation;
@@ -17,19 +18,37 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Members
+        bool _withDay;
         Screening _screening;
+        Action<Screening> _goToScreening;
+        #endregion
+
+        #region Properties
+        public Screening Screening => _screening;
         #endregion
 
         #region Constructors
-        public ClickableScreeningLabel(CGRect frame, Screening screening) : base(frame)
+        public ClickableScreeningLabel(
+            CGRect frame,
+            Screening screening,
+            bool withDay = false,
+            Action<Screening> goToScreening = null) : base(frame)
         {
             Initialize();
             _screening = screening;
+            _withDay = withDay;
+            _goToScreening = goToScreening;
 			NeedsDisplay = true;
         }
         #endregion
 
         #region Override Methods
+        public override void MouseDown(NSEvent theEvent)
+        {
+            base.MouseDown(theEvent);
+            _goToScreening?.Invoke(Screening);
+        }
+
         public override void DrawRect(CGRect dirtyRect)
         {
                 base.DrawRect(dirtyRect);
@@ -53,7 +72,7 @@ namespace PresentScreenings.TableView
                 attrs.ForegroundColorFromContext = true;
                 attrs.Font = ControlsFactory.StandardCtBoldFont;
                 var textPosition = new CGPoint(0, _lineHeight);
-                string[] lines = _screening.ToScreeningLabelString().Split('\n');
+                string[] lines = _screening.ToScreeningLabelString(_withDay).Split('\n');
                 foreach (var line in lines)
                 {
                     context.TextPosition = textPosition;

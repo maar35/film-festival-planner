@@ -24,6 +24,9 @@ namespace PresentScreenings.TableView
 		[Outlet]
 		AppKit.NSToolbarItem _saveToolbarItem { get; set; }
 
+		[Outlet]
+		PresentScreenings.TableView.ActivatableToolbarItem _ticketAlertsToolbarItem { get; set; }
+
 		[Action ("ShowFilmRatings:")]
 		partial void ShowFilmRatings (Foundation.NSObject sender);
 
@@ -45,6 +48,11 @@ namespace PresentScreenings.TableView
 			if (_saveToolbarItem != null) {
 				_saveToolbarItem.Dispose ();
 				_saveToolbarItem = null;
+			}
+
+			if (_ticketAlertsToolbarItem != null) {
+				_ticketAlertsToolbarItem.Dispose ();
+				_ticketAlertsToolbarItem = null;
 			}
 
 			if (_previousDayToolbarItem != null) {
