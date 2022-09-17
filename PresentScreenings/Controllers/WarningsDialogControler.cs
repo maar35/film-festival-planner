@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using AppKit;
 using CoreGraphics;
 using Foundation;
@@ -40,7 +41,6 @@ namespace PresentScreenings.TableView
         private CGRect _headerFrame;
         private CGRect _scrollerFrame;
         private CGRect _closeButtonFrame;
-        private CGRect _dialogFrame;
         private bool _doSetInitiallyVisibleFrame = false;
         private CGRect _initiallyVisibleFrame;
         private NSView _sampleView;
@@ -113,7 +113,8 @@ namespace PresentScreenings.TableView
         #region Private Methods
         private void GetScreenings()
         {
-            List<Screening> screenings = _presentor.ScreeningsWithWarnings;
+            List<Screening> screenings = _presentor.ScreeningsWithWarnings
+                .ToList();
             screenings.AddRange(_presentor.ScreeningsWithTicketsToBuy);
             screenings.AddRange(_presentor.ScreeningsWithTicketsToSell);
             var screeningComparer = new ScreeningEqualityComparer();
@@ -127,7 +128,6 @@ namespace PresentScreenings.TableView
         private void SetUpLayout()
         {
             _contentWidth = View.Frame.Width - 2 * _xMargin;
-            _dialogFrame = View.Frame;
 
             // Set up frame for warning image.
             var yImage = View.Frame.Height - _yMargin - _imageSide;
@@ -157,10 +157,17 @@ namespace PresentScreenings.TableView
 
         private void CreateHeaderLabel()
         {
+            var warningCount = _presentor.ScreeningsWithWarnings.Count;
+            var buyCount = _presentor.ScreeningsWithTicketsToBuy.Count;
+            var sellCount = _presentor.ScreeningsWithTicketsToSell.Count;
             var headerLabel = ControlsFactory.NewStandardLabel(_headerFrame, true);
             headerLabel.Font = ControlsFactory.StandardFont;
             headerLabel.Alignment = NSTextAlignment.Center;
-            headerLabel.StringValue = ControlsFactory.GlobalWarningsString(_screenings.Count);
+            var builder = new StringBuilder();
+            builder.Append(ControlsFactory.GlobalWarningsString(warningCount));
+            builder.AppendLine();
+            builder.Append(ControlsFactory.TicketProblemsLines(buyCount, sellCount));
+            headerLabel.StringValue = builder.ToString();
             View.AddSubview(headerLabel);
         }
 

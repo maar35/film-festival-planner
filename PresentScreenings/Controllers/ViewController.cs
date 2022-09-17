@@ -388,17 +388,19 @@ namespace PresentScreenings.TableView
                 .ToList();
 
             // Update the Screening Warnings toolbar item.
-            int warningCount = ScreeningsWithWarnings.Count();
-            ActivatableToolbarItem activatableItem = App.MainWindowController.AlertToolbarItem;
-            activatableItem.Active = warningCount > 0;
-            activatableItem.Label = ControlsFactory.GlobalWarningsString(warningCount);
+            int warningCount = ScreeningsWithWarnings.Count;
+            var warningsToolbarItem = App.MainWindowController.AlertToolbarItem;
+            warningsToolbarItem.Active = warningCount > 0;
+            warningsToolbarItem.Label = ControlsFactory.GlobalWarningsString(warningCount);
+            warningsToolbarItem.ToolTip = ControlsFactory.GlobalWarningsString(warningCount);
 
             // Update the Ticket Problems toolbar item.
             int buyCount = ScreeningsWithTicketsToBuy.Count;
-            int sellCount = ScreeningsWithTicketsToSell.Count; ;
+            int sellCount = ScreeningsWithTicketsToSell.Count;
             var problemsToolbarItem = App.MainWindowController.TicketsAlertToolbarItem;
             problemsToolbarItem.Active = buyCount + sellCount > 0;
             problemsToolbarItem.Label = ControlsFactory.TicketProblemsString(buyCount, sellCount);
+            problemsToolbarItem.ToolTip = ControlsFactory.TicketProblemsLines(buyCount, sellCount);
         }
 
         static public NSCellStateValue GetNSCellStateValue(bool shouldBeOn)

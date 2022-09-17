@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using AppKit;
 using CoreAnimation;
 using CoreGraphics;
@@ -29,7 +30,7 @@ namespace PresentScreenings.TableView
         public const float LabelLineHeight = 16;
         public const float BigScreeningLabelHeight = 40;
         public const float SmallControlWidth = 64;
-        public const float StandardImageSide = 48;
+        public const float StandardImageSide = 52;
         public const float StandardButtonImageSide = 20;
         public const float StandardImageButtonWidth = 47;
         public const float SubsectionLabelWidth = 72;
@@ -197,7 +198,7 @@ namespace PresentScreenings.TableView
         #region Public Methods that handle strings.
         public static string GlobalWarningsString(int warningCount)
         {
-            string warningString = CountString(warningCount, "Warning");
+            string warningString = CountString(warningCount, "warning");
             return warningString;
         }
 
@@ -222,6 +223,15 @@ namespace PresentScreenings.TableView
                 problemString = "No ticket problems";
             }
             return problemString;
+        }
+
+        public static string TicketProblemsLines(int toBuyTicketsCount, int toSellTicketsCount)
+        {
+            var builder = new StringBuilder();
+            builder.Append(CountString(toBuyTicketsCount, "screening") + " must be bought");
+            builder.AppendLine();
+            builder.Append(CountString(toSellTicketsCount, "screening") + " must be sold");
+            return builder.ToString();
         }
 
         public static string CountString(int count, string word)
