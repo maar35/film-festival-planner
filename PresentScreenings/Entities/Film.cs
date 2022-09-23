@@ -39,6 +39,7 @@ namespace PresentScreenings.TableView
         public string DurationFormat => "hh\\:mm";
         public string DurationString => Duration.ToString(DurationFormat);
         public string MinutesString => Duration.TotalMinutes + "′";
+        public string TitleWithMinutesString => $"{Title} ({MinutesString})";
         public string Url { get; private set; }
         public List<Screening> FilmScreenings => ViewController.FilmScreenings(FilmId);
         public FilmRating Rating => ViewController.GetFilmFanFilmRating(this, ScreeningInfo.Me);
@@ -98,7 +99,7 @@ namespace PresentScreenings.TableView
         #region Override Methods
         public override string ToString()
         {
-            return $"{Title} ({MinutesString}) - {MaxRating}";
+            return $"{TitleWithMinutesString} - {MaxRating}";
         }
 
         public override string WriteHeader()

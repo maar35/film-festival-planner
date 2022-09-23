@@ -16,8 +16,12 @@ namespace PresentScreenings.TableView
         public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
 		public ActivatableToolbarItem PreviousDayToolbarItem => (ActivatableToolbarItem)_previousDayToolbarItem;
 		public ActivatableToolbarItem NextDayToolbarItem => (ActivatableToolbarItem)_nextDayToolbarItem;
-		public ActivatableToolbarItem AlertToolbarItem => (ActivatableToolbarItem)_alerToolbarItem;
-		public ActivatableToolbarItem TicketsAlertToolbarItem => (ActivatableToolbarItem)_ticketAlertsToolbarItem;
+		public ActivatableToolbarItem WarningsToolbarItem => (ActivatableToolbarItem)_alerToolbarItem;
+		public ActivatableToolbarItem TicketProblemsToolbarItem => _ticketAlertsToolbarItem;
+		public NSToolbarItem ShowFilmInfoToolbarItem => _showFilmInfoToolbarItem;
+		public NSToolbarItem VisitWebSiteToolbarItem => _vistWebsiteToolbarItem;
+		public NSToolbarItem ShowScreeningInfoToolbarItem => _showScreeningInfoToolbarItem;
+		public NSToolbarItem ShowRatingsToolbarItem => _showRatingsToolbarItem;
 		public NSToolbarItem SaveToolbarItem => _saveToolbarItem;
 		#endregion
 
@@ -38,15 +42,29 @@ namespace PresentScreenings.TableView
 			// Initialize the toolbar items.
 			PreviousDayToolbarItem.Action = new ObjCRuntime.Selector("NavigateToPreviousDay:");
 			PreviousDayToolbarItem.Active = App.Controller.Plan.NextDayExists(-1);
+			PreviousDayToolbarItem.ToolTip = PreviousDayToolbarItem.Label;
 			NextDayToolbarItem.Action = new ObjCRuntime.Selector("NavigateToNextDay:");
 			NextDayToolbarItem.Active = App.Controller.Plan.NextDayExists(1);
+			NextDayToolbarItem.ToolTip = NextDayToolbarItem.Label;
+			ShowRatingsToolbarItem.ToolTip = ShowRatingsToolbarItem.Label;
 			SaveToolbarItem.Action = new ObjCRuntime.Selector("SaveData:");
+			SaveToolbarItem.ToolTip = SaveToolbarItem.Label;
 			App.Controller.UpdateWarnings();
 		}
-        #endregion
+		#endregion
 
-        #region Custom Actions
-        partial void ShowScreeningInfo(Foundation.NSObject sender)
+		#region Custom Actions
+		partial void ShowFilmInfo(Foundation.NSObject sender)
+        {
+			App.Controller.PerformSegue("ScreeningsToFilmInfo", sender);
+        }
+
+		partial void VisitWebSite(Foundation.NSObject sender)
+        {
+			ViewController.VisitFilmWebsite(App.Controller.CurrentFilm);
+        }
+
+		partial void ShowScreeningInfo(Foundation.NSObject sender)
         {
 			App.Controller.ShowScreeningInfo();
         }

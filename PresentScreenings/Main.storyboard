@@ -643,10 +643,17 @@ DQ
                                         <segue destination="gJ5-Ju-597" kind="modal" identifier="ToolbarToRatingsSegue" id="stv-Qv-IFe"/>
                                     </connections>
                                 </toolbarItem>
-                                <toolbarItem implicitItemIdentifier="E4664813-F286-4A52-86E2-329384016DAF" label="Film Info" paletteLabel="Film Info" tag="25" image="NSInfo" bordered="YES" sizingBehavior="auto" id="Tid-Rg-JRD"/>
+                                <toolbarItem implicitItemIdentifier="E4664813-F286-4A52-86E2-329384016DAF" label="Film Info" paletteLabel="Film Info" tag="25" image="NSInfo" bordered="YES" sizingBehavior="auto" id="Tid-Rg-JRD">
+                                    <connections>
+                                        <action selector="ShowFilmInfo:" target="B8D-0N-5wS" id="frK-yU-zDc"/>
+                                    </connections>
+                                </toolbarItem>
                                 <toolbarItem implicitItemIdentifier="B63A2065-7892-4B3C-B537-7395D2A6CF22" label="Visit Website" paletteLabel="Visit Website" tag="26" image="NSNetwork" bordered="YES" id="81B-hP-HhY">
                                     <size key="minSize" width="32" height="25"/>
                                     <size key="maxSize" width="32" height="25"/>
+                                    <connections>
+                                        <action selector="VisitWebSite:" target="B8D-0N-5wS" id="ll2-7b-avS"/>
+                                    </connections>
                                 </toolbarItem>
                                 <toolbarItem implicitItemIdentifier="AD973818-8200-424E-9342-FD000255BE7B" explicitItemIdentifier="ScreeningAlerts" label="Warnings" paletteLabel="Screening Alerts" tag="31" image="NSCaution" bordered="YES" id="CRw-L3-CgV" userLabel="Alerts Toolbar Item" customClass="ActivatableToolbarItem">
                                     <size key="minSize" width="32" height="25"/>
@@ -683,12 +690,17 @@ DQ
                         </connections>
                     </window>
                     <connections>
+                        <outlet property="ShowFilmInfo" destination="Tid-Rg-JRD" id="o4c-o2-a9J"/>
                         <outlet property="ShowScreeningInfo" destination="NPy-mX-iST" id="g7S-X1-Rwy"/>
                         <outlet property="_alerToolbarItem" destination="CRw-L3-CgV" id="1RI-Yh-Pmu"/>
                         <outlet property="_nextDayToolbarItem" destination="46Y-1l-WwT" id="7Bz-kb-eXE"/>
                         <outlet property="_previousDayToolbarItem" destination="N3M-9a-8le" id="1ZK-KP-r84"/>
                         <outlet property="_saveToolbarItem" destination="5A9-2S-gQh" id="fif-5c-3RW"/>
+                        <outlet property="_showFilmInfoToolbarItem" destination="Tid-Rg-JRD" id="gh4-Th-oyp"/>
+                        <outlet property="_showRatingsToolbarItem" destination="VIZ-Ms-rld" id="ifD-SY-KTy"/>
+                        <outlet property="_showScreeningInfoToolbarItem" destination="NPy-mX-iST" id="vyk-XT-ldL"/>
                         <outlet property="_ticketAlertsToolbarItem" destination="vo4-dG-8ff" id="8J3-wc-xS8"/>
+                        <outlet property="_vistWebsiteToolbarItem" destination="81B-hP-HhY" id="EAP-TM-HQc"/>
                         <outlet property="nextDayToolbarItem" destination="46Y-1l-WwT" id="XuO-wv-BVL"/>
                         <outlet property="previousDayToolbarItem" destination="N3M-9a-8le" id="fzW-iF-iy8"/>
                         <segue destination="XfG-lQ-9wD" kind="relationship" relationship="window.shadowedContentViewController" id="cq2-FE-JQM"/>
@@ -1041,7 +1053,7 @@ Gw
                             <constraint firstItem="VI4-Vt-R12" firstAttribute="top" secondItem="Gm5-B4-fbz" secondAttribute="bottom" constant="8" id="Btd-pL-bhL"/>
                             <constraint firstItem="SM5-CE-qT9" firstAttribute="top" secondItem="X2t-8y-ItM" secondAttribute="top" constant="19" id="CdO-oc-poK"/>
                             <constraint firstAttribute="trailing" secondItem="r1u-vm-oul" secondAttribute="trailing" constant="20" id="DKX-Kp-dWf"/>
-                            <constraint firstItem="ipC-eH-G0f" firstAttribute="top" secondItem="0fB-1r-jAn" secondAttribute="bottom" constant="5" id="EEg-ha-3no"/>
+                            <constraint firstItem="ipC-eH-G0f" firstAttribute="top" secondItem="0fB-1r-jAn" secondAttribute="bottom" constant="10" id="EEg-ha-3no"/>
                             <constraint firstItem="r1u-vm-oul" firstAttribute="leading" secondItem="fZJ-iA-eBy" secondAttribute="leading" id="F4h-3W-0q6"/>
                             <constraint firstItem="LTo-dB-IYk" firstAttribute="leading" secondItem="X2t-8y-ItM" secondAttribute="leading" constant="20" id="N68-uF-9qS"/>
                             <constraint firstAttribute="trailing" secondItem="6dc-lf-7ip" secondAttribute="trailing" constant="20" id="RA1-hW-rg7"/>

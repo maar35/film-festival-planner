@@ -46,6 +46,7 @@ namespace PresentScreenings.TableView
         public FilmRatingDialogController FilmsDialogController { get; set; }
         public PlannerDialogController PlannerDialogController { get; set; }
         public UncombineTitlesSheetController UncombineTitleController { get; set; }
+        public WarningsDialogControler WarningsController { get; set; }
         public ScreeningMenuDelegate ScreeningMenuDelegate => (ScreeningMenuDelegate)_screeningMenu.Delegate;
         public NSMenuItem ToggleOnlyFilmsWithScreeningsMenuItem => _filmsMenu.ItemWithTag(FilmsMenuDelegate.ToggleOnlyFilmsWithScreeningsMenuItemTag);
         public NSMenuItem ToggleTypeMatchMenuItem => _filmsMenu.ItemWithTag(FilmsMenuDelegate.ToggleTypeMatchMethodMenuItemTag);

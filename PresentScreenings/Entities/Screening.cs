@@ -286,7 +286,7 @@ namespace PresentScreenings.TableView
         #region Public Display Methods
         public static string DayString(DateTime date)
         {
-            return string.Format("{0}{1}", date.DayOfWeek.ToString().Remove(3), date.Day.ToString());
+            return $"{date.DayOfWeek.ToString().Remove(3)}{date.Day}";
         }
 
         public static string DateTimeString(DateTime dateTime)
@@ -296,12 +296,12 @@ namespace PresentScreenings.TableView
 
         public static string LongDayString(DateTime date)
         {
-            return string.Format("{0} {1}", date.DayOfWeek.ToString().Remove(3), date.ToString(_dateFormat));
+            return $"{date.DayOfWeek.ToString().Remove(3)} {date.ToString(_dateFormat)}";
         }
 
         public string ToLongTimeString()
         {
-            return string.Format("{0} {1} ({2}){3}", StartDate.ToString(_dayOfWeekFormat), FromTillString(), DurationString(), AppendingExtraTimesString());
+            return $"{StartDate.ToString(_dayOfWeekFormat)} {FromTillString()} ({DurationString()}){AppendingExtraTimesString()}";
         }
 
         public string ToMenuItemString()
@@ -311,12 +311,17 @@ namespace PresentScreenings.TableView
 
         public string ToScreeningLabelString(bool withDay = false)
         {
-            return string.Format("{0}\n{1}", ScreeningTitle, ScreeningStringForLabel(withDay));
+            return $"{ScreeningTitle}\n{ScreeningStringForLabel(withDay)}";
         }
 
         public string ToPlannedScreeningString()
         {
-            return string.Format($"{ToLongTimeString()} {Screen} {ScreeningTitle}");
+            return $"{ToLongTimeString()} {Screen} {ScreeningTitle}";
+        }
+
+        public string ToToolTipString()
+        {
+            return $"{ScreeningTitle}\n{DateTimeString(StartTime)}\n{Screen}";
         }
 
         public string ToConsideredScreeningString(string filmFan)

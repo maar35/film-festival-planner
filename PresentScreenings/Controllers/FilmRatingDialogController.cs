@@ -379,7 +379,7 @@ namespace PresentScreenings.TableView
             _combineTitlesButton.Enabled = MultipleFilmsSelected();
             _uncombineTitleButton.Enabled = OneFilmSelected();
             FilmInfoButton.Enabled = OneFilmSelected();
-            FilmInfoButton.ToolTip = ControlsFactory.FilmInfoButtonToolTip(CurrentFilm);
+            FilmInfoButton.ToolTip = OneFilmSelected() ? ControlsFactory.FilmInfoButtonToolTip(CurrentFilm) : string.Empty;
             ReloadButton.Enabled = true;
             ReloadButton.ToolTip = ControlsFactory.ReloadButtonToolTip;
             DoneButton.Enabled = true;

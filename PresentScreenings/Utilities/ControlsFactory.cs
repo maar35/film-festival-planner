@@ -283,12 +283,17 @@ namespace PresentScreenings.TableView
 
         public static string VisitWebsiteButtonToolTip(Film film)
         {
-            return $"Visit the web site of {film}";
+            return $"Visit the web site of {film.TitleWithMinutesString}";
         }
 
         public static string FilmInfoButtonToolTip(Film film)
         {
-            return $"Get more info of {film}";
+            return $"Get more info of {film.TitleWithMinutesString}";
+        }
+
+        public static string ScreeningInfoButtonToolTip(Screening screening)
+        {
+            return $"Get more info of screening\n{screening.ToToolTipString()}";
         }
         #endregion
     }

@@ -22,11 +22,8 @@ namespace PresentScreenings.TableView
         private NSMenuItem _clickableLabelsMenuItem = null;
         #endregion
 
-        #region Application Access
-        public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
-        #endregion
-
         #region Properties
+        public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
         public ScreeningsPlan Plan => _plan;
         public NSTableView TableView => ScreeningsTable;
         internal ScreeningDialogController ScreeningInfoDialog { get; set; }
@@ -38,6 +35,10 @@ namespace PresentScreenings.TableView
         public List<Screening> ScreeningsWithWarnings { get; private set; }
         public List<Screening> ScreeningsWithTicketsToBuy { get; private set; }
         public List<Screening> ScreeningsWithTicketsToSell { get; private set; }
+        public int WarningCount => ScreeningsWithWarnings.Count;
+        public int BuyCount => ScreeningsWithTicketsToBuy.Count;
+        public int SellCount => ScreeningsWithTicketsToSell.Count;
+        public int AlertCount => WarningCount + BuyCount + SellCount;
         #endregion
 
         #region Computed Properties
@@ -65,7 +66,11 @@ namespace PresentScreenings.TableView
 
         private bool ScreeningSelected
         {
-            set => _controlByScreening[_plan.CurrScreening].Selected = value;
+            set
+            {
+                _controlByScreening[_plan.CurrScreening].Selected = value;
+                UpdateToolbarToolTips();
+            }
         }
 
         public override NSObject RepresentedObject
@@ -131,6 +136,9 @@ namespace PresentScreenings.TableView
 
             // Set window delegate.
             View.Window.Delegate = new ScreeningRelatedWindowDelegate(View.Window, Close);
+
+            // Set the toolbar item tool tips.
+            UpdateToolbarToolTips();
         }
 
         public override void PrepareForSegue(NSStoryboardSegue segue, NSObject sender)
@@ -189,6 +197,7 @@ namespace PresentScreenings.TableView
             _mainView.HeadersView.DrawCurrDay(_plan);
             SetWindowTitle();
             SetToolbarItemsStatus();
+            UpdateToolbarToolTips();
             InitializeScreeningControls();
             ReloadScreeningsView(false);
         }
@@ -388,19 +397,24 @@ namespace PresentScreenings.TableView
                 .ToList();
 
             // Update the Screening Warnings toolbar item.
-            int warningCount = ScreeningsWithWarnings.Count;
-            var warningsToolbarItem = App.MainWindowController.AlertToolbarItem;
-            warningsToolbarItem.Active = warningCount > 0;
-            warningsToolbarItem.Label = ControlsFactory.GlobalWarningsString(warningCount);
-            warningsToolbarItem.ToolTip = ControlsFactory.GlobalWarningsString(warningCount);
+            var warningsToolbarItem = App.MainWindowController.WarningsToolbarItem;
+            warningsToolbarItem.Active = WarningCount > 0;
+            warningsToolbarItem.Label = ControlsFactory.GlobalWarningsString(WarningCount);
+            warningsToolbarItem.ToolTip = ControlsFactory.GlobalWarningsString(WarningCount);
 
             // Update the Ticket Problems toolbar item.
-            int buyCount = ScreeningsWithTicketsToBuy.Count;
-            int sellCount = ScreeningsWithTicketsToSell.Count;
-            var problemsToolbarItem = App.MainWindowController.TicketsAlertToolbarItem;
-            problemsToolbarItem.Active = buyCount + sellCount > 0;
-            problemsToolbarItem.Label = ControlsFactory.TicketProblemsString(buyCount, sellCount);
-            problemsToolbarItem.ToolTip = ControlsFactory.TicketProblemsLines(buyCount, sellCount);
+            var problemsToolbarItem = App.MainWindowController.TicketProblemsToolbarItem;
+            problemsToolbarItem.Active =BuyCount + SellCount > 0;
+            problemsToolbarItem.Label = ControlsFactory.TicketProblemsString(BuyCount, SellCount);
+            problemsToolbarItem.ToolTip = ControlsFactory.TicketProblemsLines(BuyCount, SellCount);
+        }
+
+        public void UpdateToolbarToolTips()
+        {
+            MainWindowController controller = App.MainWindowController;
+            controller.VisitWebSiteToolbarItem.ToolTip = ControlsFactory.VisitWebsiteButtonToolTip(CurrentFilm);
+            controller.ShowFilmInfoToolbarItem.ToolTip = ControlsFactory.FilmInfoButtonToolTip(CurrentFilm);
+            controller.ShowScreeningInfoToolbarItem.ToolTip = ControlsFactory.ScreeningInfoButtonToolTip(CurrentScreening);
         }
 
         static public NSCellStateValue GetNSCellStateValue(bool shouldBeOn)

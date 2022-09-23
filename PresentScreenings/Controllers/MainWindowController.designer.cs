@@ -25,13 +25,31 @@ namespace PresentScreenings.TableView
 		AppKit.NSToolbarItem _saveToolbarItem { get; set; }
 
 		[Outlet]
+		AppKit.NSToolbarItem _showFilmInfoToolbarItem { get; set; }
+
+		[Outlet]
+		AppKit.NSToolbarItem _showRatingsToolbarItem { get; set; }
+
+		[Outlet]
+		AppKit.NSToolbarItem _showScreeningInfoToolbarItem { get; set; }
+
+		[Outlet]
 		PresentScreenings.TableView.ActivatableToolbarItem _ticketAlertsToolbarItem { get; set; }
+
+		[Outlet]
+		AppKit.NSToolbarItem _vistWebsiteToolbarItem { get; set; }
+
+		[Action ("ShowFilmInfo:")]
+		partial void ShowFilmInfo (Foundation.NSObject sender);
 
 		[Action ("ShowFilmRatings:")]
 		partial void ShowFilmRatings (Foundation.NSObject sender);
 
 		[Action ("ShowScreeningInfo:")]
 		partial void ShowScreeningInfo (Foundation.NSObject sender);
+
+		[Action ("VisitWebSite:")]
+		partial void VisitWebSite (Foundation.NSObject sender);
 		
 		void ReleaseDesignerOutlets ()
 		{
@@ -45,6 +63,11 @@ namespace PresentScreenings.TableView
 				_nextDayToolbarItem = null;
 			}
 
+			if (_previousDayToolbarItem != null) {
+				_previousDayToolbarItem.Dispose ();
+				_previousDayToolbarItem = null;
+			}
+
 			if (_saveToolbarItem != null) {
 				_saveToolbarItem.Dispose ();
 				_saveToolbarItem = null;
@@ -55,9 +78,24 @@ namespace PresentScreenings.TableView
 				_ticketAlertsToolbarItem = null;
 			}
 
-			if (_previousDayToolbarItem != null) {
-				_previousDayToolbarItem.Dispose ();
-				_previousDayToolbarItem = null;
+			if (_vistWebsiteToolbarItem != null) {
+				_vistWebsiteToolbarItem.Dispose ();
+				_vistWebsiteToolbarItem = null;
+			}
+
+			if (_showFilmInfoToolbarItem != null) {
+				_showFilmInfoToolbarItem.Dispose ();
+				_showFilmInfoToolbarItem = null;
+			}
+
+			if (_showScreeningInfoToolbarItem != null) {
+				_showScreeningInfoToolbarItem.Dispose ();
+				_showScreeningInfoToolbarItem = null;
+			}
+
+			if (_showRatingsToolbarItem != null) {
+				_showRatingsToolbarItem.Dispose ();
+				_showRatingsToolbarItem = null;
 			}
 		}
 	}

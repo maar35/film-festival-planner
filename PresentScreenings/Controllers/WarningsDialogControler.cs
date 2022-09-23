@@ -68,6 +68,9 @@ namespace PresentScreenings.TableView
         {
             base.ViewWillAppear();
 
+            // Tell the app delegate we're alive.
+            App.WarningsController = this;
+
             // Inactivate screenings view actions.
             _presentor.RunningPopupsCount++;
 
@@ -96,6 +99,9 @@ namespace PresentScreenings.TableView
         public override void ViewWillDisappear()
         {
             base.ViewWillDisappear();
+
+            // Tell the app delegate we're gone.
+            App.WarningsController = null;
 
             // Tell the main view controller we're gone.
             _presentor.RunningPopupsCount--;
@@ -157,9 +163,9 @@ namespace PresentScreenings.TableView
 
         private void CreateHeaderLabel()
         {
-            var warningCount = _presentor.ScreeningsWithWarnings.Count;
-            var buyCount = _presentor.ScreeningsWithTicketsToBuy.Count;
-            var sellCount = _presentor.ScreeningsWithTicketsToSell.Count;
+            var warningCount = _presentor.WarningCount;
+            var buyCount = _presentor.BuyCount;
+            var sellCount = _presentor.SellCount;
             var headerLabel = ControlsFactory.NewStandardLabel(_headerFrame, true);
             headerLabel.Font = ControlsFactory.StandardFont;
             headerLabel.Alignment = NSTextAlignment.Center;
