@@ -23,6 +23,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Members
+        protected string _newLine = Environment.NewLine;
         protected ScreeningInfo _screeningInfo;
         #endregion
 
@@ -144,7 +145,9 @@ namespace PresentScreenings.TableView
                 string messageText = "No film found for screening";
                 string informativeText = $"Can't find film with ID={FilmId} "
                     + $"while reading {AppDelegate.ScreeningsFile}."
-                    + "\n\nFor developers: If this is caused by a URL change of the film, please "
+                    + _newLine
+                    + _newLine
+                    + "For developers: If this is caused by a URL change of the film, please "
                     + "replace the filmId in ratings.csv, screenings.csv (two columns) and screeninginfo.";
                 AlertRaiser.QuitWithAlert(messageText, informativeText);
             }
@@ -159,7 +162,9 @@ namespace PresentScreenings.TableView
         #region Override Methods
         public override string ToString()
         {
-            return string.Format("{0}\n{1} {2} {3} {4} {5}", ScreeningTitle, DayString(StartTime), FromTillString(), Screen, DurationString(), Rating);
+            return $"{ScreeningTitle}"
+                + _newLine
+                + $"{DayString(StartTime)} {FromTillString()} {Screen} {DurationString()} {Rating}";
         }
 
         public override bool ListFileIsMandatory()
@@ -311,7 +316,7 @@ namespace PresentScreenings.TableView
 
         public string ToScreeningLabelString(bool withDay = false)
         {
-            return $"{ScreeningTitle}\n{ScreeningStringForLabel(withDay)}";
+            return $"{ScreeningTitle}{_newLine}{ScreeningStringForLabel(withDay)}";
         }
 
         public string ToPlannedScreeningString()
@@ -321,7 +326,7 @@ namespace PresentScreenings.TableView
 
         public string ToToolTipString()
         {
-            return $"{ScreeningTitle}\n{DateTimeString(StartTime)}\n{Screen}";
+            return $"{ScreeningTitle}{_newLine}{DateTimeString(StartTime)}{_newLine}{Screen}";
         }
 
         public string ToConsideredScreeningString(string filmFan)

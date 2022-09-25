@@ -146,7 +146,8 @@ namespace PresentScreenings.TableView
 
         private string InstructionsString()
         {
-            return string.Format("Hit the Plan button to start automatic planning.\nRatings {0} down to {1} are considered.", FilmRating.MaxRating, FilmRating.LowestSuperRating);
+            return $"Hit the Plan button to start automatic planning.{Environment.NewLine}"
+                + $"Ratings {FilmRating.MaxRating} down to {FilmRating.LowestSuperRating} are considered.";
         }
 
         private void DisplayResults(string resultText)

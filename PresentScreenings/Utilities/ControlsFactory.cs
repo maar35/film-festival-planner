@@ -293,7 +293,7 @@ namespace PresentScreenings.TableView
 
         public static string ScreeningInfoButtonToolTip(Screening screening)
         {
-            return $"Get more info of screening\n{screening.ToToolTipString()}";
+            return $"Get more info of screening{Environment.NewLine}{screening.ToToolTipString()}";
         }
         #endregion
     }

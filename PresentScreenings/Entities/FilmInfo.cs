@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using AppKit;
@@ -65,7 +64,7 @@ namespace PresentScreenings.TableView
         public string FilmArticle { get; }
         public List<int> CombinationProgramIds { get; private set; }
         public List<ScreenedFilm> ScreenedFilms { get; private set; }
-        public WebUtility.MediumCategory MediumCategory => ViewController.GetFilmById(FilmId).Category;
+        public Film.MediumCategory MediumCategory => ViewController.GetFilmById(FilmId).Category;
         public string Url => ViewController.GetFilmById(FilmId).Url;
         public Film.FilmInfoStatus InfoStatus { get; }
         public static NSStringAttributes StandardAttributes { get; }

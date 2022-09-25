@@ -72,7 +72,7 @@ namespace PresentScreenings.TableView
                 attrs.ForegroundColorFromContext = true;
                 attrs.Font = ControlsFactory.StandardCtBoldFont;
                 var textPosition = new CGPoint(0, _lineHeight);
-                string[] lines = _screening.ToScreeningLabelString(_withDay).Split('\n');
+                string[] lines = _screening.ToScreeningLabelString(_withDay).Split(Environment.NewLine);
                 foreach (var line in lines)
                 {
                     context.TextPosition = textPosition;
