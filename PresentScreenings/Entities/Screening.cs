@@ -23,6 +23,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Members
+        protected string _newLine = Environment.NewLine;
         protected ScreeningInfo _screeningInfo;
         #endregion
 
@@ -144,7 +145,9 @@ namespace PresentScreenings.TableView
                 string messageText = "No film found for screening";
                 string informativeText = $"Can't find film with ID={FilmId} "
                     + $"while reading {AppDelegate.ScreeningsFile}."
-                    + "\n\nFor developers: If this is caused by a URL change of the film, please "
+                    + _newLine
+                    + _newLine
+                    + "For developers: If this is caused by a URL change of the film, please "
                     + "replace the filmId in ratings.csv, screenings.csv (two columns) and screeninginfo.";
                 AlertRaiser.QuitWithAlert(messageText, informativeText);
             }
@@ -159,7 +162,9 @@ namespace PresentScreenings.TableView
         #region Override Methods
         public override string ToString()
         {
-            return string.Format("{0}\n{1} {2} {3} {4} {5}", ScreeningTitle, DayString(StartTime), FromTillString(), Screen, DurationString(), Rating);
+            return $"{ScreeningTitle}"
+                + _newLine
+                + $"{DayString(StartTime)} {FromTillString()} {Screen} {DurationString()} {Rating}";
         }
 
         public override bool ListFileIsMandatory()
@@ -286,7 +291,7 @@ namespace PresentScreenings.TableView
         #region Public Display Methods
         public static string DayString(DateTime date)
         {
-            return string.Format("{0}{1}", date.DayOfWeek.ToString().Remove(3), date.Day.ToString());
+            return $"{date.DayOfWeek.ToString().Remove(3)}{date.Day}";
         }
 
         public static string DateTimeString(DateTime dateTime)
@@ -296,12 +301,12 @@ namespace PresentScreenings.TableView
 
         public static string LongDayString(DateTime date)
         {
-            return string.Format("{0} {1}", date.DayOfWeek.ToString().Remove(3), date.ToString(_dateFormat));
+            return $"{date.DayOfWeek.ToString().Remove(3)} {date.ToString(_dateFormat)}";
         }
 
         public string ToLongTimeString()
         {
-            return string.Format("{0} {1} ({2}){3}", StartDate.ToString(_dayOfWeekFormat), FromTillString(), DurationString(), AppendingExtraTimesString());
+            return $"{StartDate.ToString(_dayOfWeekFormat)} {FromTillString()} ({DurationString()}){AppendingExtraTimesString()}";
         }
 
         public string ToMenuItemString()
@@ -311,12 +316,17 @@ namespace PresentScreenings.TableView
 
         public string ToScreeningLabelString(bool withDay = false)
         {
-            return string.Format("{0}\n{1}", ScreeningTitle, ScreeningStringForLabel(withDay));
+            return $"{ScreeningTitle}{_newLine}{ScreeningStringForLabel(withDay)}";
         }
 
         public string ToPlannedScreeningString()
         {
-            return string.Format($"{ToLongTimeString()} {Screen} {ScreeningTitle}");
+            return $"{ToLongTimeString()} {Screen} {ScreeningTitle}";
+        }
+
+        public string ToToolTipString()
+        {
+            return $"{ScreeningTitle}{_newLine}{DateTimeString(StartTime)}{_newLine}{Screen}";
         }
 
         public string ToConsideredScreeningString(string filmFan)

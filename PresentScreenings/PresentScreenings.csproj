@@ -160,7 +160,6 @@
     <Compile Include="Utilities\ControlsFactory.cs" />
     <Compile Include="Utilities\ListStreamer.cs" />
     <Compile Include="Utilities\ScreeningsPlanner.cs" />
-    <Compile Include="Utilities\WebUtility.cs" />
     <Compile Include="Table Classes\ScreeningOutlinable.cs" />
     <Compile Include="Utilities\AlertRaiser.cs" />
     <Compile Include="Controllers\AvailabilityDialogControler.cs" />
@@ -184,6 +183,15 @@
     <Compile Include="Window Delegates\BaseWindowDelegate.cs" />
     <Compile Include="Utilities\StringByBoolBool.cs" />
     <Compile Include="Window Delegates\ScreeningRelatedWindowDelegate.cs" />
+    <Compile Include="Controllers\MainWindowController.cs" />
+    <Compile Include="Controllers\MainWindowController.designer.cs">
+      <DependentUpon>MainWindowController.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\ActivatableToolbarItem.cs" />
+    <Compile Include="Controllers\WarningsDialogControler.cs" />
+    <Compile Include="Controllers\WarningsDialogControler.designer.cs">
+      <DependentUpon>WarningsDialogControler.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

@@ -18,7 +18,7 @@ namespace PresentScreenings.TableView
         public nfloat HorzPixelsPerHour { get; } = 120;
         public static int FirstDisplayedHour { get; } = 9;
         public static int LastDisplayedHour { get; } = 24;
-        public static nfloat XHourStart { get; } = ScreeningsView.HorizontalScreeningControlExtensionPixels;
+        public static nfloat XHourStart { get; } = ScreeningsView.HorizontalScreeningsViewMargin;
         public ScreeningsView ScreeningsView { get; }
         public HeadersView HeadersView { get; }
         #endregion

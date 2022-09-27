@@ -105,7 +105,7 @@ namespace PresentScreenings.TableView
         /// </summary>
         /// <param name="controller"></param>
         /// <param name="subView"></param>
-        public void DisableResizing(NSViewController controller, NSView subView)
+        public static void DisableResizing(NSViewController controller, NSView subView)
         {
             // Set a dummy name for the subview.
             string controlName = "subview";

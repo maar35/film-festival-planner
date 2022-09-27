@@ -11,6 +11,13 @@ namespace PresentScreenings.TableView
     public class Film : ListStreamer, IComparable
     {
         #region Public Members
+        public enum MediumCategory
+        {
+            Films,
+            CombinedProgrammes,
+            Events
+        }
+
         public enum FilmInfoStatus
         {
             Absent,
@@ -39,10 +46,11 @@ namespace PresentScreenings.TableView
         public string DurationFormat => "hh\\:mm";
         public string DurationString => Duration.ToString(DurationFormat);
         public string MinutesString => Duration.TotalMinutes + "′";
+        public string TitleWithMinutesString => $"{Title} ({MinutesString})";
         public string Url { get; private set; }
         public List<Screening> FilmScreenings => ViewController.FilmScreenings(FilmId);
         public FilmRating Rating => ViewController.GetFilmFanFilmRating(this, ScreeningInfo.Me);
-        public WebUtility.MediumCategory Category { get; private set; }
+        public MediumCategory Category { get; private set; }
         public FilmInfoStatus InfoStatus => ViewController.GetFilmInfoStatus(FilmId);
         public FilmRating MaxRating => ViewController.GetMaxRating(this);
         #endregion
@@ -84,7 +92,7 @@ namespace PresentScreenings.TableView
             _subsection = ViewController.GetSubsection(subsectionId);
             int minutes = int.Parse(duration.TrimEnd('′'));
             Duration = new TimeSpan(0, minutes, 0);
-            Category = (WebUtility.MediumCategory)Enum.Parse(typeof(WebUtility.MediumCategory), category);
+            Category = (MediumCategory)Enum.Parse(typeof(MediumCategory), category);
 
             // Get Film Info.
             if (FilmInfo == null)
@@ -98,7 +106,7 @@ namespace PresentScreenings.TableView
         #region Override Methods
         public override string ToString()
         {
-            return $"{Title} ({MinutesString}) - {MaxRating}";
+            return $"{TitleWithMinutesString} - {MaxRating}";
         }
 
         public override string WriteHeader()
@@ -117,7 +125,7 @@ namespace PresentScreenings.TableView
             fields.Add(ViewController.GetFilmFanFilmRating(this, "Adrienne").ToString());
             fields.Add(FilmInfo.GetGenreDescription());
             fields.Add(FilmInfo.Url);
-            fields.Add(FilmInfo.FilmDescription.Replace("\n", " "));
+            fields.Add(FilmInfo.FilmDescription.Replace(Environment.NewLine, " "));
 
             return string.Join(";", fields);
         }

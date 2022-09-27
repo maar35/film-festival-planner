@@ -1,4 +1,5 @@
-﻿using AppKit;
+﻿using System;
+using AppKit;
 using CoreGraphics;
 using CoreText;
 using Foundation;
@@ -13,26 +14,44 @@ namespace PresentScreenings.TableView
     public class ClickableScreeningLabel : PointingHandControl
     {
         #region Private Constants
-        private const float _lineHeight = ScreeningsView.ScreeningControlLineHeight;
+        private const float _lineHeight = ControlsFactory.StandardLineHeight;
         #endregion
 
         #region Private Members
+        bool _withDay;
         Screening _screening;
+        Action<Screening> _goToScreening;
+        #endregion
+
+        #region Properties
+        public Screening Screening => _screening;
         #endregion
 
         #region Constructors
-        public ClickableScreeningLabel(CGRect frame, Screening screening) : base(frame)
+        public ClickableScreeningLabel(
+            CGRect frame,
+            Screening screening,
+            bool withDay = false,
+            Action<Screening> goToScreening = null) : base(frame)
         {
             Initialize();
             _screening = screening;
-			NeedsDisplay = true;
+            _withDay = withDay;
+            _goToScreening = goToScreening;
+            NeedsDisplay = true;
         }
         #endregion
 
         #region Override Methods
+        public override void MouseDown(NSEvent theEvent)
+        {
+            base.MouseDown(theEvent);
+            _goToScreening?.Invoke(Screening);
+        }
+
         public override void DrawRect(CGRect dirtyRect)
         {
-                base.DrawRect(dirtyRect);
+            base.DrawRect(dirtyRect);
 
             // Use Core Graphic routines to draw the UI.
             using (CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
@@ -46,14 +65,14 @@ namespace PresentScreenings.TableView
                 context.DrawPath(CGPathDrawingMode.Fill);
 
                 // Draw screening information.
-                context.TranslateCTM(2, ScreeningsView.VerticalTextOffset);
+                context.TranslateCTM(2, ControlsFactory.VerticalTextOffset);
                 context.SetTextDrawingMode(CGTextDrawingMode.Fill);
                 ColorView.SetScreeningColor(_screening, context, true);
                 CTStringAttributes attrs = new CTStringAttributes();
                 attrs.ForegroundColorFromContext = true;
                 attrs.Font = ControlsFactory.StandardCtBoldFont;
-                var textPosition = new CGPoint(0, _lineHeight);
-                string[] lines = _screening.ToScreeningLabelString().Split('\n');
+                var textPosition = new CGPoint(0, Frame.Height - _lineHeight);
+                string[] lines = _screening.ToScreeningLabelString(_withDay).Split(Environment.NewLine);
                 foreach (var line in lines)
                 {
                     context.TextPosition = textPosition;

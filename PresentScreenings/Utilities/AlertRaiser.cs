@@ -59,6 +59,7 @@ namespace PresentScreenings.TableView
                 InformativeText = ex.ToString(),
                 MessageText = $"Error in {ProgramName}."
             };
+            alert.AddButton("Close");
             try
             {
                 alert.RunModal();

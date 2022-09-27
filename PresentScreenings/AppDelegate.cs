@@ -37,6 +37,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
+        public MainWindowController MainWindowController { get; set; }
         public ViewController Controller { get; set; } = null;
         public AnalyserDialogController AnalyserDialogController { get; set; }
         public AvailabilityDialogControler AvailabilityDialogControler { get; set; }
@@ -45,6 +46,7 @@ namespace PresentScreenings.TableView
         public FilmRatingDialogController FilmsDialogController { get; set; }
         public PlannerDialogController PlannerDialogController { get; set; }
         public UncombineTitlesSheetController UncombineTitleController { get; set; }
+        public WarningsDialogControler WarningsController { get; set; }
         public ScreeningMenuDelegate ScreeningMenuDelegate => (ScreeningMenuDelegate)_screeningMenu.Delegate;
         public NSMenuItem ToggleOnlyFilmsWithScreeningsMenuItem => _filmsMenu.ItemWithTag(FilmsMenuDelegate.ToggleOnlyFilmsWithScreeningsMenuItemTag);
         public NSMenuItem ToggleTypeMatchMenuItem => _filmsMenu.ItemWithTag(FilmsMenuDelegate.ToggleTypeMatchMethodMenuItemTag);
@@ -179,16 +181,8 @@ namespace PresentScreenings.TableView
             // Write screenings summary.
             WriteScreeningsSummary(directory);
         }
-        #endregion
 
-        #region Private Methods
-        private static string GetDocumentsPath()
-        {
-            string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-            return homeFolder + $"/Documents/Film/{Festival}/{Festival}{FestivalYear}/FestivalPlan";
-        }
-
-        private void RunSaveDialog()
+        public void RunSaveDialog()
         {
             // Create the Save alert.
             string alertTitle = "Save Festival Data";
@@ -211,6 +205,14 @@ namespace PresentScreenings.TableView
             {
                 SaveFestivalData();
             }
+        }
+        #endregion
+
+        #region Private Methods
+        private static string GetDocumentsPath()
+        {
+            string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+            return homeFolder + $"/Documents/Film/{Festival}/{Festival}{FestivalYear}/FestivalPlan";
         }
 
         private void SaveFestivalData()

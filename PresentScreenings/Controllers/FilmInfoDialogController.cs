@@ -83,7 +83,7 @@ namespace PresentScreenings.TableView
             PopulatieDialogView();
 
             // Disable resizing.
-            Presentor.DisableResizing(this, _sampleView);
+            GoToScreeningDialog.DisableResizing(this, _sampleView);
         }
 
         public override void ViewDidDisappear()

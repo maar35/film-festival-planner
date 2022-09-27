@@ -13,23 +13,21 @@ namespace PresentScreenings.TableView
     public class ScreeningsView
 	{
         #region Private Constants
-        const float _labelTop = 2;
-        const float _yLine = 17;
-        const int _linesPerScreening = 2;
-        const float _labelHeight = _yLine * _linesPerScreening;
-        #endregion
-
-        #region Public Constants
-        public const float HorizontalScreeningControlExtensionPixels = _labelHeight;
-        public const float ScreeningControlLineHeight = _yLine;
-        public const float VerticalTextOffset = 3;
+        private const float _labelTop = ControlsFactory.VerticalPixelsBetweenLabels;
+        private const float _yLine = ControlsFactory.StandardLineHeight;
+        private const int _linesPerScreening = 2;
+        private const float _labelHeight = _yLine * _linesPerScreening;
         #endregion
 
         #region Private Variables
-        nfloat _labelLeft;
-        nfloat _labelWidth;
-        ViewController _controller;
-        ScreeningsTableView _superView;
+        private nfloat _labelLeft;
+        private nfloat _labelWidth;
+        private ViewController _controller;
+        private ScreeningsTableView _superView;
+        #endregion
+
+        #region Properties
+        public static float HorizontalScreeningsViewMargin => _labelHeight;
         #endregion
 
         #region Constructors

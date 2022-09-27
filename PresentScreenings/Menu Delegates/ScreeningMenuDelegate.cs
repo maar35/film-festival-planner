@@ -14,7 +14,7 @@ namespace PresentScreenings.TableView
     {
         #region Constants
         private const int _showScreeningInfoMenuItemTag = 201;
-        private const int _showFilmInfoMenuItemTag = 202;
+        private const int _showScreeningWarningsMenuItemTag = 202;
         private const int _soldOutMenuItemTag = 203;
         private const int _ticketsBoughtMenuItemTag = 204;
         private const int _myAttendanceMenuItemTag = 210;
@@ -159,8 +159,8 @@ namespace PresentScreenings.TableView
                 case _showScreeningInfoMenuItemTag:
                     item.Enabled = _controller.ViewIsActive();
                     break;
-                case _showFilmInfoMenuItemTag:
-                    item.Enabled = enabled && _app.FilmInfoController == null;
+                case _showScreeningWarningsMenuItemTag:
+                    item.Enabled = _controller.ViewIsActive() && _controller.AlertCount > 0;
                     break;
                 case _soldOutMenuItemTag:
                     item.Enabled = enabled;
@@ -312,7 +312,8 @@ namespace PresentScreenings.TableView
             return _app.AvailabilityDialogControler != null
                 || _app.PlannerDialogController != null
                 || _app.CombineTitleController != null
-                || _app.UncombineTitleController != null;
+                || _app.UncombineTitleController != null
+                || _app.WarningsController != null;
         }
         #endregion
 

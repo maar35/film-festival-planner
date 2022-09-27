@@ -77,9 +77,6 @@ namespace PresentScreenings.TableView
 		[Action ("navigatePreviousScreening:")]
 		partial void navigatePreviousScreening (Foundation.NSObject sender);
 
-		[Action ("ShowFilmRatings:")]
-		partial void ShowFilmRatings (Foundation.NSObject sender);
-
 		[Action ("ShowScreeningInfo:")]
 		partial void ShowScreeningInfo (Foundation.NSObject sender);
 

@@ -22,11 +22,8 @@ namespace PresentScreenings.TableView
         private NSMenuItem _clickableLabelsMenuItem = null;
         #endregion
 
-        #region Application Access
-        public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
-        #endregion
-
         #region Properties
+        public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
         public ScreeningsPlan Plan => _plan;
         public NSTableView TableView => ScreeningsTable;
         internal ScreeningDialogController ScreeningInfoDialog { get; set; }
@@ -35,6 +32,49 @@ namespace PresentScreenings.TableView
         public static TimeSpan EarliestTime => new TimeSpan(ScreeningsTableView.FirstDisplayedHour, 0, 0);
         public static TimeSpan EarlyTime => new TimeSpan(ScreeningsTableView.FirstDisplayedHour + 1, 0, 0);
         public static TimeSpan LatestTime => new TimeSpan(ScreeningsTableView.LastDisplayedHour - 1, 59, 0);
+        public int WarningCount => ScreeningsWithWarnings.Count;
+        public int BuyCount => ScreeningsWithTicketsToBuy.Count;
+        public int SellCount => ScreeningsWithTicketsToSell.Count;
+        public int AlertCount => WarningCount + BuyCount + SellCount;
+        #endregion
+
+        #region Cached Properties
+        private List<Screening> _screeningsWithWarnings = null;
+        public List<Screening> ScreeningsWithWarnings
+        {
+            get
+            {
+                if (_screeningsWithWarnings == null)
+                {
+                    _screeningsWithWarnings = GetScreeningsWithWarnings();
+                }
+                return _screeningsWithWarnings;
+            }
+        }
+
+        private List<Screening> _screeningsWithTicketsToBuy = null;
+        public List<Screening> ScreeningsWithTicketsToBuy {
+            get
+            {
+                if (_screeningsWithTicketsToBuy == null)
+                {
+                    _screeningsWithTicketsToBuy = GetScreeningsWithTicketsToBuy();
+                }
+                return _screeningsWithTicketsToBuy;
+            }
+        }
+
+        private List<Screening> _screeningsWithTicketsToSell = null;
+        public List<Screening> ScreeningsWithTicketsToSell {
+            get
+            {
+                if (_screeningsWithTicketsToSell == null)
+                {
+                    _screeningsWithTicketsToSell = GetScreeningsWithTicketsToSell();
+                }
+                return _screeningsWithTicketsToSell;
+            }
+        }
         #endregion
 
         #region Computed Properties
@@ -62,7 +102,11 @@ namespace PresentScreenings.TableView
 
         private bool ScreeningSelected
         {
-            set => _controlByScreening[_plan.CurrScreening].Selected = value;
+            set
+            {
+                _controlByScreening[_plan.CurrScreening].Selected = value;
+                UpdateToolbarToolTips();
+            }
         }
 
         public override NSObject RepresentedObject
@@ -128,6 +172,9 @@ namespace PresentScreenings.TableView
 
             // Set window delegate.
             View.Window.Delegate = new ScreeningRelatedWindowDelegate(View.Window, Close);
+
+            // Set the toolbar item tool tips.
+            UpdateToolbarToolTips();
         }
 
         public override void PrepareForSegue(NSStoryboardSegue segue, NSObject sender)
@@ -185,13 +232,39 @@ namespace PresentScreenings.TableView
         {
             _mainView.HeadersView.DrawCurrDay(_plan);
             SetWindowTitle();
+            SetToolbarItemsStatus();
+            UpdateToolbarToolTips();
             InitializeScreeningControls();
-            ReloadScreeningsView();
+            ReloadScreeningsView(false);
         }
 
         private void InitializeScreeningControls()
         {
             _controlByScreening = new Dictionary<Screening, DaySchemaScreeningControl> { };
+        }
+
+        private void SetToolbarItemsStatus()
+        {
+            var toolBar = View.Window.Toolbar;
+            var items = toolBar.VisibleItems;
+            foreach (var item in items)
+            {
+                if (item is ActivatableToolbarItem activatableItem)
+                {
+                    switch (activatableItem.Identifier)
+                    {
+                        case "PreviousDay":
+                            activatableItem.Active = Plan.NextDayExists(-1);
+                            break;
+                        case "NextDay":
+                            activatableItem.Active = Plan.NextDayExists(1);
+                            break;
+                        case "Alerts":
+                            UpdateWarnings();
+                            break;
+                    }
+                }
+            }
         }
 
         private void DisposeColorLabels()
@@ -256,6 +329,45 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
+        #region Private Alert Support Methods
+        private List<Screening> GetScreeningsWithWarnings()
+        {
+            return ScreeningsPlan.Screenings
+                .Where(s => s.Warning != ScreeningInfo.Warning.NoWarning)
+                .ToList();
+
+        }
+
+        private List<Screening> GetScreeningsWithTicketsToBuy()
+        {
+            return ScreeningsPlan.Screenings
+                .Where(s => s.TicketStatus == ScreeningInfo.TicketsStatus.MustBuyTickets)
+                .ToList();
+        }
+
+        private List<Screening> GetScreeningsWithTicketsToSell()
+        {
+            return ScreeningsPlan.Screenings
+                .Where(s => s.TicketStatus == ScreeningInfo.TicketsStatus.MustSellTickets)
+                .ToList();
+        }
+
+        private void ResetScreeningsWithWarnings()
+        {
+            _screeningsWithWarnings = null;
+        }
+
+        private void ResetScreeningsWithTicketsToBuy()
+        {
+            _screeningsWithTicketsToBuy = null;
+        }
+
+        private void ResetScreeningsWithTicketsToSell()
+        {
+            _screeningsWithTicketsToSell = null;
+        }
+        #endregion
+
         #region Public Methods
         public static List<Screening> OverlappingScreenings(Screening screening, bool useTravelTime = false)
         {
@@ -317,9 +429,13 @@ namespace PresentScreenings.TableView
             return RunningPopupsCount == 0;
         }
 
-        public void ReloadScreeningsView()
+        public void ReloadScreeningsView(bool updateWarnings=true, bool ticketStatusOnly=false)
         {
             TableView.ReloadData();
+            if (updateWarnings)
+            {
+                UpdateWarnings(ticketStatusOnly);
+            }
         }
 
         public void AddScreeningControl(Screening screening, DaySchemaScreeningControl control)
@@ -329,6 +445,45 @@ namespace PresentScreenings.TableView
                 _controlByScreening.Remove(screening);
             }
             _controlByScreening.Add(screening, control);
+        }
+
+        public void UpdateWarnings(bool ticketStatusOnly=false)
+        {
+            if (!ticketStatusOnly)
+            {
+                // Update the warning status for all screenings.
+                foreach (var screening in ScreeningsPlan.Screenings)
+                {
+                    UpdateWarning(screening);
+                }
+            }
+
+            // Reset the list of screenings with warnings.
+            ResetScreeningsWithWarnings();
+
+            // Reset the lists of screenings with ticket problems.
+            ResetScreeningsWithTicketsToBuy();
+            ResetScreeningsWithTicketsToSell();
+
+            // Update the Screening Warnings toolbar item.
+            var warningsToolbarItem = App.MainWindowController.WarningsToolbarItem;
+            warningsToolbarItem.Active = WarningCount > 0;
+            warningsToolbarItem.Label = ControlsFactory.GlobalWarningsString(WarningCount);
+            warningsToolbarItem.ToolTip = ControlsFactory.GlobalWarningsString(WarningCount);
+
+            // Update the Ticket Problems toolbar item.
+            var problemsToolbarItem = App.MainWindowController.TicketProblemsToolbarItem;
+            problemsToolbarItem.Active = BuyCount + SellCount > 0;
+            problemsToolbarItem.Label = ControlsFactory.TicketProblemsString(BuyCount, SellCount);
+            problemsToolbarItem.ToolTip = ControlsFactory.TicketProblemsLines(BuyCount, SellCount);
+        }
+
+        public void UpdateToolbarToolTips()
+        {
+            MainWindowController controller = App.MainWindowController;
+            controller.VisitWebSiteToolbarItem.ToolTip = ControlsFactory.VisitWebsiteButtonToolTip(CurrentFilm);
+            controller.ShowFilmInfoToolbarItem.ToolTip = ControlsFactory.FilmInfoButtonToolTip(CurrentFilm);
+            controller.ShowScreeningInfoToolbarItem.ToolTip = ControlsFactory.ScreeningInfoButtonToolTip(CurrentScreening);
         }
 
         static public NSCellStateValue GetNSCellStateValue(bool shouldBeOn)
@@ -795,7 +950,7 @@ namespace PresentScreenings.TableView
             Screening screening = _plan.CurrScreening;
             screening.TicketsBought = !screening.TicketsBought;
             UpdateAttendanceStatus(screening);
-            ReloadScreeningsView();
+            ReloadScreeningsView(true, true);
         }
 
         public void ToggleSoldOut()
@@ -803,7 +958,7 @@ namespace PresentScreenings.TableView
             Screening screening = _plan.CurrScreening;
             screening.SoldOut = !screening.SoldOut;
             UpdateAttendanceStatus(screening);
-            ReloadScreeningsView();
+            ReloadScreeningsView(false);
         }
 
         public void ToggleAttendance(string filmfan)
@@ -854,7 +1009,7 @@ namespace PresentScreenings.TableView
         }
 
         [Action("ShowFilmRatings:")]
-        internal void ShowFilmRating(NSObject sender)
+        internal void ShowFilmRatings(NSObject sender)
         {
             PerformSegue("FilmRatingSegue", sender);
         }
