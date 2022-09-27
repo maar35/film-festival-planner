@@ -8,9 +8,6 @@ namespace PresentScreenings.TableView
 {
     public partial class MainWindowController : NSWindowController
 	{
-		#region Constants
-        #endregion
-
         #region Properties
         public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
 		public ActivatableToolbarItem PreviousDayToolbarItem => (ActivatableToolbarItem)_previousDayToolbarItem;
@@ -50,41 +47,41 @@ namespace PresentScreenings.TableView
 			SaveToolbarItem.ToolTip = SaveToolbarItem.Label;
 			App.Controller.UpdateWarnings();
 		}
-		#endregion
+        #endregion
 
-		#region Custom Actions
-		partial void ShowFilmInfo(Foundation.NSObject sender)
+        #region Custom Actions
+        partial void ShowFilmInfo(NSObject sender)
         {
 			App.Controller.PerformSegue("ScreeningsToFilmInfo", sender);
         }
 
-		partial void VisitWebSite(Foundation.NSObject sender)
+        partial void VisitWebSite(NSObject sender)
         {
 			ViewController.VisitFilmWebsite(App.Controller.CurrentFilm);
         }
 
-		partial void ShowScreeningInfo(Foundation.NSObject sender)
+        partial void ShowScreeningInfo(NSObject sender)
         {
 			App.Controller.ShowScreeningInfo();
         }
 
-		[Action("NavigateToPreviousDay:")]
+        [Action("NavigateToPreviousDay:")]
         private void NavigateToPreviousDay(NSObject sender)
 		{
 			App.Controller.SetNextDay(-1);
 		}
 
-		[Action("NavigateToNextDay:")]
+        [Action("NavigateToNextDay:")]
         private void NavigateToNextDay(NSObject sender)
         {
 			App.Controller.SetNextDay(1);
 		}
 
-		[Action("SaveData:")]
+        [Action("SaveData:")]
 		private void SaveData(NSObject sender)
         {
 			App.RunSaveDialog();
         }
-		#endregion
-	}
+        #endregion
+    }
 }

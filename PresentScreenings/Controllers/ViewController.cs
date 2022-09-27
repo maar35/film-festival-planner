@@ -32,13 +32,49 @@ namespace PresentScreenings.TableView
         public static TimeSpan EarliestTime => new TimeSpan(ScreeningsTableView.FirstDisplayedHour, 0, 0);
         public static TimeSpan EarlyTime => new TimeSpan(ScreeningsTableView.FirstDisplayedHour + 1, 0, 0);
         public static TimeSpan LatestTime => new TimeSpan(ScreeningsTableView.LastDisplayedHour - 1, 59, 0);
-        public List<Screening> ScreeningsWithWarnings { get; private set; }
-        public List<Screening> ScreeningsWithTicketsToBuy { get; private set; }
-        public List<Screening> ScreeningsWithTicketsToSell { get; private set; }
         public int WarningCount => ScreeningsWithWarnings.Count;
         public int BuyCount => ScreeningsWithTicketsToBuy.Count;
         public int SellCount => ScreeningsWithTicketsToSell.Count;
         public int AlertCount => WarningCount + BuyCount + SellCount;
+        #endregion
+
+        #region Cached Properties
+        private List<Screening> _screeningsWithWarnings = null;
+        public List<Screening> ScreeningsWithWarnings
+        {
+            get
+            {
+                if (_screeningsWithWarnings == null)
+                {
+                    _screeningsWithWarnings = GetScreeningsWithWarnings();
+                }
+                return _screeningsWithWarnings;
+            }
+        }
+
+        private List<Screening> _screeningsWithTicketsToBuy = null;
+        public List<Screening> ScreeningsWithTicketsToBuy {
+            get
+            {
+                if (_screeningsWithTicketsToBuy == null)
+                {
+                    _screeningsWithTicketsToBuy = GetScreeningsWithTicketsToBuy();
+                }
+                return _screeningsWithTicketsToBuy;
+            }
+        }
+
+        private List<Screening> _screeningsWithTicketsToSell = null;
+        public List<Screening> ScreeningsWithTicketsToSell {
+            get
+            {
+                if (_screeningsWithTicketsToSell == null)
+                {
+                    _screeningsWithTicketsToSell = GetScreeningsWithTicketsToSell();
+                }
+                return _screeningsWithTicketsToSell;
+            }
+        }
         #endregion
 
         #region Computed Properties
@@ -293,6 +329,45 @@ namespace PresentScreenings.TableView
         }
         #endregion
 
+        #region Private Alert Support Methods
+        private List<Screening> GetScreeningsWithWarnings()
+        {
+            return ScreeningsPlan.Screenings
+                .Where(s => s.Warning != ScreeningInfo.Warning.NoWarning)
+                .ToList();
+
+        }
+
+        private List<Screening> GetScreeningsWithTicketsToBuy()
+        {
+            return ScreeningsPlan.Screenings
+                .Where(s => s.TicketStatus == ScreeningInfo.TicketsStatus.MustBuyTickets)
+                .ToList();
+        }
+
+        private List<Screening> GetScreeningsWithTicketsToSell()
+        {
+            return ScreeningsPlan.Screenings
+                .Where(s => s.TicketStatus == ScreeningInfo.TicketsStatus.MustSellTickets)
+                .ToList();
+        }
+
+        private void ResetScreeningsWithWarnings()
+        {
+            _screeningsWithWarnings = null;
+        }
+
+        private void ResetScreeningsWithTicketsToBuy()
+        {
+            _screeningsWithTicketsToBuy = null;
+        }
+
+        private void ResetScreeningsWithTicketsToSell()
+        {
+            _screeningsWithTicketsToSell = null;
+        }
+        #endregion
+
         #region Public Methods
         public static List<Screening> OverlappingScreenings(Screening screening, bool useTravelTime = false)
         {
@@ -383,18 +458,12 @@ namespace PresentScreenings.TableView
                 }
             }
 
-            // Set the list of screenings with warnings.
-            ScreeningsWithWarnings = ScreeningsPlan.Screenings
-                .Where(s => s.Warning != ScreeningInfo.Warning.NoWarning)
-                .ToList();
+            // Reset the list of screenings with warnings.
+            ResetScreeningsWithWarnings();
 
-            // Set the lists of screenings with ticket problems.
-            ScreeningsWithTicketsToBuy = ScreeningsPlan.Screenings
-                .Where(s => s.TicketStatus == ScreeningInfo.TicketsStatus.MustBuyTickets)
-                .ToList();
-            ScreeningsWithTicketsToSell = ScreeningsPlan.Screenings
-                .Where(s => s.TicketStatus == ScreeningInfo.TicketsStatus.MustSellTickets)
-                .ToList();
+            // Reset the lists of screenings with ticket problems.
+            ResetScreeningsWithTicketsToBuy();
+            ResetScreeningsWithTicketsToSell();
 
             // Update the Screening Warnings toolbar item.
             var warningsToolbarItem = App.MainWindowController.WarningsToolbarItem;
@@ -404,7 +473,7 @@ namespace PresentScreenings.TableView
 
             // Update the Ticket Problems toolbar item.
             var problemsToolbarItem = App.MainWindowController.TicketProblemsToolbarItem;
-            problemsToolbarItem.Active =BuyCount + SellCount > 0;
+            problemsToolbarItem.Active = BuyCount + SellCount > 0;
             problemsToolbarItem.Label = ControlsFactory.TicketProblemsString(BuyCount, SellCount);
             problemsToolbarItem.ToolTip = ControlsFactory.TicketProblemsLines(BuyCount, SellCount);
         }

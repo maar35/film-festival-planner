@@ -38,7 +38,7 @@ namespace PresentScreenings.TableView
             _screening = screening;
             _withDay = withDay;
             _goToScreening = goToScreening;
-			NeedsDisplay = true;
+            NeedsDisplay = true;
         }
         #endregion
 
@@ -51,7 +51,7 @@ namespace PresentScreenings.TableView
 
         public override void DrawRect(CGRect dirtyRect)
         {
-                base.DrawRect(dirtyRect);
+            base.DrawRect(dirtyRect);
 
             // Use Core Graphic routines to draw the UI.
             using (CGContext context = NSGraphicsContext.CurrentContext.GraphicsPort)
@@ -71,7 +71,7 @@ namespace PresentScreenings.TableView
                 CTStringAttributes attrs = new CTStringAttributes();
                 attrs.ForegroundColorFromContext = true;
                 attrs.Font = ControlsFactory.StandardCtBoldFont;
-                var textPosition = new CGPoint(0, _lineHeight);
+                var textPosition = new CGPoint(0, Frame.Height - _lineHeight);
                 string[] lines = _screening.ToScreeningLabelString(_withDay).Split(Environment.NewLine);
                 foreach (var line in lines)
                 {

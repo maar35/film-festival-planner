@@ -48,7 +48,10 @@ namespace PresentScreenings.TableView
         private const float _clickpadRightMargin = ControlsFactory.ClickpadRightMargin;
         private const float _clickpadTopMargin = ControlsFactory.ClickpadTopMargin;
         private const float _labelLineHeight = ControlsFactory.LabelLineHeight;
+        private const float _horizontalTextOffset = -1;
+        private const float _verticalTextOffset = ControlsFactory.VerticalTextOffset;
         private const float _progressNeedleMargin = 2;
+        private const int _maxDaysInRuler = 5;
         #endregion
 
         #region Properties
@@ -238,7 +241,6 @@ namespace PresentScreenings.TableView
         public static void DrawOnDemandAvailabilityStatus(CGContext context, OnDemandScreening screening, nfloat side, bool selected)
         {
             // Establish some base dimensions.
-            const int maxDaysInRuler = 5;
             var margin = _progressNeedleMargin;
             nfloat w = side - 2 * margin;
             nfloat h = side - 2 * margin;
@@ -277,7 +279,7 @@ namespace PresentScreenings.TableView
             var daySeconds = ViewController.DaySpan.TotalSeconds;
             nfloat days = (nfloat)windowSeconds / (nfloat)daySeconds;
             nfloat wPeriod = w / days;
-            if (days <= maxDaysInRuler)
+            if (days <= _maxDaysInRuler)
             {
                 using (var needlePath = new CGPath())
                 {
@@ -326,8 +328,7 @@ namespace PresentScreenings.TableView
 
         public static void InitializeCoreText(CGContext context, bool selected, nfloat side)
         {
-            var yShift = 3;
-            context.TranslateCTM(-1, yShift);
+            context.TranslateCTM(_horizontalTextOffset, _verticalTextOffset);
             NSColor textColor = ClickPadTextColor(selected);
             context.SetTextDrawingMode(CGTextDrawingMode.Fill);
             context.SetFillColor(textColor.CGColor);

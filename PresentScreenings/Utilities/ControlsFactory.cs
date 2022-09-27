@@ -249,17 +249,16 @@ namespace PresentScreenings.TableView
 
         public static void UpdateScreeningWarningLabel(NSTextField label, Screening screening)
         {
+            label.TextColor = NSColor.Black;
             if (screening.Warning == ScreeningInfo.Warning.NoWarning)
             {
                 label.StringValue = string.Empty;
                 label.BackgroundColor = NSColor.WindowBackground;
-                label.TextColor = NSColor.Black;
             }
             else
             {
                 label.StringValue = ScreeningWarningString(screening);
                 label.BackgroundColor = ColorView.WarningBackgroundColor;
-                label.TextColor = NSColor.Black;
             }
         }
 
