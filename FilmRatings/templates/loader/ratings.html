@@ -34,8 +34,8 @@
                         <td>{{ festival_item.rating_count_on_file }}</td>
                         <td>{{ festival_item.film_count }}</td>
                         <td>{{ festival_item.rating_count }}</td>
-                        <td style="padding: 2px 8px">
-                            <input type="submit" value="Load" name="{{ festival_item.submit_name }}" style="width: 100%; padding: 2px 15px; margin: 2px 0; font-size: small;">
+                        <td class="with-submit">
+                            <input type="submit" value="Load" name="{{ festival_item.submit_name }}" class="in-table">
                         </td>
                     </tr>
                 {% endfor %}

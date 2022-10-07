@@ -1,5 +1,4 @@
 from datetime import date
-from http import HTTPStatus
 
 from django.test import TestCase
 from django.urls import reverse
@@ -36,35 +35,16 @@ class FestivalModelTests(TestCase):
         festival_count = Festival.festivals.count()
         self.assertEqual(festival_count, 0)
 
-    def test_no_festivals(self):
+    def test_festival_sorting(self):
         """
-        If no festival exist, an appropriate message is displayed.
-        """
-        response = self.client.get(reverse('festivals:index'))
-        self.assertEqual(response.status_code, HTTPStatus.OK)
-        self.assertContains(response, "No festivals are available.")
-        self.assertQuerysetEqual(response.context['festival_list'], [])
-
-    def test_one_festival(self):
-        """
-        A single festival is displayed on the index page.
-        """
-        festival = create_festival('IFFR', '2021-01-27', '2021-02-06', 'July')
-        response = self.client.get(reverse('festivals:index'))
-        self.assertQuerysetEqual(
-            response.context['festival_list'],
-            [festival],
-        )
-
-    def test_two_festivals(self):
-        """
-        Two festivals are displayed on the index page, most recent
-        first.
+        Three festivals are displayed on the index page, reverse
+        chronologically.
         """
         festival_1 = create_festival('IFFR', '2021-01-27', '2021-02-06')
-        festival_2 = create_festival('IDFA', '2022-07-17', '2022-07-27')
+        festival_2 = create_festival('IDFA', '2025-07-17', '2022-07-27')
+        festival_3 = create_festival('MTMF', '2020-04-12', '2022-07-27')
         response = self.client.get(reverse('festivals:index'))
         self.assertQuerysetEqual(
             response.context['festival_list'],
-            [festival_2, festival_1],
+            [festival_2, festival_1, festival_3],
         )

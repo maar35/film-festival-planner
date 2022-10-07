@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.views import generic
 
 from FilmRatings import tools
+from FilmRatings.tools import add_base_context
 from festivals.forms.set_festival import FestivalEdition, TestNearestFestival
 from festivals.models import Festival, default_festival
 
@@ -14,16 +15,33 @@ from festivals.models import Festival, default_festival
 # Define generic view classes.
 class IndexView(generic.ListView):
     template_name = 'festivals/index.html'
+    http_method_names = ['get', 'post']
+    object_list = Festival.festivals.order_by('-start_date')
     context_object_name = 'festival_list'
-
-    def get_queryset(self):
-        """Return the festivals, most recent first."""
-        return Festival.festivals.order_by('-start_date')
+    unexpected_error = ''
 
     def get_context_data(self, **kwargs):
-        context = tools.add_base_context(self.request, super().get_context_data(**kwargs))
+        context = add_base_context(self.request, super().get_context_data(**kwargs))
         context['title'] = 'Festival Index'
+        context['unexpected_error'] = self.unexpected_error
         return context
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method == 'POST':
+
+            picked_festival = None
+            names = [(f'{festival.id}', festival) for festival in self.object_list]
+            for name, festival in names:
+                if name in request.POST:
+                    picked_festival = festival
+                    break
+            if picked_festival is not None:
+                picked_festival.set_current(request.session)
+                return HttpResponseRedirect(reverse('film_list:film_list'))
+            else:
+                self.unexpected_error = f'Submit name not found in POS ({request.POST}'
+
+        return render(request, 'festivals/index.html', self.get_context_data())
 
 
 # Festival details view.

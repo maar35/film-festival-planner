@@ -38,9 +38,26 @@
             background-color: #00000090;
         }
 
+        /* Specifics for in-table input widgets */
+        input[type=submit].in-table {
+            width: 100%;
+            padding: 6px 15px;
+            font-size: small;
+            border-radius: 4px;
+        }
+        input[type=submit].in-table:hover {
+            background-color: darkgreen;
+        }
+
+        /* Table cell style when containing an input widget */
+        td.with-submit {
+            padding: 0 8px;
+        }
 
         /* Style The Dropdown Button */
         .drop-button {
+            position: relative;
+            top: 4px;
             color: ivory;
             background-color: green;
             padding: 2px;
@@ -56,7 +73,7 @@
             background-color: green;
             text-align: center;
             width: 70%;
-            height: 15px;
+            height: 24px;
         }
         .dropdown:hover {
             background-color: darkgreen;
@@ -113,7 +130,7 @@
         <p>
             <span style="color:{{ festival_color }}; text-align: left; width: 49%; display: inline-block;">
             {% if festival %}
-                {{ festival }}
+                <a href="{% url 'festivals:index' %}">{{ festival }}</a>
                 {% now "Y-m-d" as today_as_date %}
                 {% if today_as_date < festival.start_date|date:"Y-m-d" %}
                     <span style="color: ivory"> starts in {{ festival.start_date|timeuntil }}</span>
