@@ -6,8 +6,12 @@ Created on Tue Oct 20 22:11:21 2020
 @author: maarten
 """
 
-import datetime
+from datetime import datetime
 import inspect
+
+
+def comment(text):
+    print(f"\n{datetime.now()}  - {text}")
 
 
 class ErrorCollector:
@@ -22,7 +26,7 @@ class ErrorCollector:
         frame = inspect.currentframe().f_back
         lineno = frame.f_lineno
         caller = frame.f_code.co_name if frame.f_code is not None else 'code'
-        error = f"{datetime.datetime.now()} - ERROR {err} in {caller} line {lineno} - {msg}"
+        error = f"{datetime.now()} - ERROR {err} in {caller} line {lineno} - {msg}"
         print(error)
         self.errors.append(error)
 
@@ -44,7 +48,7 @@ class DebugRecorder:
 
     def write_debug(self):
         if len(self.debug_lines) > 0:
-            time_stamp = datetime.datetime.now().isoformat(' ') + '\n'
+            time_stamp = datetime.now().isoformat(' ') + '\n'
             with open(self.debug_file, 'w') as f:
                 f.write(time_stamp + str(self))
             print(f"Debug text written to {self.debug_file}.")

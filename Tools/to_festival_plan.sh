@@ -5,7 +5,7 @@ declare -r festival=${festival_year%%[0-9][0-9][0-9][0-9]}
 declare -r year=${festival_year##${festival}}
 declare -r festival_dir=~/Documents/Film/$festival/${festival}${year}
 declare -r source_dir=$festival_dir/_planner_data
-declare -r source_files="$source_dir/*.csv $source_dir/*.xml"
+declare -r source_files="$source_dir/*.csv $source_dir/*.xml $source_dir/filmids.txt"
 declare -r target_dir=$festival_dir/FestivalPlan
 declare -r backup_dir=$target_dir/_bak
 declare -r temp_dir=$target_dir/newbak
@@ -37,7 +37,9 @@ if [ ! -d $backup_dir ]; then
 fi
 
 echo "Source files:"
-ls -lt $source_files
+pushd $source_dir
+ls -lt $(for source_file in $source_files; do basename $source_file; done)
+popd
 
 pushd $target_dir
 mkdir $temp_dir
