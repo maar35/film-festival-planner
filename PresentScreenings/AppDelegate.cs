@@ -57,7 +57,7 @@ namespace PresentScreenings.TableView
         public AppDelegate()
 		{
             // Preferences.
-            Festival = "MTMF";
+            Festival = "Imagine";
             FestivalYear = "2022";
             VisitPhysical = true;
             PauseBetweenOnDemandScreenings = new TimeSpan(0, 30, 0);

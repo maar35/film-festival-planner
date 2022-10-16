@@ -8,11 +8,10 @@ import urllib.error
 from enum import Enum, auto
 from typing import Dict
 
-shared_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
-sys.path.insert(0, shared_dir)
-import planner_interface as planner
-import application_tools as app_tools
-import web_tools
+import Shared.planner_interface as planner
+import Shared.application_tools as app_tools
+from Shared.parse_tools import HtmlPageParser
+from Shared.web_tools import iripath_to_uripath, UrlFile, UrlReader
 
 # Parameters.
 festival = 'MTMF'
@@ -104,7 +103,7 @@ def get_films(festival_data):
 def get_one_film(iri, festival_data):
     # Get the URL from the IRI.
     iri_path = iri[len(mtmf_hostname):]
-    url = mtmf_hostname + web_tools.iripath_to_uripath(iri_path)
+    url = mtmf_hostname + iripath_to_uripath(iri_path)
 
     # Load the film HTML.
     film_html = None
@@ -118,7 +117,7 @@ def get_one_film(iri, festival_data):
             Globals.error_collector.add(error, f'while loading {url}')
     else:
         film_file = film_file_format.format(film_id)
-        url_file = web_tools.UrlFile(url, film_file, Globals.error_collector)
+        url_file = UrlFile(url, film_file, Globals.error_collector)
         try:
             film_html = url_file.get_text(f'Downloading site {url}')
         except urllib.error.HTTPError:
@@ -133,7 +132,7 @@ def get_one_film(iri, festival_data):
 
 
 def load_url(url, encoding='utf-8'):
-    reader = web_tools.UrlReader(Globals.error_collector)
+    reader = UrlReader(Globals.error_collector)
     request = reader.get_request(url)
     with urllib.request.urlopen(request) as response:
         html_bytes = response.read()
@@ -169,16 +168,6 @@ class Globals:
     screened_film_urls_by_film_id = {}
 
 
-class HtmlPageParser(web_tools.HtmlPageParser):
-    debugging = False
-
-    def __init__(self, festival_data, debug_prefix, encoding=None):
-        web_tools.HtmlPageParser.__init__(self, Globals.debug_recorder, debug_prefix)
-        self.festival_data = festival_data
-        if encoding is not None:
-            self.print_debug(f'Encoding: {encoding}', '')
-
-
 class FilmPageParser(HtmlPageParser):
     class FilmsParseState(Enum):
         IDLE = auto()
@@ -198,7 +187,7 @@ class FilmPageParser(HtmlPageParser):
     debugging = False
 
     def __init__(self, url, festival_data, encoding=None):
-        HtmlPageParser.__init__(self, festival_data, 'F', encoding)
+        HtmlPageParser.__init__(self, festival_data, Globals.debug_recorder, 'F', encoding)
         self.url = url
         self.festival_data = festival_data
         self.print_debug(self.bar, f'Analysing URL {url}')
@@ -384,7 +373,7 @@ class ScreeningsPageParser(HtmlPageParser):
     nl_month_by_name: Dict[str, int] = {'apr': 4}
 
     def __init__(self, iffr_data, film, subtitles):
-        HtmlPageParser.__init__(self, iffr_data, "S")
+        HtmlPageParser.__init__(self, iffr_data, Globals.debug_recorder, "S")
         self.film = film
         self.subtitles = subtitles
         self.print_debug(self.bar, f"Analysing FILM {film}, {film.url}")
@@ -489,7 +478,7 @@ class ScreeningsPageParser(HtmlPageParser):
 
     def read_screen(self, url, film_id, screening_nr):
         locations_file = screenings_file_format.format(film_id, screening_nr)
-        url_file = web_tools.UrlFile(url, locations_file, Globals.error_collector)
+        url_file = UrlFile(url, locations_file, Globals.error_collector)
         try:
             locations_html = url_file.get_text(f'Downloading shopping cart site {url}')
         except ValueError:
@@ -558,7 +547,7 @@ class ShoppingCartPageParser(HtmlPageParser):
     debugging = False
 
     def __init__(self, festival_data, film, sequence_nr, url):
-        HtmlPageParser.__init__(self, festival_data, 'SC')
+        HtmlPageParser.__init__(self, festival_data, Globals.debug_recorder, 'SC')
         self.film = film
         self.sequence_nr = sequence_nr
         self.print_debug(self.bar, f'Analysing shopping cart #{sequence_nr} of FILM {film}, {url}')
@@ -566,7 +555,7 @@ class ShoppingCartPageParser(HtmlPageParser):
 
     def get_theater_screen(self, url):
         details_file = details_file_format.format(self.film.filmid, self.sequence_nr)
-        url_file = web_tools.UrlFile(url, details_file, Globals.error_collector)
+        url_file = UrlFile(url, details_file, Globals.error_collector)
         try:
             details_html = url_file.get_text(f'Downloading site {url}')
         except ValueError:
@@ -594,7 +583,7 @@ class TheaterScreenPageParser(HtmlPageParser):
     debugging = False
 
     def __init__(self, festival_data, film, url):
-        HtmlPageParser.__init__(self, festival_data, 'TS')
+        HtmlPageParser.__init__(self, festival_data, Globals.debug_recorder, 'TS')
         self.print_debug(self.bar, f'Analysing screening details of FILM {film}, {url}')
         self.stateStack = self.StateStack(self.print_debug, self.ScreensParseState.IDLE)
         self.current_screen = None
