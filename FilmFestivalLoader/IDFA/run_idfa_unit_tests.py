@@ -10,14 +10,9 @@ Created on Tue Nov 24 16:18:02 2020
 
 
 import datetime
-import sys
-import os
-import parse_idfa_html as idfa
 
-prj_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner")
-shared_dir = os.path.join(prj_dir, "FilmFestivalLoader/Shared")
-sys.path.insert(0, shared_dir)
-import test_tools
+import parse_idfa_html as idfa
+from Shared.test_tools import execute_tests, equity_decorator
 
 
 def main():
@@ -26,7 +21,7 @@ def main():
              compare_a_,
              compare_00,
              test_film_title_error]
-    test_tools.execute_tests(tests)
+    execute_tests(tests)
 
 
 class TestFilm:
@@ -64,7 +59,7 @@ class TestList:
         pass
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def compare_a0():
     # Arrange.
     films = TestList.idfa_data.films
@@ -76,7 +71,7 @@ def compare_a0():
     return less, True
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def compare_0a():
     # Arrange.
     films = TestList.idfa_data.films
@@ -88,7 +83,7 @@ def compare_0a():
     return greater, False
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def compare_a_():
     # Arrange.
     films = TestList.idfa_data.films
@@ -100,7 +95,7 @@ def compare_a_():
     return less, True
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def compare_00():
     # Arrange.
     films = TestList.idfa_data.films
@@ -112,7 +107,7 @@ def compare_00():
     return less, True
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def test_film_title_error():
     # Arrange.
     screened_title = None
