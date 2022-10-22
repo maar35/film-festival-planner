@@ -9,18 +9,14 @@ Created on Wed Nov  4 20:36:18 2020
 @author: maarten
 """
 
-import os
-import sys
-import re
 import datetime
 import html.parser
+import os
+import re
 
-prj_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner")
-shared_dir = os.path.join(prj_dir, "FilmFestivalLoader/Shared")
-sys.path.insert(0, shared_dir)
-import planner_interface as planner
-import application_tools as app_tools
-import web_tools
+from Shared.application_tools import ErrorCollector, DebugRecorder
+from Shared.planner_interface import FilmInfo, ScreenedFilm, Film, Screening, FestivalData
+from Shared.web_tools import get_charset, UrlReader, HtmlPageParser, iripath_to_uripath
 
 # Parameters.
 festival = 'IDFA'
@@ -46,12 +42,12 @@ debug_file = os.path.join(plandata_dir, "debug.txt")
 az_webroot_format = "https://www.idfa.nl/nl/collectie/documentaires?page={:d}&filters[edition.year]=2020"
 films_hostname = "https://www.idfa.nl"
 
+# Application tools.
+error_collector = ErrorCollector()
+debug_recorder = DebugRecorder(debug_file)
+
 
 def main():
-    # Initialize globals.
-    Globals.error_collector = app_tools.ErrorCollector()
-    Globals.debug_recorder = app_tools.DebugRecorder(debug_file)
-
     # Initialize a festival data object.
     idfa_data = IdfaData(plandata_dir)
 
@@ -88,10 +84,10 @@ def comment(text):
 
 
 def store_title_languages():
-    planner.Film.language_by_title['El Sicario, Room 164'] = 'es'
-    planner.Film.language_by_title['Il mio corpo'] = 'it'
-    planner.Film.language_by_title['Le temps perdu'] = 'fr'
-    planner.Film.language_by_title['O arrais do mar'] = 'pt'
+    Film.language_by_title['El Sicario, Room 164'] = 'es'
+    Film.language_by_title['Il mio corpo'] = 'it'
+    Film.language_by_title['Le temps perdu'] = 'fr'
+    Film.language_by_title['O arrais do mar'] = 'pt'
 
 
 class Globals:
@@ -110,13 +106,13 @@ class FilmsLoader:
             az_data = None
             az_file = az_file_format.format(page_number)
             if os.path.isfile(az_file):
-                charset = web_tools.get_charset(az_file)
+                charset = get_charset(az_file)
                 with open(az_file, 'r', encoding=charset) as f:
                     az_data = f.read()
             else:
                 az_page = az_webroot_format.format(page_number)
                 print(f"Downloading {az_page}.")
-                url_reader = web_tools.UrlReader(Globals.error_collector)
+                url_reader = UrlReader(Globals.error_collector)
                 az_data = url_reader.load_url(az_page, az_file)
             parser = AzPageParser(data)
             parser.feed(az_data)
@@ -136,12 +132,12 @@ class FilmDetailsLoader:
         film_data = None
         film_file = film_file_format.format(film.filmid)
         if os.path.isfile(film_file):
-            charset = web_tools.get_charset(film_file)
+            charset = get_charset(film_file)
             with open(film_file, 'r', encoding=charset) as f:
                 film_data = f.read()
         else:
             print(f"Downloading site of {film.title}: {film.url}")
-            url_reader = web_tools.UrlReader(Globals.error_collector)
+            url_reader = UrlReader(Globals.error_collector)
             film_data = url_reader.load_url(film.url, film_file)
         if film_data is not None:
             print(f'Parsing FILM INFO of: {film.title}')
@@ -174,12 +170,12 @@ class CombinationProgramsLoader:
             filmid = idfa_data.film_id_by_url[url]
             film_file = film_file_format.format(filmid)
             if os.path.isfile(film_file):
-                charset = web_tools.get_charset(film_file)
+                charset = get_charset(film_file)
                 with open(film_file, 'r', encoding=charset) as f:
                     compilation_data = f.read()
         if compilation_data is None:
             print(f'Downloading site of combination program: {url}')
-            url_reader = web_tools.UrlReader(Globals.error_collector)
+            url_reader = UrlReader(Globals.error_collector)
             compilation_data = url_reader.read_url(url)
         if compilation_data is not None:
             print(f'Parsing FILM INFO from: {url}')
@@ -197,10 +193,10 @@ class CombinationProgramsLoader:
         return film
 
 
-class HtmlPageParser(web_tools.HtmlPageParser):
+class HtmlPageParser(HtmlPageParser):
 
     def __init__(self, idfa_data, debug_prefix):
-        web_tools.HtmlPageParser.__init__(self, Globals.debug_recorder, debug_prefix)
+        HtmlPageParser.__init__(self, Globals.debug_recorder, debug_prefix)
         self.idfa_data = idfa_data
         self.debugging = False
 
@@ -238,7 +234,7 @@ class AzPageParser(HtmlPageParser):
 
     def add_filminfo(idfa_data, film, description, article, screened_films=[]):
         if description is not None or article is not None:
-            filminfo = planner.FilmInfo(film.filmid, description, article, screened_films)
+            filminfo = FilmInfo(film.filmid, description, article, screened_films)
             idfa_data.filminfos.append(filminfo)
 
     def add_film_finding_duration(self):
@@ -268,7 +264,7 @@ class AzPageParser(HtmlPageParser):
                 if attr[0] == "class" and attr[1].startswith("collectionitem-module__link_"):
                     self.in_link = True
                 elif self.in_link and attr[0] == 'href':
-                    uri_path = web_tools.iripath_to_uripath(attr[1])
+                    uri_path = iripath_to_uripath(attr[1])
                     self.url = films_hostname + uri_path
                     self.in_link = False
             elif tag == "h2":
@@ -391,7 +387,7 @@ class ScreeningsParser(HtmlPageParser):
         self.idfa_data.compilation_by_url[self.compilation_url] = None
 
     def get_url(self, iri):
-        return films_hostname + web_tools.iripath_to_uripath(iri)
+        return films_hostname + iripath_to_uripath(iri)
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -469,7 +465,7 @@ class FilmPageParser(HtmlPageParser):
             filminfo.article = article
         except IndexError as e:
             Globals.error_collector.add(str(e), f'No filminfo description found for: {self.film.title}')
-            filminfo = planner.FilmInfo(self.film.filmid, '', article)
+            filminfo = FilmInfo(self.film.filmid, '', article)
             self.idfa_data.filminfos.append(filminfo)
 
     def handle_starttag(self, tag, attrs):
@@ -552,7 +548,7 @@ class CompilationPageParser(FilmPageParser):
 
     def add_screened_film(self):
         film = self.idfa_data.get_film_by_key(self.screened_title, None)
-        screened_film = planner.ScreenedFilm(film.filmid, self.screened_title, self.screened_description)
+        screened_film = ScreenedFilm(film.filmid, self.screened_title, self.screened_description)
         self.screened_films.append(screened_film)
 
     def add_compilation_filminfo(self):
@@ -610,10 +606,10 @@ class CompilationPageParser(FilmPageParser):
             self.add_screened_film()
 
 
-class Film(planner.Film):
+class Film(Film):
 
     def __init__(self, film):
-        planner.Film.__init__(self, film.seqnr, film.filmid, film.title, film.url)
+        Film.__init__(self, film.seqnr, film.filmid, film.title, film.url)
 
     def __lt__(self, other):
         self_is_alpha = self.re_alpha.match(self.sortstring) is not None
@@ -625,20 +621,20 @@ class Film(planner.Film):
         return self.sortstring < other.sortstring
 
 
-class Screening(planner.Screening):
+class Screening(Screening):
     def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, combination_program_url):
-        planner.Screening.__init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience)
+        Screening.__init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience)
         self.combination_program_url = combination_program_url
 
 
-class IdfaData(planner.FestivalData):
+class IdfaData(FestivalData):
 
     def __init__(self, plandata_dir):
-        planner.FestivalData.__init__(self, plandata_dir)
+        FestivalData.__init__(self, plandata_dir)
         self.compilation_by_url = {}
 
     def create_film(self, title, url):
-        return Film(planner.FestivalData.create_film(self, title, url))
+        return Film(FestivalData.create_film(self, title, url))
 
 
 if __name__ == "__main__":
