@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using AppKit;
 
 namespace PresentScreenings.TableView
@@ -42,7 +43,7 @@ namespace PresentScreenings.TableView
 
             // Assign properties that need calculating.
             SectionId = int.Parse(sectionId);
-            Color = _colorByName[color];
+            Color = GetColor(color);
         }
         #endregion
 
@@ -60,6 +61,25 @@ namespace PresentScreenings.TableView
         public override string ToString()
         {
             return Name;
+        }
+        #endregion
+
+        #region Private Methods
+        private NSColor GetColor(string colorString)
+        {
+            NSColor color;
+            if (colorString.StartsWith("#"))
+            {
+                var r = Convert.ToInt32(colorString.Substring(1, 2), 16);
+                var g = Convert.ToInt32(colorString.Substring(3, 2), 16);
+                var b = Convert.ToInt32(colorString.Substring(5, 2), 16);
+                color = NSColor.FromRgb(r, g, b);
+            }
+            else
+            {
+                color = _colorByName[colorString];
+            }
+            return color;
         }
         #endregion
     }

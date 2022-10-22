@@ -8,4 +8,12 @@ namespace PresentScreenings.TableView
         {
         }
     }
+
+    public sealed class NextAttributePartPresumptionsFailedException : Exception
+    {
+        public NextAttributePartPresumptionsFailedException(string message) : base(message)
+        {
+
+        }
+    }
 }

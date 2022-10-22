@@ -165,7 +165,7 @@ class HtmlPageParser(html.parser.HTMLParser):
 
     def print_debug(self, str1, str2):
         if self.debugging:
-            self.debug_recorder.add(self.debug_prefix + ' ' + str(str1) + ' ' + str(str2))
+            self.debug_recorder.add(f'{self.debug_prefix}  {str1} {str2}')
 
     def handle_starttag(self, tag, attrs):
         if len(attrs) > 0:
