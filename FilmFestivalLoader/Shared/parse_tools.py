@@ -12,29 +12,6 @@ import Shared.web_tools as web_tools
 from Shared.planner_interface import Screening
 
 
-def add_screening(festival_data, film, screen, start_dt, end_dt, qa='', subtitles='', extra='',
-                  audience='', program=None, display=True):
-
-    # Print the screening properties.
-    if display and audience == 'publiek':
-        print()
-        print(f"---SCREENING OF {film.title}")
-        print(f"--  screen:     {screen}")
-        print(f"--  start time: {start_dt}")
-        print(f"--  end time:   {end_dt}")
-        print(f"--  duration:   film: {film.duration_str()}  screening: {end_dt - start_dt}")
-        print(f"--  audience:   {audience}")
-        print(f"--  category:   {film.medium_category}")
-        print(f"--  q and a:    {qa}")
-        print(f"--  subtitles:  {subtitles}")
-
-    # Create a new screening object.
-    screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience, program, subtitles)
-
-    # Add the screening to the list.
-    festival_data.screenings.append(screening)
-
-
 class FileKeeper:
     def __init__(self, festival, year):
         # Define directories.
@@ -62,13 +39,35 @@ class FileKeeper:
 
 
 class HtmlPageParser(web_tools.HtmlPageParser):
-    debugging = False
 
-    def __init__(self, festival_data, debug_recorder, debug_prefix, encoding=None):
+    def __init__(self, festival_data, debug_recorder, debug_prefix, debugging=False, encoding=None):
         web_tools.HtmlPageParser.__init__(self, debug_recorder, debug_prefix)
+        self.debugging = debugging
         self.festival_data = festival_data
         if encoding is not None:
             self.print_debug(f'Encoding: {encoding}', '')
+
+    def add_screening(self, film, screen, start_dt, end_dt, qa='', subtitles='', extra='',
+                      audience='', program=None, display=True):
+
+        # Print the screening properties.
+        if display and audience == 'publiek':
+            print()
+            print(f"---SCREENING OF {film.title}")
+            print(f"--  screen:     {screen}")
+            print(f"--  start time: {start_dt}")
+            print(f"--  end time:   {end_dt}")
+            print(f"--  duration:   film: {film.duration_str()}  screening: {end_dt - start_dt}")
+            print(f"--  audience:   {audience}")
+            print(f"--  category:   {film.medium_category}")
+            print(f"--  q and a:    {qa}")
+            print(f"--  subtitles:  {subtitles}")
+
+        # Create a new screening object.
+        screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience, program, subtitles)
+
+        # Add the screening to the list.
+        self.festival_data.screenings.append(screening)
 
 
 if __name__ == "__main__":

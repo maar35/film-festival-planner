@@ -48,6 +48,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Members
+        private const int _loopThreshold = 200;
         private static string _newLine = Environment.NewLine;
         private static string _twoLines = _newLine + _newLine;
         private static readonly Dictionary<string, ScreenedFilmType> _screenedFilmTypeByString;
@@ -295,9 +296,15 @@ namespace PresentScreenings.TableView
             attributedString.AddAttributes(StandardAttributes, range);
 
             // Set attributes for the HTML indicated ranges.
+            int loopNumber = 0;
             while (startIndex >= 0)
             {
                 startIndex = NextAttributedPart(ref attributedString, startIndex);
+                loopNumber += 1;
+                if (loopNumber >= _loopThreshold)
+                {
+                    throw new NextAttributePartPresumptionsFailedException($"'{text}' breaks NextAttributePart presumptions");
+                }
             }
 
             attributedString.EndEditing();
