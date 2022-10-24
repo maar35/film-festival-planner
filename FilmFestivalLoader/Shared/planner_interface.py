@@ -15,13 +15,13 @@ from enum import Enum, auto
 
 interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 articles_file = os.path.join(interface_dir, "articles.txt")
-ucode_file = os.path.join(interface_dir, "unicodemap.txt")
+unicode_file = os.path.join(interface_dir, "unicodemap.txt")
 
 
 class UnicodeMapper:
 
     def __init__(self):
-        with open(ucode_file) as f:
+        with open(unicode_file) as f:
             self.umap_keys = f.readline().rstrip("\n").split(";")
             self.umap_values = f.readline().rstrip("\n").split(";")
 
@@ -355,11 +355,11 @@ class FestivalData:
         self.read_screens()
         self.read_filmids()
 
-    def _filmkey(self, title, url):
+    def film_key(self, title, url):
         return title
 
     def create_film(self, title, url):
-        film_id = self.new_film_id(self._filmkey(title, url))
+        film_id = self.new_film_id(self.film_key(title, url))
         if film_id not in [f.filmid for f in self.films]:
             self.film_seqnr += 1
             return Film(self.film_seqnr, film_id, title, url)
@@ -376,7 +376,7 @@ class FestivalData:
         return film_id
 
     def get_film_by_key(self, title, url):
-        film_id = self.film_id_by_key[self._filmkey(title, url)]
+        film_id = self.film_id_by_key[self.film_key(title, url)]
         films = [film for film in self.films if film.filmid == film_id]
         if len(films) > 0:
             return films[0]
@@ -448,7 +448,7 @@ class FestivalData:
                 title = record[1]
                 url = record[2]
                 self.film_id_by_url[url] = filmid
-                self.film_id_by_key[self._filmkey(title, url)] = filmid
+                self.film_id_by_key[self.film_key(title, url)] = filmid
         except OSError:
             pass
 

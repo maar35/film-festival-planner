@@ -608,7 +608,7 @@ class MtmfData(planner.FestivalData):
     def _init__(self, planner_data_dir):
         planner.FestivalData.__init__(self, planner_data_dir)
 
-    def _filmkey(self, film, url):
+    def film_key(self, film, url):
         return url
 
     def film_can_go_to_planner(self, film_id):
