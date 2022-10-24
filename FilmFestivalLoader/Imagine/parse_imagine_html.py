@@ -7,13 +7,12 @@ Created on Thu Mar 18 20:56:44 2021
 """
 
 import datetime
-import os
 import re
 from enum import Enum, auto
 
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment
 from Shared.parse_tools import FileKeeper, HtmlPageParser
-from Shared.planner_interface import write_lists, FilmInfo, Screening, FestivalData, Film
+from Shared.planner_interface import write_lists, FilmInfo, FestivalData, Film
 from Shared.web_tools import UrlFile
 
 # Parameters.
@@ -24,7 +23,7 @@ ondemand_available_hours = None
 
 # Files.
 fileKeeper = FileKeeper(festival, year)
-az_file = fileKeeper.az_file
+az_file = fileKeeper.az_file()
 debug_file = fileKeeper.debug_file
 
 # URL information.
@@ -70,9 +69,6 @@ def main():
 def parse_imagine_sites(festival_data):
     comment('Parsing AZ pages and film pages.')
     get_films(festival_data)
-
-    # comment('Parsing film pages.')
-    # get_film_details(festival_data)
 
 
 def get_films(festival_data):
@@ -426,7 +422,7 @@ class ImagineData(FestivalData):
     def _init__(self, plandata_dir):
         FestivalData.__init__(self, plandata_dir)
 
-    def _filmkey(self, film, url):
+    def film_key(self, film, url):
         return url
 
     def film_can_go_to_planner(self, film_id):

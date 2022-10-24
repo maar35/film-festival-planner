@@ -114,11 +114,8 @@ class HtmlCharsetParser(html.parser.HTMLParser):
 
     def handle_starttag(self, tag, attrs):
         html.parser.HTMLParser.handle_starttag(self, tag, attrs)
-        if tag == 'meta':
-            for attr in attrs:
-                if attr[0] == 'charset':
-                    self.charset = attr[1]
-                    break
+        if tag == 'meta' and len(attrs) > 0 and attrs[0] == 'charset':
+            self.charset = attrs[0][1]
 
 
 class HtmlPageParser(html.parser.HTMLParser):
@@ -128,6 +125,11 @@ class HtmlPageParser(html.parser.HTMLParser):
         def __init__(self, print_debug, state):
             self.print_debug = print_debug
             self.stack = [state]
+
+        def __str__(self):
+            head = f'States of HtmlParser in web_tools.py:\n'
+            states = '\n'.join([str(s) for s in self.stack])
+            return head + states
 
         def _print_debug(self, new_state):
             frame = inspect.currentframe().f_back

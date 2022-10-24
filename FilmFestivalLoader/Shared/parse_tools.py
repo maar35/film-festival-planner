@@ -15,24 +15,39 @@ from Shared.planner_interface import Screening
 class FileKeeper:
     def __init__(self, festival, year):
         # Define directories.
-        self.documents_dir = os.path.expanduser(f'~/Documents/Film/{festival}/{festival}{year}')
+        self.base_dir = os.path.expanduser(f'~/Documents/Film')
+        self.festival_dir = os.path.join(self.base_dir, f'{festival}')
+        self.documents_dir = os.path.join(self.festival_dir, f'{festival}{year}')
         self.webdata_dir = os.path.join(self.documents_dir, '_website_data')
         self.plandata_dir = os.path.join(self.documents_dir, '_planner_data')
+        self.interface_dir = os.path.join(self.documents_dir, 'FestivalPlan')
 
         # Define formats.
-        self.film_file_format = os.path.join(self.webdata_dir, "filmpage_{:03d}.html")
+        self.az_file_format = os.path.join(self.webdata_dir, "az_page_{:02}.html")
+        self.film_file_format = os.path.join(self.webdata_dir, "film_page_{:03d}.html")
         self.screenings_file_format = os.path.join(self.webdata_dir, "screenings_{:03d}_{:02d}.html")
         self.details_file_format = os.path.join(self.webdata_dir, "details_{:03d}_{:02d}.html")
 
         # Define filenames.
-        self.az_file = os.path.join(self.webdata_dir, "azpage.html")
+        self.az_file_unnumbered = os.path.join(self.webdata_dir, "azpage.html")
         self.debug_file = os.path.join(self.plandata_dir, "debug.txt")
 
-        # Make sure the web- and data-directories exist.
+        # Make sure that relevant directories exist.
+        if not os.path.isdir(self.festival_dir):
+            os.mkdir(self.festival_dir)
+        if not os.path.isdir(self.documents_dir):
+            os.mkdir(self.documents_dir)
         if not os.path.isdir(self.webdata_dir):
             os.mkdir(self.webdata_dir)
         if not os.path.isdir(self.plandata_dir):
             os.mkdir(self.plandata_dir)
+        if not os.path.isdir(self.interface_dir):
+            os.mkdir(self.interface_dir)
+
+    def az_file(self, seq_nr=None):
+        if seq_nr is not None:
+            return self.az_file_format.format(seq_nr)
+        return self.az_file_unnumbered
 
     def filmdata_file(self, film_id):
         return self.film_file_format.format(film_id)
