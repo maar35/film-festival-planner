@@ -125,7 +125,8 @@ namespace PresentScreenings.TableView
                 bool fits = true;
                 if (screening is OnDemandScreening onDemandScreening)
                 {
-                    fits = FitOnDemandScreening(filmFan, onDemandScreening);
+                    break;
+                    //fits = FitOnDemandScreening(filmFan, onDemandScreening);
                 }
                 if (fits && screening.IsPlannable)
                 {
@@ -170,8 +171,10 @@ namespace PresentScreenings.TableView
                 }
 
                 // Try to fit moving forward.
+                int loopCounter = 0;
                 while (!stop)
                 {
+                    loopCounter++;
                     TimeSpan span = _controller.GetSpanToAutomaticallyFit(onDemandScreening);
                     if (span == TimeSpan.Zero)
                     {
@@ -194,6 +197,10 @@ namespace PresentScreenings.TableView
                         {
                             stop = true;
                         }
+                    }
+                    if (loopCounter > 200)
+                    {
+                        throw new TooManyLoopsWhilePlanningException($"Fitting in {onDemandScreening}");
                     }
                 }
             }

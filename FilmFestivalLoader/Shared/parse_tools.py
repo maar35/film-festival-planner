@@ -62,6 +62,12 @@ class HtmlPageParser(web_tools.HtmlPageParser):
         if encoding is not None:
             self.print_debug(f'Encoding: {encoding}', '')
 
+        # Member variables to construct film article.
+        self.description = None
+        self.article_paragraphs = []
+        self.article_paragraph = ''
+        self.article = None
+
     def add_screening(self, film, screen, start_dt, end_dt, qa='', subtitles='', extra='',
                       audience='', program=None, display=True):
 
@@ -83,6 +89,17 @@ class HtmlPageParser(web_tools.HtmlPageParser):
 
         # Add the screening to the list.
         self.festival_data.screenings.append(screening)
+
+    def set_description_from_article(self):
+        descr_threshold = 512
+
+        if len(self.article_paragraphs) > 0:
+            self.description = self.article_paragraphs[0]
+            if len(self.description) > descr_threshold:
+                self.description = self.description[:descr_threshold] + '…'
+        else:
+            self.description = self.film.title
+            self.article = ''
 
 
 if __name__ == "__main__":

@@ -190,7 +190,7 @@ class AzPageParser(HtmlPageParser):
             # Get the film info.
             get_details_of_one_film(self.festival_data, self.film)
 
-    def add_screening(self):
+    def add_imagine_screening(self):
         # Get the film.
         try:
             self.film = self.festival_data.get_film_by_key(self.title, self.url)
@@ -243,7 +243,7 @@ class AzPageParser(HtmlPageParser):
         HtmlPageParser.handle_endtag(self, tag)
 
         if self.stateStack.state_is(self.AzParseState.IN_SCREENING) and tag == 'li':
-            self.add_screening()
+            self.add_imagine_screening()
             self.stateStack.pop()
 
     def handle_data(self, data):
@@ -292,9 +292,6 @@ class FilmPageParser(HtmlPageParser):
         self.description = None
         self.alt_description = None
         self.alt_description_parts = []
-        self.article_paragraphs = []
-        self.article_paragraph = ''
-        self.article = None
         self.film_property_by_label = {}
         self.metadata_key = None
         self.screened_films = []
