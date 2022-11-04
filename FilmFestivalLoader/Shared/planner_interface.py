@@ -18,6 +18,26 @@ articles_file = os.path.join(interface_dir, "articles.txt")
 unicode_file = os.path.join(interface_dir, "unicodemap.txt")
 
 
+def write_lists(festival_data, write_film_list, write_other_lists):
+
+    if write_film_list or write_other_lists:
+        print("\n\nWRITING LISTS")
+
+    if write_film_list:
+        festival_data.sort_films()
+        festival_data.write_films()
+    else:
+        print("Films NOT WRITTEN")
+
+    if write_other_lists:
+        festival_data.write_film_ids()
+        festival_data.write_filminfo()
+        festival_data.write_screens()
+        festival_data.write_screenings()
+    else:
+        print("Film info, screens and screenings NOT WRITTEN")
+
+
 class UnicodeMapper:
 
     def __init__(self):
@@ -47,13 +67,16 @@ class Article:
 
 class Film:
 
+    category_string_films = 'films'
+    category_string_combinations = 'verzamelprogrammas'
+    category_string_events = 'events'
     category_films = "Films"
     category_combinations = "CombinedProgrammes"
     category_events = "Events"
     category_by_string = {
-        'films': category_films,
-        'verzamelprogrammas': category_combinations,
-        'events': category_events,
+        category_string_films: category_films,
+        category_string_combinations: category_combinations,
+        category_string_events: category_events,
     }
     mapper = UnicodeMapper()
     articles_by_language = {}
@@ -77,7 +100,8 @@ class Film:
     def __lt__(self, other):
         return self.sortstring < other.sortstring
 
-    def film_repr_csv_head(self):
+    @staticmethod
+    def film_repr_csv_head():
         text = ';'.join([
             'seqnr',
             'filmid',
@@ -103,10 +127,6 @@ class Film:
             self.category_by_string[self.medium_category],
             self.url
         ])
-        return f'{text}\n'
-
-    def filmid_repr(self):
-        text = ";".join([str(self.filmid), self.title.replace(";", ".,"), self.url ])
         return f'{text}\n'
 
     def short_str(self):
@@ -305,25 +325,6 @@ class Screening:
         return f'{text}\n'
 
 
-def write_lists(festival_data, write_film_list, write_other_lists):
-
-    if write_film_list or write_other_lists:
-        print("\n\nWRITING LISTS")
-
-    if write_film_list:
-        festival_data.sort_films()
-        festival_data.write_films()
-    else:
-        print("Films NOT WRITTEN")
-
-    if write_other_lists:
-        festival_data.write_filminfo()
-        festival_data.write_screens()
-        festival_data.write_screenings()
-    else:
-        print("Film info, screens and screenings NOT WRITTEN")
-
-
 class FestivalData:
 
     curr_screen_id = None
@@ -332,6 +333,7 @@ class FestivalData:
         self.films = []
         self.filminfos = []
         self.screenings = []
+        self.title_by_film_id = {}
         self.film_id_by_url = {}
         self.film_id_by_key = {}
         self.section_by_name = {}
@@ -362,6 +364,8 @@ class FestivalData:
         film_id = self.new_film_id(self.film_key(title, url))
         if film_id not in [f.filmid for f in self.films]:
             self.film_seqnr += 1
+            self.title_by_film_id[film_id] = title
+            self.film_id_by_url[url] = film_id
             return Film(self.film_seqnr, film_id, title, url)
         else:
             return None
@@ -444,11 +448,12 @@ class FestivalData:
             with open(self.filmids_file, 'r') as f:
                 records = [self.splitrec(line, ';') for line in f]
             for record in records:
-                filmid = int(record[0])
+                film_id = int(record[0])
                 title = record[1]
                 url = record[2]
-                self.film_id_by_url[url] = filmid
-                self.film_id_by_key[self.film_key(title, url)] = filmid
+                self.film_id_by_url[url] = film_id
+                self.film_id_by_key[self.film_key(title, url)] = film_id
+                self.title_by_film_id[film_id] = title
         except OSError:
             pass
 
@@ -537,17 +542,22 @@ class FestivalData:
         public_films = [f for f in self.films if self.film_can_go_to_planner(f.filmid)]
         if len(self.films):
             with open(self.films_file, 'w') as f:
-                f.write(self.films[0].film_repr_csv_head())
+                f.write(Film.film_repr_csv_head())
                 for film in public_films:
                     f.write(repr(film))
             print(f'Done writing {len(public_films)} of {len(self.films)} records to {self.films_file}.')
         else:
             print('No films to be written.')
-        if len(self.films):
+
+    def write_film_ids(self):
+        film_id_count = len(self.film_id_by_url)
+        if film_id_count > 0:
             with open(self.filmids_file, 'w') as f:
-                for film in self.films:
-                    f.write(film.filmid_repr())
-            print(f'Done writing {len(self.films)} records to {self.filmids_file}.')
+                for url, film_id in self.film_id_by_url.items():
+                    title = self.title_by_film_id[film_id]
+                    text = ";".join([str(film_id), title.replace(";", ".,"), url])
+                    f.write(f'{text}\n')
+            print(f'Done writing {film_id_count} records to {self.filmids_file}.')
 
     def write_filminfo(self):
         info_count = 0

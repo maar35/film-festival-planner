@@ -287,7 +287,7 @@ class FilmPageParser(HtmlPageParser):
 
     def __init__(self, festival_data, film):
         HtmlPageParser.__init__(self, festival_data, debug_recorder, "F")
-        self.debugging = True
+        self.debugging = False
         self.film = film
         self.description = None
         self.alt_description = None
