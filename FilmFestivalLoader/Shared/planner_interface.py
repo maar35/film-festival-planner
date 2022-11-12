@@ -149,6 +149,9 @@ class Film:
         except KeyError:
             return 'en'
 
+    def screenings(self, festival_data):
+        return [s for s in festival_data.screenings if s.film.filmid == self.filmid]
+
     def film_info(self, festival_data):
         infos = [i for i in festival_data.filminfos if i.filmid == self.filmid]
         try:
@@ -324,6 +327,9 @@ class Screening:
         ])
         return f'{text}\n'
 
+    def is_public(self):
+        return self.audience == 'publiek'
+
 
 class FestivalData:
 
@@ -380,11 +386,15 @@ class FestivalData:
         return film_id
 
     def get_film_by_key(self, title, url):
-        film_id = self.film_id_by_key[self.film_key(title, url)]
-        films = [film for film in self.films if film.filmid == film_id]
-        if len(films) > 0:
-            return films[0]
-        return None
+        try:
+            film_id = self.film_id_by_key[self.film_key(title, url)]
+        except KeyError:
+            raise KeyError(f'title: {title}, url: {url}')
+        else:
+            films = [film for film in self.films if film.filmid == film_id]
+            if len(films) == 0:
+                raise ValueError(f'title: {title}, url: {url}')
+        return films[0]
 
     def get_filmid(self, url):
         return self.get_film_by_key(None, url).filmid
@@ -533,7 +543,7 @@ class FestivalData:
             film.seqnr = seqnr
 
     def screening_can_go_to_planner(self, screening):
-        return screening.audience == 'publiek'
+        return screening.is_public() and not screening.film.is_part_of_combination(self)
 
     def film_can_go_to_planner(self, filmid):
         return len([s for s in self.screenings if s.film.filmid == filmid and self.screening_can_go_to_planner(s)]) > 0
@@ -608,7 +618,7 @@ class FestivalData:
     def write_screenings(self):
         public_screenings = []
         if len(self.screenings):
-            public_screenings = [s for s in self.screenings if self.screening_can_go_to_planner(s) and not s.film.is_part_of_combination(self)]
+            public_screenings = [s for s in self.screenings if self.screening_can_go_to_planner(s)]
             with open(self.screenings_file, 'w') as f:
                 f.write(self.screenings[0].screening_repr_csv_head())
                 for screening in public_screenings:

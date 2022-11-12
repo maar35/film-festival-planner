@@ -14,6 +14,8 @@ import os
 import datetime
 from html.parser import HTMLParser
 
+from Shared.parse_tools import ScreeningKey
+
 shared_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 sys.path.insert(0, shared_dir)
 import planner_interface as planner
@@ -317,27 +319,7 @@ class ScreeningsLoader():
         """
 
         film_by_en_name = {}
-        
-        class ScreeningKey:
-            
-            def __init__(self, screening):
-                self.screen = screening.screen
-                self.start_dt = screening.start_datetime
-                self.end_dt = screening.end_datetime
 
-            def __str__(self):
-                return "{} {}-{} in {}".format(
-                        self.start_dt.date().isoformat(),
-                        self.start_dt.time().isoformat(timespec='minutes'),
-                        self.end_dt.time().isoformat(timespec='minutes'),
-                        self.screen)
-
-            def __eq__(self, other):
-                return hash(self) == hash(other)
-
-            def __hash__(self):
-                return hash((self.screen, self.start_dt, self.end_dt))
-                
         def main():
         
             # Get films and subscreenings of screenings with equal screen, start time and end time.
@@ -351,7 +333,7 @@ class ScreeningsLoader():
             # Combine the screening keys with multiple films with those with compilations.
             get_common_keys()
     
-            # Add the screenings with no simulateous other screening.
+            # Add the screenings with no simultaneous other screening.
             self.regular_count = 0
             self.repeater_count = 0
             add_singlet_screenings()

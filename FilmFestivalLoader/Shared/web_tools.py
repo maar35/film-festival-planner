@@ -7,16 +7,24 @@ Created on Mon Nov  2 18:27:20 2020
 """
 
 import html.parser
-import urllib.request
-import urllib.error
-import urllib.parse
 import os
 import inspect
 import json
+from urllib.error import HTTPError
+from urllib.parse import quote, urlparse, urlunparse
+from urllib.request import urlopen, Request
 
 
 def iripath_to_uripath(path):
-    return urllib.parse.quote(path)
+    return quote(path)
+
+
+def iri_slug_to_url(host, slug):
+    host_obj = urlparse(host)
+    slug_obj = urlparse(slug)
+    slug_obj = slug_obj._replace(path=quote(slug_obj.path))
+    result_url = urlunparse([host_obj.scheme, host_obj.hostname, slug_obj.path, '', '', ''])
+    return result_url
 
 
 def get_charset(file, byte_count=512):
@@ -51,7 +59,11 @@ class UrlFile:
 
     def get_text(self, comment_at_download=None):
         reader = UrlReader(self.error_collector)
-        self.set_encoding(reader)
+        try:
+            self.set_encoding(reader)
+        except HTTPError as e:
+            self.error_collector.add(str(e), f'{self.url}')
+            return None
         if os.path.isfile(self.path):
             with open(self.path, 'r', encoding=self.encoding) as f:
                 html_text = f.read()
@@ -67,7 +79,7 @@ class UrlFile:
                 self.encoding = get_charset(self.path, self.byte_count)
             if self.encoding is None:
                 request = reader.get_request(self.url)
-                with urllib.request.urlopen(request) as response:
+                with urlopen(request) as response:
                     self.encoding = response.headers.get_content_charset()
             if self.encoding is None:
                 self.error_collector.add('No encoding found', f'{self.url}')
@@ -82,12 +94,11 @@ class UrlReader:
         self.error_collector = error_collector
 
     def get_request(self, url):
-        return urllib.request.Request(url, headers=self.headers)
+        return Request(url, headers=self.headers)
 
     def load_url(self, url, target_file, encoding='utf-8'):
         request = self.get_request(url)
-        html_bytes = None
-        with urllib.request.urlopen(request) as response:
+        with urlopen(request) as response:
             html_bytes = response.read()
             if html_bytes is not None:
                 if len(html_bytes) == 0:
@@ -95,8 +106,8 @@ class UrlReader:
                 else:
                     with open(target_file, 'wb') as f:
                         f.write(html_bytes)
-        html = html_bytes.decode(encoding=encoding)
-        return html
+        decoded_html = html_bytes.decode(encoding=encoding)
+        return decoded_html
 
 
 class HtmlCharsetParser(html.parser.HTMLParser):
@@ -125,6 +136,7 @@ class HtmlPageParser(html.parser.HTMLParser):
         def __init__(self, print_debug, state):
             self.print_debug = print_debug
             self.stack = [state]
+            self._print_debug(state)
 
         def __str__(self):
             head = f'States of HtmlParser in web_tools.py:\n'
@@ -154,12 +166,11 @@ class HtmlPageParser(html.parser.HTMLParser):
         def state_in(self, states):
             return self.stack[-1] in states
 
-    debugging = None
-
-    def __init__(self, debug_recorder, debug_prefix):
+    def __init__(self, debug_recorder, debug_prefix, debugging=False):
         html.parser.HTMLParser.__init__(self)
         self.debug_recorder = debug_recorder
         self.debug_prefix = debug_prefix
+        self.debugging = debugging
 
     @property
     def bar(self):

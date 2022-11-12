@@ -43,8 +43,7 @@ namespace PresentScreenings.TableView
 		{
 			DisposeSubViews(view);
             var currScreening = plan.CurrScreening;
-            var elegableScreenings = plan.ScreenScreenings[day][screen]
-                .Where(s => s.Film.FilmInfo.CombinationProgramIds.Count == 0);
+            var elegableScreenings = plan.ScreenScreenings[day][screen];
             foreach (var screening in elegableScreenings)
             {
                 _controller.UpdateWarning(screening);

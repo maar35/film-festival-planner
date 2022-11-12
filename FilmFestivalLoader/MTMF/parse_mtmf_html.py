@@ -407,13 +407,13 @@ class ScreeningsPageParser(HtmlPageParser):
 
     def add_screening_if_possible(self):
         if self.screen is not None:
-            self.add_screening()
+            self.add_mtmf_screening()
         else:
             self.init_screening_data()
             print(f'No screening added.')
             Globals.error_collector.add('Screening has no screen', f'Film {self.film}')
 
-    def add_screening(self):
+    def add_mtmf_screening(self):
         self.print_debug(
             '--- ',
             f'SCREEN={self.screen}, START TIME={self.start_dt}, END TIME={self.end_dt}, AUDIENCE={self.audience}')

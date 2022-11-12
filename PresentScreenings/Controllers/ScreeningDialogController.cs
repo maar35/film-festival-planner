@@ -317,7 +317,7 @@ namespace PresentScreenings.TableView
             View.AddSubview(scrollView);
 
             // Display the screenings.
-            DisplayScreeningControls(screenings, screeningsView, GoToScreening, ref _screeningInfoControl);
+            DisplayScreeningControls(screenings, _screening.FilmId, screeningsView, GoToScreening, ref _screeningInfoControl);
 
             // Scroll to the selected screening.
             ScrollScreeningToVisible(CurrentScreening, scrollView);

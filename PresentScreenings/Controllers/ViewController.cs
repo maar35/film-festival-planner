@@ -550,13 +550,10 @@ namespace PresentScreenings.TableView
         {
             var combinationProgramIds = GetFilmInfo(filmId).CombinationProgramIds;
             var filmIds = new List<int> { };
+            filmIds.Add(filmId);
             if (combinationProgramIds.Count > 0)
             {
                 filmIds.AddRange(combinationProgramIds);
-            }
-            else
-            {
-                filmIds.Add(filmId);
             }
             var filmScreenings = ScreeningsPlan.Screenings
                 .Where(s => filmIds.Contains(s.FilmId))

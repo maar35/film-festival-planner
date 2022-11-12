@@ -196,7 +196,7 @@ class AzPageParser(HtmlPageParser):
             self.film = self.festival_data.get_film_by_key(self.title, self.url)
         except KeyError:
             self.add_film()
-        if self.film is None:
+        except ValueError:
             self.add_film()
 
         # Calculate the screening's end time.

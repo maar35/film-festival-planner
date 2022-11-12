@@ -79,9 +79,6 @@ namespace PresentScreenings.TableView
             Screenings = new Screening()
                 .ReadListFromFile(AppDelegate.ScreeningsFile, line => PickScreening(line));
 
-            // Filter out screenings that are screened in a combination program.
-            SetDisplayedScreenings();
-
             // Initialize the day schemes.
             InitializeDays();
             _currDayNumber = 0;
@@ -261,23 +258,6 @@ namespace PresentScreenings.TableView
             foreach (var screen in onlineScreens)
             {
                 _displayScreenByAbbreviation.Add(screen.Abbreviation, screen);
-            }
-        }
-
-        private void SetDisplayedScreenings()
-        {
-            List<Screening> screeningsToRemove = new List<Screening> { };
-            foreach (Screening screening in Screenings)
-            {
-                FilmInfo filmInfo = ViewController.GetFilmInfo(screening.FilmId);
-                if (filmInfo.CombinationProgramIds.Count > 0)
-                {
-                    screeningsToRemove.Add(screening);
-                }
-            }
-            foreach (var screeningToRemove in screeningsToRemove)
-            {
-                Screenings.Remove(screeningToRemove);
             }
         }
 

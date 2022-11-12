@@ -204,7 +204,7 @@ namespace PresentScreenings.TableView
             View.AddSubview(scrollView);
 
             // Display the screenings.
-            GoToScreeningDialog.DisplayScreeningControls(screenings, screeningsView, GoToScreening, ref _currentScreeningControl);
+            GoToScreeningDialog.DisplayScreeningControls(screenings, _film.FilmId, screeningsView, GoToScreening, ref _currentScreeningControl);
 
             // Scroll to the selected screening.
             GoToScreeningDialog.ScrollScreeningToVisible(App.Controller.CurrentScreening, scrollView);

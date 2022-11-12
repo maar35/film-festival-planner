@@ -37,6 +37,7 @@ namespace PresentScreenings.TableView
         #region Virtual Methods
         public static void DisplayScreeningControls(
             List<Screening> screenings,
+            int filmId,
             NSView screeningsView,
             GoToScreeningDelegate goToScreening,
             ref FilmScreeningControl currentScreeningControl)
@@ -71,7 +72,7 @@ namespace PresentScreenings.TableView
                 // Create the screening label.
                 labelRect.Y = yScreening;
                 var screeningLabel = ControlsFactory.NewStandardLabel(labelRect);
-                screeningLabel.StringValue = screening.ToFilmScreeningLabelString();
+                screeningLabel.StringValue = screening.ToFilmScreeningLabelString(filmId);
                 ColorView.SetScreeningColor(screening, screeningLabel);
                 screeningsView.AddSubview(screeningLabel);
 

@@ -23,6 +23,7 @@ class FileKeeper:
         self.interface_dir = os.path.join(self.documents_dir, 'FestivalPlan')
 
         # Define formats.
+        self.generic_numbered_file_format = '{:02}.html'
         self.az_file_format = os.path.join(self.webdata_dir, "az_page_{:02}.html")
         self.film_file_format = os.path.join(self.webdata_dir, "film_page_{:03d}.html")
         self.screenings_file_format = os.path.join(self.webdata_dir, "screenings_{:03d}_{:02d}.html")
@@ -52,15 +53,36 @@ class FileKeeper:
     def filmdata_file(self, film_id):
         return self.film_file_format.format(film_id)
 
+    def numbered_webdata_file(self, prefix, webdata_id):
+        return os.path.join(self.webdata_dir, prefix.format(webdata_id))
+
+
+class ScreeningKey:
+
+    def __init__(self, screening):
+        self.screen = screening.screen
+        self.start_dt = screening.start_datetime
+        self.end_dt = screening.end_datetime
+
+    def __str__(self):
+        return "{} {}-{} in {}".format(
+            self.start_dt.date().isoformat(),
+            self.start_dt.time().isoformat(timespec='minutes'),
+            self.end_dt.time().isoformat(timespec='minutes'),
+            self.screen)
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+    def __hash__(self):
+        return hash((self.screen, self.start_dt, self.end_dt))
+
 
 class HtmlPageParser(web_tools.HtmlPageParser):
 
-    def __init__(self, festival_data, debug_recorder, debug_prefix, debugging=False, encoding=None):
-        web_tools.HtmlPageParser.__init__(self, debug_recorder, debug_prefix)
-        self.debugging = debugging
+    def __init__(self, festival_data, debug_recorder, debug_prefix, debugging=False):
+        web_tools.HtmlPageParser.__init__(self, debug_recorder, debug_prefix, debugging=debugging)
         self.festival_data = festival_data
-        if encoding is not None:
-            self.print_debug(f'Encoding: {encoding}', '')
 
         # Member variables to construct film article.
         self.description = None
