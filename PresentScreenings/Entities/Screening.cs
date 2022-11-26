@@ -215,7 +215,7 @@ namespace PresentScreenings.TableView
             fields.Add(Subtitles);
             fields.Add(filmInfo.GetGenreDescription());
             fields.Add(filmInfo.Url);
-            fields.Add(filmInfo.FilmDescription);
+            fields.Add(filmInfo.FilmDescription.Replace('\n', ' '));
 
             return string.Join(";", fields);
         }
