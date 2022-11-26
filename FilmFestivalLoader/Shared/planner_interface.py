@@ -204,7 +204,7 @@ class ScreenedFilm:
         if title is None or len(title) == 0:
             raise FilmTitleError(description)
         self.title = title
-        self.description = description if description is not None else ''
+        self.description = description.strip() if description is not None else ''
         self.screened_film_type = sf_type
 
     def __str__(self):
@@ -215,8 +215,8 @@ class FilmInfo:
 
     def __init__(self, film_id, description, article, combination_films=None, screened_films=None):
         self.filmid = film_id
-        self.description = description
-        self.article = article
+        self.description = description.strip()
+        self.article = article.strip()
         self.combination_films = [] if combination_films is None else combination_films
         self.screened_films = [] if screened_films is None else screened_films
 
