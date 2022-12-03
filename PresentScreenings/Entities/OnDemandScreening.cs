@@ -34,9 +34,9 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Override Methods
-        public override string ToFilmScreeningLabelString()
+        public override string ToFilmScreeningLabelString(int? filmId)
         {
-            return $"{DayString(StartTime)} {Screen} {StartTime.ToString(_timeFormat)} {DateTimeString(WindowStartTime)}-{DateTimeString(WindowEndTime)} {ExtraTimeSymbolsString()} {ShortAttendingFriendsString()}{ScreeningTitleIfDifferent()}";
+            return $"{DayString(StartTime)} {Screen} {StartTime.ToString(_timeFormat)} {DateTimeString(WindowStartTime)}-{DateTimeString(WindowEndTime)} {ExtraTimeSymbolsString()} {ShortAttendingFriendsString()}{ScreeningTitleIfDifferent(filmId)}";
         }
 
         protected override string AvailableTillString()

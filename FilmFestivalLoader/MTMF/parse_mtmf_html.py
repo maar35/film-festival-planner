@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
-import os
-import sys
 import datetime
-import urllib.request
+import os
 import urllib.error
+import urllib.request
 from enum import Enum, auto
 from typing import Dict
 
-import Shared.planner_interface as planner
 import Shared.application_tools as app_tools
+import Shared.planner_interface as planner
 from Shared.parse_tools import HtmlPageParser
 from Shared.web_tools import iripath_to_uripath, UrlFile, UrlReader
 
@@ -407,13 +406,13 @@ class ScreeningsPageParser(HtmlPageParser):
 
     def add_screening_if_possible(self):
         if self.screen is not None:
-            self.add_screening()
+            self.add_mtmf_screening()
         else:
             self.init_screening_data()
             print(f'No screening added.')
             Globals.error_collector.add('Screening has no screen', f'Film {self.film}')
 
-    def add_screening(self):
+    def add_mtmf_screening(self):
         self.print_debug(
             '--- ',
             f'SCREEN={self.screen}, START TIME={self.start_dt}, END TIME={self.end_dt}, AUDIENCE={self.audience}')
@@ -608,7 +607,7 @@ class MtmfData(planner.FestivalData):
     def _init__(self, planner_data_dir):
         planner.FestivalData.__init__(self, planner_data_dir)
 
-    def _filmkey(self, film, url):
+    def film_key(self, film, url):
         return url
 
     def film_can_go_to_planner(self, film_id):

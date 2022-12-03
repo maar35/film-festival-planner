@@ -13,7 +13,13 @@ namespace PresentScreenings.TableView
     {
         public NextAttributePartPresumptionsFailedException(string message) : base(message)
         {
+        }
+    }
 
+    public sealed class TooManyLoopsWhilePlanningException : Exception
+    {
+        public TooManyLoopsWhilePlanningException(string message) : base(message)
+        {
         }
     }
 }

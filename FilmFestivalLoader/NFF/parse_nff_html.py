@@ -8,17 +8,15 @@ Created on Fri Oct  2 21:35:14 2020
 @author: maarten
 """
 
-import sys
-import re
-import os
 import datetime
+import os
+import re
 from html.parser import HTMLParser
 
-shared_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
-sys.path.insert(0, shared_dir)
-import planner_interface as planner
-import application_tools as tools
-import web_tools
+from Shared.application_tools import DebugRecorder, ErrorCollector
+from Shared.parse_tools import ScreeningKey
+from Shared.planner_interface import UnicodeMapper, Film, Screening, FestivalData, FilmInfo
+from Shared.web_tools import get_charset
 
 # Parameters.
 festival_year = 2020
@@ -43,13 +41,13 @@ films_webroot = "https://www.filmfestival.nl/en/films/"
 premiere_prefix = "festivalpremiere-"
 
 # Global unicode mapper.
-unicode_mapper = planner.UnicodeMapper()
+unicode_mapper = UnicodeMapper()
 
 
 def main():
     # Initialize globals.
-    Globals.error_collector = tools.ErrorCollector()
-    Globals.debug_recorder = tools.DebugRecorder(debug_file)
+    Globals.error_collector = ErrorCollector()
+    Globals.debug_recorder = DebugRecorder(debug_file)
     
     # initialize a festival data object.
     nff_data = NffData(plandata_dir)
@@ -97,13 +95,13 @@ class NffFilm:
         
     def __str__(self):
         return ";".join([self.title,
-                         str(planner.Film.duration_to_minutes(self.duration)),
+                         str(Film.duration_to_minutes(self.duration)),
                          self.description,
                          self.directors,
                          self.competitions]) + ";"
 
     
-class NffScreening(planner.Screening):
+class NffScreening(Screening):
     
     def __init__(self, screening, subscreenings):
         film = screening.film
@@ -113,7 +111,7 @@ class NffScreening(planner.Screening):
         qa = screening.q_and_a
         extra = screening.extra
         audience = screening.audience
-        planner.Screening.__init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience)
+        Screening.__init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience)
         self.subscreenings = subscreenings
         self.exclude = False
 
@@ -231,7 +229,7 @@ class PremieresLoader():
         if os.path.isfile(film_html_file):
             self.print_debug("--  Analysing premiêre page of title:", title)
             premiere_parser = PremierePageParser(self.film, nff_data)
-            charset = web_tools.get_charset(film_html_file)
+            charset = get_charset(film_html_file)
             with open(film_html_file, 'r', encoding=charset) as f:
                 text = '\n' + '\n'.join([line for line in f])
             premiere_parser.feed(text)
@@ -258,7 +256,7 @@ class ScreeningsLoader():
             film_file = film_file_format.format(film.filmid)
             print(f"Now reading {film_file} - {film.title} ({film.duration_str()})")
             try:
-                charset = web_tools.get_charset(film_file)
+                charset = get_charset(film_file)
                 with open(film_file, 'r', encoding=charset) as f:
                     film_text = f.read()
                 self.parse_one_film_page(film, film_text, nff_data)
@@ -317,27 +315,7 @@ class ScreeningsLoader():
         """
 
         film_by_en_name = {}
-        
-        class ScreeningKey:
-            
-            def __init__(self, screening):
-                self.screen = screening.screen
-                self.start_dt = screening.start_datetime
-                self.end_dt = screening.end_datetime
 
-            def __str__(self):
-                return "{} {}-{} in {}".format(
-                        self.start_dt.date().isoformat(),
-                        self.start_dt.time().isoformat(timespec='minutes'),
-                        self.end_dt.time().isoformat(timespec='minutes'),
-                        self.screen)
-
-            def __eq__(self, other):
-                return hash(self) == hash(other)
-
-            def __hash__(self):
-                return hash((self.screen, self.start_dt, self.end_dt))
-                
         def main():
         
             # Get films and subscreenings of screenings with equal screen, start time and end time.
@@ -351,7 +329,7 @@ class ScreeningsLoader():
             # Combine the screening keys with multiple films with those with compilations.
             get_common_keys()
     
-            # Add the screenings with no simulateous other screening.
+            # Add the screenings with no simultaneous other screening.
             self.regular_count = 0
             self.repeater_count = 0
             add_singlet_screenings()
@@ -411,8 +389,8 @@ class ScreeningsLoader():
             qa = ""
             extra = ""
             audience = "publiek"
-            screening = planner.Screening(film, screen, start_dt, end_dt, qa, extra, audience)
-            screening_minutes = f"({planner.Film.duration_to_minutes(end_dt - start_dt)}')"
+            screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience)
+            screening_minutes = f"({Film.duration_to_minutes(end_dt - start_dt)}')"
             description = "{:24} {} {}-{} {:8}{} ({})".format(
                     str(screen),
                     start_dt.date(),
@@ -572,7 +550,7 @@ class HtmlPageParser(HTMLParser):
             end_date = self.start_date if self.end_time > self.start_time else self.start_date + datetime.timedelta(days=1) 
             end_datetime = datetime.datetime.combine(end_date, self.end_time)
             self.print_debug("--- ", f"START TIME = {start_datetime}, END TIME = {end_datetime}")
-        screening = planner.Screening(self.film, self.screen, start_datetime, end_datetime, self.qa, self.extra, self.audience)
+        screening = Screening(self.film, self.screen, start_datetime, end_datetime, self.qa, self.extra, self.audience)
         if not dry_run:
             self.nff_data.screenings.append(screening)
             print("---SCREENING ADDED")
@@ -790,7 +768,7 @@ class FilmPageParser(HtmlPageParser):
             self.part_descr += data
 
 
-class NffData(planner.FestivalData):
+class NffData(FestivalData):
 
     # Dictionary for unconstructable URL's.
     url_by_title = {}
@@ -801,7 +779,7 @@ class NffData(planner.FestivalData):
     url_by_title['The Undercurrent'] = 'https://www.filmfestival.nl/en/films/-1'
 
     def __init__(self, plandata_dir):
-        planner.FestivalData.__init__(self, plandata_dir)
+        FestivalData.__init__(self, plandata_dir)
         self.nff_films = []
 
     def __repr__(self):
@@ -814,7 +792,7 @@ class NffData(planner.FestivalData):
             seqnr = filmid
             title = nff_film.title
             url = self.get_url(nff_film.title)
-            film = planner.Film(seqnr, filmid, title, url)
+            film = Film(seqnr, filmid, title, url)
             film.medium_category = "films"
             film.duration = nff_film.duration
             self.films.append(film)
@@ -839,7 +817,7 @@ class NffData(planner.FestivalData):
         print(f"\nDone writing {len(self.nff_films)} records to {filmdata_file}.\n")
 
     def add_filminfo(self, filmid, description):
-        filminfo = planner.FilmInfo(filmid, description, '')
+        filminfo = FilmInfo(filmid, description, '')
         self.filminfos.append(filminfo)
 
 

@@ -15,13 +15,33 @@ from enum import Enum, auto
 
 interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 articles_file = os.path.join(interface_dir, "articles.txt")
-ucode_file = os.path.join(interface_dir, "unicodemap.txt")
+unicode_file = os.path.join(interface_dir, "unicodemap.txt")
+
+
+def write_lists(festival_data, write_film_list, write_other_lists):
+
+    if write_film_list or write_other_lists:
+        print("\n\nWRITING LISTS")
+
+    if write_film_list:
+        festival_data.sort_films()
+        festival_data.write_films()
+    else:
+        print("Films NOT WRITTEN")
+
+    if write_other_lists:
+        festival_data.write_film_ids()
+        festival_data.write_filminfo()
+        festival_data.write_screens()
+        festival_data.write_screenings()
+    else:
+        print("Film info, screens and screenings NOT WRITTEN")
 
 
 class UnicodeMapper:
 
     def __init__(self):
-        with open(ucode_file) as f:
+        with open(unicode_file) as f:
             self.umap_keys = f.readline().rstrip("\n").split(";")
             self.umap_values = f.readline().rstrip("\n").split(";")
 
@@ -47,13 +67,16 @@ class Article:
 
 class Film:
 
+    category_string_films = 'films'
+    category_string_combinations = 'verzamelprogrammas'
+    category_string_events = 'events'
     category_films = "Films"
     category_combinations = "CombinedProgrammes"
     category_events = "Events"
     category_by_string = {
-        'films': category_films,
-        'verzamelprogrammas': category_combinations,
-        'events': category_events,
+        category_string_films: category_films,
+        category_string_combinations: category_combinations,
+        category_string_events: category_events,
     }
     mapper = UnicodeMapper()
     articles_by_language = {}
@@ -77,7 +100,8 @@ class Film:
     def __lt__(self, other):
         return self.sortstring < other.sortstring
 
-    def film_repr_csv_head(self):
+    @staticmethod
+    def film_repr_csv_head():
         text = ';'.join([
             'seqnr',
             'filmid',
@@ -105,10 +129,6 @@ class Film:
         ])
         return f'{text}\n'
 
-    def filmid_repr(self):
-        text = ";".join([str(self.filmid), self.title.replace(";", ".,"), self.url ])
-        return f'{text}\n'
-
     def short_str(self):
         return f'{self.title} ({self.duration_str()})'
 
@@ -128,6 +148,9 @@ class Film:
             return language
         except KeyError:
             return 'en'
+
+    def screenings(self, festival_data):
+        return [s for s in festival_data.screenings if s.film.filmid == self.filmid]
 
     def film_info(self, festival_data):
         infos = [i for i in festival_data.filminfos if i.filmid == self.filmid]
@@ -181,7 +204,7 @@ class ScreenedFilm:
         if title is None or len(title) == 0:
             raise FilmTitleError(description)
         self.title = title
-        self.description = description if description is not None else ''
+        self.description = description.strip() if description is not None else ''
         self.screened_film_type = sf_type
 
     def __str__(self):
@@ -192,8 +215,8 @@ class FilmInfo:
 
     def __init__(self, film_id, description, article, combination_films=None, screened_films=None):
         self.filmid = film_id
-        self.description = description
-        self.article = article
+        self.description = description.strip()
+        self.article = article.strip()
         self.combination_films = [] if combination_films is None else combination_films
         self.screened_films = [] if screened_films is None else screened_films
 
@@ -259,6 +282,8 @@ class Screen:
 
 class Screening:
 
+    audience_type_public = 'publiek'
+
     def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience,
                  combination_program=None, subtitles=''):
         self.film = film
@@ -304,24 +329,8 @@ class Screening:
         ])
         return f'{text}\n'
 
-
-def write_lists(festival_data, write_film_list, write_other_lists):
-
-    if write_film_list or write_other_lists:
-        print("\n\nWRITING LISTS")
-
-    if write_film_list:
-        festival_data.sort_films()
-        festival_data.write_films()
-    else:
-        print("Films NOT WRITTEN")
-
-    if write_other_lists:
-        festival_data.write_filminfo()
-        festival_data.write_screens()
-        festival_data.write_screenings()
-    else:
-        print("Film info, screens and screenings NOT WRITTEN")
+    def is_public(self):
+        return self.audience == self.audience_type_public
 
 
 class FestivalData:
@@ -332,6 +341,7 @@ class FestivalData:
         self.films = []
         self.filminfos = []
         self.screenings = []
+        self.title_by_film_id = {}
         self.film_id_by_url = {}
         self.film_id_by_key = {}
         self.section_by_name = {}
@@ -355,13 +365,15 @@ class FestivalData:
         self.read_screens()
         self.read_filmids()
 
-    def _filmkey(self, title, url):
+    def film_key(self, title, url):
         return title
 
     def create_film(self, title, url):
-        film_id = self.new_film_id(self._filmkey(title, url))
+        film_id = self.new_film_id(self.film_key(title, url))
         if film_id not in [f.filmid for f in self.films]:
             self.film_seqnr += 1
+            self.title_by_film_id[film_id] = title
+            self.film_id_by_url[url] = film_id
             return Film(self.film_seqnr, film_id, title, url)
         else:
             return None
@@ -376,11 +388,16 @@ class FestivalData:
         return film_id
 
     def get_film_by_key(self, title, url):
-        film_id = self.film_id_by_key[self._filmkey(title, url)]
-        films = [film for film in self.films if film.filmid == film_id]
-        if len(films) > 0:
-            return films[0]
-        return None
+        key = self.film_key(title, url)
+        try:
+            film_id = self.film_id_by_key[key]
+        except KeyError:
+            raise KeyError(f'Key ({key}) not found in film dictionary')
+        else:
+            films = [film for film in self.films if film.filmid == film_id]
+            if len(films) == 0:
+                raise ValueError(f'Key ({key}) found, but no film found with film ID ({film_id}).')
+        return films[0]
 
     def get_filmid(self, url):
         return self.get_film_by_key(None, url).filmid
@@ -444,11 +461,12 @@ class FestivalData:
             with open(self.filmids_file, 'r') as f:
                 records = [self.splitrec(line, ';') for line in f]
             for record in records:
-                filmid = int(record[0])
+                film_id = int(record[0])
                 title = record[1]
                 url = record[2]
-                self.film_id_by_url[url] = filmid
-                self.film_id_by_key[self._filmkey(title, url)] = filmid
+                self.film_id_by_url[url] = film_id
+                self.film_id_by_key[self.film_key(title, url)] = film_id
+                self.title_by_film_id[film_id] = title
         except OSError:
             pass
 
@@ -528,7 +546,7 @@ class FestivalData:
             film.seqnr = seqnr
 
     def screening_can_go_to_planner(self, screening):
-        return screening.audience == 'publiek'
+        return screening.is_public() and not screening.film.is_part_of_combination(self)
 
     def film_can_go_to_planner(self, filmid):
         return len([s for s in self.screenings if s.film.filmid == filmid and self.screening_can_go_to_planner(s)]) > 0
@@ -537,17 +555,22 @@ class FestivalData:
         public_films = [f for f in self.films if self.film_can_go_to_planner(f.filmid)]
         if len(self.films):
             with open(self.films_file, 'w') as f:
-                f.write(self.films[0].film_repr_csv_head())
+                f.write(Film.film_repr_csv_head())
                 for film in public_films:
                     f.write(repr(film))
             print(f'Done writing {len(public_films)} of {len(self.films)} records to {self.films_file}.')
         else:
             print('No films to be written.')
-        if len(self.films):
+
+    def write_film_ids(self):
+        film_id_count = len(self.film_id_by_url)
+        if film_id_count > 0:
             with open(self.filmids_file, 'w') as f:
-                for film in self.films:
-                    f.write(film.filmid_repr())
-            print(f'Done writing {len(self.films)} records to {self.filmids_file}.')
+                for url, film_id in self.film_id_by_url.items():
+                    title = self.title_by_film_id[film_id]
+                    text = ";".join([str(film_id), title.replace(";", ".,"), url])
+                    f.write(f'{text}\n')
+            print(f'Done writing {film_id_count} records to {self.filmids_file}.')
 
     def write_filminfo(self):
         info_count = 0
@@ -598,7 +621,7 @@ class FestivalData:
     def write_screenings(self):
         public_screenings = []
         if len(self.screenings):
-            public_screenings = [s for s in self.screenings if self.screening_can_go_to_planner(s) and not s.film.is_part_of_combination(self)]
+            public_screenings = [s for s in self.screenings if self.screening_can_go_to_planner(s)]
             with open(self.screenings_file, 'w') as f:
                 f.write(self.screenings[0].screening_repr_csv_head())
                 for screening in public_screenings:

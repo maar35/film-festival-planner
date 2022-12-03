@@ -2,12 +2,23 @@
 
 declare -r old_dir=${1:-FestivalPlan}
 declare -r new_dir=${2:-_planner_data}
-declare -r festival_year=$(basename $(dirname $(pwd)))
-declare -r festival=${festival_year:0:4}
-declare -r year=${festival_year:4:4}
-declare -r documents_dir=~/Documents/Film/${festival}/${festival_year}
+
+declare -r cmd=$(basename $0)
+declare -r usage="USAGE: $cmd old_dir new_dir"
 declare -r csv_file=films.csv
 
-cd $documents_dir
-echo "$old_dir <> $new_dir"
+err=
+[ -n "$err" ] || [ $# -eq 2 ] || err="Argument count ($#)"
+[ -n "$err" ] || [ -d  $old_dir ] || err="$old_dir is not a directory"
+[ -n "$err" ] || [ -d  $new_dir ] || err="$new_dir is not a directory"
+[ -n "$err" ] || [ -f  $old_dir/$csv_file ] || err="$old_dir/$csv_file not found"
+[ -n "$err" ] || [ -f  $new_dir/$csv_file ] || err="$new_dir/$csv_file not found"
+
+if [ -n "$err" ]; then
+    echo "$0: $err" >&2
+    echo $usage >&2
+    exit 1
+fi
+
+echo "$old_dir/$csv_file <> $new_dir/$csv_file"
 diff <(cut -d";" -f2- $old_dir/$csv_file | sort -k1n) <(cut -d";" -f2- $new_dir/$csv_file | sort -k1n)

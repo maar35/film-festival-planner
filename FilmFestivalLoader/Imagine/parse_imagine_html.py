@@ -7,13 +7,12 @@ Created on Thu Mar 18 20:56:44 2021
 """
 
 import datetime
-import os
 import re
 from enum import Enum, auto
 
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment
-from Shared.parse_tools import FileKeeper, HtmlPageParser
-from Shared.planner_interface import write_lists, FilmInfo, Screening, FestivalData, Film
+from Shared.parse_tools import FileKeeper, HtmlPageParser, try_parse_festival_sites
+from Shared.planner_interface import write_lists, FilmInfo, FestivalData, Film
 from Shared.web_tools import UrlFile
 
 # Parameters.
@@ -24,7 +23,7 @@ ondemand_available_hours = None
 
 # Files.
 fileKeeper = FileKeeper(festival, year)
-az_file = fileKeeper.az_file
+az_file = fileKeeper.az_file()
 debug_file = fileKeeper.debug_file
 
 # URL information.
@@ -42,37 +41,12 @@ def main():
     festival_data = ImagineData(fileKeeper.plandata_dir)
 
     # Try parsing the websites.
-    write_film_list = False
-    write_other_lists = True
-    try:
-        parse_imagine_sites(festival_data)
-    except KeyboardInterrupt:
-        comment('Interrupted from keyboard... exiting')
-        write_other_lists = False
-    except Exception as e:
-        debug_recorder.write_debug()
-        comment('Debug info printed.')
-        raise e
-    else:
-        write_film_list = True
-
-    # Display errors when found.
-    if error_collector.error_count() > 0:
-        comment('Encountered some errors:')
-        print(error_collector)
-
-    # Write parsed information.
-    comment('Done loading Imagine data.')
-    write_lists(festival_data, write_film_list, write_other_lists)
-    debug_recorder.write_debug()
+    try_parse_festival_sites(parse_imagine_sites, festival_data, error_collector, debug_recorder)
 
 
 def parse_imagine_sites(festival_data):
     comment('Parsing AZ pages and film pages.')
     get_films(festival_data)
-
-    # comment('Parsing film pages.')
-    # get_film_details(festival_data)
 
 
 def get_films(festival_data):
@@ -80,7 +54,7 @@ def get_films(festival_data):
     url_file = UrlFile(az_url, az_file, error_collector, byte_count=100)
     az_html = url_file.get_text()
     if az_html is not None:
-        AzPageParser(festival_data, True, url_file.encoding).feed(az_html)
+        AzPageParser(festival_data).feed(az_html)
 
 
 def get_details_of_all_films(festival_data):
@@ -111,8 +85,8 @@ class AzPageParser(HtmlPageParser):
         IN_LANGUAGE = auto()
         IN_DURATION = auto()
 
-    def __init__(self, festival_data, debugging=False, encoding=None):
-        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'AZ', debugging=debugging, encoding=encoding)
+    def __init__(self, festival_data):
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'AZ')
         self.debugging = True
         self.film = None
         self.url = None
@@ -194,13 +168,13 @@ class AzPageParser(HtmlPageParser):
             # Get the film info.
             get_details_of_one_film(self.festival_data, self.film)
 
-    def add_screening(self):
+    def add_imagine_screening(self):
         # Get the film.
         try:
             self.film = self.festival_data.get_film_by_key(self.title, self.url)
         except KeyError:
             self.add_film()
-        if self.film is None:
+        except ValueError:
             self.add_film()
 
         # Calculate the screening's end time.
@@ -247,7 +221,7 @@ class AzPageParser(HtmlPageParser):
         HtmlPageParser.handle_endtag(self, tag)
 
         if self.stateStack.state_is(self.AzParseState.IN_SCREENING) and tag == 'li':
-            self.add_screening()
+            self.add_imagine_screening()
             self.stateStack.pop()
 
     def handle_data(self, data):
@@ -291,14 +265,11 @@ class FilmPageParser(HtmlPageParser):
 
     def __init__(self, festival_data, film):
         HtmlPageParser.__init__(self, festival_data, debug_recorder, "F")
-        self.debugging = True
+        self.debugging = False
         self.film = film
         self.description = None
         self.alt_description = None
         self.alt_description_parts = []
-        self.article_paragraphs = []
-        self.article_paragraph = ''
-        self.article = None
         self.film_property_by_label = {}
         self.metadata_key = None
         self.screened_films = []
@@ -426,7 +397,7 @@ class ImagineData(FestivalData):
     def _init__(self, plandata_dir):
         FestivalData.__init__(self, plandata_dir)
 
-    def _filmkey(self, film, url):
+    def film_key(self, film, url):
         return url
 
     def film_can_go_to_planner(self, film_id):

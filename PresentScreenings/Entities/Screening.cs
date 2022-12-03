@@ -215,7 +215,7 @@ namespace PresentScreenings.TableView
             fields.Add(Subtitles);
             fields.Add(filmInfo.GetGenreDescription());
             fields.Add(filmInfo.Url);
-            fields.Add(filmInfo.FilmDescription);
+            fields.Add(filmInfo.FilmDescription.Replace('\n', ' '));
 
             return string.Join(";", fields);
         }
@@ -237,9 +237,9 @@ namespace PresentScreenings.TableView
             return string.Empty;
         }
 
-        public virtual string ToFilmScreeningLabelString()
+        public virtual string ToFilmScreeningLabelString(int? filmId=null)
         {
-            return string.Format("{0} {1}{2}", ToMenuItemString(), ShortAttendingFriendsString(), ScreeningTitleIfDifferent());
+            return string.Format("{0} {1}{2}", ToMenuItemString(), ShortAttendingFriendsString(), ScreeningTitleIfDifferent(filmId));
         }
 
         protected virtual bool GetIsPlannable()
@@ -428,13 +428,24 @@ namespace PresentScreenings.TableView
             return builder.ToString();
         }
 
-        public string ScreeningTitleIfDifferent()
+        public string ScreeningTitleIfDifferent(int? filmId=null)
         {
-            if (ScreeningTitle == FilmTitle)
+            string title = string.Empty;
+            if (filmId != null)
             {
-                return string.Empty;
+                if (filmId != FilmId)
+                {
+                    title = FilmTitle;
+                }
             }
-            return string.Format($" - {ScreeningTitle}");
+            if (title == string.Empty)
+            {
+                if (ScreeningTitle != FilmTitle)
+                {
+                    title = ScreeningTitle;
+                }
+            }
+            return title == string.Empty ? title : $" - {title}";
         }
         #endregion
 

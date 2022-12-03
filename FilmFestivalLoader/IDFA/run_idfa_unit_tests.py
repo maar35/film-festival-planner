@@ -10,14 +10,13 @@ Created on Tue Nov 24 16:18:02 2020
 
 
 import datetime
-import sys
-import os
-import parse_idfa_html as idfa
 
-prj_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner")
-shared_dir = os.path.join(prj_dir, "FilmFestivalLoader/Shared")
-sys.path.insert(0, shared_dir)
-import test_tools
+import parse_idfa_html as idfa
+from Shared.test_tools import execute_tests, equity_decorator
+
+
+idfa_data = idfa.IdfaData(idfa.plandata_dir)
+idfa_films = []
 
 
 def main():
@@ -26,19 +25,12 @@ def main():
              compare_a_,
              compare_00,
              test_film_title_error]
-    test_tools.execute_tests(tests)
+    arrange_test_films()
+    execute_tests(tests)
 
 
-class TestFilm:
-
-    def __init__(self, title, url, minutes):
-        self.title = title
-        self.url = url
-        self.duration = datetime.timedelta(minutes=minutes)
-
-
-class TestList:
-
+def arrange_test_films():
+    # Create a list of bare-bones films.
     test_films = []
     test_films.append(TestFilm(
         'Zappa',
@@ -56,18 +48,26 @@ class TestList:
         '48',
         'Films;https://www.idfa.nl/nl/film/ecf51812-683c-4811-be3d-175d97d6e583/48%3Ffilters%5Bedition.year%5D%3D2020%26collectionType%3Didfa',
         93))
-    idfa_data = idfa.IdfaData(idfa.plandata_dir)
-    for film in test_films:
-        idfa.AzPageParser.add_film(idfa_data, film.title, film.url, film.duration)
 
-    def __init(self):
-        pass
+    # Fill the list with films that have IDFA sorting.
+    for test_film in test_films:
+        film = idfa_data.create_film(test_film.title, test_film.url)
+        film.duration = test_film.duration
+        idfa_films.append(idfa.Film(film))
 
 
-@test_tools.equity_decorator
+class TestFilm:
+
+    def __init__(self, title, url, minutes):
+        self.title = title
+        self.url = url
+        self.duration = datetime.timedelta(minutes=minutes)
+
+
+@equity_decorator
 def compare_a0():
     # Arrange.
-    films = TestList.idfa_data.films
+    films = idfa_films
 
     # Act.
     less = films[0] < films[1]
@@ -76,10 +76,10 @@ def compare_a0():
     return less, True
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def compare_0a():
     # Arrange.
-    films = TestList.idfa_data.films
+    films = idfa_films
 
     # Act.
     greater = films[0] > films[1]
@@ -88,10 +88,10 @@ def compare_0a():
     return greater, False
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def compare_a_():
     # Arrange.
-    films = TestList.idfa_data.films
+    films = idfa_films
 
     # Act.
     less = films[0] < films[2]
@@ -100,10 +100,10 @@ def compare_a_():
     return less, True
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def compare_00():
     # Arrange.
-    films = TestList.idfa_data.films
+    films = idfa_films
 
     # Act.
     less = films[1] < films[3]
@@ -112,32 +112,28 @@ def compare_00():
     return less, True
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def test_film_title_error():
     # Arrange.
     screened_title = None
     screened_description = "Boyi-biyo vertelt het verhaal van Shilo, die in de Centraal-Afrikaanse Republiek"
     screened_description += " met zijn gezin maar net kan rondkomen van zijn werk als vleeskoerier. Ondanks"
     screened_description += " vele obstakels blijft hij ondertussen dromen van een carrière als marathonloper."
-    idfa_data = idfa.IdfaData(idfa.plandata_dir)
-    compilation_url = 'https://www.idfa.nl/nl/shows/82f713ed-7812-4e2f-a8f5-9de4ceba3daf/boyi-biyo-red-card'
-    compilation_title = 'Boyi-biyo @ Red Card'
-    film = idfa.planner.Film(1, 1, compilation_title, compilation_url)
-    parser = idfa.CompilationPageParser(idfa_data, compilation_url, compilation_title)
-    parser.screened_title = screened_title
-    parser.screened_description = screened_description
+    combination_url = 'https://www.idfa.nl/nl/shows/82f713ed-7812-4e2f-a8f5-9de4ceba3daf/boyi-biyo-red-card'
+    combination_title = 'Boyi-biyo @ Red Card'
+    combination_film = idfa_data.create_film(combination_title, combination_url)
 
     # Act.
-    correct_exceptioon = None
+    correct_exception = None
     try:
-        _ = idfa.planner.ScreenedFilm(film.filmid, screened_title, screened_description)
+        _ = idfa.planner.ScreenedFilm(combination_film.filmid, screened_title, screened_description)
     except idfa.planner.FilmTitleError:
-        correct_exceptioon = True
+        correct_exception = True
     except Exception:
-        correct_exceptioon = False
+        correct_exception = False
 
     # Assert.
-    return correct_exceptioon, True
+    return correct_exception, True
 
 
 if __name__ == '__main__':
