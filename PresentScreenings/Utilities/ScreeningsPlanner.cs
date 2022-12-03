@@ -19,6 +19,7 @@ namespace PresentScreenings.TableView
         private ViewController _controller;
         private Action<string> _displayResults;
         private StringBuilder _builder = new StringBuilder();
+        private const int _maxLoopsWhilePlanning = 200;
         private const string _dateTimeFormat = "yyyy-MM-dd HH:mm:ss";
         #endregion
 
@@ -126,7 +127,6 @@ namespace PresentScreenings.TableView
                 if (screening is OnDemandScreening onDemandScreening)
                 {
                     break;
-                    //fits = FitOnDemandScreening(filmFan, onDemandScreening);
                 }
                 if (fits && screening.IsPlannable)
                 {
@@ -174,7 +174,14 @@ namespace PresentScreenings.TableView
                 int loopCounter = 0;
                 while (!stop)
                 {
+                    // Control limited loop count.
                     loopCounter++;
+                    if (loopCounter > _maxLoopsWhilePlanning)
+                    {
+                        throw new TooManyLoopsWhilePlanningException($"Fitting in {onDemandScreening}");
+                    }
+
+                    // Try to get a span that fits the screening.
                     TimeSpan span = _controller.GetSpanToAutomaticallyFit(onDemandScreening);
                     if (span == TimeSpan.Zero)
                     {
@@ -186,6 +193,8 @@ namespace PresentScreenings.TableView
                         found = fits(onDemandScreening);
                         stop = found;
                     }
+
+                    // Try to move a day forward.  **SHOULD tryNextDay NOT BE RESET?**
                     if (tryNextDay)
                     {
                         if (_controller.TryMoveForwardOvernight(onDemandScreening))
@@ -197,10 +206,6 @@ namespace PresentScreenings.TableView
                         {
                             stop = true;
                         }
-                    }
-                    if (loopCounter > 200)
-                    {
-                        throw new TooManyLoopsWhilePlanningException($"Fitting in {onDemandScreening}");
                     }
                 }
             }

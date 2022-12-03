@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
-import os
-import sys
 import datetime
-import urllib.request
+import os
 import urllib.error
+import urllib.request
 from enum import Enum, auto
 from typing import Dict
 
-import Shared.planner_interface as planner
 import Shared.application_tools as app_tools
+import Shared.planner_interface as planner
 from Shared.parse_tools import HtmlPageParser
 from Shared.web_tools import iripath_to_uripath, UrlFile, UrlReader
 

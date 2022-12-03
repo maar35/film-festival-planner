@@ -11,7 +11,7 @@ import re
 from enum import Enum, auto
 
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment
-from Shared.parse_tools import FileKeeper, HtmlPageParser
+from Shared.parse_tools import FileKeeper, HtmlPageParser, try_parse_festival_sites
 from Shared.planner_interface import write_lists, FilmInfo, FestivalData, Film
 from Shared.web_tools import UrlFile
 
@@ -41,29 +41,7 @@ def main():
     festival_data = ImagineData(fileKeeper.plandata_dir)
 
     # Try parsing the websites.
-    write_film_list = False
-    write_other_lists = True
-    try:
-        parse_imagine_sites(festival_data)
-    except KeyboardInterrupt:
-        comment('Interrupted from keyboard... exiting')
-        write_other_lists = False
-    except Exception as e:
-        debug_recorder.write_debug()
-        comment('Debug info printed.')
-        raise e
-    else:
-        write_film_list = True
-
-    # Display errors when found.
-    if error_collector.error_count() > 0:
-        comment('Encountered some errors:')
-        print(error_collector)
-
-    # Write parsed information.
-    comment('Done loading Imagine data.')
-    write_lists(festival_data, write_film_list, write_other_lists)
-    debug_recorder.write_debug()
+    try_parse_festival_sites(parse_imagine_sites, festival_data, error_collector, debug_recorder)
 
 
 def parse_imagine_sites(festival_data):
@@ -76,7 +54,7 @@ def get_films(festival_data):
     url_file = UrlFile(az_url, az_file, error_collector, byte_count=100)
     az_html = url_file.get_text()
     if az_html is not None:
-        AzPageParser(festival_data, True, url_file.encoding).feed(az_html)
+        AzPageParser(festival_data).feed(az_html)
 
 
 def get_details_of_all_films(festival_data):
@@ -107,8 +85,8 @@ class AzPageParser(HtmlPageParser):
         IN_LANGUAGE = auto()
         IN_DURATION = auto()
 
-    def __init__(self, festival_data, debugging=False, encoding=None):
-        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'AZ', debugging=debugging, encoding=encoding)
+    def __init__(self, festival_data):
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'AZ')
         self.debugging = True
         self.film = None
         self.url = None

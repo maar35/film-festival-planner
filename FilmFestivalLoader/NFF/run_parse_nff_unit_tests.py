@@ -9,23 +9,18 @@ Created on Wed Oct  7 15:13:21 2020
 """
 
 import datetime
-import sys
-import os
-import parse_nff_html
 
-prj_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner")
-shared_dir = os.path.join(prj_dir, "FilmFestivalLoader/Shared")
-sys.path.insert(0, shared_dir)
-import test_tools
+import parse_nff_html
+from Shared.test_tools import execute_tests, equity_decorator
 
 
 def main():
     tests = [test_get_url,
              test_toascii]
-    test_tools.execute_tests(tests)
+    execute_tests(tests)
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def test_toascii():
     # Arrange.
     unicode_string = 'ñé²'
@@ -37,7 +32,7 @@ def test_toascii():
     return ascii_string, 'ne²'
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def test_get_url():
     # Arrange.
     title = 'More Moiré²'
