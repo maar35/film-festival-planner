@@ -282,6 +282,8 @@ class Screen:
 
 class Screening:
 
+    audience_type_public = 'publiek'
+
     def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience,
                  combination_program=None, subtitles=''):
         self.film = film
@@ -328,7 +330,7 @@ class Screening:
         return f'{text}\n'
 
     def is_public(self):
-        return self.audience == 'publiek'
+        return self.audience == self.audience_type_public
 
 
 class FestivalData:
@@ -386,14 +388,15 @@ class FestivalData:
         return film_id
 
     def get_film_by_key(self, title, url):
+        key = self.film_key(title, url)
         try:
-            film_id = self.film_id_by_key[self.film_key(title, url)]
+            film_id = self.film_id_by_key[key]
         except KeyError:
-            raise KeyError(f'title: {title}, url: {url}')
+            raise KeyError(f'Key ({key}) not found in film dictionary')
         else:
             films = [film for film in self.films if film.filmid == film_id]
             if len(films) == 0:
-                raise ValueError(f'title: {title}, url: {url}')
+                raise ValueError(f'Key ({key}) found, but no film found with film ID ({film_id}).')
         return films[0]
 
     def get_filmid(self, url):

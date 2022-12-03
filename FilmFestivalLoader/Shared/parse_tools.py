@@ -9,7 +9,35 @@ Created on Fri Oct 7 22:24:00 2022
 import os
 
 import Shared.web_tools as web_tools
-from Shared.planner_interface import Screening
+from Shared.application_tools import comment
+from Shared.planner_interface import Screening, write_lists
+
+
+def try_parse_festival_sites(parser, festival_data, error_collector, debug_recorder):
+    # Try parsing the websites.
+    write_film_list = False
+    write_other_lists = True
+    try:
+        parser(festival_data)
+    except KeyboardInterrupt:
+        comment('Interrupted from keyboard... exiting')
+        write_other_lists = False
+    except Exception as e:
+        debug_recorder.write_debug()
+        comment('Debug info printed.')
+        raise e
+    else:
+        write_film_list = True
+
+    # Display errors when found.
+    if error_collector.error_count() > 0:
+        comment("Encountered some errors:")
+        print(error_collector)
+
+    # Write parsed information.
+    comment('Done loading Imagine data.')
+    write_lists(festival_data, write_film_list, write_other_lists)
+    debug_recorder.write_debug()
 
 
 class FileKeeper:
