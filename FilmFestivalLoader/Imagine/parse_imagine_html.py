@@ -12,7 +12,7 @@ from enum import Enum, auto
 
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment
 from Shared.parse_tools import FileKeeper, HtmlPageParser, try_parse_festival_sites
-from Shared.planner_interface import write_lists, FilmInfo, FestivalData, Film
+from Shared.planner_interface import FilmInfo, FestivalData, Film
 from Shared.web_tools import UrlFile
 
 # Parameters.
@@ -296,12 +296,12 @@ class FilmPageParser(HtmlPageParser):
         self.article_paragraph = ''
 
     def set_article(self):
+        descr_threshold = 512
         article = '\n\n'.join(self.article_paragraphs)
         if self.alt_description is None:
             self.article = article
         elif len(self.article_paragraphs) > 0:
             self.description = self.article_paragraphs[0]
-            descr_threshold = 512
             if len(self.description) > descr_threshold:
                 self.description = self.description[:descr_threshold] + '…'
             self.article = f'{self.alt_description}\n\n{article}'
