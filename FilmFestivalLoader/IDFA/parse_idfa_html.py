@@ -18,7 +18,7 @@ from typing import Dict
 import Shared.planner_interface as planner
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment
 from Shared.parse_tools import FileKeeper, HtmlPageParser, ScreeningKey, try_parse_festival_sites
-from Shared.web_tools import iripath_to_uripath, UrlFile, iri_slug_to_url
+from Shared.web_tools import UrlFile, iri_slug_to_url
 
 # Parameters.
 festival = 'IDFA'
