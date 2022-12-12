@@ -162,7 +162,9 @@
             <span style="text-align: right; width: 50%; display: inline-block;">
             {% if current_fan %}
                 {% if user_represents_fan %}
-                    {{ user.username }} represents {{ current_fan }}
+                    {{ user.username }} represents <a href="{% url 'film_list:film_fan' %}">{{ current_fan }}</a>
+                {% elif user_is_admin %}
+                    <a href="{% url 'film_list:film_fan' %}">{{ current_fan }}</a>
                 {% else %}
                     {{ current_fan }}
                 {% endif %}
