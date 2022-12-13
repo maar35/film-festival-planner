@@ -143,10 +143,7 @@ def film_list(request):
         'fans': fan_list,
         'rating_rows': rating_rows,
     })
-    if 'rating_action' in session:
-        action = session['rating_action']
-        context['action'] = action
-        context['action']['action_time'] = datetime.datetime.fromisoformat(action['action_time'])
+    refresh_rating_action(session, context)
 
     # Check the request.
     if request.method == 'POST':
@@ -237,15 +234,32 @@ def update_rating(session, film, fan, rating_value):
     zero_ratings = FilmFanFilmRating.fan_ratings.filter(film=film, film_fan=fan, rating=0)
     if len(zero_ratings) > 0:
         zero_ratings.delete()
+    init_rating_action(session, old_rating_str, new_rating)
+
+
+def init_rating_action(session, old_rating_str, new_rating):
     new_rating_name = get_rating_name(new_rating.rating)
     rating_action = {
+        'fan': str(current_fan(session)),
         'old_rating': old_rating_str,
         'new_rating': str(new_rating.rating),
         'new_rating_name': new_rating_name,
         'rated_film': str(new_rating.film),
         'action_time': datetime.datetime.now().isoformat(),
     }
-    session['rating_action'] = rating_action
+    session[rating_action_key(session)] = rating_action
+
+
+def refresh_rating_action(session, context):
+    key = rating_action_key(session)
+    if key in session:
+        action = session[key]
+        context['action'] = action
+        context['action']['action_time'] = datetime.datetime.fromisoformat(action['action_time'])
+
+
+def rating_action_key(session):
+    return f'rating_action_{current_festival(session).id}'
 
 
 # rating picker view.
