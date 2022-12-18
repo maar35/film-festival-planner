@@ -13,7 +13,7 @@ from festivals.models import current_festival, Festival
 from film_list.forms.model_forms import Rating, User
 from film_list.forms.unbound_forms import PickRating, SaveRatingsForm
 from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan, get_rating_name
-from loader.views import rating_count_on_file
+from loader.views import file_row_count
 
 
 # Define generic view classes.
@@ -52,7 +52,7 @@ class SaveView(LoginRequiredMixin, FormView):
             'festival': festival,
             'film_count': len(Film.films.filter(festival=festival)),
             'rating_count': len(FilmFanFilmRating.fan_ratings.filter(film__festival=festival)),
-            'rating_count_on_file': rating_count_on_file(festival),
+            'rating_count_on_file': file_row_count(festival, festival.films_file, has_header=True),
             'ratings_file': festival.ratings_file,
         }
         context = add_base_context(self.request, super().get_context_data(**kwargs))

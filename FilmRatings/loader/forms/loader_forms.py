@@ -5,9 +5,10 @@ from django import forms
 
 from FilmRatings.tools import initialize_log, add_log
 from film_list.models import Film, FilmFanFilmRating, FilmFan
+from sections.models import Section, Subsection
 
 
-class Loader(forms.Form):
+class RatingLoaderForm(forms.Form):
     keep_ratings = forms.BooleanField(
         label='Save existing ratings before loading',
         required=False,
@@ -79,6 +80,8 @@ class BaseLoader:
         return True
 
     def check_header(self, file, reader):
+        if self.expected_header is None:
+            return True
         header = reader.__next__()
         if header != self.expected_header:
             self.add_log(f'File {file} has an incompatible header.')
@@ -238,3 +241,107 @@ class RatingLoader(BaseLoader):
         rating = FilmFanFilmRating(film=film, film_fan=film_fan)
         rating.rating = rating_value
         return rating
+
+
+class SectionLoader(BaseLoader):
+
+    def __init__(self, session, festival):
+        super().__init__(session, festival)
+        self.object_name = 'section'
+        self.sections = None
+
+    def load_sections(self):
+        # Read the sections of the given festival.
+        if not self.read_sections():
+            return False
+
+        # Delete existing sections of the given festival.
+        existing_sections = Section.sections.filter(festival_id=self.festival.id)
+        self.delete_objects(existing_sections)
+
+        # Load the new sections.
+        Section.sections.bulk_create(self.sections)
+        self.add_log(f'{len(self.sections)} sections loaded.')
+
+        return True
+
+    def read_sections(self):
+        # Initialize.
+        sections_file = self.festival.sections_file
+        self.sections = []
+
+        # Read sections from file.
+        if not self.read_objects(sections_file, self.sections):
+            return False
+
+        # Add result statistics to the log.
+        sections_count = len(self.sections)
+        if sections_count == 0:
+            self.add_log(f'No sections found in file {sections_file}')
+            return False
+        self.add_log(f'{sections_count} sections read.')
+
+        return True
+
+    def read_row(self, row):
+        section_id = int(row[0])
+        name = row[1]
+        color = row[2]
+        section = Section(festival=self.festival, section_id=section_id, name=name, color=color)
+        return section
+
+
+class SubsectionLoader(BaseLoader):
+
+    def __init__(self, session, festival):
+        super().__init__(session, festival)
+        self.object_name = 'subsection'
+        self.subsections = None
+
+    def load_subsections(self):
+        # Read the subsections of the given festival.
+        if not self.read_subsections():
+            return False
+
+        # Delete existing subsections of the given festival.
+        existing_subsections = Subsection.subsections.filter(festival_id=self.festival.id)
+        self.delete_objects(existing_subsections)
+
+        # Load the new subsections.
+        Subsection.subsections.bulk_create(self.subsections)
+        self.add_log(f'{len(self.subsections)} subsections loaded.')
+
+        return True
+
+    def read_subsections(self):
+        # Initialize.
+        subsections_file = self.festival.subsections_file
+        self.subsections = []
+
+        # Read subsections from file.
+        if not self.read_objects(subsections_file, self.subsections):
+            return False
+
+        # Add result statistics to the log.
+        subsections_count = len(self.subsections)
+        if subsections_count == 0:
+            self.add_log(f'No subsections found in file {subsections_file}')
+            return False
+        self.add_log(f'{subsections_count} subsections read.')
+
+        return True
+
+    def read_row(self, row):
+        subsection_id = int(row[0])
+        section_id = int(row[1])
+        name = row[2]
+        description = row[3]
+        url = row[4]
+        try:
+            section = Section.sections.get(festival_id=self.festival.id, section_id=section_id)
+        except Section.DoesNotExist:
+            self.add_log(f'Section not found: #{section_id}.')
+            return None
+        subsection = Subsection(festival=self.festival, subsection_id=subsection_id, section=section, name=name,
+                                description=description, url=url)
+        return subsection
