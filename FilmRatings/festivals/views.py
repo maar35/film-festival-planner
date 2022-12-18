@@ -17,7 +17,7 @@ class IndexView(generic.ListView):
     template_name = 'festivals/index.html'
     http_method_names = ['get', 'post']
     object_list = Festival.festivals.order_by('-start_date')
-    context_object_name = 'festival_list'
+    context_object_name = 'festival_rows'
     unexpected_error = ''
 
     def get_context_data(self, **kwargs):

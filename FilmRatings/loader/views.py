@@ -109,8 +109,8 @@ class SectionsLoaderView(generic.ListView):
                 session = request.session
                 picked_festival.set_current(session)
                 initialize_log(session)
-                if SectionLoader(session, picked_festival).load_sections():
-                    SubsectionLoader(session, picked_festival).load_subsections()
+                if SectionLoader(session, picked_festival).load_objects():
+                    SubsectionLoader(session, picked_festival).load_objects()
                 return HttpResponseRedirect(reverse('sections:index'))
             else:
                 self.unexpected_error = f'Submit name not found in POST ({request.POST}'

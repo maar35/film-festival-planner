@@ -483,31 +483,3 @@ class FilmListViewsTests(ViewsTestCase):
         # Assert.
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
         self.assertNotContains(get_response, 'Not allowed')
-
-    def test_update_rating_message_is_kept_per_festival(self):
-        """
-        When switching festival, the last rating update message for
-        that festival is displayed in the film ratings list.
-        """
-        # Arrange.
-        fan = me()
-        rating_value_1_org = 7
-        rating_value_1_new = 8
-        rating_value_2_org = 1
-        rating_value_2_new = 9
-        festival_1 = create_festival('IDFA', '2022-11-08', '2022-11-21')
-        festival_2 = create_festival('MTMF', '2022-04-17', '2022-04-27')
-        film_1 = Film(festival_id=festival_1.id, film_id=1, seq_nr=1, title='Test Movie', duration=timedelta(minutes=6))
-        film_2 = Film(festival_id=festival_2.id, film_id=1, seq_nr=1, title='Movie Two', duration=timedelta(minutes=77))
-        film_1.save()
-        film_2.save()
-        rating_1_org = FilmFanFilmRating(film=film_1, film_fan=fan, rating=rating_value_1_org)
-        rating_1_new = FilmFanFilmRating(film=film_1, film_fan=fan, rating=rating_value_1_new)
-        rating_2_org = FilmFanFilmRating(film=film_2, film_fan=fan, rating=rating_value_2_org)
-        rating_2_new = FilmFanFilmRating(film=film_2, film_fan=fan, rating=rating_value_2_new)
-        rating_1_org.save()
-        rating_2_org.save()
-
-        # Act.
-        # Assert.
-        self.assertEqual(True, False, 'Test is work in progress')

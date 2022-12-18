@@ -243,45 +243,54 @@ class RatingLoader(BaseLoader):
         return rating
 
 
-class SectionLoader(BaseLoader):
+class SimpleLoader(BaseLoader):
 
-    def __init__(self, session, festival):
+    def __init__(self, session, festival, object_name, object_manager, objects_file):
         super().__init__(session, festival)
-        self.object_name = 'section'
-        self.sections = None
+        self.object_name = object_name
+        self.object_manager = object_manager
+        self.objects_file = objects_file
+        self.object_list = []
 
-    def load_sections(self):
-        # Read the sections of the given festival.
-        if not self.read_sections():
+    def load_objects(self):
+        # Read the objects of the given festival.
+        if not self.read_objects_simple():
             return False
 
-        # Delete existing sections of the given festival.
-        existing_sections = Section.sections.filter(festival_id=self.festival.id)
-        self.delete_objects(existing_sections)
+        # Delete existing objects of the given festival.
+        existing_objects = self.object_manager.filter(festival_id=self.festival.id)
+        self.delete_objects(existing_objects)
 
-        # Load the new sections.
-        Section.sections.bulk_create(self.sections)
-        self.add_log(f'{len(self.sections)} sections loaded.')
+        # Load the new objects.
+        self.object_manager.bulk_create(self.object_list)
+        self.add_log(f'{len(self.object_list)} {self.object_name} records loaded.')
 
         return True
 
-    def read_sections(self):
-        # Initialize.
-        sections_file = self.festival.sections_file
-        self.sections = []
-
-        # Read sections from file.
-        if not self.read_objects(sections_file, self.sections):
+    def read_objects_simple(self):
+        # Read objects from file.
+        print(f'@@ read {self.object_name}s from {self.objects_file}')
+        if not self.read_objects(self.objects_file, self.object_list):
+            print(f'@@ {len(self.object_list)} records read, not successful...')
             return False
 
         # Add result statistics to the log.
-        sections_count = len(self.sections)
-        if sections_count == 0:
-            self.add_log(f'No sections found in file {sections_file}')
+        object_count = len(self.object_list)
+        print(f'@@ Yes! {object_count} records found!')
+        if object_count == 0:
+            self.add_log(f'No {self.object_name} records found in file {self.objects_file}')
             return False
-        self.add_log(f'{sections_count} sections read.')
+        self.add_log(f'{object_count} {self.object_name} records read.')
 
         return True
+
+
+class SectionLoader(SimpleLoader):
+
+    def __init__(self, session, festival):
+        manager = Section.sections
+        file = festival.sections_file
+        super().__init__(session, festival, 'section', manager, file)
 
     def read_row(self, row):
         section_id = int(row[0])
@@ -291,45 +300,12 @@ class SectionLoader(BaseLoader):
         return section
 
 
-class SubsectionLoader(BaseLoader):
+class SubsectionLoader(SimpleLoader):
 
     def __init__(self, session, festival):
-        super().__init__(session, festival)
-        self.object_name = 'subsection'
-        self.subsections = None
-
-    def load_subsections(self):
-        # Read the subsections of the given festival.
-        if not self.read_subsections():
-            return False
-
-        # Delete existing subsections of the given festival.
-        existing_subsections = Subsection.subsections.filter(festival_id=self.festival.id)
-        self.delete_objects(existing_subsections)
-
-        # Load the new subsections.
-        Subsection.subsections.bulk_create(self.subsections)
-        self.add_log(f'{len(self.subsections)} subsections loaded.')
-
-        return True
-
-    def read_subsections(self):
-        # Initialize.
-        subsections_file = self.festival.subsections_file
-        self.subsections = []
-
-        # Read subsections from file.
-        if not self.read_objects(subsections_file, self.subsections):
-            return False
-
-        # Add result statistics to the log.
-        subsections_count = len(self.subsections)
-        if subsections_count == 0:
-            self.add_log(f'No subsections found in file {subsections_file}')
-            return False
-        self.add_log(f'{subsections_count} subsections read.')
-
-        return True
+        manager = Subsection.subsections
+        file = festival.subsections_file
+        super().__init__(session, festival, 'subsection', manager, file)
 
     def read_row(self, row):
         subsection_id = int(row[0])
