@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from film_list.models import Film, FilmFan, FilmFanFilmRating
 
 # Register the models.

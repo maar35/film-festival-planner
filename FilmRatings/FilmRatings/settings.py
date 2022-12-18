@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'festivals.apps.FestivalsConfig',
     'film_list.apps.FilmListConfig',
     'loader.apps.LoaderConfig',
+    'sections.apps.SectionsConfig',
     'exercises.apps.ExercisesConfig',
 ]
 

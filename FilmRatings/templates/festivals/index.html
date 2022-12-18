@@ -6,21 +6,33 @@
 {% block content %}
     {% load static %}
     <h3>Festivals</h3>
+    {% if unexpected_error %}
+        <h2 class="error">Unexpected error</h2>
+        <p>{{ unexpected_error }}</p>
+    {% endif %}
     <br>
-    {% if festival_list %}
+    {% if festival_rows %}
+        <form method="post">
+        {% csrf_token %}
         <table>
             <tbody>
-            {% for festival in festival_list %}
+            {% for festival_row in festival_rows %}
                 <tr>
-                    <td><a href="{% url 'festivals:detail' festival.id %}">{{ festival }}</a></td>
-                    <td style="color:{{ festival.festival_color }}">{{ festival.festival_color }}</td>
-                    <td>{{ festival.start_date | date:"Y-m-d" }}</td>
-                    <td>{{ festival.end_date | date:"Y-m-d" }}</td>
-                    <td><img src="{% static festival.base.image %}" alt="Imagine picture" width="42" height="26"></td>
+                    <td class="with-submit">
+                    {% if festival_row != festival %}
+                        <input type="submit" value="Switch" name="{{ festival_row.id }}" class="in-table">
+                    {% endif %}
+                    </td>
+                    <td><a href="{% url 'festivals:detail' festival_row.id %}">{{ festival_row }}</a></td>
+                    <td style="color:{{ festival_row.festival_color }}">{{ festival_row.festival_color }}</td>
+                    <td>{{ festival_row.start_date | date:"Y-m-d" }}</td>
+                    <td>{{ festival_row.end_date | date:"Y-m-d" }}</td>
+                    <td><img src="{% static festival_row.base.image %}" alt="Imagine picture" width="42" height="26"></td>
                 </tr>
             {% endfor %}
             </tbody>
         </table>
+        </form>
     {% else %}
         <p>No festivals are available.</p>
     {% endif %}

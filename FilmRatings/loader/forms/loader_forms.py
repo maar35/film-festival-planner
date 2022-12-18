@@ -5,9 +5,10 @@ from django import forms
 
 from FilmRatings.tools import initialize_log, add_log
 from film_list.models import Film, FilmFanFilmRating, FilmFan
+from sections.models import Section, Subsection
 
 
-class Loader(forms.Form):
+class RatingLoaderForm(forms.Form):
     keep_ratings = forms.BooleanField(
         label='Save existing ratings before loading',
         required=False,
@@ -79,6 +80,8 @@ class BaseLoader:
         return True
 
     def check_header(self, file, reader):
+        if self.expected_header is None:
+            return True
         header = reader.__next__()
         if header != self.expected_header:
             self.add_log(f'File {file} has an incompatible header.')
@@ -238,3 +241,83 @@ class RatingLoader(BaseLoader):
         rating = FilmFanFilmRating(film=film, film_fan=film_fan)
         rating.rating = rating_value
         return rating
+
+
+class SimpleLoader(BaseLoader):
+
+    def __init__(self, session, festival, object_name, object_manager, objects_file):
+        super().__init__(session, festival)
+        self.object_name = object_name
+        self.object_manager = object_manager
+        self.objects_file = objects_file
+        self.object_list = []
+
+    def load_objects(self):
+        # Read the objects of the given festival.
+        if not self.read_objects_simple():
+            return False
+
+        # Delete existing objects of the given festival.
+        existing_objects = self.object_manager.filter(festival_id=self.festival.id)
+        self.delete_objects(existing_objects)
+
+        # Load the new objects.
+        self.object_manager.bulk_create(self.object_list)
+        self.add_log(f'{len(self.object_list)} {self.object_name} records loaded.')
+
+        return True
+
+    def read_objects_simple(self):
+        # Read objects from file.
+        print(f'@@ read {self.object_name}s from {self.objects_file}')
+        if not self.read_objects(self.objects_file, self.object_list):
+            print(f'@@ {len(self.object_list)} records read, not successful...')
+            return False
+
+        # Add result statistics to the log.
+        object_count = len(self.object_list)
+        print(f'@@ Yes! {object_count} records found!')
+        if object_count == 0:
+            self.add_log(f'No {self.object_name} records found in file {self.objects_file}')
+            return False
+        self.add_log(f'{object_count} {self.object_name} records read.')
+
+        return True
+
+
+class SectionLoader(SimpleLoader):
+
+    def __init__(self, session, festival):
+        manager = Section.sections
+        file = festival.sections_file
+        super().__init__(session, festival, 'section', manager, file)
+
+    def read_row(self, row):
+        section_id = int(row[0])
+        name = row[1]
+        color = row[2]
+        section = Section(festival=self.festival, section_id=section_id, name=name, color=color)
+        return section
+
+
+class SubsectionLoader(SimpleLoader):
+
+    def __init__(self, session, festival):
+        manager = Subsection.subsections
+        file = festival.subsections_file
+        super().__init__(session, festival, 'subsection', manager, file)
+
+    def read_row(self, row):
+        subsection_id = int(row[0])
+        section_id = int(row[1])
+        name = row[2]
+        description = row[3]
+        url = row[4]
+        try:
+            section = Section.sections.get(festival_id=self.festival.id, section_id=section_id)
+        except Section.DoesNotExist:
+            self.add_log(f'Section not found: #{section_id}.')
+            return None
+        subsection = Subsection(festival=self.festival, subsection_id=subsection_id, section=section, name=name,
+                                description=description, url=url)
+        return subsection

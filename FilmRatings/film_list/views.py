@@ -13,7 +13,7 @@ from festivals.models import current_festival, Festival
 from film_list.forms.model_forms import Rating, User
 from film_list.forms.unbound_forms import PickRating, SaveRatingsForm
 from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan, get_rating_name
-from loader.views import rating_count_on_file
+from loader.views import file_row_count
 
 
 # Define generic view classes.
@@ -52,7 +52,7 @@ class SaveView(LoginRequiredMixin, FormView):
             'festival': festival,
             'film_count': len(Film.films.filter(festival=festival)),
             'rating_count': len(FilmFanFilmRating.fan_ratings.filter(film__festival=festival)),
-            'rating_count_on_file': rating_count_on_file(festival),
+            'rating_count_on_file': file_row_count(festival, festival.films_file, has_header=True),
             'ratings_file': festival.ratings_file,
         }
         context = add_base_context(self.request, super().get_context_data(**kwargs))
@@ -143,10 +143,7 @@ def film_list(request):
         'fans': fan_list,
         'rating_rows': rating_rows,
     })
-    if 'rating_action' in session:
-        action = session['rating_action']
-        context['action'] = action
-        context['action']['action_time'] = datetime.datetime.fromisoformat(action['action_time'])
+    refresh_rating_action(session, context)
 
     # Check the request.
     if request.method == 'POST':
@@ -237,15 +234,32 @@ def update_rating(session, film, fan, rating_value):
     zero_ratings = FilmFanFilmRating.fan_ratings.filter(film=film, film_fan=fan, rating=0)
     if len(zero_ratings) > 0:
         zero_ratings.delete()
+    init_rating_action(session, old_rating_str, new_rating)
+
+
+def init_rating_action(session, old_rating_str, new_rating):
     new_rating_name = get_rating_name(new_rating.rating)
     rating_action = {
+        'fan': str(current_fan(session)),
         'old_rating': old_rating_str,
         'new_rating': str(new_rating.rating),
         'new_rating_name': new_rating_name,
         'rated_film': str(new_rating.film),
         'action_time': datetime.datetime.now().isoformat(),
     }
-    session['rating_action'] = rating_action
+    session[rating_action_key(session)] = rating_action
+
+
+def refresh_rating_action(session, context):
+    key = rating_action_key(session)
+    if key in session:
+        action = session[key]
+        context['action'] = action
+        context['action']['action_time'] = datetime.datetime.fromisoformat(action['action_time'])
+
+
+def rating_action_key(session):
+    return f'rating_action_{current_festival(session).id}'
 
 
 # rating picker view.

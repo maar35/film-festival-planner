@@ -31,8 +31,6 @@ fileKeeper = FileKeeper(festival, festival_year)
 debug_file = fileKeeper.debug_file
 
 plandata_dir = fileKeeper.plandata_dir
-filmdata_file = os.path.join(plandata_dir, 'filmdata.csv')
-filminfo_file = os.path.join(plandata_dir, 'filminfo.xml')
 specials_file = os.path.join(fileKeeper.webdata_dir, 'specials.html')
 
 # URL information.
@@ -523,7 +521,7 @@ class SpecialFeaturePageParser(FilmPageParser):
             film_info = film.film_info(self.festival_data)
             film_info.combination_films.append(self.film)
         screened_films_str = '\n'.join([str(screened_film) for screened_film in self.screened_films])
-        print(f'@@ combination {self.film} linked to screened films:\n{screened_films_str}')
+        print(f'Combination {self.film} linked to screened films:\n{screened_films_str}')
 
     def set_screening_times(self, data):
         self.start_dt, self.end_dt = get_screening_times(data)

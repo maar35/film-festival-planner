@@ -136,5 +136,13 @@ class Festival(models.Model):
     def ratings_cache(self):
         return os.path.join(self.festival_data_dir, 'ratings_cache.csv')
 
+    @property
+    def sections_file(self):
+        return os.path.join(self.festival_data_dir, 'sections.csv')
+
+    @property
+    def subsections_file(self):
+        return os.path.join(self.festival_data_dir, 'subsections.csv')
+
     def set_current(self, session):
         session['festival'] = self.id

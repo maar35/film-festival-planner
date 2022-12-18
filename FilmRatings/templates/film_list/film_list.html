@@ -25,7 +25,7 @@
     <br>
     {% if action.new_rating %}
         <p>
-        {{ current_fan }}
+        {{ action.fan }}
         {% if action.old_rating == '-' %}
             gave <em>{{ action.rated_film }}</em> a rating of <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% elif action.new_rating == '0' %}
