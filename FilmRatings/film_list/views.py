@@ -17,12 +17,16 @@ from loader.views import file_row_count
 
 
 # Define generic view classes.
+from sections.models import Subsection
+
+
 class ResultsView(generic.DetailView):
     model = Film
     template_name = 'film_list/results.html'
 
     def get_context_data(self, **kwargs):
         film = self.object
+        subsection = get_subsection(film)
         fan_rows = []
         fans = FilmFan.film_fans.all()
         for fan in fans:
@@ -30,6 +34,7 @@ class ResultsView(generic.DetailView):
             fan_rows.append(fan_row)
         context = add_base_context(self.request, super().get_context_data(**kwargs))
         context['title'] = 'Film Rating Results'
+        context['subsection'] = subsection
         context['fan_rows'] = fan_rows
         return context
 
@@ -177,7 +182,8 @@ def get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_n
     for film in films:
 
         # Set the row to contain film, film duration and film fans.
-        rating_cells = [film, film.duration_str()]
+        subsection = get_subsection(film)
+        rating_cells = [film, film.duration_str(), subsection]
         for fan in fan_list:
 
             # Set a rating string to display.
@@ -204,6 +210,13 @@ def get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_n
 
         # Append a row to the table rows.
         rating_rows.append(rating_cells)
+
+
+def get_subsection(film):
+    if len(film.subsection) == 0:
+        return ''
+    subsection = Subsection.subsections.get(festival=film.festival, subsection_id=film.subsection)
+    return subsection
 
 
 def get_submitted_name(request, submit_names):
