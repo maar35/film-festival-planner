@@ -28,7 +28,7 @@ def serialize_film(film):
         film.sort_title,
         film.title,
         film.title_language,
-        film.section if film.section is not None else '',
+        film.subsection if film.subsection is not None else '',
         duration_str,
         film.medium_category,
         film.url

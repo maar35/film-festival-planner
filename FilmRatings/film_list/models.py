@@ -14,7 +14,7 @@ class Film(models.Model):
     sort_title = models.CharField(max_length=128)
     title = models.CharField(max_length=128)
     title_language = models.CharField(max_length=2)
-    section = models.CharField(max_length=32, null=True)
+    subsection = models.CharField(max_length=32, null=True)
     duration = models.DurationField(null=False)
     medium_category = models.CharField(max_length=32)
     url = models.URLField(max_length=200)

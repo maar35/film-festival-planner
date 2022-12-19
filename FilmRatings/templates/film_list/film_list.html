@@ -50,6 +50,7 @@
             <tr>
                 <td class="sticky"><b>Film</b></td>
                 <td class="sticky"><b>Duration</b></td>
+                <td class="sticky"><b>Subsection</b></td>
                 {% for fan in fans %}
                     <td class="sticky"><b>{{ fan }}</b></td>
                 {% endfor %}
@@ -65,6 +66,8 @@
                         </a></td>
                     {% elif forloop.counter == 2 %}
                         <td>{{ rating_cell }}</td>
+                    {% elif forloop.counter == 3 %}
+                        <td style="color:{{ rating_cell.section.color }}">{{ rating_cell.name }}</td>
                     {% elif rating_cell.fan == current_fan %}
                         <td class="dropdown">
                             <span class="drop-button">

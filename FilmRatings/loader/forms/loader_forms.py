@@ -160,7 +160,7 @@ class FilmLoader(BaseLoader):
         film.sort_title = row[2]
         film.title = row[3]
         film.title_language = row[4]
-        film.section = row[5]
+        film.subsection = row[5]
         film.duration = datetime.timedelta(minutes=int(row[6].rstrip("′")))
         film.medium_category = row[7]
         film.url = row[8]
