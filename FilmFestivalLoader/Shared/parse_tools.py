@@ -51,7 +51,7 @@ class FileKeeper:
         self.interface_dir = os.path.join(self.documents_dir, 'FestivalPlan')
 
         # Define formats.
-        self.generic_numbered_file_format = '{:02}.html'
+        self.generic_numbered_file_format = '{:03}.html'
         self.az_file_format = os.path.join(self.webdata_dir, "az_page_{:02}.html")
         self.film_file_format = os.path.join(self.webdata_dir, "film_page_{:03d}.html")
         self.screenings_file_format = os.path.join(self.webdata_dir, "screenings_{:03d}_{:02d}.html")
@@ -78,11 +78,12 @@ class FileKeeper:
             return self.az_file_format.format(seq_nr)
         return self.az_file_unnumbered
 
-    def filmdata_file(self, film_id):
+    def film_webdata_file(self, film_id):
         return self.film_file_format.format(film_id)
 
     def numbered_webdata_file(self, prefix, webdata_id):
-        return os.path.join(self.webdata_dir, prefix.format(webdata_id))
+        postfix = self.generic_numbered_file_format.format(webdata_id)
+        return os.path.join(self.webdata_dir, f'{prefix}_{postfix}')
 
 
 class ScreeningKey:
