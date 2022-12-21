@@ -34,6 +34,8 @@ def write_lists(festival_data, write_film_list, write_other_lists):
         festival_data.write_filminfo()
         festival_data.write_screens()
         festival_data.write_screenings()
+        festival_data.write_sections()
+        festival_data.write_subsections()
     else:
         print("Film info, screens and screenings NOT WRITTEN")
 
@@ -231,7 +233,7 @@ class Section:
     def __init__(self, section_id, name, color=None):
         self.section_id = section_id
         self.name = name
-        self.color = color if color is not None else 'black'
+        self.color = color if color is not None else 'grey'
 
     def __repr__(self):
         text = ';'.join([str(self.section_id), self.name, self.color])

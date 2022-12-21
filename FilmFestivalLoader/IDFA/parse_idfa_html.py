@@ -78,7 +78,7 @@ def get_films(festival_data):
 def get_film_details(festival_data, url):
     comment(f'Parsing film detail url {url}')
     film_id = festival_data.new_film_id(url)
-    film_file = fileKeeper.filmdata_file(film_id)
+    film_file = fileKeeper.film_webdata_file(film_id)
     url_file = UrlFile(url, film_file, error_collector, byte_count=200)
     film_html = url_file.get_text(f'Downloading film with ID {film_id} from {url}')
     if film_html is not None:
@@ -110,7 +110,7 @@ def get_specials(festival_data):
 
 
 def get_special_feature_details(festival_data, combination_program):
-    combination_file = fileKeeper.filmdata_file(combination_program.filmid)
+    combination_file = fileKeeper.film_webdata_file(combination_program.filmid)
     url_file = UrlFile(combination_program.url, combination_file, error_collector, byte_count=500)
     combination_html = url_file.get_text()
     if combination_html is not None:
