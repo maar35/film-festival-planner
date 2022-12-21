@@ -25,7 +25,6 @@ debug_file = file_keeper.debug_file
 iffr_hostname = "https://iffr.com"
 url_festival = iffr_hostname.split('/')[2].split('.')[0]
 az_url_path = f'/nl/{url_festival}/{festival_year}/a-z'
-az = 'https://iffr.com/nl/iffr/2023/a-z'
 
 # Application tools.
 error_collector = ErrorCollector()
@@ -82,10 +81,6 @@ def get_subsection_details(festival_data):
             SubsectionPageParser(festival_data, subsection, url_file.encoding).feed(subsection_html)
 
 
-class Globals:
-    extras_by_main = {}
-
-
 class AzPageParser(HtmlPageParser):
     class AzParseState(Enum):
         IDLE = auto()
@@ -106,7 +101,7 @@ class AzPageParser(HtmlPageParser):
         """, re.VERBOSE)
 
     def __init__(self, festival_data):
-        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'AZ', debugging=True)
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'AZ', debugging=False)
         self.film = None
         self.title = None
         self.url = None
@@ -418,6 +413,7 @@ class FilmInfoPageParser(HtmlPageParser):
 
     debugging = False
     intro_span = datetime.timedelta(minutes=4)
+    extras_by_main = {}
     screened_film_type_by_string = {
         'Voorfilm bij ': ScreenedFilmType.SCREENED_BEFORE,
         'Te zien na ': ScreenedFilmType.SCREENED_AFTER,
@@ -520,10 +516,10 @@ class FilmInfoPageParser(HtmlPageParser):
 
     def store_combination(self, combination_film_id):
         screened_film_id = self.film.filmid
-        if combination_film_id in Globals.extras_by_main.keys():
-            Globals.extras_by_main[combination_film_id].append((screened_film_id, self.screened_film_type))
+        if combination_film_id in self.extras_by_main.keys():
+            self.extras_by_main[combination_film_id].append((screened_film_id, self.screened_film_type))
         else:
-            Globals.extras_by_main[combination_film_id] = [(screened_film_id, self.screened_film_type)]
+            self.extras_by_main[combination_film_id] = [(screened_film_id, self.screened_film_type)]
         self.screened_film_type = None
 
     @staticmethod
@@ -534,8 +530,8 @@ class FilmInfoPageParser(HtmlPageParser):
             return '/'.join(parts)
         return url
 
-    @staticmethod
-    def apply_combinations(festival_data):
+    @classmethod
+    def apply_combinations(cls, festival_data):
 
         def pr_debug(s):
             if FilmInfoPageParser.debugging:
@@ -551,15 +547,15 @@ class FilmInfoPageParser(HtmlPageParser):
         def short_str(film_id):
             return festival_data.get_film_by_id(film_id).short_str()
 
-        pr_debug_dict(Globals.extras_by_main)
+        pr_debug_dict(cls.extras_by_main)
 
         # Find mutually linked films and decide which will be the main film.
         film_ids_to_pop = set()
-        for (main_film_id, extra_infos) in Globals.extras_by_main.items():
+        for (main_film_id, extra_infos) in cls.extras_by_main.items():
             if len(extra_infos) == 1:
                 (extra_film_id, screened_film_type) = extra_infos[0]
-                if extra_film_id in Globals.extras_by_main:
-                    extra_infos_from_extra = Globals.extras_by_main[extra_film_id]
+                if extra_film_id in cls.extras_by_main:
+                    extra_infos_from_extra = cls.extras_by_main[extra_film_id]
                     if len(extra_infos_from_extra) == 1:
                         extra_info_from_extra = extra_infos_from_extra[0]
                         if extra_info_from_extra == (main_film_id, screened_film_type):
@@ -570,10 +566,10 @@ class FilmInfoPageParser(HtmlPageParser):
 
         # Remove the non-main films from the extras by main dictionary.
         for film_id_to_pop in film_ids_to_pop:
-            Globals.extras_by_main.pop(film_id_to_pop)
+            cls.extras_by_main.pop(film_id_to_pop)
 
         # Implement the links in the extras by main dictionary in the film info lists.
-        for (main_film_id, extra_infos) in Globals.extras_by_main.items():
+        for (main_film_id, extra_infos) in cls.extras_by_main.items():
             pr_debug(f'{short_str(main_film_id)} [{" || ".join([short_str(i) for (i, t) in extra_infos])}]')
             main_film = festival_data.get_film_by_id(main_film_id)
             main_film_info = main_film.film_info(festival_data)
