@@ -8,16 +8,15 @@ Created on Thu Dec 24 12:27:14 2020
 
 
 import datetime
-import sys
-import os
-import parse_iffr_html as iffr
 
-prj_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner")
-shared_dir = os.path.join(prj_dir, "FilmFestivalLoader/Shared")
-sys.path.insert(0, shared_dir)
-import test_tools
-import planner_interface
-import web_tools
+import parse_iffr_html as iffr
+from Shared.parse_tools import FileKeeper
+from Shared.planner_interface import Film, ScreenedFilmType, ScreenedFilm, Screen
+from Shared.test_tools import execute_tests, equity_decorator
+from Shared.web_tools import fix_json
+
+festival = 'IFFR'
+festival_year = 2022
 
 
 def main():
@@ -35,9 +34,8 @@ def main():
              new_screen_ondemand,
              new_screen_physical,
              fix_html_code_point,
-             fix_html_code_point_str,
-             fix_html_code_point_file]
-    test_tools.execute_tests(tests)
+             fix_html_code_point_str]
+    execute_tests(tests)
 
 
 class TestFilm:
@@ -53,7 +51,7 @@ class TestFilm:
         self.sorted_title = None
 
     def film_info(self, data):
-        return planner_interface.Film.film_info(self, data)
+        return Film.film_info(self, data)
 
 
 class TestList:
@@ -79,7 +77,8 @@ class TestList:
         'https://iffr.com/nl/2021/films/80-000-ans',
         28,
         'This is some French movie. I would not bother to see it.'))
-    festival_data = iffr.IffrData(iffr.plandata_dir)
+    file_keeper = FileKeeper(festival, festival_year)
+    festival_data = iffr.IffrData(file_keeper.plandata_dir)
     az_parser = iffr.AzPageParser(festival_data)
     for film in test_films:
         az_parser.title = film.title
@@ -91,67 +90,67 @@ class TestList:
     info_parser = iffr.FilmInfoPageParser(festival_data, test_films[0])
 
 
-@test_tools.equity_decorator
-def test_new_name_first():
+# @equity_decorator
+# def test_new_name_first():
+#
+#     # Arrange.
+#     screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
+#     test_name = 'offline'
+#     names = ['offline']
+#
+#     # Act.
+#     new_name = screen_splitter.new_name(test_name, names)
+#
+#     # Assert.
+#     return new_name, 'offline2'
+#
+#
+# @equity_decorator
+# def test_new_name_not():
+#
+#     # Arrange.
+#     screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
+#     test_name = 'offline'
+#     names = []
+#
+#     # Act.
+#     new_name = screen_splitter.new_name(test_name, names)
+#
+#     # Assert.
+#     return new_name, 'offline'
+#
+#
+# @equity_decorator
+# def test_new_name_gap():
+#
+#     # Arrange.
+#     screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
+#     test_name = 'offline'
+#     names = ['offline', 'offline3']
+#
+#     # Act.
+#     new_name = screen_splitter.new_name(test_name, names)
+#
+#     # Assert.
+#     return new_name, 'offline2'
+#
+#
+# @equity_decorator
+# def test_new_name_next():
+#
+#     # Arrange.
+#     screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
+#     test_name = 'offline199'
+#     names = ['offline199', 'offline200']
+#
+#     # Act.
+#     new_name = screen_splitter.new_name(test_name, names)
+#
+#     # Assert.
+#     return new_name, 'offline201'
 
-    # Arrange.
-    screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
-    test_name = 'offline'
-    names = ['offline']
 
-    # Act.
-    new_name = screen_splitter.new_name(test_name, names)
-
-    # Assert.
-    return new_name, 'offline2'
-
-
-@test_tools.equity_decorator
-def test_new_name_not():
-
-    # Arrange.
-    screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
-    test_name = 'offline'
-    names = []
-
-    # Act.
-    new_name = screen_splitter.new_name(test_name, names)
-
-    # Assert.
-    return new_name, 'offline'
-
-
-@test_tools.equity_decorator
-def test_new_name_gap():
-
-    # Arrange.
-    screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
-    test_name = 'offline'
-    names = ['offline', 'offline3']
-
-    # Act.
-    new_name = screen_splitter.new_name(test_name, names)
-
-    # Assert.
-    return new_name, 'offline2'
-
-
-@test_tools.equity_decorator
-def test_new_name_next():
-
-    # Arrange.
-    screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
-    test_name = 'offline199'
-    names = ['offline199', 'offline200']
-
-    # Act.
-    new_name = screen_splitter.new_name(test_name, names)
-
-    # Assert.
-    return new_name, 'offline201'
-
-
-@test_tools.equity_decorator
+@equity_decorator
 def compare_a0():
     # Arrange.
     films = TestList.festival_data.films
@@ -163,7 +162,7 @@ def compare_a0():
     return less, True
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def compare_0a():
     # Arrange.
     films = TestList.festival_data.films
@@ -175,7 +174,7 @@ def compare_0a():
     return greater, False
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def compare_a_():
     # Arrange.
     films = TestList.festival_data.films
@@ -187,7 +186,7 @@ def compare_a_():
     return less, True
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def compare_00():
     # Arrange.
     films = TestList.festival_data.films
@@ -199,7 +198,7 @@ def compare_00():
     return less, True
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def repair_url_works():
     # Arrange.
     faulty_url = 'https://iffr.com/nl/2021/films/the-amusement-park'
@@ -212,7 +211,7 @@ def repair_url_works():
     return repaired_url, correct_url
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def repair_url_pass():
     # Arrange.
     correct_url = 'https://iffr.com/nl/iffr/2021/films/the-amusement-park'
@@ -224,7 +223,7 @@ def repair_url_pass():
     return repaired_url, correct_url
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def append_combination_0():
     # Arrange.
     new_film = TestList.festival_data.films[0]
@@ -237,7 +236,7 @@ def append_combination_0():
     return len(film_infos[1].combination_films), 0
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def append_combination_1():
     # Arrange.
     first_film = TestList.festival_data.films[1]
@@ -254,44 +253,44 @@ def append_combination_1():
     return film_infos[1].combination_films[0], first_film
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def new_screened_film_0():
     # Arrange.
     film = TestList.festival_data.films[0]
     film_id = film.filmid
     title = film.title
     description = TestList.test_films[0].description
-    sf_type = planner_interface.ScreenedFilmType.SCREENED_BEFORE
+    sf_type = ScreenedFilmType.SCREENED_BEFORE
 
     # Act.
-    screened_film = planner_interface.ScreenedFilm(film_id, title, description, sf_type)
+    screened_film = ScreenedFilm(film_id, title, description, sf_type)
 
     # Assert.
-    return screened_film.screened_film_type, planner_interface.ScreenedFilmType.SCREENED_BEFORE
+    return screened_film.screened_film_type, ScreenedFilmType.SCREENED_BEFORE
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def new_screened_film_1():
     # Arrange.
     film = TestList.festival_data.films[0]
     film_id = film.filmid
     title = film.title
     description = TestList.test_films[0].description
-    sf_type = planner_interface.ScreenedFilmType.SCREENED_AFTER
+    sf_type = ScreenedFilmType.SCREENED_AFTER
 
     # Act.
-    screened_film = planner_interface.ScreenedFilm(film_id, title, description, sf_type)
+    screened_film = ScreenedFilm(film_id, title, description, sf_type)
 
     # Assert.
     return screened_film.screened_film_type.name, 'SCREENED_AFTER'
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def new_screen_online():
     # Arrange.
     city = 'The Hague'
     name = 'Online Program 42'
-    screen_type = planner_interface.Screen.screen_types[1]  # OnLine
+    screen_type = Screen.screen_types[1]  # OnLine
 
     # Act.
     screen = TestList.festival_data.get_screen(city, name)
@@ -300,12 +299,12 @@ def new_screen_online():
     return screen.type, screen_type
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def new_screen_ondemand():
     # Arrange.
     city = 'The Hague'
     name = 'On Demand Theater'
-    screen_type = planner_interface.Screen.screen_types[2]  # OnDemand
+    screen_type = Screen.screen_types[2]  # OnDemand
 
     # Act.
     screen = TestList.festival_data.get_screen(city, name)
@@ -314,12 +313,12 @@ def new_screen_ondemand():
     return screen.type, screen_type
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def new_screen_physical():
     # Arrange.
     city = 'The Hague'
     name = 'The Horse 666'
-    screen_type = planner_interface.Screen.screen_types[0]  # Physical
+    screen_type = Screen.screen_types[0]  # Physical
 
     # Act.
     screen = TestList.festival_data.get_screen(city, name)
@@ -328,19 +327,19 @@ def new_screen_physical():
     return screen.type, screen_type
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def fix_html_code_point():
     # Arrange.
     code_point_str = '\u003c'
 
     # Act.
-    result_str = web_tools.fix_json(code_point_str)
+    result_str = fix_json(code_point_str)
 
     # Assert.
     return result_str, '<'
 
 
-@test_tools.equity_decorator
+@equity_decorator
 def fix_html_code_point_str():
     # Arrange.
     code_point_str = "Steve McQueens vorige installatie, \u003cem\u003eYear 3\u003c/em\u003e, maakte hij in " \
@@ -349,29 +348,10 @@ def fix_html_code_point_str():
                 "2019."
 
     # Act.
-    result_str = web_tools.fix_json(code_point_str)
+    result_str = fix_json(code_point_str)
 
     # Assert.
     return result_str, clean_str
-
-
-@test_tools.equity_decorator
-def fix_html_code_point_file():
-    # Arrange.
-    code_point_file = os.path.join(iffr.documents_dir, 'code_point_test.html')
-    clean_file = os.path.join(iffr.documents_dir, 'code_point_test_fixed.html')
-    parser = TestList.az_parser
-
-    # Act.
-    with open(code_point_file, 'r', encoding='utf-8') as f:
-        code_point_text = f.read()
-    with open(clean_file, 'r', encoding='utf-8') as f:
-        clean_text = f.read()
-    parser.parse_props(code_point_text)
-    result_text = parser.iffr_data.filminfos[-1].description
-
-    # Assert.
-    return result_text, clean_text[35633:35897]
 
 
 if __name__ == '__main__':

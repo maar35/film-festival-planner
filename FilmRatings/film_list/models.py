@@ -68,6 +68,10 @@ def get_user_fan(user):
     return user_fan
 
 
+def get_present_fans():
+    return FilmFan.film_fans.filter(name__in=['Maarten', 'Adrienne', 'Manfred'])
+
+
 class FilmFan(models.Model):
 
     # Define the fields.

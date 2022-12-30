@@ -12,7 +12,7 @@ from FilmRatings.tools import unset_log, add_base_context, get_log, wrap_up_form
 from festivals.models import current_festival, Festival
 from film_list.forms.model_forms import Rating, User
 from film_list.forms.unbound_forms import PickRating, SaveRatingsForm
-from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan, get_rating_name
+from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan, get_rating_name, get_present_fans
 from loader.views import file_row_count
 
 
@@ -23,23 +23,47 @@ from sections.models import Subsection
 class ResultsView(generic.DetailView):
     model = Film
     template_name = 'film_list/results.html'
+    http_method_names = ['get', 'post']
+    submit_name_prefix = 'rating_'
+    submit_names = []
+    unexpected_error = ''
 
     def get_context_data(self, **kwargs):
         film = self.object
         subsection = get_subsection(film)
         fan_rows = []
         fans = FilmFan.film_fans.all()
+        logged_in_fan = current_fan(self.request.session)
         for fan in fans:
-            fan_row = [fan, fan.fan_rating_str(film), fan.fan_rating_name(film)]
-            fan_rows.append(fan_row)
+            choices = get_fan_choices(self.submit_name_prefix, film, fan, logged_in_fan, self.submit_names)
+            fan_rows.append({
+                'fan': fan,
+                'rating_str': fan.fan_rating_str(film),
+                'rating_name': fan.fan_rating_name(film),
+                'choices': choices,
+            })
         context = add_base_context(self.request, super().get_context_data(**kwargs))
         context['title'] = 'Film Rating Results'
         context['subsection'] = subsection
         context['fan_rows'] = fan_rows
+        context['unexpected_error'] = self.unexpected_error
         return context
 
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
+
+        if request.method == 'POST':
+            submitted_name = get_submitted_name(request, self.submit_names)
+            session = self.request.session
+            if submitted_name is not None:
+                [film_pk, rating_value] = submitted_name.strip(self.submit_name_prefix).split('_')
+                film = Film.films.get(id=film_pk)
+                update_rating(session, film, current_fan(session), rating_value)
+
+                return HttpResponseRedirect(reverse('film_list:results', args=(film_pk,)))
+            else:
+                self.unexpected_error = "Can't identify submit widget."
+
         unset_log(request.session)
         return response
 
@@ -135,7 +159,7 @@ def film_list(request):
     submit_name_prefix = 'rating_'
     session = request.session
     logged_in_fan = current_fan(session)
-    fan_list = FilmFan.film_fans.all()
+    fan_list = get_present_fans()
 
     # Get the table rows.
     rating_rows = []
@@ -146,6 +170,7 @@ def film_list(request):
     context = add_base_context(request, {
         'title': title,
         'fans': fan_list,
+        'short_threshold': datetime.timedelta(minutes=40).total_seconds(),
         'rating_rows': rating_rows,
     })
     refresh_rating_action(session, context)
@@ -183,23 +208,13 @@ def get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_n
 
         # Set the row to contain film, film duration and film fans.
         subsection = get_subsection(film)
-        rating_cells = [film, film.duration_str(), subsection]
+        rating_cells = [film, film, subsection]
         for fan in fan_list:
-
             # Set a rating string to display.
             rating_str = get_rating_str(film, fan)
 
-            # Set the rating choices if this fan is the current fan.
-            choices = []
-            if fan == logged_in_fan:
-                for value, name in FilmFanFilmRating.Rating.choices:
-                    choice = {
-                        'value': value,
-                        'rating_name': name,
-                        'submit_name': f'{submit_name_prefix}{film.id}_{value}'
-                    }
-                    choices.append(choice)
-                    submit_names.append(choice['submit_name'])
+            # Get choices for this fan.
+            choices = get_fan_choices(submit_name_prefix, film, fan, logged_in_fan, submit_names)
 
             # Append a rating cell to the current row.
             rating_cells.append({
@@ -210,6 +225,22 @@ def get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_n
 
         # Append a row to the table rows.
         rating_rows.append(rating_cells)
+
+
+def get_fan_choices(submit_name_prefix, film, fan, logged_in_fan, submit_names):
+    # Set the rating choices if this fan is the current fan.
+    choices = []
+    if fan == logged_in_fan:
+        for value, name in FilmFanFilmRating.Rating.choices:
+            choice = {
+                'value': value,
+                'rating_name': name,
+                'submit_name': f'{submit_name_prefix}{film.id}_{value}'
+            }
+            choices.append(choice)
+            submit_names.append(choice['submit_name'])
+
+    return choices
 
 
 def get_subsection(film):
@@ -258,6 +289,7 @@ def init_rating_action(session, old_rating_str, new_rating):
         'new_rating': str(new_rating.rating),
         'new_rating_name': new_rating_name,
         'rated_film': str(new_rating.film),
+        'rated_film_id': new_rating.film.id,
         'action_time': datetime.datetime.now().isoformat(),
     }
     session[rating_action_key(session)] = rating_action

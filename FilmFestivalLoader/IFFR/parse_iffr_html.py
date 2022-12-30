@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
-import sys
-import re
 import datetime
+import re
 from enum import Enum, auto
+from json import JSONDecodeError
 from typing import Dict
 
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment
@@ -132,7 +131,7 @@ class AzPageParser(HtmlPageParser):
         for g in groups:
             self.title = fix_json(g['title'])
             self.url = iri_slug_to_url(iffr_hostname, g['url'])
-            self.description = fix_json(g['list_desc'])
+            self.description = self.get_description(g['list_desc'])
             if g['section']:
                 self.section_name = fix_json(g['section'])
             if g['subsection']:
@@ -140,11 +139,25 @@ class AzPageParser(HtmlPageParser):
             if g['subsection_url']:
                 self.subsection_url = iri_slug_to_url(iffr_hostname, g['subsection_url'])
             self.sorted_title = fix_json(g['sorted_title']).lower()
-            minutes_str = g['duration']
-            minutes = 0 if minutes_str is None else int(minutes_str)
-            self.duration = datetime.timedelta(minutes=minutes)
+            self.duration = self.get_duration(g['duration'])
             self.add_film()
             self.init_film_data()
+
+    def get_description(self, parsed_description):
+        try:
+            description = fix_json(parsed_description)
+        except JSONDecodeError as e:
+            error_collector.add(f'{self.title}: {e}:', parsed_description)
+            description = ''
+        if parsed_description == 'Binnenkort meer informatie over deze film.':
+            description = ''
+        return description
+
+    @staticmethod
+    def get_duration(minutes_str):
+        minutes = 0 if minutes_str is None else int(minutes_str)
+        duration = datetime.timedelta(minutes=minutes)
+        return duration
 
     def add_film(self):
         self.film = self.festival_data.create_film(self.title, self.url)
@@ -156,6 +169,8 @@ class AzPageParser(HtmlPageParser):
             self.film.sortstring = self.sorted_title
             print(f'Adding FILM: {self.title} ({self.film.duration_str()}) {self.film.medium_category}')
             self.festival_data.films.append(self.film)
+            if len(self.description) == 0:
+                self.subsection_name = 'NO DESCRIPTION'
             section = self.festival_data.get_section(self.section_name)
             if section is not None:
                 subsection = self.festival_data.get_subsection(self.subsection_name, self.subsection_url, section)
@@ -163,8 +178,9 @@ class AzPageParser(HtmlPageParser):
             self.add_film_info()
 
     def add_film_info(self):
-        film_info = FilmInfo(self.film.filmid, self.description, '')
-        self.festival_data.filminfos.append(film_info)
+        if len(self.description) > 0:
+            film_info = FilmInfo(self.film.filmid, self.description, '')
+            self.festival_data.filminfos.append(film_info)
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -207,7 +223,7 @@ class ScreeningsPageParser(HtmlPageParser):
                                         'december': 12}
 
     def __init__(self, festival_data, film):
-        HtmlPageParser.__init__(self, festival_data, "FS")
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, "FS")
         self.film = film
         self.location = None
         self.start_date = None
@@ -421,7 +437,7 @@ class FilmInfoPageParser(HtmlPageParser):
         'Wordt vertoond in combinatie met ': ScreenedFilmType.DIRECTLY_COMBINED}
 
     def __init__(self, festival_data, film):
-        HtmlPageParser.__init__(self, festival_data, 'FI')
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'FI')
         self.festival_data = festival_data
         self.film = film
         self.article_paragraphs = []

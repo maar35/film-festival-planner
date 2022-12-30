@@ -98,7 +98,6 @@ class SectionsLoaderView(generic.ListView):
 
     def dispatch(self, request, *args, **kwargs):
         if request.method == 'POST':
-
             picked_festival = None
             names = [(f'{row["id"]}', row['festival']) for row in self.object_list]
             for name, festival in names:
