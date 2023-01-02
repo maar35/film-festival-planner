@@ -38,7 +38,7 @@ class ResultsView(generic.DetailView):
             choices = get_fan_choices(self.submit_name_prefix, film, fan, logged_in_fan, self.submit_names)
             fan_rows.append({
                 'fan': fan,
-                'rating_str': fan.fan_rating_str(film),
+                'rating_str': get_rating_str(film, fan),
                 'rating_name': fan.fan_rating_name(film),
                 'choices': choices,
             })

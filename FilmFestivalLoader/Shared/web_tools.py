@@ -46,6 +46,16 @@ def fix_json(code_point_str):
     return result_str
 
 
+def get_encoding(url, error_collector):
+    request = Request(url, headers=UrlReader.headers)
+    with urlopen(request) as response:
+        encoding = response.headers.get_content_charset()
+    if encoding is None:
+        error_collector.add('No encoding found', f'{url}')
+        encoding = UrlFile.default_encoding
+    return encoding
+
+
 class UrlFile:
     default_byte_count = 512
     default_encoding = 'ascii'
@@ -96,14 +106,14 @@ class UrlReader:
     def get_request(self, url):
         return Request(url, headers=self.headers)
 
-    def load_url(self, url, target_file, encoding='utf-8'):
+    def load_url(self, url, target_file=None, encoding='utf-8'):
         request = self.get_request(url)
         with urlopen(request) as response:
             html_bytes = response.read()
             if html_bytes is not None:
                 if len(html_bytes) == 0:
                     self.error_collector.add(f'No text found, file {target_file} not written', f'{url}')
-                else:
+                elif target_file is not None:
                     with open(target_file, 'wb') as f:
                         f.write(html_bytes)
         decoded_html = html_bytes.decode(encoding=encoding)

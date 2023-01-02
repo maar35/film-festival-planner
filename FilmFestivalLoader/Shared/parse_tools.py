@@ -13,7 +13,10 @@ from Shared.application_tools import comment
 from Shared.planner_interface import Screening, write_lists
 
 
-def try_parse_festival_sites(parser, festival_data, error_collector, debug_recorder):
+def try_parse_festival_sites(parser, festival_data, error_collector, debug_recorder, festival=None):
+    # Set defaults when necessary.
+    festival = 'festival' if festival is None else festival
+
     # Try parsing the websites.
     write_film_list = False
     write_other_lists = True
@@ -35,7 +38,7 @@ def try_parse_festival_sites(parser, festival_data, error_collector, debug_recor
         print(error_collector)
 
     # Write parsed information.
-    comment('Done loading Imagine data.')
+    comment(f'Done loading {festival} data.')
     write_lists(festival_data, write_film_list, write_other_lists)
     debug_recorder.write_debug()
 
@@ -141,7 +144,14 @@ class HtmlPageParser(web_tools.HtmlPageParser):
         # Add the screening to the list.
         self.festival_data.screenings.append(screening)
 
-    def set_description_from_article(self):
+    def add_paragraph(self):
+        self.article_paragraphs.append(self.article_paragraph)
+        self.article_paragraph = ''
+
+    def set_article(self):
+        self.article = '\n\n'.join(self.article_paragraphs)
+
+    def set_description_from_article(self, title):
         descr_threshold = 512
 
         if len(self.article_paragraphs) > 0:
@@ -149,7 +159,7 @@ class HtmlPageParser(web_tools.HtmlPageParser):
             if len(self.description) > descr_threshold:
                 self.description = self.description[:descr_threshold] + '…'
         else:
-            self.description = self.film.title
+            self.description = title
             self.article = ''
 
 

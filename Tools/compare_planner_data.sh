@@ -6,6 +6,8 @@ declare -r files="
     films.csv
     screenings.csv
     screens.csv
+    sections.csv
+    subsections.csv
     filminfo.xml
 "
 declare -r film_file=films.csv
