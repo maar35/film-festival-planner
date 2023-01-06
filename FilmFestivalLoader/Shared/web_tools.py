@@ -7,9 +7,8 @@ Created on Mon Nov  2 18:27:20 2020
 """
 
 import html.parser
-import os
-import inspect
 import json
+import os
 from urllib.error import HTTPError
 from urllib.parse import quote, urlparse, urlunparse
 from urllib.request import urlopen, Request
@@ -137,78 +136,6 @@ class HtmlCharsetParser(html.parser.HTMLParser):
         html.parser.HTMLParser.handle_starttag(self, tag, attrs)
         if tag == 'meta' and len(attrs) > 0 and attrs[0] == 'charset':
             self.charset = attrs[0][1]
-
-
-class HtmlPageParser(html.parser.HTMLParser):
-
-    class StateStack:
-
-        def __init__(self, print_debug, state):
-            self.print_debug = print_debug
-            self.stack = [state]
-            self._print_debug(state)
-
-        def __str__(self):
-            head = f'States of HtmlParser in web_tools.py:\n'
-            states = '\n'.join([str(s) for s in self.stack])
-            return head + states
-
-        def _print_debug(self, new_state):
-            frame = inspect.currentframe().f_back
-            caller = frame.f_code.co_name if frame.f_code is not None else 'code'
-            self.print_debug(f'Parsing state after {caller:6} is {new_state}', '')
-
-        def push(self, state):
-            self.stack.append(state)
-            self._print_debug(state)
-
-        def pop(self):
-            self.stack[-1:] = []
-            self._print_debug(self.stack[-1])
-
-        def change(self, state):
-            self.stack[-1] = state
-            self._print_debug(state)
-
-        def state_is(self, state):
-            return state == self.stack[-1]
-
-        def state_in(self, states):
-            return self.stack[-1] in states
-
-    def __init__(self, debug_recorder, debug_prefix, debugging=False):
-        html.parser.HTMLParser.__init__(self)
-        self.debug_recorder = debug_recorder
-        self.debug_prefix = debug_prefix
-        self.debugging = debugging
-
-    @property
-    def bar(self):
-        return f'{40 * "-"} '
-
-    def print_debug(self, str1, str2):
-        if self.debugging:
-            self.debug_recorder.add(f'{self.debug_prefix}  {str1} {str2}')
-
-    def handle_starttag(self, tag, attrs):
-        if len(attrs) > 0:
-            sep = f'\n{self.debug_prefix}   '
-            extra = sep + sep.join([f'attr:  {attr}' for attr in attrs])
-        else:
-            extra = ''
-        self.print_debug(f'Encountered a start tag: \'{tag}\'', extra)
-
-    def handle_endtag(self, tag):
-        self.print_debug('Encountered an end tag :', f'\'{tag}\'')
-
-    def handle_data(self, data):
-        self.print_debug('Encountered some data  :', f'\'{data}\'')
-
-    def handle_comment(self, data):
-        self.print_debug('Comment  :', data)
-
-    def handle_decl(self, data):
-        self.print_debug('Decl     :', data)
 
 
 if __name__ == "__main__":

@@ -15,6 +15,36 @@ namespace PresentScreenings.TableView
 
     public static class ColorView
     {
+        #region Public Nested Classes.
+        class WebColor : ListStreamer
+        {
+            #region Properties
+            public string Name { get; private set; }
+            public string Code { get; private set; }
+            #endregion
+
+            #region Constructors
+            // Empty constructor to facilitate ListStreamer method calls.
+            public WebColor() { }
+
+            // Constructor to read records from the interface file.
+            public WebColor(string screenText)
+            {
+                string[] fields = screenText.Split(';');
+                Name = fields[0];
+                Code = fields[1];
+            }
+            #endregion
+
+            #region Override Methods
+            public override bool ListFileHasHeader()
+            {
+                return false;
+            }
+            #endregion
+        }
+        #endregion
+
         #region Private members
         private static readonly NSColor screeningBgColorBlack = NSColor.FromRgb(0, 0, 0);
         private static readonly NSColor screeningTextColorBlack = NSColor.White;
@@ -56,11 +86,14 @@ namespace PresentScreenings.TableView
 
         #region Properties
         public static NSColor WarningBackgroundColor => _warningBackgroundColor;
+        public static Dictionary<string, NSColor> ColorByName { get; set; }
         #endregion
 
         #region Constructors
         static ColorView()
         {
+            SetWebColors();
+
             TextColorByScreeningStatus = new Dictionary<ScreeningInfo.ScreeningStatus, NSColor> { };
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Free, screeningTextColorBlack);
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.NeedingTickets, screeningTextColorPurple);
@@ -379,6 +412,32 @@ namespace PresentScreenings.TableView
             using (var textLine = new CTLine(attributedString))
             {
                 textLine.Draw(context);
+            }
+        }
+
+        public static NSColor GetColor(string colorCode)
+        {
+            NSColor color = null;
+            if (colorCode.StartsWith("#"))
+            {
+                var r = Convert.ToInt32(colorCode.Substring(1, 2), 16);
+                var g = Convert.ToInt32(colorCode.Substring(3, 2), 16);
+                var b = Convert.ToInt32(colorCode.Substring(5, 2), 16);
+                color = NSColor.FromRgb(r, g, b);
+            }
+            return color;
+        }
+
+        public static void SetWebColors()
+        {
+            // Read web colors.
+            var webColors = new WebColor().ReadListFromFile(AppDelegate.WebColorsFile, line => new WebColor(line));
+
+            // Fill the dictionary.
+            ColorByName = new Dictionary<string, NSColor> { };
+            foreach (var webColor in webColors)
+            {
+                ColorByName.Add(webColor.Name.ToLower(), GetColor(webColor.Code));
             }
         }
         #endregion

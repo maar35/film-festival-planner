@@ -70,14 +70,19 @@ namespace PresentScreenings.TableView
             NSColor color;
             if (colorString.StartsWith("#"))
             {
-                var r = Convert.ToInt32(colorString.Substring(1, 2), 16);
-                var g = Convert.ToInt32(colorString.Substring(3, 2), 16);
-                var b = Convert.ToInt32(colorString.Substring(5, 2), 16);
-                color = NSColor.FromRgb(r, g, b);
+                color = ColorView.GetColor(colorString);
+            }
+            else if (_colorByName.ContainsKey(colorString))
+            {
+                color = _colorByName[colorString];
+            }
+            else if (ColorView.ColorByName.ContainsKey(colorString))
+            {
+                color = ColorView.ColorByName[colorString];
             }
             else
             {
-                color = _colorByName[colorString];
+                color = NSColor.SystemGray;
             }
             return color;
         }

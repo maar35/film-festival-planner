@@ -14,12 +14,10 @@ from film_list.forms.model_forms import Rating, User
 from film_list.forms.unbound_forms import PickRating, SaveRatingsForm
 from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan, get_rating_name, get_present_fans
 from loader.views import file_row_count
-
-
-# Define generic view classes.
 from sections.models import Subsection
 
 
+# Define generic view classes.
 class ResultsView(generic.DetailView):
     model = Film
     template_name = 'film_list/results.html'
@@ -80,8 +78,9 @@ class SaveView(LoginRequiredMixin, FormView):
         festival_items = {
             'festival': festival,
             'film_count': len(Film.films.filter(festival=festival)),
+            'film_count_on_file': file_row_count(festival, festival.films_file, has_header=True),
             'rating_count': len(FilmFanFilmRating.fan_ratings.filter(film__festival=festival)),
-            'rating_count_on_file': file_row_count(festival, festival.films_file, has_header=True),
+            'rating_count_on_file': file_row_count(festival, festival.ratings_file, has_header=True),
             'ratings_file': festival.ratings_file,
         }
         context = add_base_context(self.request, super().get_context_data(**kwargs))

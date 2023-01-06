@@ -431,14 +431,6 @@ class FilmInfoPageParser(HtmlPageParser):
         IN_EMPHASIS = auto()
         AWAITING_COMBINATION_LINK = auto()
         IN_COMBINATION_LINK = auto()
-        # IN_COMBINATION = auto()
-        # AWAITING_SCREENED_FILMS = auto()
-        # IN_SCREENED_FILMS = auto()
-        # IN_SCREENED_FILM = auto()
-        # FOUND_SCREENED_URL = auto()
-        # IN_SCREENED_TITLE = auto()
-        # AWAITING_SCREENED_DESCRIPTION = auto()
-        # IN_SCREENED_DESCRIPTION = auto()
         DONE = auto()
 
     debugging = True
@@ -459,10 +451,7 @@ class FilmInfoPageParser(HtmlPageParser):
         self.article_paragraph = ''
         self.article = None
         self.combination_slug = None
-        self.combination_url = None
-        self.combination_urls = []
         self.state_stack = self.StateStack(self.print_debug, self.FilmInfoParseState.IDLE)
-        self.combination_ref_found = False
 
         # Get the film info of the current film. Its unique existence is guaranteed in AzPageParser.
         self.film_info = self.film.film_info(self.festival_data)
@@ -539,7 +528,6 @@ class FilmInfoPageParser(HtmlPageParser):
         if combination_url not in self.combination_loaded_by_url.keys():
             self.combination_loaded_by_url[combination_url] = True
             get_combination_film(self.festival_data, combination_url)
-        # self.combination_url = combination_url
         try:
             combination_program = CombinationPageParser.combination_program_by_url[combination_url]
         except KeyError as e:
@@ -653,7 +641,7 @@ class CombinationPageParser(HtmlPageParser):
                 self.subsection_url = attrs[6][1]
                 self.state_stack.change(self.CombinationParserState.IN_SUBSECTION)
         elif self.state_stack.state_is(self.CombinationParserState.AWAITING_DESCRIPTION) and tag == 'div':
-            if len(attrs) > 0 and attrs[0] == ('class', 'sc-fuISkM eAqEtb'):
+            if len(attrs) > 0 and attrs[0][0] == 'class':
                 self.state_stack.push(self.CombinationParserState.IN_PARAGRAPH)
         elif self.state_stack.state_is(self.CombinationParserState.IN_PARAGRAPH) and tag == 'em':
             self.state_stack.push(self.CombinationParserState.IN_EMPHASIS)

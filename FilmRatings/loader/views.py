@@ -36,7 +36,7 @@ def load_festival_ratings(request):
         'color': festival.festival_color,
         'film_count_on_file': file_row_count(festival, festival.films_file, has_header=True),
         'film_count': Film.films.filter(festival=festival).count,
-        'rating_count_on_file': file_row_count(festival, festival.ratings_file),
+        'rating_count_on_file': file_row_count(festival, festival.ratings_file, has_header=True),
         'rating_count': FilmFanFilmRating.fan_ratings.filter(film__festival=festival).count,
     } for festival in festivals]
     context = add_base_context(request, {
