@@ -14,6 +14,10 @@ from urllib.parse import quote, urlparse, urlunparse
 from urllib.request import urlopen, Request
 
 
+DEFAULT_BYTE_COUNT = 512
+DEFAULT_ENCODING = 'ascii'
+
+
 def iripath_to_uripath(path):
     return quote(path)
 
@@ -26,11 +30,26 @@ def iri_slug_to_url(host, slug):
     return result_url
 
 
-def get_charset(file, byte_count=512):
+def get_encoding_from_url(url, byte_count=DEFAULT_BYTE_COUNT):
+    request = UrlReader.get_request(url)
+    with urlopen(request) as response:
+        encoding = response.headers.get_content_charset()
+        if encoding is None:
+            html_bytes = response.read(byte_count)
+            encoding = get_encoding_from_bytes(html_bytes)
+    return encoding
+
+
+def get_encoding_from_file(file, byte_count=DEFAULT_BYTE_COUNT):
     with open(file, 'r') as f:
         sample_text = f.read(byte_count)
+    charset = get_encoding_from_bytes(sample_text)
+    return charset
+
+
+def get_encoding_from_bytes(html_bytes):
     charset_parser = HtmlCharsetParser()
-    charset = charset_parser.get_charset(sample_text)
+    charset = charset_parser.get_charset(html_bytes)
     return charset
 
 
@@ -45,10 +64,8 @@ def fix_json(code_point_str):
     return result_str
 
 
-def get_encoding(url, error_collector):
-    request = Request(url, headers=UrlReader.headers)
-    with urlopen(request) as response:
-        encoding = response.headers.get_content_charset()
+def get_encoding(url, error_collector, byte_count=DEFAULT_BYTE_COUNT):
+    encoding = get_encoding_from_url(url, byte_count)
     if encoding is None:
         error_collector.add('No encoding found', f'{url}')
         encoding = UrlFile.default_encoding
@@ -56,8 +73,8 @@ def get_encoding(url, error_collector):
 
 
 class UrlFile:
-    default_byte_count = 512
-    default_encoding = 'ascii'
+    default_byte_count = DEFAULT_BYTE_COUNT
+    default_encoding = DEFAULT_ENCODING
 
     def __init__(self, url, path, error_collector, byte_count=None):
         self.url = url
@@ -67,9 +84,8 @@ class UrlFile:
         self.encoding = None
 
     def get_text(self, comment_at_download=None):
-        reader = UrlReader(self.error_collector)
         try:
-            self.set_encoding(reader)
+            self.set_encoding()
         except HTTPError as e:
             self.error_collector.add(str(e), f'{self.url}')
             return None
@@ -79,17 +95,16 @@ class UrlFile:
         else:
             if comment_at_download is not None:
                 print(comment_at_download)
+            reader = UrlReader(self.error_collector)
             html_text = reader.load_url(self.url, self.path)
         return html_text
 
-    def set_encoding(self, reader):
+    def set_encoding(self):
         if self.encoding is None:
             if os.path.isfile(self.path):
-                self.encoding = get_charset(self.path, self.byte_count)
+                self.encoding = get_encoding_from_file(self.path, self.byte_count)
             if self.encoding is None:
-                request = reader.get_request(self.url)
-                with urlopen(request) as response:
-                    self.encoding = response.headers.get_content_charset()
+                self.encoding = get_encoding_from_url(self.url)
             if self.encoding is None:
                 self.error_collector.add('No encoding found', f'{self.url}')
                 self.encoding = self.default_encoding
@@ -102,10 +117,11 @@ class UrlReader:
     def __init__(self, error_collector):
         self.error_collector = error_collector
 
-    def get_request(self, url):
-        return Request(url, headers=self.headers)
+    @classmethod
+    def get_request(cls, url):
+        return Request(url, headers=cls.headers)
 
-    def load_url(self, url, target_file=None, encoding='utf-8'):
+    def load_url(self, url, target_file=None, encoding=DEFAULT_ENCODING):
         request = self.get_request(url)
         with urlopen(request) as response:
             html_bytes = response.read()

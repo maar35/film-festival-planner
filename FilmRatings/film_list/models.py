@@ -100,7 +100,7 @@ class FilmFan(models.Model):
 
     def fan_rating_str(self, film):
         fan_rating = self.fan_rating(film)
-        return f'{fan_rating.rating}' if fan_rating is not None else ''
+        return f'{fan_rating.rating}' if fan_rating is not None else '-'
 
     def fan_rating_name(self, film):
         fan_rating = self.fan_rating(film)

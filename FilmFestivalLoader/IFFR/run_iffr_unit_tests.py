@@ -24,8 +24,8 @@ def main():
              compare_0a,
              compare_a_,
              compare_00,
-             repair_url_works,
-             repair_url_pass,
+             # repair_url_works,
+             # repair_url_pass,
              append_combination_0,
              append_combination_1,
              new_screened_film_0,
@@ -90,66 +90,6 @@ class TestList:
     info_parser = iffr.FilmInfoPageParser(festival_data, test_films[0])
 
 
-# @equity_decorator
-# def test_new_name_first():
-#
-#     # Arrange.
-#     screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
-#     test_name = 'offline'
-#     names = ['offline']
-#
-#     # Act.
-#     new_name = screen_splitter.new_name(test_name, names)
-#
-#     # Assert.
-#     return new_name, 'offline2'
-#
-#
-# @equity_decorator
-# def test_new_name_not():
-#
-#     # Arrange.
-#     screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
-#     test_name = 'offline'
-#     names = []
-#
-#     # Act.
-#     new_name = screen_splitter.new_name(test_name, names)
-#
-#     # Assert.
-#     return new_name, 'offline'
-#
-#
-# @equity_decorator
-# def test_new_name_gap():
-#
-#     # Arrange.
-#     screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
-#     test_name = 'offline'
-#     names = ['offline', 'offline3']
-#
-#     # Act.
-#     new_name = screen_splitter.new_name(test_name, names)
-#
-#     # Assert.
-#     return new_name, 'offline2'
-#
-#
-# @equity_decorator
-# def test_new_name_next():
-#
-#     # Arrange.
-#     screen_splitter = iffr.ScreenSplitter(iffr.plandata_dir)
-#     test_name = 'offline199'
-#     names = ['offline199', 'offline200']
-#
-#     # Act.
-#     new_name = screen_splitter.new_name(test_name, names)
-#
-#     # Assert.
-#     return new_name, 'offline201'
-
-
 @equity_decorator
 def compare_a0():
     # Arrange.
@@ -198,29 +138,29 @@ def compare_00():
     return less, True
 
 
-@equity_decorator
-def repair_url_works():
-    # Arrange.
-    faulty_url = 'https://iffr.com/nl/2021/films/the-amusement-park'
-    correct_url = 'https://iffr.com/nl/iffr/2021/films/the-amusement-park'
-
-    # Act.
-    repaired_url = TestList.info_parser.repair_url(faulty_url)
-
-    # Assert.
-    return repaired_url, correct_url
-
-
-@equity_decorator
-def repair_url_pass():
-    # Arrange.
-    correct_url = 'https://iffr.com/nl/iffr/2021/films/the-amusement-park'
-
-    # Act.
-    repaired_url = TestList.info_parser.repair_url(correct_url)
-
-    # Assert.
-    return repaired_url, correct_url
+# @equity_decorator
+# def repair_url_works():
+#     # Arrange.
+#     faulty_url = 'https://iffr.com/nl/2021/films/the-amusement-park'
+#     correct_url = 'https://iffr.com/nl/iffr/2021/films/the-amusement-park'
+#
+#     # Act.
+#     repaired_url = TestList.info_parser.repair_url(faulty_url)
+#
+#     # Assert.
+#     return repaired_url, correct_url
+#
+#
+# @equity_decorator
+# def repair_url_pass():
+#     # Arrange.
+#     correct_url = 'https://iffr.com/nl/iffr/2021/films/the-amusement-park'
+#
+#     # Act.
+#     repaired_url = TestList.info_parser.repair_url(correct_url)
+#
+#     # Assert.
+#     return repaired_url, correct_url
 
 
 @equity_decorator

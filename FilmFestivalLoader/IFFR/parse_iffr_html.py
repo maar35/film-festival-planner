@@ -63,7 +63,7 @@ def get_film_details(festival_data):
     for film in films:
         film_file = file_keeper.film_webdata_file(film.filmid)
         url_file = UrlFile(film.url, film_file, error_collector, byte_count=1000)
-        film_html = url_file.get_text(f'Downloading site of {film.title}: {film.url}')
+        film_html = url_file.get_text(f'Downloading site of {film.title}: {film.url}, encoding: {url_file.encoding}')
         if film_html is not None:
             print(f'Analysing html file {film.filmid} of {film.title}')
             # ScreeningsPageParser(festival_data, film).feed(film_html)
@@ -74,7 +74,7 @@ def get_film_details(festival_data):
 def get_combination_film(festival_data, url):
     encoding = get_encoding(url, error_collector)
     reader = UrlReader(error_collector)
-    print(f'Requesting combination page {url}')
+    print(f'Requesting combination page {url}, encoding={encoding}')
     combination_html = reader.load_url(url, None, encoding)
     if combination_html is not None:
         print(f'Analysing combination program data from {url}')
@@ -85,9 +85,10 @@ def get_subsection_details(festival_data):
     for subsection in festival_data.subsection_by_name.values():
         subsection_file = file_keeper.numbered_webdata_file('subsection_file', subsection.subsection_id)
         url_file = UrlFile(subsection.url, subsection_file, error_collector, byte_count=300)
-        subsection_html = url_file.get_text(f'Downloading {subsection.name} page:{subsection.url}')
+        comment_at_download = f'Downloading {subsection.name} page: {subsection.url}, encoding: {url_file.encoding}'
+        subsection_html = url_file.get_text(comment_at_download)
         if subsection_html is not None:
-            print(f'Analysing html file {subsection.subsection_id} of {subsection.name}, encoding={url_file.encoding}.')
+            print(f'Analysing html file {subsection.subsection_id} of {subsection.name}.')
             SubsectionPageParser(festival_data, subsection).feed(subsection_html)
 
 
@@ -451,13 +452,15 @@ class FilmInfoPageParser(HtmlPageParser):
         self.article_paragraph = ''
         self.article = None
         self.combination_slug = None
+
+        # Print a bar in the debug file when debugging.
+        self.print_debug(self.bar, f'Analysing FILM {self.film} {self.film.url}')
+
+        # Initialize the state stack.
         self.state_stack = self.StateStack(self.print_debug, self.FilmInfoParseState.IDLE)
 
         # Get the film info of the current film. Its unique existence is guaranteed in AzPageParser.
         self.film_info = self.film.film_info(self.festival_data)
-
-        # Print a bar in the debug file when debugging.
-        self.print_debug(self.bar, f'Analysing FILM {self.film} {self.film.url}')
 
     def set_article(self):
         HtmlPageParser.set_article(self)
@@ -541,14 +544,14 @@ class FilmInfoPageParser(HtmlPageParser):
         HtmlPageParser.handle_starttag(self, tag, attrs)
 
         if self.state_stack.state_is(self.FilmInfoParseState.IDLE) and tag == 'div' and len(attrs) > 0:
-            if attrs[0][1] == 'sc-fuISkM eAqEtb':
+            if attrs[0][0] == 'class' and attrs[0][1] in ['sc-fujyAs induiK', 'sc-dkuGKe fXALKH']:
                 self.state_stack.push(self.FilmInfoParseState.IN_ARTICLE)
         elif self.state_stack.state_is(self.FilmInfoParseState.IN_ARTICLE) and tag == 'p':
             self.state_stack.push(self.FilmInfoParseState.IN_PARAGRAPH)
         elif self.state_stack.state_is(self.FilmInfoParseState.IN_PARAGRAPH) and tag == 'em':
             self.state_stack.push(self.FilmInfoParseState.IN_EMPHASIS)
         elif self.state_stack.state_is(self.FilmInfoParseState.AWAITING_COMBINATION_LINK) and tag == 'a':
-            if len(attrs) > 1 and attrs[0][1] == 'sc-csTbgd hGhsas':
+            if len(attrs) > 1 and attrs[0][1] == 'sc-gJpXkD hgMAEf':
                 self.combination_slug = attrs[1][1]
                 self.state_stack.change(self.FilmInfoParseState.IN_COMBINATION_LINK)
 

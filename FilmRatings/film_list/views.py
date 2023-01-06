@@ -36,7 +36,7 @@ class ResultsView(generic.DetailView):
             choices = get_fan_choices(self.submit_name_prefix, film, fan, logged_in_fan, self.submit_names)
             fan_rows.append({
                 'fan': fan,
-                'rating_str': get_rating_str(film, fan),
+                'rating_str': fan.fan_rating_str(film),
                 'rating_name': fan.fan_rating_name(film),
                 'choices': choices,
             })
@@ -156,6 +156,7 @@ def film_list(request):
     # Initialize.
     title = 'Film Rating List'
     submit_name_prefix = 'rating_'
+    max_short_minutes = 40
     session = request.session
     logged_in_fan = current_fan(session)
     fan_list = get_present_fans()
@@ -169,7 +170,7 @@ def film_list(request):
     context = add_base_context(request, {
         'title': title,
         'fans': fan_list,
-        'short_threshold': datetime.timedelta(minutes=40).total_seconds(),
+        'short_threshold': datetime.timedelta(minutes=max_short_minutes).total_seconds(),
         'rating_rows': rating_rows,
     })
     refresh_rating_action(session, context)
@@ -210,7 +211,7 @@ def get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_n
         rating_cells = [film, film, subsection]
         for fan in fan_list:
             # Set a rating string to display.
-            rating_str = get_rating_str(film, fan)
+            rating_str = fan.fan_rating_str(film)
 
             # Get choices for this fan.
             choices = get_fan_choices(submit_name_prefix, film, fan, logged_in_fan, submit_names)
@@ -258,17 +259,8 @@ def get_submitted_name(request, submit_names):
     return submitted_name
 
 
-def get_rating_str(film, fan):
-    try:
-        fan_rating = FilmFanFilmRating.fan_ratings.get(film=film, film_fan=fan)
-    except (KeyError, FilmFanFilmRating.DoesNotExist):
-        fan_rating = None
-    rating_str = f'{fan_rating.rating}' if fan_rating is not None else '-'
-    return rating_str
-
-
 def update_rating(session, film, fan, rating_value):
-    old_rating_str = get_rating_str(film, fan)
+    old_rating_str = fan.fan_rating_str(film)
     new_rating, created = FilmFanFilmRating.fan_ratings.update_or_create(
         film=film,
         film_fan=fan,
