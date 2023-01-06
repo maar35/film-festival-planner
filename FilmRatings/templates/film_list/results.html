@@ -13,6 +13,8 @@
         <li>Rating count: {{ film.filmfanfilmrating_set.count }}</li>
     </ul>
     <br>
+    <form method="post">
+    {% csrf_token %}
     <table>
         <thead>
             <tr>
@@ -24,17 +26,35 @@
         <tbody>
         {% for fan_row in fan_rows %}
             <tr>
-            {% for fan_cell in fan_row %}
-                {% if forloop.counter == 1 and fan_cell == current_fan %}
-                    <td><a href="{% url 'film_list:rating' film.id %}">{{ fan_cell }}</a></td>
+                <td>
+                    {% if fan_row.fan == current_fan %}
+                        <a href="{% url 'film_list:rating' film.id %}">{{ fan_row.fan.name }}</a>
+                    {% else %}
+                        {{ fan_row.fan.name }}
+                    {% endif %}
+                </td>
+                {% if fan_row.fan == current_fan %}
+                    <td class="dropdown">
+                        <span class="drop-button">
+                            {{ fan_row.rating_str }}
+                        </span>
+                        <div class="dropdown-content">
+                            {% for choice in fan_row.choices %}
+                                <input type="submit" value="{{ choice.value | stringformat:'2d' }}  {{ choice.rating_name }}" name="{{ choice.submit_name }}">
+                            {% endfor %}
+                        </div>
+                    </td>
                 {% else %}
-                    <td>{{ fan_cell }}</td>
-                {% endif %}
-            {% endfor %}
+                    <td style="text-align: center">
+                    {{ fan_row.rating_str }}
+                    </td>
+                    {% endif %}
+                <td>{{ fan_row.rating_name }}</td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
+    </form>
     <br><br>
     <a href="{% url 'film_list:film_list' %}">Back to ratings</a>
 {% endblock %}

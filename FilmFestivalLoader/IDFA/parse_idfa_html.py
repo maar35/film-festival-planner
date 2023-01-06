@@ -257,7 +257,7 @@ class FilmPageParser(HtmlPageParser):
 
     def set_article(self):
         self.article = '\n\n'.join(self.article_paragraphs)
-        self.set_description_from_article()
+        self.set_description_from_article(self.film.title)
 
     def add_film_info(self):
         film_info = planner.FilmInfo(self.film.filmid, self.description, self.article)

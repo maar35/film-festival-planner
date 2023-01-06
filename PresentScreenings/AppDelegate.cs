@@ -21,6 +21,7 @@ namespace PresentScreenings.TableView
         public static string FestivalYear { get; private set; }
         public static bool VisitPhysical { get; private set; }
         public static string DocumentsFolder => GetDocumentsPath();
+        public static string WebColorsFolder => GetWebColorsPath();
         public static string AvailabilitiesFile { get; private set; }
         public static string ScreensFile { get; private set; }
         public static string FilmsFile { get; private set; }
@@ -32,6 +33,7 @@ namespace PresentScreenings.TableView
         public static string FilmInfoFile {get; private set; }
         public static string RatingsSheetFile { get; private set; }
         public static string ScreeningsSummaryFile { get; private set; }
+        public static string WebColorsFile { get; private set; }
         public static TimeSpan PauseBetweenOnDemandScreenings { get; private set; }
         public static TimeSpan DaySpan => new TimeSpan(24, 0, 0);
         #endregion
@@ -57,8 +59,8 @@ namespace PresentScreenings.TableView
         public AppDelegate()
 		{
             // Preferences.
-            Festival = "IDFA";
-            FestivalYear = "2022";
+            Festival = "IFFR";
+            FestivalYear = "2023";
             VisitPhysical = true;
             PauseBetweenOnDemandScreenings = new TimeSpan(0, 30, 0);
             Screening.TravelTime = new TimeSpan(0, 30, 0);
@@ -81,6 +83,7 @@ namespace PresentScreenings.TableView
             FilmInfoFile = Path.Combine(DocumentsFolder, "filminfo.xml");
             RatingsSheetFile = Path.Combine(DocumentsFolder, "RatingsSheet.csv");
             ScreeningsSummaryFile = Path.Combine(DocumentsFolder, "Screenings Summary.csv");
+            WebColorsFile = Path.Combine(WebColorsFolder, "webcolors.txt");
         }
         #endregion
 
@@ -209,10 +212,19 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
+        private static string GetHomePath()
+        {
+            return Environment.GetFolderPath(Environment.SpecialFolder.Personal);
+        }
+
         private static string GetDocumentsPath()
         {
-            string homeFolder = Environment.GetFolderPath(Environment.SpecialFolder.Personal);
-            return homeFolder + $"/Documents/Film/{Festival}/{Festival}{FestivalYear}/FestivalPlan";
+            return GetHomePath() + $"/Documents/Film/{Festival}/{Festival}{FestivalYear}/FestivalPlan";
+        }
+
+        private static string GetWebColorsPath()
+        {
+            return GetHomePath() + "/Projects/FilmFestivalPlanner";
         }
 
         private void SaveFestivalData()

@@ -269,14 +269,11 @@ class SimpleLoader(BaseLoader):
 
     def read_objects_simple(self):
         # Read objects from file.
-        print(f'@@ read {self.object_name}s from {self.objects_file}')
         if not self.read_objects(self.objects_file, self.object_list):
-            print(f'@@ {len(self.object_list)} records read, not successful...')
             return False
 
         # Add result statistics to the log.
         object_count = len(self.object_list)
-        print(f'@@ Yes! {object_count} records found!')
         if object_count == 0:
             self.add_log(f'No {self.object_name} records found in file {self.objects_file}')
             return False

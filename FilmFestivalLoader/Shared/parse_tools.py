@@ -5,15 +5,18 @@ Created on Fri Oct 7 22:24:00 2022
 
 @author: maartenroos
 """
-
+import inspect
 import os
+from html.parser import HTMLParser
 
-import Shared.web_tools as web_tools
 from Shared.application_tools import comment
 from Shared.planner_interface import Screening, write_lists
 
 
-def try_parse_festival_sites(parser, festival_data, error_collector, debug_recorder):
+def try_parse_festival_sites(parser, festival_data, error_collector, debug_recorder, festival=None):
+    # Set defaults when necessary.
+    festival = 'festival' if festival is None else festival
+
     # Try parsing the websites.
     write_film_list = False
     write_other_lists = True
@@ -35,7 +38,7 @@ def try_parse_festival_sites(parser, festival_data, error_collector, debug_recor
         print(error_collector)
 
     # Write parsed information.
-    comment('Done loading Imagine data.')
+    comment(f'Done loading {festival} data.')
     write_lists(festival_data, write_film_list, write_other_lists)
     debug_recorder.write_debug()
 
@@ -107,10 +110,82 @@ class ScreeningKey:
         return hash((self.screen, self.start_dt, self.end_dt))
 
 
-class HtmlPageParser(web_tools.HtmlPageParser):
+class BaseHtmlPageParser(HTMLParser):
+
+    class StateStack:
+
+        def __init__(self, print_debug, state):
+            self.print_debug = print_debug
+            self.stack = [state]
+            self._print_debug(state)
+
+        def __str__(self):
+            head = f'States of HtmlParser in web_tools.py:\n'
+            states = '\n'.join([str(s) for s in self.stack])
+            return head + states
+
+        def _print_debug(self, new_state):
+            frame = inspect.currentframe().f_back
+            caller = frame.f_code.co_name if frame.f_code is not None else 'code'
+            self.print_debug(f'Parsing state after {caller:6} is {new_state}', '')
+
+        def push(self, state):
+            self.stack.append(state)
+            self._print_debug(state)
+
+        def pop(self):
+            self.stack[-1:] = []
+            self._print_debug(self.stack[-1])
+
+        def change(self, state):
+            self.stack[-1] = state
+            self._print_debug(state)
+
+        def state_is(self, state):
+            return state == self.stack[-1]
+
+        def state_in(self, states):
+            return self.stack[-1] in states
+
+    def __init__(self, debug_recorder, debug_prefix, debugging=False):
+        HTMLParser.__init__(self)
+        self.debug_recorder = debug_recorder
+        self.debug_prefix = debug_prefix
+        self.debugging = debugging
+
+    @property
+    def bar(self):
+        return f'{40 * "-"} '
+
+    def print_debug(self, str1, str2):
+        if self.debugging:
+            self.debug_recorder.add(f'{self.debug_prefix}  {str1} {str2}')
+
+    def handle_starttag(self, tag, attrs):
+        if len(attrs) > 0:
+            sep = f'\n{self.debug_prefix}   '
+            extra = sep + sep.join([f'attr:  {attr}' for attr in attrs])
+        else:
+            extra = ''
+        self.print_debug(f'Encountered a start tag: \'{tag}\'', extra)
+
+    def handle_endtag(self, tag):
+        self.print_debug('Encountered an end tag :', f'\'{tag}\'')
+
+    def handle_data(self, data):
+        self.print_debug('Encountered some data  :', f'\'{data}\'')
+
+    def handle_comment(self, data):
+        self.print_debug('Comment  :', data)
+
+    def handle_decl(self, data):
+        self.print_debug('Decl     :', data)
+
+
+class HtmlPageParser(BaseHtmlPageParser):
 
     def __init__(self, festival_data, debug_recorder, debug_prefix, debugging=False):
-        web_tools.HtmlPageParser.__init__(self, debug_recorder, debug_prefix, debugging=debugging)
+        BaseHtmlPageParser.__init__(self, debug_recorder, debug_prefix, debugging=debugging)
         self.festival_data = festival_data
 
         # Member variables to construct film article.
@@ -141,7 +216,14 @@ class HtmlPageParser(web_tools.HtmlPageParser):
         # Add the screening to the list.
         self.festival_data.screenings.append(screening)
 
-    def set_description_from_article(self):
+    def add_paragraph(self):
+        self.article_paragraphs.append(self.article_paragraph)
+        self.article_paragraph = ''
+
+    def set_article(self):
+        self.article = '\n\n'.join(self.article_paragraphs)
+
+    def set_description_from_article(self, title):
         descr_threshold = 512
 
         if len(self.article_paragraphs) > 0:
@@ -149,7 +231,7 @@ class HtmlPageParser(web_tools.HtmlPageParser):
             if len(self.description) > descr_threshold:
                 self.description = self.description[:descr_threshold] + '…'
         else:
-            self.description = self.film.title
+            self.description = title
             self.article = ''
 
 

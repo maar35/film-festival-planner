@@ -27,11 +27,11 @@
         <p>
         {{ action.fan }}
         {% if action.old_rating == '-' %}
-            gave <em>{{ action.rated_film }}</em> a rating of <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
+            gave <a href="{% url 'film_list:results' action.rated_film_id %}">{{ action.rated_film }}</a> a rating of <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% elif action.new_rating == '0' %}
-            removed rating {{ action.old_rating }} of <em>{{ action.rated_film }}</em>
+            removed rating {{ action.old_rating }} of <a href="{% url 'film_list:results' action.rated_film_id %}">{{ action.rated_film }}</a>
         {% else %}
-            changed rating {{ action.old_rating }} of <em>{{ action.rated_film }}</em> into <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
+            changed rating {{ action.old_rating }} of <a href="{% url 'film_list:results' action.rated_film_id %}">{{ action.rated_film }}</a> into <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% endif %}
         {% now "Y-m-d H:i:s" as the_time %}
         {% if the_time <= action.action_time|date:"Y-m-d H:i:s" %}
@@ -61,11 +61,17 @@
             <tr>
                 {% for rating_cell in rating_cells %}
                     {% if forloop.counter == 1 %}
-                        <td><a href="{% url 'film_list:results' rating_cell.id %}">
-                            {{ rating_cell.title }}
-                        </a></td>
+                        <td style="max-width: 720px">
+                            <a href="{% url 'film_list:results' rating_cell.id %}">
+                                {{ rating_cell.title }}
+                            </a>
+                        </td>
                     {% elif forloop.counter == 2 %}
-                        <td>{{ rating_cell }}</td>
+                        {% if rating_cell.duration.total_seconds <= short_threshold %}
+                            <td style="color:SlateGray">{{ rating_cell.duration_str }}</td>
+                        {% else %}
+                            <td>{{ rating_cell.duration_str }}</td>
+                        {% endif %}
                     {% elif forloop.counter == 3 %}
                         <td style="color:{{ rating_cell.section.color }}">{{ rating_cell.name }}</td>
                     {% elif rating_cell.fan == current_fan %}

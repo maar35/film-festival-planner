@@ -68,6 +68,10 @@ def get_user_fan(user):
     return user_fan
 
 
+def get_present_fans():
+    return FilmFan.film_fans.filter(name__in=['Maarten', 'Adrienne', 'Manfred'])
+
+
 class FilmFan(models.Model):
 
     # Define the fields.
@@ -96,7 +100,7 @@ class FilmFan(models.Model):
 
     def fan_rating_str(self, film):
         fan_rating = self.fan_rating(film)
-        return f'{fan_rating.rating}' if fan_rating is not None else ''
+        return f'{fan_rating.rating}' if fan_rating is not None else '-'
 
     def fan_rating_name(self, film):
         fan_rating = self.fan_rating(film)

@@ -7,12 +7,15 @@ Created on Mon Nov  2 18:27:20 2020
 """
 
 import html.parser
-import os
-import inspect
 import json
+import os
 from urllib.error import HTTPError
 from urllib.parse import quote, urlparse, urlunparse
 from urllib.request import urlopen, Request
+
+
+DEFAULT_BYTE_COUNT = 512
+DEFAULT_ENCODING = 'ascii'
 
 
 def iripath_to_uripath(path):
@@ -27,11 +30,26 @@ def iri_slug_to_url(host, slug):
     return result_url
 
 
-def get_charset(file, byte_count=512):
+def get_encoding_from_url(url, byte_count=DEFAULT_BYTE_COUNT):
+    request = UrlReader.get_request(url)
+    with urlopen(request) as response:
+        encoding = response.headers.get_content_charset()
+        if encoding is None:
+            html_bytes = response.read(byte_count)
+            encoding = get_encoding_from_bytes(html_bytes)
+    return encoding
+
+
+def get_encoding_from_file(file, byte_count=DEFAULT_BYTE_COUNT):
     with open(file, 'r') as f:
         sample_text = f.read(byte_count)
+    charset = get_encoding_from_bytes(sample_text)
+    return charset
+
+
+def get_encoding_from_bytes(html_bytes):
     charset_parser = HtmlCharsetParser()
-    charset = charset_parser.get_charset(sample_text)
+    charset = charset_parser.get_charset(html_bytes)
     return charset
 
 
@@ -46,9 +64,17 @@ def fix_json(code_point_str):
     return result_str
 
 
+def get_encoding(url, error_collector, byte_count=DEFAULT_BYTE_COUNT):
+    encoding = get_encoding_from_url(url, byte_count)
+    if encoding is None:
+        error_collector.add('No encoding found', f'{url}')
+        encoding = UrlFile.default_encoding
+    return encoding
+
+
 class UrlFile:
-    default_byte_count = 512
-    default_encoding = 'ascii'
+    default_byte_count = DEFAULT_BYTE_COUNT
+    default_encoding = DEFAULT_ENCODING
 
     def __init__(self, url, path, error_collector, byte_count=None):
         self.url = url
@@ -58,9 +84,8 @@ class UrlFile:
         self.encoding = None
 
     def get_text(self, comment_at_download=None):
-        reader = UrlReader(self.error_collector)
         try:
-            self.set_encoding(reader)
+            self.set_encoding()
         except HTTPError as e:
             self.error_collector.add(str(e), f'{self.url}')
             return None
@@ -70,17 +95,16 @@ class UrlFile:
         else:
             if comment_at_download is not None:
                 print(comment_at_download)
+            reader = UrlReader(self.error_collector)
             html_text = reader.load_url(self.url, self.path)
         return html_text
 
-    def set_encoding(self, reader):
+    def set_encoding(self):
         if self.encoding is None:
             if os.path.isfile(self.path):
-                self.encoding = get_charset(self.path, self.byte_count)
+                self.encoding = get_encoding_from_file(self.path, self.byte_count)
             if self.encoding is None:
-                request = reader.get_request(self.url)
-                with urlopen(request) as response:
-                    self.encoding = response.headers.get_content_charset()
+                self.encoding = get_encoding_from_url(self.url)
             if self.encoding is None:
                 self.error_collector.add('No encoding found', f'{self.url}')
                 self.encoding = self.default_encoding
@@ -93,17 +117,18 @@ class UrlReader:
     def __init__(self, error_collector):
         self.error_collector = error_collector
 
-    def get_request(self, url):
-        return Request(url, headers=self.headers)
+    @classmethod
+    def get_request(cls, url):
+        return Request(url, headers=cls.headers)
 
-    def load_url(self, url, target_file, encoding='utf-8'):
+    def load_url(self, url, target_file=None, encoding=DEFAULT_ENCODING):
         request = self.get_request(url)
         with urlopen(request) as response:
             html_bytes = response.read()
             if html_bytes is not None:
                 if len(html_bytes) == 0:
                     self.error_collector.add(f'No text found, file {target_file} not written', f'{url}')
-                else:
+                elif target_file is not None:
                     with open(target_file, 'wb') as f:
                         f.write(html_bytes)
         decoded_html = html_bytes.decode(encoding=encoding)
@@ -127,78 +152,6 @@ class HtmlCharsetParser(html.parser.HTMLParser):
         html.parser.HTMLParser.handle_starttag(self, tag, attrs)
         if tag == 'meta' and len(attrs) > 0 and attrs[0] == 'charset':
             self.charset = attrs[0][1]
-
-
-class HtmlPageParser(html.parser.HTMLParser):
-
-    class StateStack:
-
-        def __init__(self, print_debug, state):
-            self.print_debug = print_debug
-            self.stack = [state]
-            self._print_debug(state)
-
-        def __str__(self):
-            head = f'States of HtmlParser in web_tools.py:\n'
-            states = '\n'.join([str(s) for s in self.stack])
-            return head + states
-
-        def _print_debug(self, new_state):
-            frame = inspect.currentframe().f_back
-            caller = frame.f_code.co_name if frame.f_code is not None else 'code'
-            self.print_debug(f'Parsing state after {caller:6} is {new_state}', '')
-
-        def push(self, state):
-            self.stack.append(state)
-            self._print_debug(state)
-
-        def pop(self):
-            self.stack[-1:] = []
-            self._print_debug(self.stack[-1])
-
-        def change(self, state):
-            self.stack[-1] = state
-            self._print_debug(state)
-
-        def state_is(self, state):
-            return state == self.stack[-1]
-
-        def state_in(self, states):
-            return self.stack[-1] in states
-
-    def __init__(self, debug_recorder, debug_prefix, debugging=False):
-        html.parser.HTMLParser.__init__(self)
-        self.debug_recorder = debug_recorder
-        self.debug_prefix = debug_prefix
-        self.debugging = debugging
-
-    @property
-    def bar(self):
-        return f'{40 * "-"} '
-
-    def print_debug(self, str1, str2):
-        if self.debugging:
-            self.debug_recorder.add(f'{self.debug_prefix}  {str1} {str2}')
-
-    def handle_starttag(self, tag, attrs):
-        if len(attrs) > 0:
-            sep = f'\n{self.debug_prefix}   '
-            extra = sep + sep.join([f'attr:  {attr}' for attr in attrs])
-        else:
-            extra = ''
-        self.print_debug(f'Encountered a start tag: \'{tag}\'', extra)
-
-    def handle_endtag(self, tag):
-        self.print_debug('Encountered an end tag :', f'\'{tag}\'')
-
-    def handle_data(self, data):
-        self.print_debug('Encountered some data  :', f'\'{data}\'')
-
-    def handle_comment(self, data):
-        self.print_debug('Comment  :', data)
-
-    def handle_decl(self, data):
-        self.print_debug('Decl     :', data)
 
 
 if __name__ == "__main__":
