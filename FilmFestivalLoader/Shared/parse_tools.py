@@ -13,7 +13,7 @@ from Shared.application_tools import comment
 from Shared.planner_interface import Screening, write_lists
 
 
-def try_parse_festival_sites(parser, festival_data, error_collector, debug_recorder, festival=None):
+def try_parse_festival_sites(parser, festival_data, error_collector, debug_recorder, festival=None, counter=None):
     # Set defaults when necessary.
     festival = 'festival' if festival is None else festival
 
@@ -32,15 +32,23 @@ def try_parse_festival_sites(parser, festival_data, error_collector, debug_recor
     else:
         write_film_list = True
 
+    # Announce that parsing is done.
+    comment(f'Done loading {festival} data.')
+    debug_recorder.write_debug()
+
     # Display errors when found.
     if error_collector.error_count() > 0:
-        comment("Encountered some errors:")
+        comment('Encountered some errors:')
         print(error_collector)
 
+    # Display custom statistics.
+    if counter is not None:
+        comment('Custom statistics')
+        for label, count in counter.count_by_label.items():
+            print(f'{label}: {count}')
+
     # Write parsed information.
-    comment(f'Done loading {festival} data.')
     write_lists(festival_data, write_film_list, write_other_lists)
-    debug_recorder.write_debug()
 
 
 class FileKeeper:
@@ -87,6 +95,30 @@ class FileKeeper:
     def numbered_webdata_file(self, prefix, webdata_id):
         postfix = self.generic_numbered_file_format.format(webdata_id)
         return os.path.join(self.webdata_dir, f'{prefix}_{postfix}')
+
+
+class Counter:
+
+    count_by_label = {}
+
+    def __init__(self):
+        pass
+
+    def start(self, label):
+        self.count_by_label[label] = 0
+
+    def increase(self, label, do_raise=True):
+        try:
+            self.count_by_label[label] += 1
+        except KeyError as e:
+            if do_raise:
+                raise e
+            else:
+                self.count_by_label[label] = 1
+
+    def get(self, label, description=None):
+        count = self.count_by_label[label]
+        return f'{label}: {count}' if description is None else f'{count} {description}'
 
 
 class ScreeningKey:

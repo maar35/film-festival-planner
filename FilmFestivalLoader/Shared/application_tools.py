@@ -5,13 +5,27 @@ Created on Tue Oct 20 22:11:21 2020
 
 @author: maarten
 """
-
+import os
 from datetime import datetime
 import inspect
+import yaml
 
 
 def comment(text):
     print(f"\n{datetime.now()}  - {text}")
+
+
+class Config:
+    config = None
+    config_path = os.path.expanduser('~/Projects/FilmFestivalPlanner/Configs/common.yml')
+
+    def __init__(self):
+        with open(self.config_path, 'r') as stream:
+            try:
+                self.config = yaml.safe_load(stream)
+                print(f'@@ config:\n{self.config}')
+            except yaml.YAMLError as e:
+                print(f'@@ exception: {e}')
 
 
 class ErrorCollector:
@@ -20,7 +34,7 @@ class ErrorCollector:
         self.errors = []
 
     def __str__(self):
-        return "\n".join(self.errors) + "\n"
+        return "\n".join(self.errors)
 
     def add(self, err, msg):
         frame = inspect.currentframe().f_back

@@ -7,8 +7,8 @@ from enum import Enum, auto
 from json import JSONDecodeError
 from typing import Dict
 
-from Shared.application_tools import ErrorCollector, DebugRecorder, comment
-from Shared.parse_tools import FileKeeper, try_parse_festival_sites, HtmlPageParser
+from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Config
+from Shared.parse_tools import FileKeeper, try_parse_festival_sites, HtmlPageParser, Counter
 from Shared.planner_interface import FilmInfo, Screening, ScreenedFilmType, ScreenedFilm, FestivalData, Film
 from Shared.web_tools import UrlFile, iri_slug_to_url, fix_json, get_encoding, UrlReader
 
@@ -22,20 +22,24 @@ debug_file = file_keeper.debug_file
 
 # URL information.
 iffr_hostname = "https://iffr.com"
-url_festival = iffr_hostname.split('/')[2].split('.')[0]
-az_url_path = f'/nl/{url_festival}/{festival_year}/a-z'
 
 # Application tools.
 error_collector = ErrorCollector()
 debug_recorder = DebugRecorder(debug_file)
+counter = Counter()
 
 
 def main():
     # Initialize a festival data object.
     festival_data: IffrData = IffrData(file_keeper.plandata_dir)
 
+    # Set-up counters.
+    counter.start('combinations')
+    counter.start('feature films')
+    counter.start('shorts')
+
     # Try parsing the websites.
-    try_parse_festival_sites(parse_iffr_sites, festival_data, error_collector, debug_recorder, festival)
+    try_parse_festival_sites(parse_iffr_sites, festival_data, error_collector, debug_recorder, festival, counter)
 
 
 def parse_iffr_sites(festival_data):
@@ -50,9 +54,11 @@ def parse_iffr_sites(festival_data):
 
 
 def get_films(festival_data):
-    az_url = iffr_hostname + az_url_path
+    url_festival = iffr_hostname.split('/')[2].split('.')[0]
+    az_url_path = f'/nl/{url_festival}/{festival_year}/a-z'
+    az_url = iri_slug_to_url(iffr_hostname, az_url_path)
     az_file = file_keeper.az_file()
-    url_file = UrlFile(az_url, az_file, error_collector, byte_count=30000)
+    url_file = UrlFile(az_url, az_file, error_collector, debug_recorder, byte_count=200)
     az_html = url_file.get_text()
     if az_html is not None:
         AzPageParser(festival_data).feed(az_html)
@@ -62,7 +68,7 @@ def get_film_details(festival_data):
     films = [film for film in festival_data.films if film.medium_category == Film.category_string_films]
     for film in films:
         film_file = file_keeper.film_webdata_file(film.filmid)
-        url_file = UrlFile(film.url, film_file, error_collector, byte_count=1000)
+        url_file = UrlFile(film.url, film_file, error_collector, debug_recorder, byte_count=300)
         film_html = url_file.get_text(f'Downloading site of {film.title}: {film.url}, encoding: {url_file.encoding}')
         if film_html is not None:
             print(f'Analysing html file {film.filmid} of {film.title}')
@@ -72,7 +78,7 @@ def get_film_details(festival_data):
 
 
 def get_combination_film(festival_data, url):
-    encoding = get_encoding(url, error_collector)
+    encoding = get_encoding(url, error_collector, debug_recorder)
     reader = UrlReader(error_collector)
     print(f'Requesting combination page {url}, encoding={encoding}')
     combination_html = reader.load_url(url, None, encoding)
@@ -84,7 +90,7 @@ def get_combination_film(festival_data, url):
 def get_subsection_details(festival_data):
     for subsection in festival_data.subsection_by_name.values():
         subsection_file = file_keeper.numbered_webdata_file('subsection_file', subsection.subsection_id)
-        url_file = UrlFile(subsection.url, subsection_file, error_collector, byte_count=300)
+        url_file = UrlFile(subsection.url, subsection_file, error_collector, debug_recorder, byte_count=300)
         comment_at_download = f'Downloading {subsection.name} page: {subsection.url}, encoding: {url_file.encoding}'
         subsection_html = url_file.get_text(comment_at_download)
         if subsection_html is not None:
@@ -113,6 +119,8 @@ class AzPageParser(HtmlPageParser):
 
     def __init__(self, festival_data):
         HtmlPageParser.__init__(self, festival_data, debug_recorder, 'AZ', debugging=False)
+        self.config = Config().config
+        self.max_short_duration = datetime.timedelta(minutes=self.config['Constants']['MaxShortMinutes'])
         self.film = None
         self.title = None
         self.url = None
@@ -181,6 +189,7 @@ class AzPageParser(HtmlPageParser):
                 error_collector.add(f'Unexpected category in: {self.film.title}', f'{self.film.medium_category} from {self.url}')
             self.film.duration = self.duration
             self.film.sortstring = self.sorted_title
+            self.increase_film_counter(self.film)
             print(f'Adding FILM: {self.title} ({self.film.duration_str()}) {self.film.medium_category}')
             self.festival_data.films.append(self.film)
             if len(self.description) == 0:
@@ -195,6 +204,10 @@ class AzPageParser(HtmlPageParser):
         if len(self.description) > 0:
             film_info = FilmInfo(self.film.filmid, self.description, '')
             self.festival_data.filminfos.append(film_info)
+
+    def increase_film_counter(self, film):
+        key = 'feature films' if film.duration > self.max_short_duration else 'shorts'
+        counter.increase(key)
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -551,7 +564,7 @@ class FilmInfoPageParser(HtmlPageParser):
         elif self.state_stack.state_is(self.FilmInfoParseState.IN_PARAGRAPH) and tag == 'em':
             self.state_stack.push(self.FilmInfoParseState.IN_EMPHASIS)
         elif self.state_stack.state_is(self.FilmInfoParseState.AWAITING_COMBINATION_LINK) and tag == 'a':
-            if len(attrs) > 1 and attrs[0][1] == 'sc-gJpXkD hgMAEf':
+            if len(attrs) > 1 and attrs[0][1] == 'sc-csTbgd hGhsas':
                 self.combination_slug = attrs[1][1]
                 self.state_stack.change(self.FilmInfoParseState.IN_COMBINATION_LINK)
 
@@ -623,6 +636,7 @@ class CombinationPageParser(HtmlPageParser):
                 subsection = self.festival_data.get_subsection(self.subsection_name, self.subsection_url, section)
                 self.combination_program.subsection = subsection
             print(f'Adding COMBINATION PROGRAM: {self.title}')
+            counter.increase('combinations')
             self.festival_data.films.append(self.combination_program)
             self.combination_program_by_url[self.url] = self.combination_program
             self.add_combination_film_info()
