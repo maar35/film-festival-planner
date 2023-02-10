@@ -97,30 +97,6 @@ class FileKeeper:
         return os.path.join(self.webdata_dir, f'{prefix}_{postfix}')
 
 
-class Counter:
-
-    count_by_label = {}
-
-    def __init__(self):
-        pass
-
-    def start(self, label):
-        self.count_by_label[label] = 0
-
-    def increase(self, label, do_raise=True):
-        try:
-            self.count_by_label[label] += 1
-        except KeyError as e:
-            if do_raise:
-                raise e
-            else:
-                self.count_by_label[label] = 1
-
-    def get(self, label, description=None):
-        count = self.count_by_label[label]
-        return f'{label}: {count}' if description is None else f'{count} {description}'
-
-
 class ScreeningKey:
 
     def __init__(self, screening):
@@ -186,8 +162,8 @@ class BaseHtmlPageParser(HTMLParser):
         self.debugging = debugging
 
     @property
-    def bar(self):
-        return f'{40 * "-"} '
+    def bar(self, char='-'):
+        return f'{40 * char} '
 
     def print_debug(self, str1, str2):
         if self.debugging:
@@ -216,9 +192,14 @@ class BaseHtmlPageParser(HTMLParser):
 
 class HtmlPageParser(BaseHtmlPageParser):
 
+    festival_data = None
+
     def __init__(self, festival_data, debug_recorder, debug_prefix, debugging=False):
         BaseHtmlPageParser.__init__(self, debug_recorder, debug_prefix, debugging=debugging)
         self.festival_data = festival_data
+
+        # Remember the screening.
+        self.screening = None
 
         # Member variables to construct film article.
         self.description = None
@@ -226,24 +207,32 @@ class HtmlPageParser(BaseHtmlPageParser):
         self.article_paragraph = ''
         self.article = None
 
-    def add_screening(self, film, screen, start_dt, end_dt, qa='', subtitles='', extra='',
-                      audience='', program=None, display=True):
+    def add_screening_from_fields(self, film, screen, start_dt, end_dt, qa='', subtitles='', extra='',
+                                  audience='', program=None, display=True):
+
+        screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience, program, subtitles)
+        self.add_screening(screening)
+
+    def add_screening(self, screening, display=True):
+
+        # Set member screening.
+        self.screening = screening
 
         # Print the screening properties.
-        if display and audience == 'publiek':
+        film = screening.film
+        start_dt = screening.start_datetime
+        end_dt = screening.end_datetime
+        if display and screening.audience == 'publiek':
             print()
             print(f"---SCREENING OF {film.title}")
-            print(f"--  screen:     {screen}")
+            print(f"--  screen:     {screening.screen}")
             print(f"--  start time: {start_dt}")
             print(f"--  end time:   {end_dt}")
             print(f"--  duration:   film: {film.duration_str()}  screening: {end_dt - start_dt}")
-            print(f"--  audience:   {audience}")
+            print(f"--  audience:   {screening.audience}")
             print(f"--  category:   {film.medium_category}")
-            print(f"--  q and a:    {qa}")
-            print(f"--  subtitles:  {subtitles}")
-
-        # Create a new screening object.
-        screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience, program, subtitles)
+            print(f"--  q and a:    {screening.q_and_a}")
+            print(f"--  subtitles:  {screening.subtitles}")
 
         # Add the screening to the list.
         self.festival_data.screenings.append(screening)

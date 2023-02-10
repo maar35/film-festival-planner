@@ -65,7 +65,7 @@ namespace PresentScreenings.TableView
         public static bool ScreeningInfoChanged { get; internal set; }
         public int CombinedFilmId { get; set; }
         public static string Me => "Maarten";
-        public static List<string> FilmFans => new List<string> { Me, "Adrienne", "Manfred", "Piggel", "Oscar" };
+        public static List<string> FilmFans => new List<string> { Me, "Adrienne", "Manfred", "Piggel", "Rijk", "Geeth" };
         public static List<string> MyFriends => FilmFans.Skip(1).ToList();
         public bool IAttend => Attendees.Contains(Me);
         public List<string> AttendingFriends => Attendees.Where(f => f != Me).ToList();

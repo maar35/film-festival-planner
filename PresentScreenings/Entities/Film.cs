@@ -111,19 +111,31 @@ namespace PresentScreenings.TableView
 
         public override string WriteHeader()
         {
-            return "title;duration;maarten;adrienne;genre;url;description";
+            return "title;duration;maarten;adrienne;max;#screenings;genre;url;description";
         }
 
         public override string Serialize()
         {
+            // Prepare calculated fields.
+            string ratingMe = Rating.ToString();
+            string ratingAdrienne = ViewController.GetFilmFanFilmRating(this, "Adrienne").ToString();
+            int rMe = int.Parse(ratingMe);
+            int rAdrienne = int.Parse(ratingAdrienne);
+            string ratingMax = rMe > rAdrienne ? rMe.ToString() : rAdrienne.ToString();
+            string genre = FilmInfo.GetGenreDescription();
+            string screeningCount = FilmScreenings.Count.ToString();
+
+            // List the fields to be printed.
             string line = string.Empty;
             List<string> fields = new List<string> { };
 
             fields.Add(Title);
             fields.Add(DurationString);
-            fields.Add(Rating.ToString());
-            fields.Add(ViewController.GetFilmFanFilmRating(this, "Adrienne").ToString());
-            fields.Add(FilmInfo.GetGenreDescription());
+            fields.Add(ratingMe);
+            fields.Add(ratingAdrienne);
+            fields.Add(ratingMax);
+            fields.Add(screeningCount);
+            fields.Add(genre);
             fields.Add(FilmInfo.Url);
             fields.Add(FilmInfo.FilmDescription.Replace(Environment.NewLine, " "));
 

@@ -10,6 +10,7 @@ Created on Thu Dec 24 12:27:14 2020
 import datetime
 
 import parse_iffr_html as iffr
+from Shared.application_tools import Counter
 from Shared.parse_tools import FileKeeper
 from Shared.planner_interface import Film, ScreenedFilmType, ScreenedFilm, Screen
 from Shared.test_tools import execute_tests, equity_decorator
@@ -80,6 +81,13 @@ class TestList:
     file_keeper = FileKeeper(festival, festival_year)
     festival_data = iffr.IffrData(file_keeper.plandata_dir)
     az_parser = iffr.AzPageParser(festival_data)
+
+    # Set-up counters.
+    counter = Counter()
+    counter.start('combinations')
+    counter.start('feature films')
+    counter.start('shorts')
+
     for film in test_films:
         az_parser.title = film.title
         az_parser.url = film.url
@@ -87,7 +95,8 @@ class TestList:
         az_parser.sorted_title = film.title
         az_parser.description = film.description
         az_parser.add_film()
-    info_parser = iffr.FilmInfoPageParser(festival_data, test_films[0])
+    combi_keeper = iffr.CombinationKeeper()
+    info_parser = iffr.FilmInfoPageParser(festival_data, test_films[0], combi_keeper)
 
 
 @equity_decorator

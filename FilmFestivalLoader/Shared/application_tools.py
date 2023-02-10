@@ -28,6 +28,30 @@ class Config:
                 print(f'@@ exception: {e}')
 
 
+class Counter:
+
+    count_by_label = {}
+
+    def __init__(self):
+        pass
+
+    def start(self, label):
+        self.count_by_label[label] = 0
+
+    def increase(self, label, do_raise=True):
+        try:
+            self.count_by_label[label] += 1
+        except KeyError as e:
+            if do_raise:
+                raise e
+            else:
+                self.count_by_label[label] = 1
+
+    def get(self, label, description=None):
+        count = self.count_by_label[label]
+        return f'{label}: {count}' if description is None else f'{count} {description}'
+
+
 class ErrorCollector:
 
     def __init__(self):

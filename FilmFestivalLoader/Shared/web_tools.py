@@ -114,7 +114,8 @@ class UrlFile:
 
 class UrlReader:
     user_agent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
-    headers = {'User-Agent': user_agent}
+    alt_user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36'
+    headers = {'User-Agent': alt_user_agent}
 
     def __init__(self, error_collector):
         self.error_collector = error_collector

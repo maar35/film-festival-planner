@@ -16,7 +16,8 @@ namespace PresentScreenings.TableView
         #region Properties
         private static string ProgramName => Path.GetFileNameWithoutExtension(Environment.GetCommandLineArgs()[0]);
         private static string ErrorFile => Path.Combine(AppDelegate.DocumentsFolder, @"error.txt");
-        private static string WarningFile => Path.Combine(AppDelegate.DocumentsFolder, @"warning.txt");
+        public static string WarningFile => Path.Combine(AppDelegate.DocumentsFolder, @"warning.txt");
+        public static string InfoFile => Path.Combine(AppDelegate.DocumentsFolder, @"info.txt");
         #endregion
 
         #region Constructors
@@ -133,6 +134,11 @@ namespace PresentScreenings.TableView
         public static void WriteWarning(string text)
         {
             WriteText(WarningFile, text);
+        }
+
+        public static void WriteInfo(string text)
+        {
+            WriteText(InfoFile, text);
         }
 
         public static void RaiseNotification(string title, string text)
