@@ -14,13 +14,6 @@ namespace PresentScreenings.TableView
         #region Constructors
         public Configuration()
         {
-            //var deserializer = new YamlDotNet.Serialization.DeserializerBuilder()
-            //    .WithNamingConvention(PascalCaseNamingConvention.Instance)
-            //    .Build();
-            //var yamlText = File.ReadAllText(AppDelegate.ConfigFile);
-            //Configuration config = deserializer.Deserialize<Configuration>(yamlText);
-            //Constants = config.Constants;
-            //Paths = config.Paths;
         }
         #endregion
     }
