@@ -18,7 +18,7 @@ namespace PresentScreenings.TableView
         #region Properties
         public static List<string> Values => new List<string> { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" };
         private static string _valueUnrated => Values[_unratedIndex];
-        public static FilmRating Unrated =>  new FilmRating(_valueUnrated);
+        public static FilmRating Unrated => new FilmRating(_valueUnrated);
         public static FilmRating LowestSuperRating => LowestPlannableRating();
         public static FilmRating MaxRating => new FilmRating(Values[Values.Count - 1]);
         public string Value { get; private set; }
