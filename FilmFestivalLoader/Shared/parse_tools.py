@@ -9,7 +9,7 @@ import inspect
 import os
 from html.parser import HTMLParser
 
-from Shared.application_tools import comment
+from Shared.application_tools import comment, config
 from Shared.planner_interface import Screening, write_lists
 
 
@@ -54,7 +54,7 @@ def try_parse_festival_sites(parser, festival_data, error_collector, debug_recor
 class FileKeeper:
     def __init__(self, festival, year):
         # Define directories.
-        self.base_dir = os.path.expanduser(f'~/Documents/Film')
+        self.base_dir = os.path.expanduser(f'~/{config()["Paths"]["FestivalRootDirectory"]}')
         self.festival_dir = os.path.join(self.base_dir, f'{festival}')
         self.documents_dir = os.path.join(self.festival_dir, f'{festival}{year}')
         self.webdata_dir = os.path.join(self.documents_dir, '_website_data')
@@ -162,8 +162,8 @@ class BaseHtmlPageParser(HTMLParser):
         self.debugging = debugging
 
     @property
-    def bar(self, char='-'):
-        return f'{40 * char} '
+    def bar(self):
+        return f'{40 * "-"} '
 
     def print_debug(self, str1, str2):
         if self.debugging:

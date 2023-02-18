@@ -11,6 +11,10 @@ import inspect
 import yaml
 
 
+def config():
+    return Config().config
+
+
 def comment(text):
     print(f"\n{datetime.now()}  - {text}")
 
@@ -21,11 +25,7 @@ class Config:
 
     def __init__(self):
         with open(self.config_path, 'r') as stream:
-            try:
-                self.config = yaml.safe_load(stream)
-                print(f'@@ config:\n{self.config}')
-            except yaml.YAMLError as e:
-                print(f'@@ exception: {e}')
+            self.config = yaml.safe_load(stream)
 
 
 class Counter:

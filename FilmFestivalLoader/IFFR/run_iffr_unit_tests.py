@@ -96,7 +96,7 @@ class TestList:
         az_parser.description = film.description
         az_parser.add_film()
     combi_keeper = iffr.CombinationKeeper()
-    info_parser = iffr.FilmInfoPageParser(festival_data, test_films[0], combi_keeper)
+    info_parser = iffr.FilmInfoPageParser(festival_data, test_films[0], combi_keeper, 'utf-8')
 
 
 @equity_decorator

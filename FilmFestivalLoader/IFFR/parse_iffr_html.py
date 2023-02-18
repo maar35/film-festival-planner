@@ -80,16 +80,16 @@ def get_film_details(festival_data):
         film_html = url_file.get_text(f'Downloading site of {film.title}: {film.url}, encoding: {url_file.encoding}')
         if film_html is not None:
             print(f'Analysing html file {film.filmid} of {film.title}')
-            FilmInfoPageParser(festival_data, film, combi_keeper).feed(film_html)
+            FilmInfoPageParser(festival_data, film, combi_keeper, url_file.encoding).feed(film_html)
     combi_keeper.apply_combinations(festival_data)
 
 
-def get_combination_film(festival_data, combi_keeper, url):
+def get_combination_film(festival_data, combi_keeper, url, charset):
     # Try if the film to be read already has a number.
     try:
         film_id = festival_data.film_id_by_url[url]
     except KeyError:
-        get_combination_film_from_url(festival_data, combi_keeper, url)
+        get_combination_film_from_url(festival_data, combi_keeper, url, charset)
     else:
         film = festival_data.get_film_by_id(film_id)
         if film is None:
@@ -104,13 +104,10 @@ def get_combination_film(festival_data, combi_keeper, url):
                 CombinationPageParser(festival_data, combi_keeper, url).feed(combination_html)
 
 
-def get_combination_film_from_url(festival_data, combi_keeper, url):
+def get_combination_film_from_url(festival_data, combi_keeper, url, charset):
     # Get an encoding, even in harsh circumstances like gupta's amd
     # circular redirections.
-    try:
-        encoding = get_encoding(url, error_collector, debug_recorder)
-    except HTTPError:
-        encoding = 'utf-8'
+    encoding = get_encoding(url, error_collector, debug_recorder, charset)
 
     # Get the html data form the url.
     print(f'Requesting combination page {url}, encoding={encoding}')
@@ -499,10 +496,11 @@ class FilmInfoPageParser(ScreeningParser):
     intro_span = datetime.timedelta(minutes=4)
     combination_loaded_by_url = {}
 
-    def __init__(self, festival_data, film, combi_keeper):
+    def __init__(self, festival_data, film, combi_keeper, charset):
         ScreeningParser.__init__(self, festival_data, combi_keeper, debug_recorder, 'FI', self.debugging)
         self.festival_data = festival_data
         self.film = film
+        self.charset =  charset
         self.article_paragraphs = []
         self.article_paragraph = ''
         self.article = None
@@ -526,7 +524,7 @@ class FilmInfoPageParser(ScreeningParser):
         if combination_url not in self.combination_loaded_by_url.keys():
             self.combination_loaded_by_url[combination_url] = True
             self.print_debug('-- FOLLOW COMBINATION URL', f'{combination_url}')
-            get_combination_film(self.festival_data, self.combi_keeper, combination_url)
+            get_combination_film(self.festival_data, self.combi_keeper, combination_url, self.charset)
         try:
             combination_program = CombinationPageParser.combination_program_by_url[combination_url]
         except KeyError as e:

@@ -2,6 +2,13 @@
 
 namespace PresentScreenings.TableView
 {
+    public sealed class AlertReturnsNonZeroValue : Exception
+    {
+        public AlertReturnsNonZeroValue(string message) : base(message)
+        {
+        }
+    }
+
     public sealed class IllegalFilmInfoCategoryException : Exception
     {
         public IllegalFilmInfoCategoryException(string message) : base(message)

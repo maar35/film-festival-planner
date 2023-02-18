@@ -55,6 +55,9 @@
     <Reference Include="Xamarin.Mac" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Xml" />
+    <Reference Include="YamlDotNet">
+      <HintPath>..\packages\YamlDotNet.13.0.0\lib\net47\YamlDotNet.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ImageAsset Include="Assets.xcassets\AppIcon.appiconset\Contents.json" />
@@ -192,6 +195,7 @@
     <Compile Include="Controllers\WarningsDialogControler.designer.cs">
       <DependentUpon>WarningsDialogControler.cs</DependentUpon>
     </Compile>
+    <Compile Include="Entities\Configuration.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

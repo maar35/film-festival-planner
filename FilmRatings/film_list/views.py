@@ -1,11 +1,7 @@
 import datetime
-import os
-
-import yaml
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Q
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
@@ -13,24 +9,13 @@ from django.views import generic
 from django.views.generic import FormView
 
 from FilmRatings.tools import unset_log, add_base_context, get_log, wrap_up_form_errors
+from festivals.config import Config
 from festivals.models import current_festival, Festival
 from film_list.forms.model_forms import Rating, User
 from film_list.forms.unbound_forms import PickRating, SaveRatingsForm
 from film_list.models import Film, FilmFan, FilmFanFilmRating, current_fan, get_rating_name, get_present_fans
 from loader.views import file_row_count
 from sections.models import Subsection
-
-
-class Config:
-    config = None
-    config_path = os.path.expanduser('~/Projects/FilmFestivalPlanner/Configs/common.yml')
-
-    def __init__(self):
-        with open(self.config_path, 'r') as stream:
-            try:
-                self.config = yaml.safe_load(stream)
-            except yaml.YAMLError as e:
-                print(f'@@ exception: {e}')
 
 
 # Define generic view classes.

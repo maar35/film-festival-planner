@@ -18,60 +18,45 @@ namespace PresentScreenings.TableView
         private static string ErrorFile => Path.Combine(AppDelegate.DocumentsFolder, @"error.txt");
         public static string WarningFile => Path.Combine(AppDelegate.DocumentsFolder, @"warning.txt");
         public static string InfoFile => Path.Combine(AppDelegate.DocumentsFolder, @"info.txt");
+        private static int AlertDepth { get; set; }
         #endregion
 
         #region Constructors
         static AlertRaiser()
         {
+            AlertDepth = 0;
         }
         #endregion
 
         #region Public Methods
         public static void QuitWithAlert(string messageText, string informativeText)
         {
-            var alert = new NSAlert()
-            {
-                AlertStyle = NSAlertStyle.Critical,
-                MessageText = messageText,
-                InformativeText = informativeText
-            };
-            alert.RunModal();
-            NSApplication.SharedApplication.Terminate(NSApplication.SharedApplication);
+            _ = RunCriticalAlert(messageText, informativeText);
+            TerminateApp();
         }
 
         public static void LandApplication(Exception ex)
         {
             WriteError(ex);
             RaiseAlert(ex);
-            NSApplication.SharedApplication.Terminate(NSApplication.SharedApplication);
+            TerminateApp();
         }
 
-        /// <summary>
-        /// Stop the application after writing a stack dump on file and display
-        /// an alert.
-        /// If no alert can be displayed, raise a user notification.
-        /// </summary>
-        /// <param name="ex"></param>
         public static void RaiseAlert(Exception ex)
+        {
+            _ = RunCriticalAlert($"Error in {ProgramName}", ex.ToString());
+        }
+
+        public static nint RunCriticalAlert(string messageText, string informativeText)
         {
             var alert = new NSAlert()
             {
                 AlertStyle = NSAlertStyle.Critical,
-                InformativeText = ex.ToString(),
-                MessageText = $"Error in {ProgramName}."
+                InformativeText = informativeText,
+                MessageText = messageText,
             };
             alert.AddButton("Close");
-            try
-            {
-                alert.RunModal();
-            }
-            catch (Exception ex2)
-            {
-                WriteError(ex, ex2);
-                string title = $"Error in {ProgramName}";
-                string text = $"See {ErrorFile}.";
-                RaiseNotification(title, text);
-            }
+            return RunAlertAsModal(alert);
         }
 
         public static void RunInformationalAlert(string messageText, string informativeText, bool saveText=false)
@@ -87,7 +72,7 @@ namespace PresentScreenings.TableView
                 alert.AddButton("OK");
                 alert.AddButton("Save");
             }
-            var result = alert.RunModal();
+            var result = RunAlertAsModal(alert);
 
             // Save the text in the error file when the Save button is hit.
             if (result == 1001)
@@ -110,7 +95,7 @@ namespace PresentScreenings.TableView
             alert.AddButton("Cancel");
 
             // Run the alert.
-            var result = alert.RunModal();
+            var result = RunAlertAsModal(alert);
 
             // Take action based on result.
             switch (result)
@@ -158,6 +143,41 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
+        private static nint RunAlertAsModal(NSAlert alert)
+        {
+            AlertDepth += 1;
+            nint alertResult = 0;
+            try
+            {
+                alertResult = alert.RunModal();
+            }
+            catch (Exception ex)
+            {
+                HandleFailedAlertRun(ex.Message, alert);
+            }
+            if (alertResult < 0)
+            {
+                HandleFailedAlertRun($"Alert returned {alertResult}.", alert);
+            }
+            AlertDepth -= 1;
+            return alertResult;
+        }
+
+        private static void HandleFailedAlertRun(string newErrorTitle, NSAlert alert)
+        {
+            if (AlertDepth > 1)
+            {
+                return;
+            }
+            var builder = new StringBuilder();
+            builder.AppendLine($"Original critical error:");
+            builder.AppendLine(alert.MessageText);
+            builder.AppendLine(alert.InformativeText);
+            var text = builder.ToString();
+            RaiseNotification(newErrorTitle, text);
+            throw new AlertReturnsNonZeroValue($"{newErrorTitle}{Environment.NewLine}{text}");
+        }
+
         private static string ErrorString(Exception ex, Exception ex2 = null)
         {
             var builder = new StringBuilder();
@@ -175,6 +195,11 @@ namespace PresentScreenings.TableView
         private static void WriteText(string file, string text)
         {
             System.IO.File.WriteAllText(file, text);
+        }
+
+        private static void TerminateApp()
+        {
+            NSApplication.SharedApplication.Terminate(NSApplication.SharedApplication);
         }
         #endregion
     }
