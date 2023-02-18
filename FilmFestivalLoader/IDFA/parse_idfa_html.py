@@ -276,8 +276,8 @@ class FilmPageParser(HtmlPageParser):
         return planner.Screening.audience_type_public if no_audience_categories else '|'.join(self.audience_categories)
 
     def add_idfa_screening(self, display=False):
-        HtmlPageParser.add_screening(self, self.film, self.screen, self.start_dt, self.end_dt,
-                                     audience=self.audience, display=display)
+        HtmlPageParser.add_screening_from_fields(self, self.film, self.screen, self.start_dt, self.end_dt,
+                                                 audience=self.audience, display=display)
         self.init_screening_data()
 
     def handle_starttag(self, tag, attrs):

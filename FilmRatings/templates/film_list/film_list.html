@@ -8,7 +8,7 @@
         <h3>Film list with ratings</h3>
     </span>
     <span style="text-align: right; width: 50%; display: inline-block;">
-        <a href="{% url 'film_list:save' festival.id %}">Save ratings</a>
+        <a href="{% url 'film_list:save' festival.id %}">Dump ratings</a>
     </span>
     {% if log %}
         <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
@@ -21,6 +21,23 @@
         {% for error in unexpected_errors %}
             <p class="log">{{ error }}</p>
         {% endfor %}
+    {% endif %}
+    {% if feature_count %}
+        <p>{{ rated_features_count }} of {{ feature_count }} feature films rated</p>
+            <ul>
+        {% for count in eligible_counts %}
+            <li>
+                {{ count.plannable_films_count }} with rating {{ count.base_rating }}
+                {% if count.base_rating < highest_rating %}
+                    or higher
+                {% endif %}
+                 so far,
+                {{ count.projected_plannable_count }} projected to be plannable.
+            </li>
+        {% endfor %}
+            </ul>
+    {% else %}
+        <p>No feature films on this page.</p>
     {% endif %}
     <br>
     {% if action.new_rating %}

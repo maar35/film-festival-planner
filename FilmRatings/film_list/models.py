@@ -3,6 +3,9 @@ from django.db import models
 from festivals.models import Festival
 
 
+FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
+
+
 # Film table.
 class Film(models.Model):
 
@@ -69,7 +72,7 @@ def get_user_fan(user):
 
 
 def get_present_fans():
-    return FilmFan.film_fans.filter(name__in=['Maarten', 'Adrienne', 'Manfred'])
+    return FilmFan.film_fans.filter(name__in=FANS_IN_RATINGS_TABLE)
 
 
 class FilmFan(models.Model):

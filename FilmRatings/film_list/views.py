@@ -9,6 +9,7 @@ from django.views import generic
 from django.views.generic import FormView
 
 from FilmRatings.tools import unset_log, add_base_context, get_log, wrap_up_form_errors
+from festivals.config import Config
 from festivals.models import current_festival, Festival
 from film_list.forms.model_forms import Rating, User
 from film_list.forms.unbound_forms import PickRating, SaveRatingsForm
@@ -156,7 +157,8 @@ def film_list(request):
     # Initialize.
     title = 'Film Rating List'
     submit_name_prefix = 'rating_'
-    max_short_minutes = 40
+    config = Config().config
+    max_short_minutes = config['Constants']['MaxShortMinutes']
     session = request.session
     logged_in_fan = current_fan(session)
     fan_list = get_present_fans()
@@ -165,11 +167,17 @@ def film_list(request):
     rating_rows = []
     submit_names = []
     get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_names)
+    film_count, rated_films_count, count_dicts = get_rating_statistic(session)
+    highest_rating = FilmFanFilmRating.Rating.values[-1]
 
     # Construct the context.
     context = add_base_context(request, {
         'title': title,
         'fans': fan_list,
+        'feature_count': film_count,
+        'rated_features_count': rated_films_count,
+        'highest_rating': highest_rating,
+        'eligible_counts': count_dicts,
         'short_threshold': datetime.timedelta(minutes=max_short_minutes).total_seconds(),
         'rating_rows': rating_rows,
     })
@@ -194,6 +202,53 @@ def film_list(request):
 
     context['log'] = get_log(session)
     return render(request, "film_list/film_list.html", context)
+
+
+def get_rating_statistic(session):
+
+    def get_stats_for_rating(base_rating):
+        counts = [count for r, count in count_by_eligible_rating.items() if r >= base_rating]
+        plannable_films_count = sum(counts)
+        if rated_films_count > 0:
+            projected_plannable_count = int(film_count * plannable_films_count / rated_films_count)
+        else:
+            projected_plannable_count = None
+        return {
+            'base_rating': base_rating,
+            'plannable_films_count': plannable_films_count,
+            'projected_plannable_count': projected_plannable_count,
+        }
+
+    # Initialize.
+    festival = current_festival(session)
+    config = Config().config
+    max_short_minutes = config['Constants']['MaxShortMinutes']
+    max_short_duration = datetime.timedelta(minutes=max_short_minutes)
+    lowest_plannable_rating = config['Constants']['LowestPlannableRating']
+    feature_films = Film.films.filter(festival=festival, duration__gt=max_short_duration)
+    eligible_ratings = FilmFanFilmRating.Rating.values[lowest_plannable_rating:]
+    film_count = len(feature_films)
+
+    # Filter out the data with eligible ratings.
+    rated_films_count = 0
+    count_by_eligible_rating = {}
+    for feature_film in feature_films:
+        rating_set = FilmFanFilmRating.fan_ratings.filter(film=feature_film, rating__gt=0)
+        if len(rating_set):
+            rated_films_count += 1
+            best_rating = max([r.rating for r in rating_set])
+            if best_rating in eligible_ratings:
+                try:
+                    count_by_eligible_rating[best_rating] += 1
+                except KeyError:
+                    count_by_eligible_rating[best_rating] = 1
+
+    # Find the statistics for all eligible ratings.
+    count_dicts = []
+    for eligible_rating in eligible_ratings:
+        count_dicts.append(get_stats_for_rating(eligible_rating))
+
+    return film_count, rated_films_count, count_dicts
 
 
 def get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_names):

@@ -6,13 +6,14 @@ Created on Mon Nov  2 18:27:20 2020
 @author: maarten
 """
 
-import html.parser
 import json
 import os
+from enum import Enum, auto
 from urllib.error import HTTPError
 from urllib.parse import quote, urlparse, urlunparse
 from urllib.request import urlopen, Request
 
+from Shared.parse_tools import BaseHtmlPageParser
 
 DEFAULT_BYTE_COUNT = 512
 DEFAULT_ENCODING = 'ascii'
@@ -30,27 +31,35 @@ def iri_slug_to_url(host, slug):
     return result_url
 
 
-def get_encoding_from_url(url, byte_count=DEFAULT_BYTE_COUNT):
+def get_encoding_from_url(url, debug_recorder, byte_count=DEFAULT_BYTE_COUNT):
     request = UrlReader.get_request(url)
     with urlopen(request) as response:
         encoding = response.headers.get_content_charset()
         if encoding is None:
             html_bytes = response.read(byte_count)
-            encoding = get_encoding_from_bytes(html_bytes)
+            encoding = get_encoding_from_bytes(html_bytes, debug_recorder)
     return encoding
 
 
-def get_encoding_from_file(file, byte_count=DEFAULT_BYTE_COUNT):
+def get_encoding_from_file(file, debug_recorder, byte_count=DEFAULT_BYTE_COUNT):
     with open(file, 'r') as f:
         sample_text = f.read(byte_count)
-    charset = get_encoding_from_bytes(sample_text)
+    charset = get_encoding_from_bytes(sample_text, debug_recorder)
     return charset
 
 
-def get_encoding_from_bytes(html_bytes):
-    charset_parser = HtmlCharsetParser()
+def get_encoding_from_bytes(html_bytes, debug_recorder):
+    charset_parser = HtmlCharsetParser(debug_recorder)
     charset = charset_parser.get_charset(html_bytes)
     return charset
+
+
+def get_encoding(url, error_collector, debug_recorder, byte_count=DEFAULT_BYTE_COUNT):
+    encoding = get_encoding_from_url(url, debug_recorder, byte_count)
+    if encoding is None:
+        error_collector.add('No encoding found', f'{url}')
+        encoding = UrlFile.default_encoding
+    return encoding
 
 
 def fix_json(code_point_str):
@@ -64,31 +73,24 @@ def fix_json(code_point_str):
     return result_str
 
 
-def get_encoding(url, error_collector, byte_count=DEFAULT_BYTE_COUNT):
-    encoding = get_encoding_from_url(url, byte_count)
-    if encoding is None:
-        error_collector.add('No encoding found', f'{url}')
-        encoding = UrlFile.default_encoding
-    return encoding
-
-
 class UrlFile:
     default_byte_count = DEFAULT_BYTE_COUNT
     default_encoding = DEFAULT_ENCODING
 
-    def __init__(self, url, path, error_collector, byte_count=None):
+    def __init__(self, url, path, error_collector, debug_recorder, byte_count=None):
         self.url = url
         self.path = path
         self.error_collector = error_collector
+        self.debug_recorder = debug_recorder
         self.byte_count = byte_count if byte_count is not None else self.default_byte_count
         self.encoding = None
-
-    def get_text(self, comment_at_download=None):
         try:
             self.set_encoding()
         except HTTPError as e:
             self.error_collector.add(str(e), f'{self.url}')
-            return None
+            self.encoding = self.default_encoding
+
+    def get_text(self, comment_at_download=None):
         if os.path.isfile(self.path):
             with open(self.path, 'r', encoding=self.encoding) as f:
                 html_text = f.read()
@@ -96,15 +98,15 @@ class UrlFile:
             if comment_at_download is not None:
                 print(comment_at_download)
             reader = UrlReader(self.error_collector)
-            html_text = reader.load_url(self.url, self.path)
+            html_text = reader.load_url(self.url, self.path, self.encoding)
         return html_text
 
     def set_encoding(self):
         if self.encoding is None:
             if os.path.isfile(self.path):
-                self.encoding = get_encoding_from_file(self.path, self.byte_count)
+                self.encoding = get_encoding_from_file(self.path, self.debug_recorder, self.byte_count)
             if self.encoding is None:
-                self.encoding = get_encoding_from_url(self.url)
+                self.encoding = get_encoding_from_url(self.url, self.debug_recorder, self.byte_count)
             if self.encoding is None:
                 self.error_collector.add('No encoding found', f'{self.url}')
                 self.encoding = self.default_encoding
@@ -112,7 +114,8 @@ class UrlFile:
 
 class UrlReader:
     user_agent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
-    headers = {'User-Agent': user_agent}
+    alt_user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36'
+    headers = {'User-Agent': alt_user_agent}
 
     def __init__(self, error_collector):
         self.error_collector = error_collector
@@ -123,24 +126,32 @@ class UrlReader:
 
     def load_url(self, url, target_file=None, encoding=DEFAULT_ENCODING):
         request = self.get_request(url)
-        with urlopen(request) as response:
-            html_bytes = response.read()
-            if html_bytes is not None:
-                if len(html_bytes) == 0:
-                    self.error_collector.add(f'No text found, file {target_file} not written', f'{url}')
-                elif target_file is not None:
-                    with open(target_file, 'wb') as f:
-                        f.write(html_bytes)
-        decoded_html = html_bytes.decode(encoding=encoding)
+        try:
+            with urlopen(request) as response:
+                html_bytes = response.read()
+        except HTTPError as e:
+            self.error_collector.add(e, f'while opening {url}')
+            html_bytes = None
+        if html_bytes is not None:
+            if len(html_bytes) == 0:
+                self.error_collector.add(f'No text found, file {target_file} not written', f'{url}')
+            elif target_file is not None:
+                with open(target_file, 'wb') as f:
+                    f.write(html_bytes)
+        decoded_html = html_bytes.decode(encoding=encoding) if html_bytes is not None else None
         return decoded_html
 
 
-class HtmlCharsetParser(html.parser.HTMLParser):
+class HtmlCharsetParser(BaseHtmlPageParser):
+    class CharsetParseState(Enum):
+        AWAITING_CHARSET = auto()
+        DONE = auto()
 
     default_charset = None
 
-    def __init__(self):
-        html.parser.HTMLParser.__init__(self)
+    def __init__(self, debug_recorder):
+        BaseHtmlPageParser.__init__(self, debug_recorder, 'CH', debugging=True)
+        self.state_stack = self.StateStack(self.print_debug, self.CharsetParseState.AWAITING_CHARSET)
         self.charset = None
 
     def get_charset(self, text):
@@ -149,9 +160,11 @@ class HtmlCharsetParser(html.parser.HTMLParser):
         return charset
 
     def handle_starttag(self, tag, attrs):
-        html.parser.HTMLParser.handle_starttag(self, tag, attrs)
-        if tag == 'meta' and len(attrs) > 0 and attrs[0] == 'charset':
-            self.charset = attrs[0][1]
+        BaseHtmlPageParser.handle_starttag(self, tag, attrs)
+        if self.state_stack.state_is(self.CharsetParseState.AWAITING_CHARSET):
+            if tag == 'meta' and len(attrs) > 0 and attrs[0][0].lower() == 'charset':
+                self.charset = attrs[0][1]
+                self.state_stack.change(self.CharsetParseState.DONE)
 
 
 if __name__ == "__main__":

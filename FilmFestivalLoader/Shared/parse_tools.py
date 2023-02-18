@@ -9,11 +9,11 @@ import inspect
 import os
 from html.parser import HTMLParser
 
-from Shared.application_tools import comment
+from Shared.application_tools import comment, config
 from Shared.planner_interface import Screening, write_lists
 
 
-def try_parse_festival_sites(parser, festival_data, error_collector, debug_recorder, festival=None):
+def try_parse_festival_sites(parser, festival_data, error_collector, debug_recorder, festival=None, counter=None):
     # Set defaults when necessary.
     festival = 'festival' if festival is None else festival
 
@@ -32,21 +32,29 @@ def try_parse_festival_sites(parser, festival_data, error_collector, debug_recor
     else:
         write_film_list = True
 
+    # Announce that parsing is done.
+    comment(f'Done loading {festival} data.')
+    debug_recorder.write_debug()
+
     # Display errors when found.
     if error_collector.error_count() > 0:
-        comment("Encountered some errors:")
+        comment('Encountered some errors:')
         print(error_collector)
 
+    # Display custom statistics.
+    if counter is not None:
+        comment('Custom statistics')
+        for label, count in counter.count_by_label.items():
+            print(f'{label}: {count}')
+
     # Write parsed information.
-    comment(f'Done loading {festival} data.')
     write_lists(festival_data, write_film_list, write_other_lists)
-    debug_recorder.write_debug()
 
 
 class FileKeeper:
     def __init__(self, festival, year):
         # Define directories.
-        self.base_dir = os.path.expanduser(f'~/Documents/Film')
+        self.base_dir = os.path.expanduser(f'~/{config()["Paths"]["FestivalRootDirectory"]}')
         self.festival_dir = os.path.join(self.base_dir, f'{festival}')
         self.documents_dir = os.path.join(self.festival_dir, f'{festival}{year}')
         self.webdata_dir = os.path.join(self.documents_dir, '_website_data')
@@ -184,9 +192,14 @@ class BaseHtmlPageParser(HTMLParser):
 
 class HtmlPageParser(BaseHtmlPageParser):
 
+    festival_data = None
+
     def __init__(self, festival_data, debug_recorder, debug_prefix, debugging=False):
         BaseHtmlPageParser.__init__(self, debug_recorder, debug_prefix, debugging=debugging)
         self.festival_data = festival_data
+
+        # Remember the screening.
+        self.screening = None
 
         # Member variables to construct film article.
         self.description = None
@@ -194,24 +207,32 @@ class HtmlPageParser(BaseHtmlPageParser):
         self.article_paragraph = ''
         self.article = None
 
-    def add_screening(self, film, screen, start_dt, end_dt, qa='', subtitles='', extra='',
-                      audience='', program=None, display=True):
+    def add_screening_from_fields(self, film, screen, start_dt, end_dt, qa='', subtitles='', extra='',
+                                  audience='', program=None, display=True):
+
+        screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience, program, subtitles)
+        self.add_screening(screening)
+
+    def add_screening(self, screening, display=True):
+
+        # Set member screening.
+        self.screening = screening
 
         # Print the screening properties.
-        if display and audience == 'publiek':
+        film = screening.film
+        start_dt = screening.start_datetime
+        end_dt = screening.end_datetime
+        if display and screening.audience == 'publiek':
             print()
             print(f"---SCREENING OF {film.title}")
-            print(f"--  screen:     {screen}")
+            print(f"--  screen:     {screening.screen}")
             print(f"--  start time: {start_dt}")
             print(f"--  end time:   {end_dt}")
             print(f"--  duration:   film: {film.duration_str()}  screening: {end_dt - start_dt}")
-            print(f"--  audience:   {audience}")
+            print(f"--  audience:   {screening.audience}")
             print(f"--  category:   {film.medium_category}")
-            print(f"--  q and a:    {qa}")
-            print(f"--  subtitles:  {subtitles}")
-
-        # Create a new screening object.
-        screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience, program, subtitles)
+            print(f"--  q and a:    {screening.q_and_a}")
+            print(f"--  subtitles:  {screening.subtitles}")
 
         # Add the screening to the list.
         self.festival_data.screenings.append(screening)

@@ -248,7 +248,7 @@ namespace PresentScreenings.TableView
 
         private static NSColor DurationTextColor(TimeSpan duration)
         {
-            return duration < FilmRatingDialogController.MinimalDuration ? NSColor.LightGray : NSColor.Black;
+            return duration <= AppDelegate.MaxShortDuration ? NSColor.LightGray : NSColor.Black;
         }
 
         private static NSColor ScreeningCountTextColor(int screeningCount)

@@ -512,11 +512,18 @@ namespace PresentScreenings.TableView
             }
             if (removedScreenings.Count > 0)
             {
+                // Compose duplicates info.
                 string line = Environment.NewLine;
-                string title = "Duplicate Screenings Found";
                 StringBuilder builder = new StringBuilder($"Duplicate screenings:{line}{line}");
                 builder.AppendJoin<Screening>($",{line}", removedScreenings);
-                AlertRaiser.RunInformationalAlert(title, builder.ToString());
+
+                // Write duplicates info.
+                AlertRaiser.WriteInfo(builder.ToString());
+
+                // Display where the files have been stored.
+                string title = "Duplicate Screenings Found";
+                string text = $"Duplicates report is saved in {AlertRaiser.InfoFile}";
+                AlertRaiser.RaiseNotification(title, text);
             }
         }
 
@@ -539,10 +546,17 @@ namespace PresentScreenings.TableView
                 .Select(pair => $"{line}{pair.Key}:{line}{string.Join(',' + line, pair.Value.Select(s => s.ScreeningTitle))}");
             if (coinciders.Count() > 0)
             {
-                string title = "Coinciding Screenings Found";
+                // Compose coinsiders info.
                 StringBuilder builder = new StringBuilder($"Coinciding screenings:{line}");
                 builder.AppendJoin(line, coinciders);
-                AlertRaiser.RunInformationalAlert(title, builder.ToString(), true);
+
+                // Write coinsiders info.
+                AlertRaiser.WriteWarning(builder.ToString());
+
+                // Display where the files have been stored.
+                string title = "Coinciding Screenings Found";
+                string text = $"Coinsiders report is saved in {AlertRaiser.WarningFile}";
+                AlertRaiser.RaiseNotification(title, text);
             }
         }
 

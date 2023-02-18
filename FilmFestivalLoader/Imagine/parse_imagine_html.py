@@ -182,8 +182,8 @@ class AzPageParser(HtmlPageParser):
         self.end_dt = self.start_dt + duration
 
         # Add screening to the list.
-        HtmlPageParser.add_screening(self, self.film, self.screen, self.start_dt, self.end_dt,
-                                     audience=self.audience, subtitles=self.subtitles, display=True)
+        HtmlPageParser.add_screening_from_fields(self, self.film, self.screen, self.start_dt, self.end_dt,
+                                                 audience=self.audience, subtitles=self.subtitles, display=True)
 
         # Initialize the next round of parsing.
         self.init_screening_data()

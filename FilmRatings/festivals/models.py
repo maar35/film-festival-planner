@@ -3,10 +3,14 @@ import os
 
 from django.db import models
 
+from festivals.config import Config
 
-# FestivalBase table, to keep information that is invariant for
-# festival editions.
+
 class FestivalBase(models.Model):
+    """
+    FestivalBase table, to keep information that is invariant for
+    festival editions.
+    """
     mnemonic = models.CharField(max_length=10, primary_key=True, serialize=False)
     name = models.CharField(max_length=60)
     image = models.CharField(max_length=200, null=True, blank=True)
@@ -21,8 +25,12 @@ class FestivalBase(models.Model):
         return f'{self.mnemonic}'
 
 
-# Festival table, to keep festival information.
 def default_festival(today=None):
+    """
+    Festival table, to keep festival information.
+    :param today: optional date to relate the nearest festival to
+    :return: a festival object
+    """
     nearest_festival = None
     if today is None:
         today = datetime.date.today()
@@ -51,7 +59,7 @@ def current_festival(session):
 
 
 def base_dir():
-    return os.path.expanduser('~/Documents/Film')
+    return os.path.expanduser(f'~/{Config().config["Paths"]["FestivalRootDirectory"]}')
 
 
 class Festival(models.Model):

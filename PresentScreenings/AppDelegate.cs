@@ -4,6 +4,8 @@ using System;
 using System.IO;
 using ObjCRuntime;
 using System.Linq;
+using YamlDotNet.Serialization.NamingConventions;
+using System.Collections.Generic;
 
 namespace PresentScreenings.TableView
 {
@@ -17,11 +19,14 @@ namespace PresentScreenings.TableView
 	public partial class AppDelegate : NSApplicationDelegate
 	{
         #region Static Properties
+        public static Configuration Config { get; private set; }
         public static string Festival { get; private set; }
         public static string FestivalYear { get; private set; }
         public static bool VisitPhysical { get; private set; }
+        public static string HomePath => GetHomePath();
         public static string DocumentsFolder => GetDocumentsPath();
         public static string WebColorsFolder => GetWebColorsPath();
+        public static string ConfigFile => GetConfigFilePath();
         public static string AvailabilitiesFile { get; private set; }
         public static string ScreensFile { get; private set; }
         public static string FilmsFile { get; private set; }
@@ -34,8 +39,10 @@ namespace PresentScreenings.TableView
         public static string RatingsSheetFile { get; private set; }
         public static string ScreeningsSummaryFile { get; private set; }
         public static string WebColorsFile { get; private set; }
+        public static int MaxShortMinutes { get; private set; }
         public static TimeSpan PauseBetweenOnDemandScreenings { get; private set; }
         public static TimeSpan DaySpan => new TimeSpan(24, 0, 0);
+        public static TimeSpan MaxShortDuration { get; private set; }
         #endregion
 
         #region Properties
@@ -58,14 +65,19 @@ namespace PresentScreenings.TableView
         #region Constructors
         public AppDelegate()
 		{
+            // Load the configuration.
+            Config = GetConfiguration();
+
             // Preferences.
             Festival = "IFFR";
             FestivalYear = "2023";
             VisitPhysical = true;
+
+            MaxShortMinutes = int.Parse(Config.Constants["MaxShortMinutes"]);
+            MaxShortDuration = new TimeSpan(0, MaxShortMinutes, 0);
             PauseBetweenOnDemandScreenings = new TimeSpan(0, 30, 0);
             Screening.TravelTime = new TimeSpan(0, 30, 0);
             FilmRatingDialogController.OnlyFilmsWithScreenings = false;
-            FilmRatingDialogController.MinimalDuration = new TimeSpan(0, 35, 0);
             DaySchemaScreeningControl.UseCoreGraphics = false;
 
             // Make sure the documents directory exists.
@@ -165,7 +177,7 @@ namespace PresentScreenings.TableView
             string sheetPath = Path.Combine(directory, sheetFileName);
             new Film().WriteListToFile(sheetPath, ScreeningsPlan.Films.Where(f =>
             {
-                return f.Duration >= FilmRatingDialogController.MinimalDuration;
+                return f.Duration > MaxShortDuration;
             }).ToList());
         }
 
@@ -217,14 +229,29 @@ namespace PresentScreenings.TableView
             return Environment.GetFolderPath(Environment.SpecialFolder.Personal);
         }
 
+        private static string GetConfigFilePath()
+        {
+            return $"{HomePath}/Projects/FilmFestivalPlanner/Configs/common.yml";
+        }
+
         private static string GetDocumentsPath()
         {
-            return GetHomePath() + $"/Documents/Film/{Festival}/{Festival}{FestivalYear}/FestivalPlan";
+            var festivalRoot = Config.Paths["FestivalRootDirectory"];
+            return $"{HomePath}/{festivalRoot}/{Festival}/{Festival}{FestivalYear}/FestivalPlan";
         }
 
         private static string GetWebColorsPath()
         {
-            return GetHomePath() + "/Projects/FilmFestivalPlanner";
+            return $"{HomePath}/Projects/FilmFestivalPlanner";
+        }
+
+        private Configuration GetConfiguration()
+        {
+            var deserializer = new YamlDotNet.Serialization.DeserializerBuilder()
+                .WithNamingConvention(PascalCaseNamingConvention.Instance)
+                .Build();
+            var yamlText = File.ReadAllText(GetConfigFilePath());
+            return deserializer.Deserialize<Configuration>(yamlText);
         }
 
         private void SaveFestivalData()

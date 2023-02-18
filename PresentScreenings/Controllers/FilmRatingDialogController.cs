@@ -50,7 +50,6 @@ namespace PresentScreenings.TableView
         public static bool TypeMatchFromBegin { get; set; } = true;
         public static bool OnlyFilmsWithScreenings { get; set; } = false;
         public static Subsection FilteredSubsection { get; set; } = null;
-        public static TimeSpan MinimalDuration { get; set; }
         #endregion
 
         #region Interface Implementation Properties

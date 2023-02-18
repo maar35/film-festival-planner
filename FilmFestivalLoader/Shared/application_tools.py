@@ -5,13 +5,51 @@ Created on Tue Oct 20 22:11:21 2020
 
 @author: maarten
 """
-
+import os
 from datetime import datetime
 import inspect
+import yaml
+
+
+def config():
+    return Config().config
 
 
 def comment(text):
     print(f"\n{datetime.now()}  - {text}")
+
+
+class Config:
+    config = None
+    config_path = os.path.expanduser('~/Projects/FilmFestivalPlanner/Configs/common.yml')
+
+    def __init__(self):
+        with open(self.config_path, 'r') as stream:
+            self.config = yaml.safe_load(stream)
+
+
+class Counter:
+
+    count_by_label = {}
+
+    def __init__(self):
+        pass
+
+    def start(self, label):
+        self.count_by_label[label] = 0
+
+    def increase(self, label, do_raise=True):
+        try:
+            self.count_by_label[label] += 1
+        except KeyError as e:
+            if do_raise:
+                raise e
+            else:
+                self.count_by_label[label] = 1
+
+    def get(self, label, description=None):
+        count = self.count_by_label[label]
+        return f'{label}: {count}' if description is None else f'{count} {description}'
 
 
 class ErrorCollector:
@@ -20,7 +58,7 @@ class ErrorCollector:
         self.errors = []
 
     def __str__(self):
-        return "\n".join(self.errors) + "\n"
+        return "\n".join(self.errors)
 
     def add(self, err, msg):
         frame = inspect.currentframe().f_back
