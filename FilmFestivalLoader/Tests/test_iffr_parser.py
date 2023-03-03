@@ -76,8 +76,6 @@ def arrange_test_films(festival_data):
         az_parser.description = test_film.description
         az_parser.add_film()
         az_parser.add_film_info()
-    # combi_keeper = CombinationKeeper()
-    # info_parser = FilmInfoPageParser(self.festival_data, test_films[0], combi_keeper, 'utf-8')
 
 
 def arrange_festival_data():
