@@ -137,6 +137,7 @@ class Film:
     def lower(self, s):
         return self.mapper.toascii(s).lower()
 
+    @staticmethod
     def duration_to_minutes(duration):
         return int(duration.total_seconds() / 60)
 
