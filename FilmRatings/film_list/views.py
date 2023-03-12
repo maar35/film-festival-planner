@@ -23,7 +23,7 @@ class ResultsView(generic.DetailView):
     model = Film
     template_name = 'film_list/results.html'
     http_method_names = ['get', 'post']
-    submit_name_prefix = 'rating_'
+    submit_name_prefix = 'results_'
     submit_names = []
     unexpected_error = ''
 
@@ -156,19 +156,26 @@ def film_list(request):
 
     # Initialize.
     title = 'Film Rating List'
-    submit_name_prefix = 'rating_'
+    submit_name_prefix = 'list_'
     config = Config().config
     max_short_minutes = config['Constants']['MaxShortMinutes']
     session = request.session
     logged_in_fan = current_fan(session)
+    festival = current_festival(session)
+    films = Film.films.filter(festival=festival).order_by('seq_nr')
+    film_count, rated_films_count, count_dicts = get_rating_statistic(festival, films)
     fan_list = get_present_fans()
+    highest_rating = FilmFanFilmRating.Rating.values[-1]
 
     # Get the table rows.
-    rating_rows = []
-    submit_names = []
-    get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_names)
-    film_count, rated_films_count, count_dicts = get_rating_statistic(session)
-    highest_rating = FilmFanFilmRating.Rating.values[-1]
+    film_list_rows = [{
+        'film': film,
+        'duration_str': film.duration_str(),
+        'duration_seconds': film.duration.total_seconds(),
+        'subsection': get_subsection(film),
+        'section': None,
+        'fan_ratings': get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix),
+    } for film in films]
 
     # Construct the context.
     context = add_base_context(request, {
@@ -179,7 +186,7 @@ def film_list(request):
         'highest_rating': highest_rating,
         'eligible_counts': count_dicts,
         'short_threshold': datetime.timedelta(minutes=max_short_minutes).total_seconds(),
-        'rating_rows': rating_rows,
+        'film_list_rows': film_list_rows,
     })
     refresh_rating_action(session, context)
 
@@ -188,7 +195,7 @@ def film_list(request):
         unset_log(session)
         form = PickRating(request.POST)
         if form.is_valid():
-            submitted_name = get_submitted_name(request, submit_names)
+            submitted_name = list(request.POST.keys())[-1]
             if submitted_name is not None:
                 [film_pk, rating_value] = submitted_name.strip(submit_name_prefix).split('_')
                 film = Film.films.get(id=film_pk)
@@ -204,7 +211,7 @@ def film_list(request):
     return render(request, "film_list/film_list.html", context)
 
 
-def get_rating_statistic(session):
+def get_rating_statistic(festival, films):
 
     def get_stats_for_rating(base_rating):
         counts = [count for r, count in count_by_eligible_rating.items() if r >= base_rating]
@@ -220,12 +227,11 @@ def get_rating_statistic(session):
         }
 
     # Initialize.
-    festival = current_festival(session)
     config = Config().config
     max_short_minutes = config['Constants']['MaxShortMinutes']
     max_short_duration = datetime.timedelta(minutes=max_short_minutes)
     lowest_plannable_rating = config['Constants']['LowestPlannableRating']
-    feature_films = Film.films.filter(festival=festival, duration__gt=max_short_duration)
+    feature_films = [film for film in films if film.duration > max_short_duration]
     eligible_ratings = FilmFanFilmRating.Rating.values[lowest_plannable_rating:]
     film_count = len(feature_films)
 
@@ -251,35 +257,26 @@ def get_rating_statistic(session):
     return film_count, rated_films_count, count_dicts
 
 
-def get_rating_rows(session, submit_name_prefix, fan_list, rating_rows, submit_names):
+def get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix):
+    fan_ratings = []
+    for fan in fan_list:
+        # Set a rating string to display.
+        rating_str = fan.fan_rating_str(film)
 
-    # Initialize.
-    festival = current_festival(session)
-    films = Film.films.filter(festival=festival).order_by('seq_nr')
-    logged_in_fan = current_fan(session)
+        # Get choices for this fan.
+        choices = [{
+            'value': value,
+            'rating_name': name,
+            'submit_name': f'{submit_name_prefix}{film.id}_{value}'
+        } for value, name in FilmFanFilmRating.Rating.choices] if fan == logged_in_fan else []
 
-    # Create a rating row for each film.
-    for film in films:
-
-        # Set the row to contain film, film duration and film fans.
-        subsection = get_subsection(film)
-        rating_cells = [film, film, subsection]
-        for fan in fan_list:
-            # Set a rating string to display.
-            rating_str = fan.fan_rating_str(film)
-
-            # Get choices for this fan.
-            choices = get_fan_choices(submit_name_prefix, film, fan, logged_in_fan, submit_names)
-
-            # Append a rating cell to the current row.
-            rating_cells.append({
-                'rating': rating_str,
-                'fan': fan,
-                'choices': choices
-            })
-
-        # Append a row to the table rows.
-        rating_rows.append(rating_cells)
+        # Append a fan rating dictionary to the list.
+        fan_ratings.append({
+            'fan': fan,
+            'rating': rating_str,
+            'choices': choices
+        })
+    return fan_ratings
 
 
 def get_fan_choices(submit_name_prefix, film, fan, logged_in_fan, submit_names):

@@ -21,7 +21,7 @@ def create_festival(mnemonic, start_date_str, end_date_str, edition=None):
     )
 
 
-def base_festival_mnemonic():
+def mock_base_festival_mnemonic():
     return 'Berlinale'
 
 

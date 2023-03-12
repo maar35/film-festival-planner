@@ -25,16 +25,16 @@
     {% if feature_count %}
         <p>{{ rated_features_count }} of {{ feature_count }} feature films rated</p>
             <ul>
-        {% for count in eligible_counts %}
-            <li>
-                {{ count.plannable_films_count }} with rating {{ count.base_rating }}
-                {% if count.base_rating < highest_rating %}
-                    or higher
-                {% endif %}
-                 so far,
-                {{ count.projected_plannable_count }} projected to be plannable.
-            </li>
-        {% endfor %}
+            {% for count in eligible_counts %}
+                <li>
+                    {{ count.plannable_films_count }} with rating {{ count.base_rating }}
+                    {% if count.base_rating < highest_rating %}
+                        or higher
+                    {% endif %}
+                     so far,
+                    {{ count.projected_plannable_count }} projected to be plannable.
+                </li>
+            {% endfor %}
             </ul>
     {% else %}
         <p>No feature films on this page.</p>
@@ -74,41 +74,38 @@
             </tr>
         </thead>
         <tbody>
-        {% for rating_cells in rating_rows %}
-            <tr>
-                {% for rating_cell in rating_cells %}
-                    {% if forloop.counter == 1 %}
-                        <td style="max-width: 720px">
-                            <a href="{% url 'film_list:results' rating_cell.id %}">
-                                {{ rating_cell.title }}
-                            </a>
-                        </td>
-                    {% elif forloop.counter == 2 %}
-                        {% if rating_cell.duration.total_seconds <= short_threshold %}
-                            <td style="color:SlateGray">{{ rating_cell.duration_str }}</td>
-                        {% else %}
-                            <td>{{ rating_cell.duration_str }}</td>
-                        {% endif %}
-                    {% elif forloop.counter == 3 %}
-                        <td style="color:{{ rating_cell.section.color }}">{{ rating_cell.name }}</td>
-                    {% elif rating_cell.fan == current_fan %}
-                        <td class="dropdown">
-                            <span class="drop-button">
-                                {{ rating_cell.rating }}
-                            </span>
-                            <div class="dropdown-content">
-                                {% for choice in rating_cell.choices %}
-                                    <input type="submit" value="{{ choice.value | stringformat:'2d' }}  {{ choice.rating_name }}" name="{{ choice.submit_name }}">
-                                {% endfor %}
-                            </div>
-                        </td>
-                    {% else %}
-                        <td style="text-align: center">
-                            {{ rating_cell.rating }}
-                        </td>
-                    {% endif %}
-                {% endfor %}
-            </tr>
+        {% for row in film_list_rows %}
+        <tr>
+            <td style="max-width: 720px">
+                <a href="{% url 'film_list:results' row.film.id %}">
+                    {{ row.film.title }}
+                </a>
+            </td>
+            {% if row.duration_seconds <= short_threshold %}
+                <td style="color:SlateGray">{{ row.duration_str }}</td>
+            {% else %}
+                <td>{{ row.duration_str }}</td>
+            {% endif %}
+            <td style="color:{{ row.subsection.section.color }}">{{ row.subsection.name }}</td>
+            {% for fan_rating in row.fan_ratings %}
+                {% if fan_rating.fan == current_fan %}
+                    <td class="dropdown">
+                        <span class="drop-button">
+                            {{ fan_rating.rating }}
+                        </span>
+                        <div class="dropdown-content">
+                            {% for choice in fan_rating.choices %}
+                                <input type="submit" value="{{ choice.value | stringformat:'2d' }}  {{ choice.rating_name }}" name="{{ choice.submit_name }}">
+                            {% endfor %}
+                        </div>
+                    </td>
+                {% else %}
+                    <td style="text-align: center">
+                        {{ fan_rating.rating }}
+                    </td>
+                {% endif %}
+            {% endfor %}
+        </tr>
         {% endfor %}
         </tbody>
     </table>

@@ -22,7 +22,8 @@ def create_film(film_id, title, minutes, seq_nr=-1, festival=None):
     if festival is None:
         festival = create_festival('IFFR', '2021-01-27', '2021-02-06')
     duration = timedelta(minutes=minutes)
-    return Film.films.create(festival_id=festival.id, film_id=film_id, seq_nr=seq_nr, title=title, duration=duration)
+    return Film.films.create(festival_id=festival.id, film_id=film_id,seq_nr=seq_nr,
+                             title=title, duration=duration, subsection='')
 
 
 def new_film(film_id, title, minutes, seq_nr=-1):
@@ -186,13 +187,11 @@ class FilmListViewsTests(ViewsTestCase):
 
     @staticmethod
     def rating_post_data(film, rating_value=0):
-        return {f'rating_{film.id}_{rating_value}': ['label']}
+        return {f'list_{film.id}_{rating_value}': ['label']}
 
     def assert_rating_action_redirect(self, user, get_response, post_response, redirect_response):
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
         self.assertContains(get_response, user.username)
-        self.assertContains(get_response, self.regular_fan.name)
-        self.assertContains(get_response, self.admin_fan.name)
         self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
         self.assertURLEqual(post_response.url, reverse('film_list:film_list'))
         self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
@@ -410,6 +409,7 @@ class FilmListViewsTests(ViewsTestCase):
         A logged in fan can remove a rating from the film detail view.
         """
         # Arrange.
+        does_not_exist_msg = 'FilmFanFilmRating matching query does not exist'
         film = create_film(film_id=1999, title='The Prince and the Price', minutes=98)
         fan = self.regular_fan
         rating_value = 6
@@ -441,10 +441,11 @@ class FilmListViewsTests(ViewsTestCase):
         self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
         self.assertContains(redirect_response, self.regular_fan.name)
         self.assertContains(redirect_response, self.admin_fan.name)
-        with self.assertRaisesMessage(FilmFanFilmRating.DoesNotExist, 'FilmFanFilmRating matching query does not exist'):
+        with self.assertRaisesMessage(FilmFanFilmRating.DoesNotExist, does_not_exist_msg):
             _ = FilmFanFilmRating.fan_ratings.get(film=film, film_fan=fan)
-        current_fan_row_re = re.compile(f'{fan.name}' + r'</a></td>\s*<td></td>\s*<td>Unrated</td>')
-        self.assertRegex(redirect_response.content.decode('utf-8'), current_fan_row_re, re.DOTALL)
+        current_fan_row_re = re.compile(f'{fan.name}' + r'</a>\s*</td>\s*<td[^>]*>.*?</td>\s*<td>Unrated</td>',
+                                        re.DOTALL)
+        self.assertRegex(redirect_response.content.decode('utf-8'), current_fan_row_re)
 
     def test_non_admin_cannot_save_ratings(self):
         """

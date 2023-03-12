@@ -1,3 +1,5 @@
+import os
+
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
@@ -12,8 +14,9 @@ from sections.models import Section, Subsection
 
 
 def file_row_count(festival, file, has_header=False):
+    path = os.path.join(festival.planner_data_dir, file)
     try:
-        with open(file, newline='') as f:
+        with open(path, newline='') as f:
             row_count = len(f.readlines())
         if has_header:
             row_count -= 1
