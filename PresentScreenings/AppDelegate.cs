@@ -28,6 +28,7 @@ namespace PresentScreenings.TableView
         public static string WebColorsFolder => GetWebColorsPath();
         public static string ConfigFile => GetConfigFilePath();
         public static string AvailabilitiesFile { get; private set; }
+        public static string TheatersFile { get; private set; }
         public static string ScreensFile { get; private set; }
         public static string FilmsFile { get; private set; }
         public static string SectionsFile { get; private set; }
@@ -85,6 +86,7 @@ namespace PresentScreenings.TableView
 
             // Set load/unload file names.
             AvailabilitiesFile = Path.Combine(DocumentsFolder, "availabilities.csv");
+            TheatersFile = Path.Combine(DocumentsFolder, "theaters.csv");
             ScreensFile = Path.Combine(DocumentsFolder, "screens.csv");
             FilmsFile = Path.Combine(DocumentsFolder, "films.csv");
             SectionsFile = Path.Combine(DocumentsFolder, "sections.csv");

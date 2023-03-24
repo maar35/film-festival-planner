@@ -196,6 +196,7 @@
       <DependentUpon>WarningsDialogControler.cs</DependentUpon>
     </Compile>
     <Compile Include="Entities\Configuration.cs" />
+    <Compile Include="Entities\Theater.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

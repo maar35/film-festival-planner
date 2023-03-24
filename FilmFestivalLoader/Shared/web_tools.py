@@ -17,6 +17,7 @@ from Shared.parse_tools import BaseHtmlPageParser
 
 DEFAULT_BYTE_COUNT = 512
 DEFAULT_ENCODING = 'ascii'
+DEFAULT_TIMEOUT = 10
 
 
 def iripath_to_uripath(path):
@@ -31,9 +32,14 @@ def iri_slug_to_url(host, slug):
     return result_url
 
 
-def get_encoding_from_url(url, debug_recorder, byte_count=DEFAULT_BYTE_COUNT):
+def get_netloc(url):
+    obj = urlparse(url)
+    return urlunparse([obj.scheme, obj.netloc, '', '', '', ''])
+
+
+def get_encoding_from_url(url, debug_recorder, byte_count=DEFAULT_BYTE_COUNT, timeout=DEFAULT_TIMEOUT):
     request = UrlReader.get_request(url)
-    with urlopen(request) as response:
+    with urlopen(request, timeout=timeout) as response:
         encoding = response.headers.get_content_charset()
         if encoding is None:
             html_bytes = response.read(byte_count)
@@ -106,7 +112,10 @@ class UrlFile:
             if os.path.isfile(self.path):
                 self.encoding = get_encoding_from_file(self.path, self.debug_recorder, self.byte_count)
             if self.encoding is None:
-                self.encoding = get_encoding_from_url(self.url, self.debug_recorder, self.byte_count)
+                try:
+                    self.encoding = get_encoding_from_url(self.url, self.debug_recorder, self.byte_count)
+                except ValueError as e:
+                    self.error_collector.add(e, f'in {self.url}')
             if self.encoding is None:
                 self.error_collector.add('No encoding found', f'{self.url}')
                 self.encoding = self.default_encoding
@@ -117,17 +126,22 @@ class UrlReader:
     alt_user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36'
     headers = {'User-Agent': alt_user_agent}
 
-    def __init__(self, error_collector):
+    def __init__(self, error_collector, timeout=DEFAULT_TIMEOUT):
         self.error_collector = error_collector
+        self.timeout = timeout
 
     @classmethod
     def get_request(cls, url):
         return Request(url, headers=cls.headers)
+        # try:
+        #     return Request(url, headers=cls.headers)
+        # except ValueError as e:
+        #     self.error_collector.add(e, f'in {url}')
 
     def load_url(self, url, target_file=None, encoding=DEFAULT_ENCODING):
         request = self.get_request(url)
         try:
-            with urlopen(request) as response:
+            with urlopen(request, timeout=self.timeout) as response:
                 html_bytes = response.read()
         except HTTPError as e:
             self.error_collector.add(e, f'while opening {url}')
@@ -155,9 +169,13 @@ class HtmlCharsetParser(BaseHtmlPageParser):
         self.charset = None
 
     def get_charset(self, text):
-        self.feed(text)
-        charset = (self.charset if self.charset is not None else self.default_charset)
-        return charset
+        try:
+            self.feed(text)
+        except TypeError:
+            return 'ascii'
+        else:
+            charset = (self.charset if self.charset is not None else self.default_charset)
+            return charset
 
     def handle_starttag(self, tag, attrs):
         BaseHtmlPageParser.handle_starttag(self, tag, attrs)

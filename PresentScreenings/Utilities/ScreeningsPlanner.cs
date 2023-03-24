@@ -49,6 +49,7 @@ namespace PresentScreenings.TableView
                 var screenings = ScreeningsPlan.Screenings
                     .Where(s => films.Any(f => f.FilmId == s.FilmId))
                     .Where(s => s.IsPlannable)
+                    .Where(s => s.HasEligibleTheater)
                     .OrderByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.AttendedByFriend)
                     .ThenByDescending(s => s.Status == ScreeningInfo.ScreeningStatus.Free)
                     .ThenByDescending(s => s.HasQAndA)

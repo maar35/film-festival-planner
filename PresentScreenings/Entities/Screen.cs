@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace PresentScreenings.TableView
@@ -31,6 +32,7 @@ namespace PresentScreenings.TableView
 
         #region Properties
         public int ScreenId { get; }
+        public Theater Theater { get; }
         public string City { get; }
         public string ParseName { get; }
         public string Abbreviation { get; }
@@ -56,14 +58,17 @@ namespace PresentScreenings.TableView
         {
             // Assign the fields of the input string.
             string[] fields = screenText.Split(';');
-            string screenId = fields[0];
-            City = fields[1];
+            string screenIdString = fields[0];
+            string theaterIdString = fields[1];
             ParseName = fields[2];
             Abbreviation = fields[3];
             string screenType = fields[4];
 
             // Assign properties that need calculating.
-            ScreenId = int.Parse(screenId);
+            ScreenId = int.Parse(screenIdString);
+            int theaterId = int.Parse(theaterIdString);
+            Theater = (from Theater t in ScreeningsPlan.Theaters where t.TheaterId == theaterId select t).First();
+            City = Theater.City;
             Type = (ScreenType)Enum.Parse(typeof(ScreenType), screenType);
         }
 

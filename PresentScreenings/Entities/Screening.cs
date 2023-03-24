@@ -63,6 +63,7 @@ namespace PresentScreenings.TableView
         public bool Location => ScreenType == Screen.ScreenType.Location;
         public int TimesIAttendFilm => ScreeningsPlan.Screenings.Count(s => s.FilmId == FilmId && s.IAttend);
         public bool IsPlannable => GetIsPlannable();
+        public bool HasEligibleTheater => GetHasEligibleTheater();
         public List<Screening> FilmScreenings => ViewController.FilmScreenings(FilmId);
         public int FilmScreeningCount => FilmScreenings.Count;
         public List<ScreenedFilm> ScreenedFilms => Film.FilmInfo.ScreenedFilms;
@@ -250,6 +251,12 @@ namespace PresentScreenings.TableView
                 && !SoldOut
                 && (AppDelegate.VisitPhysical || !Location);
             return plannable;
+        }
+
+        protected virtual bool GetHasEligibleTheater()
+        {
+            Theater.PriorityValue priority = Screen.Theater.Priority;
+            return priority == Theater.PriorityValue.High;
         }
         #endregion
 

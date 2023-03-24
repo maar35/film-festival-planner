@@ -22,10 +22,12 @@ namespace PresentScreenings.TableView
         private const float _yMargin = ControlsFactory.BigVerticalMargin;
         private const float _xBetweenViews = ControlsFactory.HorizontalPixelsBetweenControls;
         private const float _yBetweenViews = ControlsFactory.VerticalPixelsBetweenControls;
+        private const float _xBetweenLabels = ControlsFactory.HorizontalPixelsBetweenLabels;
+        private const float _labelWidth = ControlsFactory.SmallControlWidth;
+        private const float _labelHeight = ControlsFactory.StandardLabelHeight;
         private const float _imageSide = ControlsFactory.StandardImageSide;
         private const float _screeningHeight = ControlsFactory.BigScreeningLabelHeight;
-        private const float _warningHeight = ControlsFactory.StandardLabelHeight;
-        private const float _rowHeight = _screeningHeight + _warningHeight;
+        private const float _rowHeight = _screeningHeight + _labelHeight;
         private const float _buttonWidth = ControlsFactory.StandardButtonWidth;
         private const float _buttonHeight = ControlsFactory.StandardButtonHeight;
         private const float _yBetweenRows = ControlsFactory.WideVerticalPixelsBetweenLabels;
@@ -44,15 +46,31 @@ namespace PresentScreenings.TableView
         private bool _doSetInitiallyVisibleFrame = false;
         private CGRect _initiallyVisibleFrame;
         private NSView _sampleView;
+        private NSButton _doneButton;
         #endregion
 
         #region Properties
         public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
+        public Dictionary<Screening, NSView> LabelByScreening { get; private set; }
+
+        public bool ScreeningInfoChanged
+        {
+            get => View.Window.DocumentEdited;
+            private set
+            {
+                View.Window.DocumentEdited = value;
+                if (value)
+                {
+                    ScreeningInfo.ScreeningInfoChanged = true;
+                }
+            }
+        }
         #endregion
 
         #region Constructors
         public WarningsDialogControler (IntPtr handle) : base (handle)
 		{
+            LabelByScreening = new Dictionary<Screening, NSView> { };
 		}
         #endregion
 
@@ -90,7 +108,7 @@ namespace PresentScreenings.TableView
             CreateScrollView();
 
             // Create the close button.
-            CreateCloseButton();
+            CreateDoneButton();
 
             // Disable Resizing.
             GoToScreeningDialog.DisableResizing(this, _sampleView);
@@ -113,6 +131,18 @@ namespace PresentScreenings.TableView
         {
             _presentor.GoToScreening(screening);
             CloseDialog();
+        }
+
+        public void ToggleTicketStatus(Screening screening)
+        {
+            screening.TicketsBought = !screening.TicketsBought;
+            var label = LabelByScreening[screening];
+            label.NeedsDisplay = true;
+            _presentor.UpdateAttendanceStatus(screening);
+            _presentor.UpdateWarnings();
+            _presentor.ReloadScreeningsView(false);
+            ScreeningInfoChanged = true;
+            _doneButton.Title = ControlsFactory.TitleByChanged[ScreeningInfoChanged];
         }
         #endregion
 
@@ -208,17 +238,22 @@ namespace PresentScreenings.TableView
 
             // Create a frame for the Go To Screening button.
             var buttonSide = _screeningHeight;
-            var yButton = yRow + _warningHeight;
+            var yButton = yRow + _labelHeight;
             var buttonRect = new CGRect(_xScrollerMargin, yButton, buttonSide, buttonSide);
 
             // Create a frame for the screening label.
             var xScreening = _xScrollerMargin + buttonSide;
             var yScreening = yButton;
-            var screeningWidth = rowWidth - buttonSide;
+            var screeningWidth = rowWidth - buttonSide - _labelWidth - 2 * _xBetweenLabels;
             var screeningRect = new CGRect(xScreening, yScreening, screeningWidth, _screeningHeight);
 
+            // Create a frame for the Tickets Bought checkbox.
+            var xBox = xScreening + screeningWidth + _xBetweenLabels;
+            var yBox = yScreening + ControlsFactory.VerticalPixelsBetweenControls;
+            var boxRect = new CGRect(xBox, yBox, _labelWidth, _labelHeight);
+
             // Create a frame for the warning label.
-            var warningRect = new CGRect(_xScrollerMargin, yRow, rowWidth, _warningHeight);
+            var warningRect = new CGRect(_xScrollerMargin, yRow, rowWidth, _labelHeight);
 
             // Add screening rows to the document view.
             var yShift = _rowHeight + _yBetweenRows;
@@ -236,7 +271,16 @@ namespace PresentScreenings.TableView
                     screening,
                     true,
                     GoToScreening);
+                LabelByScreening.Add(screening, screeningLabel);
                 docView.AddSubview(screeningLabel);
+
+
+                // Add the Tickets Bought checkbox.
+                var box = ControlsFactory.NewCheckbox(boxRect);
+                box.Title = "Tickets";
+                box.Activated += (sender, e) => ToggleTicketStatus(screening);
+                box.State = screening.TicketsBought ? NSCellStateValue.On : NSCellStateValue.Off;
+                docView.AddSubview(box);
 
                 // Add the warning label.
                 var warningLabel = ControlsFactory.NewScreeningWarningLabel(warningRect, screening);
@@ -252,19 +296,31 @@ namespace PresentScreenings.TableView
                 // Shift the frames.
                 buttonRect.Y -= yShift;
                 screeningRect.Y -= yShift;
+                boxRect.Y -= yShift;
                 warningRect.Y -= yShift;
             }
         }
 
-        private void CreateCloseButton()
+        private void CreateDoneButton()
         {
-            NSButton closeButton = ControlsFactory.NewCancelButton(_closeButtonFrame);
-            closeButton.Action = new ObjCRuntime.Selector("CloseWarningsDialog:");
-            View.AddSubview(closeButton);
+            _doneButton = ControlsFactory.NewCancelButton(_closeButtonFrame);
+            _doneButton.Action = new ObjCRuntime.Selector("CloseWarningsDialog:");
+            _doneButton.Title = ControlsFactory.TitleByChanged[ScreeningInfoChanged];
+            View.AddSubview(_doneButton);
         }
 
         void CloseDialog()
         {
+            if (ScreeningInfoChanged)
+            {
+                // Save the screening info.
+                ScreeningDialogController.SaveScreeningInfo();
+
+                // Unset the Document Edited flag of the presentor.
+                _presentor.ScreeningInfoChanged = false;
+            }
+
+            // Close the dialog.
             _presentor.DismissViewController(this);
         }
         #endregion

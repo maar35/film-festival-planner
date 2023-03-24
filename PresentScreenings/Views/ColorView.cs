@@ -48,6 +48,8 @@ namespace PresentScreenings.TableView
         #region Private members
         private static readonly NSColor screeningBgColorBlack = NSColor.FromRgb(0, 0, 0);
         private static readonly NSColor screeningTextColorBlack = NSColor.White;
+        private static readonly NSColor screeningBgColorOffBlack = NSColor.FromRgb(38, 38, 38);
+        private static readonly NSColor screeningTextColorOffBlack = NSColor.Orange;
         private static readonly NSColor screeningBgColorGrey = NSColor.FromRgb(219, 219, 219);
         private static readonly NSColor screeningTextColorGrey = NSColor.FromRgb(0, 0, 0);
         private static readonly NSColor screeningBgColorDarkGrey = NSColor.FromRgb(176, 176, 176);
@@ -96,6 +98,7 @@ namespace PresentScreenings.TableView
 
             TextColorByScreeningStatus = new Dictionary<ScreeningInfo.ScreeningStatus, NSColor> { };
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Free, screeningTextColorBlack);
+            TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Unavailable, screeningTextColorOffBlack);
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.NeedingTickets, screeningTextColorPurple);
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Attending, screeningTextColorRed);
             TextColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.AttendedByFriend, screeningTextColorBlue);
@@ -105,6 +108,7 @@ namespace PresentScreenings.TableView
 
             BgColorByScreeningStatus = new Dictionary<ScreeningInfo.ScreeningStatus, NSColor> { };
             BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Free, screeningBgColorBlack);
+            BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Unavailable, screeningBgColorOffBlack);
             BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.NeedingTickets, screeningBgColorPurple);
             BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.Attending, screeningBgColorRed);
             BgColorByScreeningStatus.Add(ScreeningInfo.ScreeningStatus.AttendedByFriend, screeningBgColorBlue);

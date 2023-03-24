@@ -22,6 +22,7 @@ namespace PresentScreenings.TableView
 
         #region Static Properties
         public static List<FilmFanAvailability> Availabilities { get; private set; }
+        public static List<Theater> Theaters { get; private set; }
         public static List<Screen> Screens { get; private set; }
         public static List<Film> Films { get; private set; }
         public static List<Section> Sections { get; private set; }
@@ -47,6 +48,10 @@ namespace PresentScreenings.TableView
             // Read availability.
             Availabilities = new FilmFanAvailability()
                 .ReadListFromFile(AppDelegate.AvailabilitiesFile, line => new FilmFanAvailability(line));
+
+            // Read theaters.
+            Theaters = new Theater()
+                .ReadListFromFile(AppDelegate.TheatersFile, line => new Theater(line));
 
             // Read screens.
             Screens = new Screen()
