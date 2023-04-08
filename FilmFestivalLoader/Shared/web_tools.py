@@ -79,6 +79,14 @@ def fix_json(code_point_str):
     return result_str
 
 
+def get_home_page(home_url, file_keeper, error_collector, debug_recorder):
+    home_file = os.path.join(file_keeper.webdata_dir, 'home.html')
+    url_file = UrlFile(home_url, home_file, error_collector, debug_recorder, byte_count=500)
+    home_html = url_file.get_text()
+    if home_html is not None:
+        print(f'Home page read into {home_file}, encoding={url_file.encoding}')
+
+
 class UrlFile:
     default_byte_count = DEFAULT_BYTE_COUNT
     default_encoding = DEFAULT_ENCODING

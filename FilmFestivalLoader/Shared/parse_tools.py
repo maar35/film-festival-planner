@@ -211,7 +211,7 @@ class HtmlPageParser(BaseHtmlPageParser):
                                   audience='', program=None, display=True):
 
         screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience, program, subtitles)
-        self.add_screening(screening)
+        self.add_screening(screening, display=display)
 
     def add_screening(self, screening, display=True):
 

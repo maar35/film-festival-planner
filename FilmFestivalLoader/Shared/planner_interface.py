@@ -607,6 +607,25 @@ class FestivalData:
         except ValueError:
             self.curr_screen_id = 0
 
+    def print_combi_screenings(self, combi_program_id):
+        def print_screening(f, s):
+            print(f'{f.title:36} {s.start_datetime}-{s.end_datetime} {s.screen.name}')
+
+        combi_program = self.get_film_by_id(combi_program_id)
+        combi_info = combi_program.film_info(self)
+        screened_films = [self.get_film_by_id(sf.filmid) for sf in combi_info.screened_films]
+        screenings_by_title = {sf.title: sf.screenings(self) for sf in screened_films}
+        print()
+        print(f'Print the {len(combi_program.screenings(self))} screenings of {combi_program.title}, '
+              f'{len(screened_films)} screened films')
+        for cs in sorted(combi_program.screenings(self), key=lambda s: s.start_datetime):
+            print()
+            print_screening(combi_program, cs)
+            for sf in screened_films:
+                s_filtered = [s for s in screenings_by_title[sf.title] if s.start_datetime == cs.start_datetime]
+                for s in s_filtered:
+                    print_screening(sf, s)
+
     def sort_films(self):
         seq_nr = 0
         for film in sorted(self.films):
