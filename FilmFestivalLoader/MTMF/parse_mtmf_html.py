@@ -221,13 +221,17 @@ class FilmPageParser(HtmlPageParser):
         self.article_paragraph = ''
 
     def set_article(self):
-        self.article = '\n\n'.join(self.article_paragraphs)
+        self.article = '\n\n'.join(self.article_paragraphs).strip()
 
     def add_combination_url(self, url):
         self.combination_urls.append(url)
 
     def add_screened_film_url(self, url):
         self.screened_film_urls.append(url)
+
+    def add_properties_to_article(self):
+        properties_text = '\n'.join([f'{k}: {v}' for k, v in self.film_property_by_label.items()])
+        self.article += '\n\nFilm properties\n' + properties_text
 
     def add_film(self):
         if self.title is None:
@@ -319,6 +323,7 @@ class FilmPageParser(HtmlPageParser):
             self.set_article()
         elif self.stateStack.state_is(self.FilmsParseState.IN_PROPERTIES) and tag == 'dl':
             self.stateStack.change(self.FilmsParseState.DONE)
+            self.add_properties_to_article()
             self.add_film()
 
     def handle_data(self, data):
