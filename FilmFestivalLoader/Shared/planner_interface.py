@@ -572,7 +572,7 @@ class FestivalData:
                 theaters = [create_theater(self.split_rec(line, ';')) for line in f]
             self.theater_by_location = {theater.key(): theater for theater in theaters}
         except OSError:
-            pass
+            theaters = []
 
         try:
             self.curr_theater_id = max(theater.theater_id for theater in theaters)

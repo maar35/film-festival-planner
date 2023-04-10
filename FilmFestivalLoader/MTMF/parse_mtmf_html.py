@@ -369,7 +369,8 @@ class FilmPageParser(HtmlPageParser):
                     combination_film_info.screened_films.append(screened_film)
 
             # Set the combination programs of the screened film.
-            screened_film_info.combination_films = combination_films
+            unique_combinations = set(screened_film_info.combination_films) and set(combination_films)
+            screened_film_info.combination_films = list(unique_combinations)
 
         # Link the combination programs to their screened films.
         for (film_id, screened_film_urls) in FilmPageParser.screened_film_urls_by_film_id.items():
