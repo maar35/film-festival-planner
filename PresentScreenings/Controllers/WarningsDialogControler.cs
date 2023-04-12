@@ -69,9 +69,9 @@ namespace PresentScreenings.TableView
 
         #region Constructors
         public WarningsDialogControler (IntPtr handle) : base (handle)
-		{
+        {
             LabelByScreening = new Dictionary<Screening, NSView> { };
-		}
+        }
         #endregion
 
         #region Override Methods

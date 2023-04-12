@@ -263,18 +263,20 @@ class Subsection:
 
 
 class Theater:
+    default_prio = 1
 
-    def __init__(self, theater_id, city, name, abbr):
+    def __init__(self, theater_id, city, name, abbr, prio=None):
         self.theater_id = theater_id
         self.city = city
         self.name = name
         self.abbr = abbr
+        self.prio = prio or self.default_prio
 
     def __str__(self):
         return self.name
 
     def __repr__(self):
-        text = ';'.join([str(self.theater_id), self.city, self.name, self.abbr])
+        text = ';'.join([str(self.theater_id), self.city, self.name, self.abbr, self.prio])
         return f'{text}\n'
 
     def key(self):
@@ -565,7 +567,8 @@ class FestivalData:
             city = fields[1]
             name = fields[2]
             abbr = fields[3]
-            return Theater(theater_id, city, name, abbr)
+            prio = fields[4]
+            return Theater(theater_id, city, name, abbr, prio)
 
         try:
             with open(self.theaters_file, 'r') as f:

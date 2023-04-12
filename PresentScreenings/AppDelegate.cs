@@ -5,7 +5,6 @@ using System.IO;
 using ObjCRuntime;
 using System.Linq;
 using YamlDotNet.Serialization.NamingConventions;
-using System.Collections.Generic;
 
 namespace PresentScreenings.TableView
 {

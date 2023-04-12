@@ -21,8 +21,6 @@ on_demand_end_dt = datetime.datetime.fromisoformat('2023-04-01 23:59:00')
 # Files.
 file_keeper = FileKeeper(festival, festival_year)
 debug_file = file_keeper.debug_file
-screenings_file_format = os.path.join(file_keeper.webdata_dir, "screenings_{:03d}_{:02d}.html")
-details_file_format = os.path.join(file_keeper.webdata_dir, "details_{:03d}_{:02d}.html")
 
 # URL information.
 mtmf_hostname = 'https://moviesthatmatter.nl'
@@ -164,8 +162,8 @@ class FilmUrlFinder:
                 counter.increase(self.main_sections[section]['plural'])
                 self.get_film_urls(section_url, self.main_sections[section]['singular'], i)
 
-    def get_film_urls(self, section_url, prefix, web_id):
-        section_file = file_keeper.numbered_webdata_file(f'section_{prefix}', web_id)
+    def get_film_urls(self, section_url, prefix, section_index):
+        section_file = file_keeper.numbered_webdata_file(f'section_{prefix}', section_index)
         url_file = UrlFile(section_url, section_file, error_collector, debug_recorder, byte_count=500)
         section_html = url_file.get_text()
         if section_html is not None:
@@ -199,7 +197,7 @@ class FilmPageParser(HtmlPageParser):
     screened_film_urls_by_film_id = {}
 
     def __init__(self, festival_data, url):
-        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'F', debugging=True)
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'F', debugging=False)
         self.url = url
         self.festival_data = festival_data
         self.print_debug(self.bar, f'Analysing film URL {url}')
@@ -431,7 +429,7 @@ class ScreeningsPageParser(HtmlPageParser):
     nl_month_by_name: Dict[str, int] = {'mrt': 3, 'apr': 4}
 
     def __init__(self, iffr_data, film, subtitles):
-        HtmlPageParser.__init__(self, iffr_data, debug_recorder, 'S', debugging=True)
+        HtmlPageParser.__init__(self, iffr_data, debug_recorder, 'S', debugging=False)
         self.film = film
         self.subtitles = subtitles
         self.print_debug(self.bar, f"Analysing screenings of {film}, {film.url}")
@@ -523,7 +521,8 @@ class ScreeningsPageParser(HtmlPageParser):
             self.read_screen(url)
 
     def read_screen(self, url):
-        locations_file = screenings_file_format.format(self.film.filmid, self.screening_nr)
+        locations_file_format = os.path.join(file_keeper.webdata_dir, "screenings_{:03d}_{:02d}.html")
+        locations_file = locations_file_format.format(self.film.filmid, self.screening_nr)
         url_file = UrlFile(url, locations_file, error_collector, debug_recorder)
         try:
             locations_html = url_file.get_text(f'Downloading shopping cart site {url}')
@@ -601,7 +600,7 @@ class ShoppingCartPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, film, sequence_nr, url):
-        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'SC', debugging=True)
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'SC', debugging=False)
         self.film = film
         self.sequence_nr = sequence_nr
         self.print_debug(self.bar, f'Analysing shopping cart #{sequence_nr} of FILM {film}, {url}')
@@ -609,6 +608,7 @@ class ShoppingCartPageParser(HtmlPageParser):
         self.current_screen = None
 
     def get_theater_screen(self, url):
+        details_file_format = os.path.join(file_keeper.webdata_dir, "details_{:03d}_{:02d}.html")
         details_file = details_file_format.format(self.film.filmid, self.sequence_nr)
         url_file = UrlFile(url, details_file, error_collector, debug_recorder)
         try:
@@ -626,7 +626,6 @@ class ShoppingCartPageParser(HtmlPageParser):
 
         if self.state_stack.state_is(self.ShoppingCartState.IDLE):
             if tag == 'div' and len(attrs) > 0 and attrs[0][1] == 'at-show-property at-show-location':
-
                 self.state_stack.change(self.ShoppingCartState.IN_SCREEN)
             elif tag == 'iframe' and len(attrs) > 4 and attrs[0][1] == 'order__iframe order__iframe--crossmarx':
                 details_url = attrs[4][1]
@@ -646,7 +645,7 @@ class TheaterScreenPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, film, url):
-        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'TS', debugging=True)
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'TS', debugging=False)
         self.print_debug(self.bar, f'Analysing screening location of FILM {film}, {url}')
         self.stateStack = self.StateStack(self.print_debug, self.ScreensParseState.IDLE)
         self.current_screen = None

@@ -141,10 +141,6 @@ class UrlReader:
     @classmethod
     def get_request(cls, url):
         return Request(url, headers=cls.headers)
-        # try:
-        #     return Request(url, headers=cls.headers)
-        # except ValueError as e:
-        #     self.error_collector.add(e, f'in {url}')
 
     def load_url(self, url, target_file=None, encoding=DEFAULT_ENCODING):
         request = self.get_request(url)
@@ -180,9 +176,9 @@ class HtmlCharsetParser(BaseHtmlPageParser):
         try:
             self.feed(text)
         except TypeError:
-            return 'ascii'
+            return DEFAULT_ENCODING
         else:
-            charset = (self.charset if self.charset is not None else self.default_charset)
+            charset = self.charset or self.default_charset
             return charset
 
     def handle_starttag(self, tag, attrs):

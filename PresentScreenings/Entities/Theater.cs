@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace PresentScreenings.TableView
 {
@@ -20,9 +19,19 @@ namespace PresentScreenings.TableView
         public string Name { get; }
         public string Abbreviation { get; }
         public PriorityValue Priority { get; private set; }
+        public static Dictionary<int, PriorityValue> PriorityByNumber { get; set; }
         #endregion
 
         #region Constructors
+        // Static constructor.
+        static Theater()
+        {
+            PriorityByNumber = new Dictionary<int, PriorityValue> { };
+            PriorityByNumber.Add(0, PriorityValue.NoGo);
+            PriorityByNumber.Add(1, PriorityValue.Low);
+            PriorityByNumber.Add(2, PriorityValue.High);
+        }
+
         // Constructor to read records from the interface file.
         public Theater(string theaterText)
         {
@@ -32,20 +41,11 @@ namespace PresentScreenings.TableView
             City = fields[1];
             Name = fields[2];
             Abbreviation = fields[3];
+            string priorityString = fields[4];
 
             // Assign properties that need calculating.
             TheaterId = int.Parse(theaterId);
-
-            // EXPRIMENT introduce priority.
-            List<int> eligibleTheaters = new List<int> { 1, 15 };
-            if (eligibleTheaters.Contains(TheaterId))
-            {
-                Priority = PriorityValue.High;
-            }
-            else
-            {
-                Priority = PriorityValue.Low;
-            }
+            Priority = PriorityByNumber[int.Parse(priorityString)];
         }
 
         // Empty constructor to facilitate ListStreamer method calls.
