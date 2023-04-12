@@ -95,6 +95,14 @@ namespace PresentScreenings.TableView
             _presentor.RunningPopupsCount++;
         }
 
+        public override void ViewDidAppear()
+        {
+            base.ViewDidAppear();
+
+            // Set the window title.
+            View.Window.Title = $"Analyzer, plan created for {ScreeningInfo.Me}";
+        }
+
         public override void ViewWillDisappear()
         {
             base.ViewWillDisappear();

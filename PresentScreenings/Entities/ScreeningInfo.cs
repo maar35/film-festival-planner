@@ -15,6 +15,7 @@ namespace PresentScreenings.TableView
         public enum ScreeningStatus
         {
             Free,
+            Unavailable,
             Attending,
             AttendedByFriend,
             AttendingFilm,
@@ -78,6 +79,7 @@ namespace PresentScreenings.TableView
         {
             _screeningStatusByString = new Dictionary<string, ScreeningStatus> { };
             _screeningStatusByString.Add("ONWAAR", ScreeningStatus.Free);
+            _screeningStatusByString.Add("AFWEZIG", ScreeningStatus.Unavailable);
             _screeningStatusByString.Add("MAARTEN", ScreeningStatus.Attending);
             _screeningStatusByString.Add("FILM", ScreeningStatus.AttendingFilm);
             _screeningStatusByString.Add("TIJD", ScreeningStatus.TimeOverlap);

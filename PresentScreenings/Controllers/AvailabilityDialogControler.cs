@@ -104,7 +104,7 @@ namespace PresentScreenings.TableView
             Presentor.DismissViewController(this);
         }
 
-        public static void SaveAvailabilities()
+        public void SaveAvailabilities()
         {
             // Save the availabilities.
             App.WriteFilmFanAvailabilities();
@@ -292,6 +292,7 @@ namespace PresentScreenings.TableView
             }
             _availablityChanged = true;
             UpdateControls(fan, true);
+            UpdateScreenings(days);
         }
 
         private void SetAvailability(NSCellStateValue state, string fan, DateTime day)
@@ -382,6 +383,15 @@ namespace PresentScreenings.TableView
                 NSButton box = boxByDay.Value;
                 box.State = AvailabilityState(fan, day);
             }
+        }
+
+        private void UpdateScreenings(List<DateTime> days)
+        {
+            List<Screening> dayScreenings = ScreeningsPlan.Screenings
+                .Where(s => days.Contains(s.StartDate))
+                .ToList();
+            Presentor.UpdateOneAttendanceStatus(ScreeningsPlan.Screenings);
+            Presentor.ReloadScreeningsView(false);
         }
 
         private NSCellStateValue AvailabilityState(string fan)

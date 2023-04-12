@@ -310,6 +310,10 @@ namespace PresentScreenings.TableView
             {
                 screening.Status = ScreeningInfo.ScreeningStatus.NoTravelTime;
             }
+            else if (!screening.FitsAvailability)
+            {
+                screening.Status = ScreeningInfo.ScreeningStatus.Unavailable;
+            }
             else
             {
                 screening.Status = ScreeningInfo.ScreeningStatus.Free;

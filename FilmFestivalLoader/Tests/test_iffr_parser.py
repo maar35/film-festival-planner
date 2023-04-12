@@ -8,51 +8,44 @@ Created on Thu Dec 24 12:27:14 2020
 @author: maartenroos
 """
 
-import datetime
 import unittest
 
-# from IFFR.parse_iffr_html import IffrData, AzPageParser, CombinationKeeper, FilmInfoPageParser
 from IFFR.parse_iffr_html import AzPageParser, IffrData
 from Shared.application_tools import Counter
 from Shared.parse_tools import FileKeeper
 from Shared.planner_interface import Film, ScreenedFilmType, ScreenedFilm, Screen
 from Shared.web_tools import fix_json
+from Tests.AuxiliaryClasses.test_film import TestFilm
 
 festival = 'IFFR'
 festival_year = 2023
 
 
-class TestFilm():
+class IffrTestFilm(TestFilm):
     def __init__(self, film_id, title, url, minutes, description):
-        self.film_id = film_id
-        self.title = title
-        self.url = url
-        self.duration = datetime.timedelta(minutes=minutes)
-        self.description = description
-
-    def film_info(self, data):
-        return Film.film_info(self, data)
+        festival_data = arrange_festival_data()
+        TestFilm.__init__(self, film_id, title, url, minutes, description, festival_data)
 
 
 def arrange_test_films(festival_data):
     # Create a list of bare-bones film-like objects.
     test_films = []
-    test_films.append(TestFilm(
+    test_films.append(IffrTestFilm(
         500, 'Zappa',
         'https://iffr.com/nl/iffr/2021/films/4c62c61a-5d03-43f1-b3fd-1acc5fe74b2c/zappa',
         129,
         'A fabulous documentary on the greatest musical artist ever.'))
-    test_films.append(TestFilm(
+    test_films.append(IffrTestFilm(
         501, '100UP',
         'https://iffr.com/nl/iffr/2021/films/904e10e4-2b45-49ab-809a-bdac8e8950d1/100up',
         93,
         'this is test film, specially created for this unit test'))
-    test_films.append(TestFilm(
+    test_films.append(IffrTestFilm(
         502, '’Til Kingdom Come',
         'https://iffr.com/nl/iffr/2021/films/c0e65192-b1a9-4fbe-b380-c74002cee909/til-kingdom-come',
         76,
         'As the tile already indicates, the makers of the film disrespect the English language.'))
-    test_films.append(TestFilm(
+    test_films.append(IffrTestFilm(
         503, '80 000 ans',
         'https://iffr.com/nl/iffr/2021/films/80-000-ans',
         28,
