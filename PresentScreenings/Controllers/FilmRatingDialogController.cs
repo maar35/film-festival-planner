@@ -27,7 +27,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
+        public AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
         public NSTableView FilmRatingTableView => _filmRatingTableView;
         public NSButton WebLinkButton => _downloadFilmInfoButton;
         public NSButton FilmInfoButton => _goToScreeningButton;
@@ -153,7 +153,8 @@ namespace PresentScreenings.TableView
                     uncombineSheet.Presentor = this;
                     break;
                 case "GoToScreeningSegue":
-                    FilmInfoDialogController.Presentor = this;
+                    var filmInfoModal = segue.DestinationController as FilmInfoDialogController;
+                    filmInfoModal.Presentor = this;
                     break;
             }
         }
@@ -534,7 +535,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Custom Actions
-        partial void AcceptDialog(Foundation.NSObject sender)
+        partial void AcceptDialog(NSObject sender)
         {
             CloseDialog();
         }

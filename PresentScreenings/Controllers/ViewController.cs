@@ -185,14 +185,14 @@ namespace PresentScreenings.TableView
             switch (segue.Identifier)
             {
                 case "ScreeningsToScreeningInfo:":
-                    var dialog = segue.DestinationController as ScreeningDialogController;
-                    dialog.PopulateDialog((DaySchemaScreeningControl)sender);
-                    ScreeningDialogController.Presentor = this;
+                    var screeningInfoDialog = segue.DestinationController as ScreeningDialogController;
+                    screeningInfoDialog.PopulateDialog((DaySchemaScreeningControl)sender);
+                    screeningInfoDialog.Presentor = this;
                     break;
                 case "ScreeningsToFilmInfo":
                     var filmInfoDialog = segue.DestinationController as FilmInfoDialogController;
                     filmInfoDialog.UseTitleBackground = true;
-                    FilmInfoDialogController.Presentor = this;
+                    filmInfoDialog.Presentor = this;
                     break;
             }
         }
@@ -943,7 +943,7 @@ namespace PresentScreenings.TableView
 
         public void ShowScreeningInfo()
         {
-            Screening screening = _plan.CurrScreening;
+            Screening screening = CurrentScreening;
             DaySchemaScreeningControl control = _controlByScreening[screening];
             PerformSegue("ScreeningsToScreeningInfo:", control);
         }
