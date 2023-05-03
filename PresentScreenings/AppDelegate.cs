@@ -5,6 +5,7 @@ using System.IO;
 using ObjCRuntime;
 using System.Linq;
 using YamlDotNet.Serialization.NamingConventions;
+using System.Threading.Tasks;
 
 namespace PresentScreenings.TableView
 {
@@ -352,20 +353,30 @@ namespace PresentScreenings.TableView
             Controller.SetPreviousScreening();
         }
 
-        internal void NavigateFilmScreening(Screening screening)
+        internal async void NavigateFilmScreening(Screening screening)
         {
-            if (FilmsDialogController != null)
-            {
-                FilmsDialogController.CloseDialog();
-            }
+            // Close the film info dialog when running.
             if (FilmInfoController != null)
             {
                 FilmInfoController.CloseDialog();
             }
+
+            // Prevents the app from freezing when the last dialog is closed.
+            await Task.Delay(100);
+
+            // Close the film ratings dialog when running.
+            if (FilmsDialogController != null)
+            {
+                FilmsDialogController.CloseDialog();
+            }
+
+            // Close the analyser dialog when running.
             if (AnalyserDialogController != null)
             {
                 AnalyserDialogController.CloseDialog();
             }
+
+            // Open the screening info dialog of the given screening.
             Controller.GoToScreening(screening);
         }
 

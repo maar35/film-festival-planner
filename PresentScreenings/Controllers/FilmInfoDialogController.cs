@@ -46,7 +46,7 @@ namespace PresentScreenings.TableView
 
         #region Properties
         public static AppDelegate App => (AppDelegate)NSApplication.SharedApplication.Delegate;
-        public static GoToScreeningDialog Presentor { get; set; }
+        public GoToScreeningDialog Presentor { get; set; }
         public bool BehaveAsPopover { get; set; } = false;
         public bool UseTitleBackground { get; set; } = false;
         #endregion
@@ -251,8 +251,7 @@ namespace PresentScreenings.TableView
 
         private void GoToScreening(Screening screening)
         {
-            Presentor.GoToScreening(screening);
-            CloseDialog();
+            App.NavigateFilmScreening(screening);
         }
         #endregion
 

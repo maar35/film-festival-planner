@@ -46,7 +46,6 @@ namespace PresentScreenings.TableView
         private CGRect _scrollViewFrame;
         private Screening _screening;
         private DaySchemaScreeningControl _senderControl;
-        private static ViewController _presentor;
         private List<Screening> _filmScreenings;
         private FilmScreeningControl _screeningInfoControl;
         private Dictionary<string, AttendanceCheckbox> _attendanceCheckboxByFilmFan;
@@ -56,11 +55,7 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Properties
-        public static ViewController Presentor
-        {
-            get => _presentor;
-            set => _presentor = (ViewController)value;
-        }
+        public ViewController Presentor { get; set; }
 
         public bool ScreeningInfoChanged
         {
@@ -141,7 +136,7 @@ namespace PresentScreenings.TableView
             {
                 case "ScreeningToFilmInfo":
                     var filmInfoModal = segue.DestinationController as FilmInfoDialogController;
-                    FilmInfoDialogController.Presentor = this;
+                    filmInfoModal.Presentor = this;
                     filmInfoModal.BehaveAsPopover = true;
                     filmInfoModal.UseTitleBackground = true;
                 break;
