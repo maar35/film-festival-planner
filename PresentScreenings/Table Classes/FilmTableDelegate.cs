@@ -189,7 +189,6 @@ namespace PresentScreenings.TableView
                 {
                     Identifier = "Description",
                     BackgroundColor = NSColor.Clear,
-                    TextColor = NSColor.Black,
                     Bordered = false,
                     Selectable = true,
                     Editable = false,
@@ -238,6 +237,7 @@ namespace PresentScreenings.TableView
                 {
                     Identifier = _cellIdentifier,
                     BackgroundColor = NSColor.Clear,
+                    TextColor = NSColor.Black,
                     Bordered = false,
                     Selectable = false,
                     Editable = false,

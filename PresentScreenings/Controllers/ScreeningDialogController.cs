@@ -52,6 +52,7 @@ namespace PresentScreenings.TableView
         private NSTextField _warningLabel = null;
         private NSImageView _warningImageView = null;
         private NSView _sampleSubView;
+        private Dictionary<string, NSTextField> _fanRatingLabelByFan;
         #endregion
 
         #region Properties
@@ -266,6 +267,9 @@ namespace PresentScreenings.TableView
 
         private void CreateFilmFanControls()
         {
+            // Initialize the label by fan dictionary.
+            _fanRatingLabelByFan = new Dictionary<string, NSTextField> { };
+
             // Set the font for the Attendance checkboxes.
             var checkBoxFont = _checkboxTicketsBought.Font;
 
@@ -275,8 +279,11 @@ namespace PresentScreenings.TableView
                 // Create the Rating box for this film fan.
                 var fanRatingLabel = ControlsFactory.NewStandardLabel(_ratingFrame, true);
                 fanRatingLabel.Alignment = NSTextAlignment.Right;
-                fanRatingLabel.StringValue = ViewController.GetFilmFanFilmRating(_screening.FilmId, filmfan).ToString();
                 View.AddSubview(fanRatingLabel);
+
+                // Add the label to the label by fan dictionary.
+                _fanRatingLabelByFan.Add(filmfan, fanRatingLabel);
+                UpdateRating(filmfan);
 
                 // Create the Attendance checkbox for this film fan.
                 var fanCheckbox = new AttendanceCheckbox(_attendanceFrame)
@@ -393,6 +400,20 @@ namespace PresentScreenings.TableView
             UpdateScreeningInfo();
             var attendanceState = AttendanceCheckbox.GetAttendanceState(_screening.FilmFanAttends(filmFan));
             _attendanceCheckboxByFilmFan[filmFan].State = attendanceState;
+        }
+
+        public void UpdateRatings()
+        {
+            foreach (var filmfan in ScreeningInfo.FilmFans)
+            {
+                UpdateRating(filmfan);
+            }
+        }
+
+        public void UpdateRating(string filmfan)
+        {
+            var fanRatingLabel = _fanRatingLabelByFan[filmfan];
+            fanRatingLabel.StringValue = ViewController.GetFilmFanFilmRating(_screening.FilmId, filmfan).ToString();
         }
 
         public void UpdateWarning()
