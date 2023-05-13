@@ -86,8 +86,13 @@ namespace PresentScreenings.TableView
                         break;
                     case _toggleOnlyFilmsWithScreeningsMenuItemTag:
                     case _toggleTypeMatchMethodMenuItemTag:
+                        item.Enabled = ratingController != null
+                                        && filmInfoController == null;
+                        break;
                     case _reloadRatingsMenuItemTag:
-                        item.Enabled = ratingController != null && filmInfoController == null;
+                        item.Enabled = ratingController != null
+                                        || screeningInfoController != null
+                                        || viewController.RunningPopupsCount == 0;
                         break;
                     case _showFilmInfoMenuItemTag:
                         item.Enabled = screeningInfoController != null

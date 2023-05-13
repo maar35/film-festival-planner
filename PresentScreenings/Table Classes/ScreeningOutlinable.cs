@@ -120,7 +120,6 @@ namespace PresentScreenings.TableView
         {
             if (FilmOutlinables.Count == 0)
             {
-                Func<Screening, bool> Attending = s => s.Status == ScreeningInfo.ScreeningStatus.Attending;
                 var screenings = ViewController.OverlappingScreenings(Screening, true)
                                                .Where(s => Attending(s))
                                                .OrderByDescending(s => s.Film.MaxRating);
@@ -130,6 +129,14 @@ namespace PresentScreenings.TableView
                     FilmOutlinables.Add(new ScreeningOutlinable(screening, level));
                 }
             }
+        }
+        #endregion
+
+        #region Private Methods
+        private bool Attending(Screening screening)
+        {
+            return screening.Status == ScreeningInfo.ScreeningStatus.Attending
+                || screening.Status == ScreeningInfo.ScreeningStatus.NeedingTickets;
         }
         #endregion
     }

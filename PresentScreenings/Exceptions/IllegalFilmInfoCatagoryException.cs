@@ -22,11 +22,4 @@ namespace PresentScreenings.TableView
         {
         }
     }
-
-    public sealed class TooManyLoopsWhilePlanningException : Exception
-    {
-        public TooManyLoopsWhilePlanningException(string message) : base(message)
-        {
-        }
-    }
 }

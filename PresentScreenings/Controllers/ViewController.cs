@@ -958,6 +958,8 @@ namespace PresentScreenings.TableView
         {
             Plan.ReadRatings();
             App.FilmsDialogController?.ReloadRatings();
+            ScreeningInfoDialog?.UpdateRatings();
+            ReloadScreeningsView(false);
         }
 
         public void ToggleTicketsBought()

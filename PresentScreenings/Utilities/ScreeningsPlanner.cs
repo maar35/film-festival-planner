@@ -19,7 +19,6 @@ namespace PresentScreenings.TableView
         private ViewController _controller;
         private Action<string> _displayResults;
         private StringBuilder _builder = new StringBuilder();
-        private const int _maxLoopsWhilePlanning = 200;
         private const string _dateTimeFormat = "yyyy-MM-dd HH:mm:ss";
         #endregion
 
@@ -127,7 +126,7 @@ namespace PresentScreenings.TableView
                 bool fits = true;
                 if (screening is OnDemandScreening onDemandScreening)
                 {
-                    break;
+                    fits = FitOnDemandScreening(filmFan, onDemandScreening);
                 }
                 if (fits && screening.IsPlannable)
                 {
@@ -150,6 +149,8 @@ namespace PresentScreenings.TableView
                 && odScreening.FitsAvailability;
             bool canMove(OnDemandScreening odScreening) =>
                 odScreening.AttendingFilmFans.Count == 0;
+            bool atDayEnd(OnDemandScreening odScreening) =>
+                onDemandScreening.StartTime.TimeOfDay >= OnDemandScreening.BounceSpan;
 
 
             // No moving if the screening already fits.
@@ -172,19 +173,11 @@ namespace PresentScreenings.TableView
                 }
 
                 // Try to fit moving forward.
-                int loopCounter = 0;
                 while (!stop)
                 {
-                    // Control limited loop count.
-                    loopCounter++;
-                    if (loopCounter > _maxLoopsWhilePlanning)
-                    {
-                        throw new TooManyLoopsWhilePlanningException($"Fitting in {onDemandScreening}");
-                    }
-
                     // Try to get a span that fits the screening.
                     TimeSpan span = _controller.GetSpanToAutomaticallyFit(onDemandScreening);
-                    if (span == TimeSpan.Zero)
+                    if (span == TimeSpan.Zero || atDayEnd(onDemandScreening))
                     {
                         tryNextDay = true;
                     }
@@ -195,9 +188,10 @@ namespace PresentScreenings.TableView
                         stop = found;
                     }
 
-                    // Try to move a day forward.  **SHOULD tryNextDay NOT BE RESET?**
+                    // Try to move a day forward.
                     if (tryNextDay)
                     {
+                        tryNextDay = false;
                         if (_controller.TryMoveForwardOvernight(onDemandScreening))
                         {
                             found = fits(onDemandScreening);

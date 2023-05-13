@@ -33,6 +33,7 @@ namespace PresentScreenings.TableView
         private NSTextField _filmsDocumentView;
         private NSButton _planButton;
         private NSButton _unplanButton;
+        private NSView _sampleView;
         #endregion
 
         #region Application Access
@@ -74,8 +75,8 @@ namespace PresentScreenings.TableView
             // Create the action buttons at the bottom of the screen.
             CreateActionButtons();
 
-            // Set constraints of the in-code generated UI elements.
-            //SetConstraints();
+            // Disable resizing.
+            GoToScreeningDialog.DisableResizing(this, _sampleView);
         }
 
         public override void ViewWillDisappear()
@@ -113,6 +114,9 @@ namespace PresentScreenings.TableView
             // Scroll to the instruction text.
             var yScroll = _filmsDocumentView.Frame.Height - _filmsScrollView.Frame.Height;
             _filmsScrollView.ContentView.ScrollToPoint(new CGPoint(0, yScroll));
+
+            // Set sample view used to disable resizing.
+            _sampleView = _filmsScrollView;
         }
 
         private void CreateActionButtons()

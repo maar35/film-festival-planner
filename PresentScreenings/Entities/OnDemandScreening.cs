@@ -15,8 +15,8 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Calculated Properties
-        public TimeSpan BounceSpan => new TimeSpan(8, 59, 0);
-        public TimeSpan MarginSpan => new TimeSpan(0, 1, 0);
+        static public TimeSpan BounceSpan => new TimeSpan(8, 59, 0);
+        static public TimeSpan MarginSpan => new TimeSpan(0, 1, 0);
         #endregion
 
         #region Constructors
