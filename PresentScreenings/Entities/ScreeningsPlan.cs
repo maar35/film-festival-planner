@@ -244,10 +244,8 @@ namespace PresentScreenings.TableView
         {
             // Parse the screen from the input line.
             string[] fields = line.Split(';');
-            string screenString = fields[Screening.IndexByName["Screen"]];
-            Screen screen = Screens
-                .Where(s => s.Abbreviation == screenString)
-                .First();
+            int screenId = int.Parse(fields[Screening.IndexByName["ScreenId"]]);
+            Screen screen = ViewController.GetScreenById(screenId);
 
             // Return the Screening or subclass, dependent of the screen type.
             return screen.Type == Screen.ScreenType.OnLine ? new OnLineScreening(line)

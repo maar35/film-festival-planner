@@ -287,12 +287,12 @@ class Screen:
 
     screen_types = ['Location', 'OnLine', 'OnDemand']
 
-    def __init__(self, screen_id, theater, name, abbr, screentype='Location'):
+    def __init__(self, screen_id, theater, name, abbr, screen_type='Location'):
         self.screen_id = screen_id
         self.theater = theater
         self.name = name
         self.abbr = abbr
-        self.type = screentype
+        self.type = screen_type
 
     def __str__(self):
         return self.abbr
@@ -330,11 +330,11 @@ class Screening:
     @staticmethod
     def screening_repr_csv_head():
         text = ";".join([
-            "filmid",
-            "screen",
-            "starttime",
-            "endtime",
-            "combinationid",
+            "film_id",
+            "screen_id",
+            "start_time",
+            "end_time",
+            "combination_id",
             "subtitles",
             "qanda",
             "extra",
@@ -344,7 +344,7 @@ class Screening:
     def __repr__(self):
         text = ";".join([
             str(self.film.filmid),
-            self.screen.abbr,
+            str(self.screen.screen_id),
             self.start_datetime.isoformat(sep=' '),
             self.end_datetime.isoformat(sep=' '),
             str(self.combination_program.filmid if self.combination_program is not None else ''),

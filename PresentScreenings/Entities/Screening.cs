@@ -89,7 +89,7 @@ namespace PresentScreenings.TableView
             IndexByName = new Dictionary<string, int> { };
             int n = 0;
             IndexByName.Add("FilmId", n);
-            IndexByName.Add("Screen", ++n);
+            IndexByName.Add("ScreenId", ++n);
             IndexByName.Add("StartTime", ++n);
             IndexByName.Add("EndTime", ++n);
             IndexByName.Add("CombinationProgramId", ++n);
@@ -105,7 +105,7 @@ namespace PresentScreenings.TableView
             // Assign the fields of the input string.
             string[] fields = screeningText.Split(';');
             int filmId = int.Parse(fields[IndexByName["FilmId"]]);
-            string screen = fields[IndexByName["Screen"]];
+            int screenId = int.Parse(fields[IndexByName["ScreenId"]]);
             string startTimeString = fields[IndexByName["StartTime"]];
             string endTimeString = fields[IndexByName["EndTime"]];
             string combinationIdStr = fields[IndexByName["CombinationProgramId"]];
@@ -115,7 +115,7 @@ namespace PresentScreenings.TableView
 
             // Assign key properties.
             OriginalFilmId = filmId;
-            Screen = (from Screen s in ScreeningsPlan.Screens where s.ToString() == screen select s).First();
+            Screen = ViewController.GetScreenById(screenId);
             DateTime startTime = DateTime.Parse(startTimeString);
             DateTime endTime = DateTime.Parse(endTimeString);
 
