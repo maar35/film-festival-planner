@@ -106,7 +106,7 @@ namespace PresentScreenings.TableView
             // Parse the fields of the input string.
             string[] fields = ScreeningInfoText.Split(';');
             OriginalFilmId = int.Parse(fields[0]);
-            string screen = fields[1];
+            int screenId = int.Parse(fields[1]);
             StartTime = DateTime.Parse(fields[2]);
             MovableStartTime = DateTime.Parse(fields[3]);
             MovableEndTime = DateTime.Parse(fields[4]);
@@ -118,7 +118,7 @@ namespace PresentScreenings.TableView
             string soldOut = fields[10];
 
             // Assign properties.
-            Screen = ScreeningsPlan.Screens.First(s => s.ToString() == screen);
+            Screen = ViewController.GetScreenById(screenId);
             AutomaticallyPlanned = StringToBool[automaticallyPlanned];
             Attendees = GetAttendeesFromStrings(attendanceStrings);
             TicketsBought = StringToBool[ticketsBought];
@@ -147,7 +147,7 @@ namespace PresentScreenings.TableView
 
         public override string WriteHeader()
         {
-            string headerFmt = "filmid;screen;starttime;movablestarttime;movableendtime;combinedfilmid;autoplanned;blocked;{0};ticketsbought;soldout";
+            string headerFmt = "filmid;screenid;starttime;movablestarttime;movableendtime;combinedfilmid;autoplanned;blocked;{0};ticketsbought;soldout";
             return string.Format(headerFmt, FilmFansString());
         }
 
@@ -156,7 +156,7 @@ namespace PresentScreenings.TableView
             string line = string.Join(
                 ';',
                 OriginalFilmId,
-                Screen,
+                Screen.ScreenId,
                 StartTime.ToString(_dateTimeFormat),
                 MovableStartTime.ToString(_dateTimeFormat),
                 MovableEndTime.ToString(_dateTimeFormat),

@@ -601,6 +601,11 @@ namespace PresentScreenings.TableView
             return ScreeningsPlan.Films.First(f => f.FilmId == filmId);
         }
 
+        public static Screen GetScreenById(int screenId)
+        {
+            return ScreeningsPlan.Screens.First(s => s.ScreenId == screenId);
+        }
+
         public static FilmInfo GetFilmInfo(int filmId)
         {
             var info = ScreeningsPlan.FilmInfos.Where(f => f.FilmId == filmId).ToList();
