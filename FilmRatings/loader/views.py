@@ -1,20 +1,21 @@
 import os
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
-from django.views import generic
+from django.views.generic import FormView, ListView
 
-from FilmRatings.tools import add_base_context, initialize_log
+from FilmRatings.tools import add_base_context, initialize_log, get_log, unset_log
 from festivals.models import Festival, current_festival
 from film_list.models import Film, FilmFanFilmRating
-from loader.forms.loader_forms import RatingLoaderForm, SectionLoader, SubsectionLoader
+from loader.forms.loader_forms import RatingLoaderForm, SectionLoader, SubsectionLoader, LoadTheatersForm
 from sections.models import Section, Subsection
+from theaters.models import Theater, theaters_path, City, cities_path, Screen, screens_path
 
 
-def file_row_count(festival, file, has_header=False):
-    path = os.path.join(festival.planner_data_dir, file)
+def file_record_count(path, has_header=False):
     try:
         with open(path, newline='') as f:
             row_count = len(f.readlines())
@@ -37,9 +38,9 @@ def load_festival_ratings(request):
         'str': festival,
         'submit_name': f'{submit_name_prefix}{festival.id}',
         'color': festival.festival_color,
-        'film_count_on_file': file_row_count(festival, festival.films_file, has_header=True),
+        'film_count_on_file': file_record_count(festival.films_file, has_header=True),
         'film_count': Film.films.filter(festival=festival).count,
-        'rating_count_on_file': file_row_count(festival, festival.ratings_file, has_header=True),
+        'rating_count_on_file': file_record_count(festival.ratings_file, has_header=True),
         'rating_count': FilmFanFilmRating.fan_ratings.filter(film__festival=festival).count,
     } for festival in festivals]
     context = add_base_context(request, {
@@ -78,15 +79,15 @@ def get_festival_row(festival):
     festival_row = {
         'festival': festival,
         'id': festival.id,
-        'section_count_on_file': file_row_count(festival, festival.sections_file),
+        'section_count_on_file': file_record_count(festival.sections_file),
         'section_count': Section.sections.filter(festival=festival).count,
-        'subsection_count_on_file': file_row_count(festival, festival.subsections_file),
+        'subsection_count_on_file': file_record_count(festival.subsections_file),
         'subsection_count': Subsection.subsections.filter(festival=festival).count,
     }
     return festival_row
 
 
-class SectionsLoaderView(generic.ListView):
+class SectionsLoaderView(ListView):
     template_name = 'loader/sections.html'
     http_method_names = ['get', 'post']
     object_list = [get_festival_row(festival) for festival in Festival.festivals.order_by('-start_date')]
@@ -118,3 +119,33 @@ class SectionsLoaderView(generic.ListView):
                 self.unexpected_error = f'Submit name not found in POST ({request.POST}'
 
         return render(request, 'loader/sections.html', self.get_context_data())
+
+
+class TheatersLoaderView(LoginRequiredMixin, FormView):
+    model = Theater
+    template_name = 'loader/theaters.html'
+    form_class = LoadTheatersForm
+    success_url = '/theaters/theaters'
+    # http_method_names = ['get', 'post']
+
+    def get_context_data(self, **kwargs):
+        session = self.request.session
+        theater_items = {
+            'city_count': City.cities.count,
+            'city_count_on_file': file_record_count(cities_path()),
+            'theater_count': Theater.theaters.count,
+            'theater_count_on_file': file_record_count(theaters_path()),
+            'screen_count': Screen.screens.count,
+            'screen_count_on_file': file_record_count(screens_path()),
+        }
+        context = add_base_context(self.request, super().get_context_data(**kwargs))
+        context['title'] = 'Load Theater Data'
+        context['theater_items'] = theater_items
+        context['log'] = get_log(session)
+        unset_log(session)
+        return context
+
+    def form_valid(self, form):
+        session = self.request.session
+        form.load_theater_data(session)
+        return super().form_valid(form)

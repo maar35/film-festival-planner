@@ -1,0 +1,41 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>Theaters Overview</h3>
+    {% if log %}
+        <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
+        {% for result in log.results %}
+            <p class="log">{{ result }}</p>
+        {% endfor %}
+    {% endif %}
+    <br>
+    {% if theater_list %}
+        <table>
+            <thead>
+                <tr>
+                    <td><b>City</b></td>
+                    <td><b>Theater</b></td>
+                    <td><b>Abbreviation</b></td>
+                    <td><b>Priority</b></td>
+                    <td><b>Screens</b></td>
+                </tr>
+            </thead>
+            <tbody>
+            {% for theater in theater_list %}
+                <tr>
+                    <td>{{ theater.city.name }}</td>
+                    <td>{{ theater.parse_name }}</td>
+                    <td>{{ theater.abbreviation }}</td>
+                    <td>{{ theater.priority }}</td>
+                    <td>{{ 0 }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No theaters are loaded</p>
+    {% endif %}<br>
+{% endblock %}

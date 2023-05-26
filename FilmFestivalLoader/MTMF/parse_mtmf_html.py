@@ -668,7 +668,7 @@ class TheaterScreenPageParser(HtmlPageParser):
 class MtmfData(FestivalData):
 
     def __init__(self, planner_data_dir):
-        FestivalData.__init__(self, planner_data_dir)
+        FestivalData.__init__(self, planner_data_dir, home_city)
 
     def film_key(self, film, url):
         return url

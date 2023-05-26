@@ -4,4 +4,5 @@ Constants:
 
 Paths:
     FestivalRootDirectory: Documents/Film
+    CommonDataDirectory: Documents/Film/CommonFestivalData
 
