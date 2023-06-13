@@ -414,7 +414,6 @@ class FestivalData:
         self.subsections_file = os.path.join(plandata_dir, 'subsections.csv')
         self.subsections_file = os.path.join(plandata_dir, 'subsections.csv')
         self.cities_file = os.path.join(self.common_data_dir, 'cities.csv')
-        self.theaters_read_file = os.path.join(plandata_dir, 'theaters.csv')
         self.theaters_file = os.path.join(self.common_data_dir, 'theaters.csv')
         self.screens_file = os.path.join(plandata_dir, 'screens.csv')
         self.screenings_file = os.path.join(plandata_dir, 'screenings.csv')
@@ -636,7 +635,7 @@ class FestivalData:
             return Theater(theater_id, city, name, abbr, prio)
 
         try:
-            with open(self.theaters_read_file, 'r') as f:
+            with open(self.theaters_file, 'r') as f:
                 theaters = [create_theater(self.split_rec(line, ';')) for line in f]
             self.theater_by_location = {theater.key(): theater for theater in theaters}
         except OSError:

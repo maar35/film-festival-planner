@@ -1,0 +1,30 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    {% load static %}
+    {% if user_is_admin %}
+        <h3>Hit the button to read fresh theaters</h3>
+        <br>
+        <table>
+            <tbody>
+                <tr><td><b>#Cities on file</b></td><td style="text-align: right">{{ theater_items.city_count_on_file }}</td></tr>
+                <tr><td><b>#Cities</b></td><td style="text-align: right">{{ theater_items.city_count }}</td></tr>
+                <tr><td><b>#Theaters on file</b></td><td style="text-align: right">{{ theater_items.theater_count_on_file }}</td></tr>
+                <tr><td><b>#Theaters</b></td><td style="text-align: right">{{ theater_items.theater_count }}</td></tr>
+                <tr><td><b>#Screns on file</b></td><td style="text-align: right">{{ theater_items.screen_count_on_file }}</td></tr>
+                <tr><td><b>#Screens</b></td><td style="text-align: right">{{ theater_items.screen_count }}</td></tr>
+            </tbody>
+        </table>
+        <br>
+        <form method="post">
+            {% csrf_token %}
+            <input type="submit"; value="Load theater data">
+        </form>
+    {% else %}
+        <h2 class="error">Not allowed</h2>
+        <p>Only an admin fan can load theater data.</p>
+    {% endif %}
+{% endblock %}}

@@ -18,8 +18,10 @@ from loader.views import file_record_count
 from sections.models import Subsection
 
 
-# Define generic view classes.
 class ResultsView(generic.DetailView):
+    """
+    Define generic view classes.
+    """
     model = Film
     template_name = 'film_list/results.html'
     http_method_names = ['get', 'post']
@@ -98,8 +100,12 @@ class SaveView(LoginRequiredMixin, FormView):
         return super().form_valid(form)
 
 
-# General index page.
 def index(request):
+    """
+    General index page.
+    :param request:
+    :return: the rendered index page:
+    """
 
     # Set-up parameters.
     title = 'Film List App Index'
@@ -150,9 +156,13 @@ def film_fan(request):
     return render(request, 'film_list/film_fan.html', context)
 
 
-# Film ratings view.
 @login_required
 def film_list(request):
+    """
+    Film ratings view.
+    :param request:
+    :return: the rendered ratings page
+    """
 
     # Initialize.
     title = 'Film Rating List'

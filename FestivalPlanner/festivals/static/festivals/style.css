@@ -1,0 +1,197 @@
+/* Color links green, conform Django style. */
+a,
+li a,
+td a {
+    color: green;
+}
+
+/* Style the h1 header as to stand out within the page.
+The h1 header is meant to be used as page title only. */
+h1 {
+    color: ivory;
+    text-align: center;
+    font-family: copperplate;
+}
+
+/* Color most regular elements silver, as to contrast the dark
+background pictures. */
+p,
+small,
+label,
+h2,
+h3,
+li,
+table,
+th,
+td {
+    color: silver;
+    font-family: trebuchet ms;
+}
+
+/* Use b for table head cells. Color these cells a bit brighter than
+the regular cells. */
+b {
+    color: ivory;
+}
+
+/* Static table styling. Color is dependant of the current festival
+and is set dynamically. */
+table,
+th,
+td {
+    padding: 10px;
+    border-collapse: collapse;
+    background-color: #00000070;
+}
+
+/* Table cell style when containing an input widget */
+td.with-submit {
+    padding: 0 8px;
+}
+
+/* Make the select pop-up widget a bit larger than standard. */
+select {
+    font-size: large
+}
+
+/* Completely customize the submit widget, among other things make it
+a bit larger. */
+input[type=submit] {
+    width: 50%;
+    font-size: large;
+    background-color: green;
+    color: ivory;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+input[type=submit]:hover {
+    background-color: forestgreen;
+}
+
+/* Customize the text and password input widgets as to make the text
+larger and to create harmony with the submit widget. */
+input[type=password],
+input[type=text] {
+    font-size: large;
+    background-color: green;
+    color: ivory;
+    padding: 7px 20px;
+    border: none;
+    border-radius: 4px;
+}
+input[type=password]:hover,
+input[type=text]:hover {
+    background-color: forestgreen;
+}
+input[type=password]:focus,
+input[type=text]:focus {
+    background-color: darkgreen;
+}
+
+/* Specifics for in-table input widgets */
+input[type=submit].in-table {
+    width: 100%;
+    padding: 6px 15px;
+    font-size: small;
+    border-radius: 4px;
+}
+input[type=submit].in-table:hover {
+    background-color: darkgreen;
+}
+
+/* Class selectors. */
+.error {
+    color: tomato;
+    background; ivory;
+    text-shadow: 4px 4px 3px green;
+    margin-bottom: 2px;
+}
+
+/* Style for log items */
+.log {
+    font-size: small;
+    padding-left: 40px;
+    padding-top: 1px;
+    padding-bottom: 0px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+/* Create a sticky, half-transparant header */
+.sticky {
+    position: sticky;
+    top: 0;
+    background-color: #00000090;
+}
+
+/* Style The Dropdown Button */
+.drop-button {
+    position: relative;
+    top: 4px;
+    color: ivory;
+    background-color: green;
+    padding: 2px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+}
+
+/* The container <div> - needed to position the dropdown content */
+.dropdown {
+    position: relative;
+    display: inline-block;
+    background-color: green;
+    text-align: center;
+    width: 70%;
+    height: 24px;
+}
+.dropdown:hover {
+    background-color: darkgreen;
+}
+
+/* Dropdown Content (Hidden by Default) */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    cursor: pointer;
+    background-color: forestgreen;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    min-width: 200px;
+    padding: 6px 8px;
+    z-index: 1;
+}
+
+/* Links inside the dropdown */
+.dropdown-content input {
+    color: ivory;
+    background-color: forestgreen;
+    width: 100%;
+    margin: 0px;
+    padding: 4px 16px;
+    text-decoration: none;
+    text-align: left;
+    display: block;
+}
+.dropdown-content input:hover {
+    background-color: darkgreen
+}
+
+/* Show the dropdown menu on hover */
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+/* Change the background color of the dropdown button when the dropdown content is shown */
+.dropdown:hover .drop-button {
+    background-color: darkgreen;
+}
+
+/* Disable text selection */
+.no-select {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}

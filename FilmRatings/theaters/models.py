@@ -27,7 +27,7 @@ class City(models.Model):
     """
 
     # Define the fields.
-    id = models.IntegerField(primary_key=True, serialize=False)
+    city_id = models.IntegerField(unique=True, null=False)
     name = models.CharField(max_length=256, null=False, blank=False)
     country = models.CharField(max_length=256, null=False, blank=False)
 
@@ -52,7 +52,7 @@ class Theater(models.Model):
         HIGH = 2
 
     # Define the fields.
-    id = models.IntegerField(primary_key=True, serialize=False)
+    theater_id = models.IntegerField(unique=True, null=False)
     city = models.ForeignKey(City, on_delete=models.CASCADE)
     parse_name = models.CharField(max_length=64, null=False, blank=False)
     abbreviation = models.CharField(max_length=10, null=False, blank=False)
@@ -63,33 +63,7 @@ class Theater(models.Model):
 
     class Meta:
         db_table = 'theaters'
-        unique_together = ('city_id', 'abbreviation')
+        unique_together = ('city', 'abbreviation')
 
     def __str__(self):
         return f'{self.abbreviation} {self.city.name}'
-
-
-class Screen(models.Model):
-    """
-    Screen, used to display a film on.
-    """
-    class ScreenAddressType(models.IntegerChoices):
-        LOCATION = 3
-        ONDEMAND = 2
-        ONLINE = 1
-
-    # Define the fields.
-    id = models.IntegerField(primary_key=True, serialize=False)
-    theater = models.ForeignKey(Theater, on_delete=models.CASCADE)
-    parse_name = models.CharField(max_length=64, null=False, blank=False)
-    abbreviation = models.CharField(max_length=8, null=True, blank=False)
-    address_type = models.IntegerField(choices=ScreenAddressType.choices)
-
-    # Define a manager.
-    screens = models.Manager()
-
-    class Meta:
-        db_table = 'screens'
-
-    def __str__(self):
-        return f'{self.theater.abbreviation}{self.abbreviation}'

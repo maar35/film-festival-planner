@@ -12,7 +12,7 @@
         {% endfor %}
     {% endif %}
     <br>
-    {% if theater_list %}
+    {% if theater_rows %}
         <table>
             <thead>
                 <tr>
@@ -24,12 +24,12 @@
                 </tr>
             </thead>
             <tbody>
-            {% for theater in theater_list %}
+            {% for theater_row in theater_rows %}
                 <tr>
-                    <td>{{ theater.city.name }}</td>
-                    <td>{{ theater.parse_name }}</td>
-                    <td>{{ theater.abbreviation }}</td>
-                    <td>{{ theater.priority }}</td>
+                    <td>{{ theater_row.theater.city.name }}</td>
+                    <td style="color:{{ theater_row.priority_color }}">{{ theater_row.theater.parse_name }}</td>
+                    <td style="color:{{ theater_row.priority_color }}">{{ theater_row.theater.abbreviation }}</td>
+                    <td style="color:{{ theater_row.priority_color }}">{{ theater_row.priority_label }}</td>
                     <td>{{ 0 }}</td>
                 </tr>
             {% endfor %}

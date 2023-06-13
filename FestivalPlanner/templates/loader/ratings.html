@@ -1,0 +1,53 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    {% if user_is_admin %}
+        <h3>Pick a festival to load rating data from</h3>
+        {% if unexpected_error %}
+            <h2 class="error">Unexpected error</h2>
+            <p>{{ unexpected_error }}</p>
+            <br>
+        {% endif %}
+        {% if festival_items %}
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+            <br>
+            <table>
+                <thead>
+                    <tr>
+                        <td><b>Festival</b></td>
+                        <td><b>#Films on file</b></td>
+                        <td><b>#Films</b></td>
+                        <td><b>#Ratings on file</b></td>
+                        <td><b>#Ratings</b></td>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for festival_item in festival_items %}
+                    <tr>
+                        <td style="color:{{ festival_item.color }}">{{ festival_item.str }}</td>
+                        <td>{{ festival_item.film_count_on_file }}</td>
+                        <td>{{ festival_item.film_count }}</td>
+                        <td>{{ festival_item.rating_count_on_file }}</td>
+                        <td>{{ festival_item.rating_count }}</td>
+                        <td class="with-submit">
+                            <input type="submit" value="Load" name="{{ festival_item.submit_name }}" class="in-table">
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </form>
+        {% else %}
+            <p>No festivals are available.</p>
+        {% endif %}
+        <br>
+    {% else %}
+        <h2 class="error">Not allowed</h2>
+        <p>Only an admin fan can load festival data.</p>
+    {% endif %}
+{% endblock %}}

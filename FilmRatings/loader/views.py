@@ -1,5 +1,3 @@
-import os
-
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
@@ -12,7 +10,7 @@ from festivals.models import Festival, current_festival
 from film_list.models import Film, FilmFanFilmRating
 from loader.forms.loader_forms import RatingLoaderForm, SectionLoader, SubsectionLoader, LoadTheatersForm
 from sections.models import Section, Subsection
-from theaters.models import Theater, theaters_path, City, cities_path, Screen, screens_path
+from theaters.models import Theater, theaters_path, City, cities_path, screens_path
 
 
 def file_record_count(path, has_header=False):
@@ -26,9 +24,13 @@ def file_record_count(path, has_header=False):
     return row_count
 
 
-# View to start loading ratings of a specific festival.
 @login_required
 def load_festival_ratings(request):
+    """
+    View to start loading ratings of a specific festival.
+    :param request:
+    :return:
+    """
 
     # Construct the context.
     title = 'Load Ratings'
@@ -74,7 +76,6 @@ def load_festival_ratings(request):
     return render(request, 'loader/ratings.html', context)
 
 
-# Class-based view to load program sections of a specific festival.
 def get_festival_row(festival):
     festival_row = {
         'festival': festival,
@@ -88,6 +89,9 @@ def get_festival_row(festival):
 
 
 class SectionsLoaderView(ListView):
+    """
+    Class-based view to load program sections of a specific festival.
+    """
     template_name = 'loader/sections.html'
     http_method_names = ['get', 'post']
     object_list = [get_festival_row(festival) for festival in Festival.festivals.order_by('-start_date')]
@@ -135,7 +139,6 @@ class TheatersLoaderView(LoginRequiredMixin, FormView):
             'city_count_on_file': file_record_count(cities_path()),
             'theater_count': Theater.theaters.count,
             'theater_count_on_file': file_record_count(theaters_path()),
-            'screen_count': Screen.screens.count,
             'screen_count_on_file': file_record_count(screens_path()),
         }
         context = add_base_context(self.request, super().get_context_data(**kwargs))

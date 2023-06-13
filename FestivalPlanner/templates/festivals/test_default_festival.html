@@ -1,0 +1,38 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>Test which festival is the nearest for a given date</h3>
+    <br>
+    {% if sample_date %}
+        <h3>Previous results</h3>
+        <p>Sample date {{ sample_date }} resulted in <span style="color:{{ festival_color }}">{{ festival }}</span>.</p>
+        <br>
+    {% endif %}
+    {% if festivals %}
+        <table>
+            <tbody>
+            {% for festival in festivals %}
+                <tr>
+                    <td style="color:{{ festival.festival_color }}">{{ festival }}</td>
+                    <td style="color:{{ festival.festival_color }}">{{ festival.festival_color }}</td>
+                    <td>{{ festival.start_date | date:"Y-m-d" }}</td>
+                    <td>{{ festival.end_date | date:"Y-m-d" }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No festivals are available.</p>
+    {% endif %}
+    <br>
+    <form action="{% url 'festivals:test_default_festival' %}" method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" value="Set nearest festival" />
+    </form>
+    <br>
+    <p><a href="{% url 'festivals:index' %}">Festivals index</a></p>
+{% endblock %}

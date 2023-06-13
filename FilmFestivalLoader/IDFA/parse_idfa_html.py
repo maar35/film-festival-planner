@@ -612,7 +612,7 @@ class Screening(planner.Screening):
 class IdfaData(planner.FestivalData):
 
     def __init__(self, directory):
-        planner.FestivalData.__init__(self, directory)
+        planner.FestivalData.__init__(self, directory, festival_city)
         self.compilation_by_url = {}
 
     def film_key(self, title, url):

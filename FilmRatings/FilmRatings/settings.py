@@ -29,6 +29,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'localhost',
     'air-van-maarten',
+    '127.0.0.1',
 ]
 
 

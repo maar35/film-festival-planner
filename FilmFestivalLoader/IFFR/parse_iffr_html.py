@@ -796,7 +796,7 @@ class IffrScreening(Screening):
 class IffrData(FestivalData):
 
     def __init__(self, planner_data_dir):
-        FestivalData.__init__(self, planner_data_dir)
+        FestivalData.__init__(self, planner_data_dir, festival_city)
 
     def film_key(self, title, url):
         return url

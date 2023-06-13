@@ -347,7 +347,7 @@ class CityLoader(SimpleLoader):
         city_id = int(row[0])
         name = row[1]
         country = row[2]
-        city = City(id=city_id, name=name, country=country)
+        city = City(city_id=city_id, name=name, country=country)
         return city
 
 
@@ -365,10 +365,10 @@ class TheaterLoader(SimpleLoader):
         abbreviation = row[3]
         priority = Theater.Priority(int(row[4]))
         try:
-            city = City.cities.get(id=city_id)
+            city = City.cities.get(city_id=city_id)
         except City.DoesNotExist:
             self.add_log(f'City not found: #{city_id}.')
             return None
-        theater = Theater(id=theater_id, city=city, parse_name=parse_name, abbreviation=abbreviation,
+        theater = Theater(theater_id=theater_id, city=city, parse_name=parse_name, abbreviation=abbreviation,
                           priority=priority)
         return theater
