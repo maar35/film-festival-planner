@@ -1,0 +1,55 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    {% load static %}
+    {% if user_is_admin %}
+        <h3>Pick a festival to load section data from</h3>
+        {% if unexpected_error %}
+            <h2 class="error">Unexpected error</h2>
+            <p>{{ unexpected_error }}</p>
+        {% endif %}
+        <br>
+        {% if festival_rows %}
+            <form method="post">
+            {% csrf_token %}
+            <table>
+                <thead>
+                    <tr>
+                        <td><b>Festival</b></td>
+                        <td><b>#Sections on file</b></td>
+                        <td><b>#Sections</b></td>
+                        <td><b>#Subsections on file</b></td>
+                        <td><b>#Subsections</b></td>
+                        <td><b>Action</b></td>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for festival_row in festival_rows %}
+                    <tr>
+                        <td style="color:{{ festival_row.festival.festival_color }}">{{ festival_row.festival }}</td>
+                        <td>{{ festival_row.section_count_on_file }}</td>
+                        <td>{{ festival_row.section_count }}</td>
+                        <td>{{ festival_row.subsection_count_on_file }}</td>
+                        <td>{{ festival_row.subsection_count }}</td>
+                        <td class="with-submit">
+                        {% if festival_row.section_count_on_file > 0 %}
+                            <input type="submit" value="Load" name="{{ festival_row.id }}" class="in-table">
+                        {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </form>
+        {% else %}
+            <p>No festivals are available.</p>
+        {% endif %}
+        <br>
+    {% else %}
+        <h2 class="error">Not allowed</h2>
+        <p>Only an admin fan can load festival data.</p>
+    {% endif %}
+{% endblock %}}

@@ -1,0 +1,42 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>Section Overview</h3>
+    {% if log %}
+        <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
+        {% for result in log.results %}
+            <p class="log">{{ result }}</p>
+        {% endfor %}
+    {% endif %}
+    <br>
+    {% if subsection_list %}
+        <table>
+            <thead>
+                <tr>
+                    <td><b>Festival</b></td>
+                    <td><b>Subsection</b></td>
+                    <td><b>Description</b></td>
+                    <td><b>Section</b></td>
+                    <td><b>Color</b></td>
+                </tr>
+            </thead>
+            <tbody>
+            {% for subsection in subsection_list %}
+                <tr>
+                    <td style="color:{{ festival.festival_color }}">{{ subsection.section.festival }}</td>
+                    <td style="color:{{ subsection.section.color }}">{{ subsection.name }}</td>
+                    <td>{{ subsection.description }}</td>
+                    <td style="color:{{ subsection.section.color }}">{{ subsection.section.name }}</td>
+                    <td style="color:{{ subsection.section.color }}">{{ subsection.section.color }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No sections are available for this festival.</p>
+    {% endif %}
+    <br>
+{% endblock %}

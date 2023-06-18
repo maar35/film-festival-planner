@@ -6,6 +6,7 @@ from django import forms
 from FilmRatings.tools import initialize_log, add_log
 from film_list.models import Film, FilmFanFilmRating, FilmFan
 from sections.models import Section, Subsection
+from theaters.models import Theater, theaters_path, City, cities_path
 
 
 class RatingLoaderForm(forms.Form):
@@ -22,21 +23,29 @@ class RatingLoaderForm(forms.Form):
             RatingLoader(session, festival, keep_ratings).load_ratings()
 
 
+class LoadTheatersForm(forms.Form):
+    dummy_field = forms.SlugField(required=False)
+
+    @staticmethod
+    def load_theater_data(session):
+        initialize_log(session)
+        if CityLoader(session).load_objects():
+            TheaterLoader(session).load_objects()
+
+
 class BaseLoader:
     """
     Base class for loading objects such as films or ratings from CSV files.
     """
     expected_header = None
 
-    def __init__(self, session, festival, file_required=True):
+    def __init__(self, session, file_required=True):
         """
         Initialize the member variables
         :param session: Session to store the log as a cookie
-        :param festival: Film Festival to allow derived classes to filter data
         :param file_required: Boolean to indicate whether the input file is required
         """
         self.session = session
-        self.festival = festival
         self.file_required = file_required
         self.object_name = None
         self.objects_on_file = None
@@ -111,7 +120,8 @@ class FilmLoader(BaseLoader):
     expected_header = ['seqnr', 'filmid', 'sort', 'title', 'titlelanguage', 'section', 'duration', 'mediumcategory', 'url']
 
     def __init__(self, session, festival, keep_ratings):
-        super().__init__(session, festival)
+        super().__init__(session)
+        self.festival = festival
         self.keep_ratings = keep_ratings
         self.object_name = 'film'
         self.films = None
@@ -190,7 +200,8 @@ class RatingLoader(BaseLoader):
     expected_header = ['filmid', 'filmfan', 'rating']
 
     def __init__(self, session, festival, keep_ratings):
-        super().__init__(session, festival, file_required=False)
+        super().__init__(session, file_required=False)
+        self.festival = festival
         self.keep_ratings = keep_ratings
         self.object_name = 'rating'
         self.ratings_file = self.festival.ratings_file
@@ -245,8 +256,9 @@ class RatingLoader(BaseLoader):
 
 class SimpleLoader(BaseLoader):
 
-    def __init__(self, session, festival, object_name, object_manager, objects_file):
-        super().__init__(session, festival)
+    def __init__(self, session, object_name, object_manager, objects_file, festival=None):
+        super().__init__(session)
+        self.festival = festival
         self.object_name = object_name
         self.object_manager = object_manager
         self.objects_file = objects_file
@@ -257,8 +269,11 @@ class SimpleLoader(BaseLoader):
         if not self.read_objects_simple():
             return False
 
-        # Delete existing objects of the given festival.
-        existing_objects = self.object_manager.filter(festival_id=self.festival.id)
+        # Delete existing objects (of the given festival).
+        if self.festival:
+            existing_objects = self.object_manager.filter(festival_id=self.festival.id)
+        else:
+            existing_objects = self.object_manager.all()
         self.delete_objects(existing_objects)
 
         # Load the new objects.
@@ -287,7 +302,7 @@ class SectionLoader(SimpleLoader):
     def __init__(self, session, festival):
         manager = Section.sections
         file = festival.sections_file
-        super().__init__(session, festival, 'section', manager, file)
+        super().__init__(session, 'section', manager, file, festival)
 
     def read_row(self, row):
         section_id = int(row[0])
@@ -302,7 +317,7 @@ class SubsectionLoader(SimpleLoader):
     def __init__(self, session, festival):
         manager = Subsection.subsections
         file = festival.subsections_file
-        super().__init__(session, festival, 'subsection', manager, file)
+        super().__init__(session, 'subsection', manager, file, festival)
 
     def read_row(self, row):
         subsection_id = int(row[0])
@@ -318,3 +333,41 @@ class SubsectionLoader(SimpleLoader):
         subsection = Subsection(festival=self.festival, subsection_id=subsection_id, section=section, name=name,
                                 description=description, url=url)
         return subsection
+
+
+class CityLoader(SimpleLoader):
+
+    def __init__(self, session):
+        manager = City.cities
+        file = cities_path()
+        super().__init__(session, 'city', manager, file)
+
+    def read_row(self, row):
+        city_id = int(row[0])
+        name = row[1]
+        country = row[2]
+        city = City(city_id=city_id, name=name, country=country)
+        return city
+
+
+class TheaterLoader(SimpleLoader):
+
+    def __init__(self, session):
+        manager = Theater.theaters
+        file = theaters_path()
+        super().__init__(session, 'theater', manager, file)
+
+    def read_row(self, row):
+        theater_id = int(row[0])
+        city_id = int(row[1])
+        parse_name = row[2]
+        abbreviation = row[3]
+        priority = Theater.Priority(int(row[4]))
+        try:
+            city = City.cities.get(city_id=city_id)
+        except City.DoesNotExist:
+            self.add_log(f'City not found: #{city_id}.')
+            return None
+        theater = Theater(theater_id=theater_id, city=city, parse_name=parse_name, abbreviation=abbreviation,
+                          priority=priority)
+        return theater

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Festival Planner Page{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'films/style.css' %}">
+    <link rel="shortcut icon" type="image/png" href="{% static 'festivals/images/Mac-512.png' %}"/>
+</head>
+
+<style>
+    body {
+        background: black url("{% static background_image %}") no-repeat;
+    }
+    table,
+    th,
+    td {
+        border: 1px solid {{ festival_color }};
+    }
+    em {
+        color: {{ festival_color }};
+    }
+</style>
+
+<body>
+    <hr>
+    <h1>{% block header %} Page Title {% endblock %}</h1>
+    <p>
+        <span style="color:{{ festival_color }}; text-align: left; width: 49%; display: inline-block;">
+        {% if festival %}
+            <a href="{% url 'festivals:index' %}">{{ festival }}</a>
+            {% now "Y-m-d" as today_as_date %}
+            {% if today_as_date < festival.start_date|date:"Y-m-d" %}
+                <span style="color: ivory"> starts in {{ festival.start_date|timeuntil }}</span>
+            {% elif today_as_date == festival.start_date|date:"Y-m-d" %}
+                <span style="color: ivory"> started today!</span>
+            {% elif today_as_date == festival.end_date|date:"Y-m-d" %}
+                <span style="color: ivory"> last day!</span>
+            {% elif today_as_date > festival.end_date|date:"Y-m-d" %}
+                <span style="color: silver"> ended {{ festival.end_date|timesince }} ago</span>
+            {% else %}
+                <span style="color:ivory"> still going on {{ festival.end_date|timeuntil }}!</span>
+            {% endif %}
+        {% else %}
+            No festival selected.
+        {% endif %}
+        </span>
+        <span style="text-align: right; width: 50%; display: inline-block;">
+        {% if user.is_authenticated %}
+            {{ user.username }}
+            <a href="{% url 'authentication:logout' %}">Logout</a>
+        {% else %}
+            <a href="{% url 'authentication:login' %}">Login</a>
+        {% endif %}
+        </span>
+    </p>
+    <p class="sticky-index">
+        <span style="text-align: left; width: 40%; display: inline-block;">
+            <a href="{% url 'films:index' %}">index</a>
+        </span>
+        <span style="text-align: center; width: 19%; display: inline-block;">
+            <small style="color: ivory;">Festival Planner App</small>
+        </span>
+        <span style="text-align: right; width: 40%; display: inline-block;">
+        {% if current_fan %}
+            {% if user_represents_fan %}
+                {{ user.username }} represents <a href="{% url 'films:film_fan' %}">{{ current_fan }}</a>
+            {% elif user_is_admin %}
+                <a href="{% url 'films:film_fan' %}">{{ current_fan }}</a>
+            {% else %}
+                {{ current_fan }}
+            {% endif %}
+        {% else %}
+            <span>No fan is active.</span>
+        {% endif %}
+        </span>
+    </p>
+    <hr>
+    {% block content %}
+        Body content
+    {% endblock %}
+</body>
+
+<footer>
+    <hr>
+    <small>
+        {% block footer %} ©MR {% endblock %}
+    </small>
+</footer>
+</html>

@@ -1,0 +1,34 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>Current festival details</h3>
+    <table>
+        <tbody>
+        <tr><td><b>Festival</b></td><td>{{ festival.base.name }}</td></tr>
+        <tr><td><b>Mnemonic</b></td><td>{{ festival.base.mnemonic }}</td></tr>
+        <tr><td><b>Year</b></td><td>{{ festival.year }}</td></tr>
+        <tr><td><b>Edition</b></td>
+            {% if festival.edition %}
+                <td>{{ festival.edition }}</td>
+            {% else %}
+                <td></td>
+            {% endif %}
+        </tr>
+        <tr><td><b>From</b></td><td>{{ festival.start_date }}</td></tr>
+        <tr><td><b>Till</b></td><td>{{ festival.end_date }}</td></tr>
+        <tr><td><b>Color</b></td><td>{{ festival.festival_color }}</td></tr>
+        </tbody>
+    </table>
+    <br><br>
+    <h3>Switch to another festival</h3>
+    <form action="{% url 'festivals:detail' festival_id %}" method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="submit" value="Switch" />
+    </form>
+    <br><br>
+    <a href="{% url 'festivals:index' %}">Back to festival index</a>
+{% endblock %}

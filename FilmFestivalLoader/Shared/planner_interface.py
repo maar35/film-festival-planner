@@ -13,6 +13,8 @@ import re
 import xml.etree.ElementTree as ET
 from enum import Enum, auto
 
+from Shared.application_tools import config
+
 interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 articles_file = os.path.join(interface_dir, "articles.txt")
 unicode_file = os.path.join(interface_dir, "unicodemap.txt")
@@ -32,6 +34,7 @@ def write_lists(festival_data, write_film_list, write_other_lists):
     if write_other_lists:
         festival_data.write_film_ids()
         festival_data.write_filminfo()
+        festival_data.write_cities()
         festival_data.write_theaters()
         festival_data.write_screens()
         festival_data.write_screenings()
@@ -262,6 +265,25 @@ class Subsection:
         return f'{text}\n'
 
 
+class City:
+    default_country = 'nl'
+
+    def __init__(self, city_id, name, country=None):
+        self.city_id = city_id
+        self.name = name
+        self.country = country or self.default_country
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        text = ';'.join([str(self.city_id), self.name, self.country])
+        return f'{text}\n'
+
+    def key(self):
+        return self.country, self.name
+
+
 class Theater:
     default_prio = 1
 
@@ -276,15 +298,19 @@ class Theater:
         return self.name
 
     def __repr__(self):
-        text = ';'.join([str(self.theater_id), self.city, self.name, self.abbr, self.prio])
+        text = ';'.join([
+            str(self.theater_id),
+            str(self.city.city_id),
+            self.name,
+            self.abbr,
+            str(self.prio)])
         return f'{text}\n'
 
     def key(self):
-        return  self.city, self.name
+        return self.city, self.name
 
 
 class Screen:
-
     screen_types = ['Location', 'OnLine', 'OnDemand']
 
     def __init__(self, screen_id, theater, name, abbr, screen_type='Location'):
@@ -306,7 +332,6 @@ class Screen:
 
 
 class Screening:
-
     audience_type_public = 'publiek'
 
     def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience,
@@ -359,11 +384,17 @@ class Screening:
 
 
 class FestivalData:
-
+    curr_city_id = None
     curr_theater_id = None
     curr_screen_id = None
+    curr_film_id = None
+    curr_section_id = None
+    curr_subsection_id = None
+    common_data_dir = os.path.expanduser(f'~/{config()["Paths"]["CommonDataDirectory"]}')
+    default_city_name = 'Bullshit City'
 
-    def __init__(self, plandata_dir):
+    def __init__(self, plandata_dir, default_city_name=None):
+        self.default_city_name = default_city_name or self.default_city_name
         self.films = []
         self.filminfos = []
         self.screenings = []
@@ -375,22 +406,22 @@ class FestivalData:
         self.subsection_by_name = {}
         self.screen_by_location = {}
         self.theater_by_location = {}
+        self.city_by_location = {}
         self.films_file = os.path.join(plandata_dir, 'films.csv')
         self.filmids_file = os.path.join(plandata_dir, 'filmids.txt')
         self.filminfo_file = os.path.join(plandata_dir, 'filminfo.xml')
         self.sections_file = os.path.join(plandata_dir, 'sections.csv')
         self.subsections_file = os.path.join(plandata_dir, 'subsections.csv')
         self.subsections_file = os.path.join(plandata_dir, 'subsections.csv')
-        self.theaters_file = os.path.join(plandata_dir, 'theaters.csv')
+        self.cities_file = os.path.join(self.common_data_dir, 'cities.csv')
+        self.theaters_file = os.path.join(self.common_data_dir, 'theaters.csv')
         self.screens_file = os.path.join(plandata_dir, 'screens.csv')
         self.screenings_file = os.path.join(plandata_dir, 'screenings.csv')
-        self.curr_film_id = None
         self.film_seqnr = 0
-        self.curr_section_id = None
-        self.curr_subsection_id = None
         self.read_articles()
         self.read_sections()
         self.read_subsections()
+        self.read_cities()
         self.read_theaters()
         self.read_screens()
         self.read_filmids()
@@ -461,9 +492,23 @@ class FestivalData:
             self.subsection_by_name[name] = subsection
         return subsection
 
-    def get_theater(self, city, name):
-        name = name if name is not None else f'{city}-Theater'
-        theater_key = (city, name)
+    def get_city(self, city_name, country=None):
+        country = country or City.default_country
+        city_name = city_name or self.default_city_name
+        city_key = (country, city_name)
+        try:
+            city = self.city_by_location[city_key]
+        except KeyError:
+            self.curr_city_id += 1
+            city_id = self.curr_city_id
+            city = City(city_id, city_name, country)
+            self.city_by_location[city_key] = city
+        return city
+
+    def get_theater(self, city_name, name):
+        city = self.get_city(city_name)
+        name = name if name is not None else f'{city.name}-Theater'
+        theater_key = (city.city_id, name)
         try:
             theater = self.theater_by_location[theater_key]
         except KeyError:
@@ -474,8 +519,8 @@ class FestivalData:
             self.theater_by_location[theater_key] = theater
         return theater
 
-    def get_screen(self, city, name, theater_name=None):
-        theater = self.get_theater(city, theater_name)
+    def get_screen(self, city_name, name, theater_name=None):
+        theater = self.get_theater(city_name, theater_name)
         screen_key = (theater.theater_id, name)
         try:
             screen = self.screen_by_location[screen_key]
@@ -561,10 +606,29 @@ class FestivalData:
         except ValueError:
             self.curr_subsection_id = 0
 
+    def read_cities(self):
+        def create_city(fields):
+            city_id = int(fields[0])
+            name = fields[1]
+            country = fields[2]
+            return City(city_id, name, country)
+
+        try:
+            with open(self.cities_file, 'r') as f:
+                cities = [create_city(self.split_rec(line, ';')) for line in f]
+            self.city_by_location = {city.key(): city for city in cities}
+        except OSError:
+            cities = []
+
+        try:
+            self.curr_city_id = max(city.city_id for city in cities)
+        except ValueError:
+            self.curr_city_id = 0
+
     def read_theaters(self):
         def create_theater(fields):
             theater_id = int(fields[0])
-            city = fields[1]
+            city = self.get_city(fields[1])
             name = fields[2]
             abbr = fields[3]
             prio = fields[4]
@@ -701,6 +765,12 @@ class FestivalData:
             for subsection in self.subsection_by_name.values():
                 f.write(repr(subsection))
         print(f'Done writing {len(self.subsection_by_name)} records to {self.subsections_file}.')
+
+    def write_cities(self):
+        with open(self.cities_file, 'w') as f:
+            for city in self.city_by_location.values():
+                f.write(repr(city))
+        print(f'Done writing {len(self.city_by_location)} records to {self.cities_file}')
 
     def write_theaters(self):
         with open(self.theaters_file, 'w') as f:

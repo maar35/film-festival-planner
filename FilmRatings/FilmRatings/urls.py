@@ -27,6 +27,7 @@ urlpatterns = [
     path('festivals/', include('festivals.urls')),
     path('loader/', include('loader.urls')),
     path('sections/', include('sections.urls')),
+    path('theaters/', include('theaters.urls')),
     path('exercises/', include('exercises.urls')),
 ]
 

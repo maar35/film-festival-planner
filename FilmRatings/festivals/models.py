@@ -27,7 +27,8 @@ class FestivalBase(models.Model):
 
 def default_festival(today=None):
     """
-    Festival table, to keep festival information.
+    Return a festival object that will do as a default festival when
+    logging in.
     :param today: optional date to relate the nearest festival to
     :return: a festival object
     """

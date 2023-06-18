@@ -429,7 +429,7 @@ class ScreeningsPageParser(HtmlPageParser):
     nl_month_by_name: Dict[str, int] = {'mrt': 3, 'apr': 4}
 
     def __init__(self, iffr_data, film, subtitles):
-        HtmlPageParser.__init__(self, iffr_data, debug_recorder, 'S', debugging=False)
+        HtmlPageParser.__init__(self, iffr_data, debug_recorder, 'S', debugging=True)
         self.film = film
         self.subtitles = subtitles
         self.print_debug(self.bar, f"Analysing screenings of {film}, {film.url}")
@@ -503,7 +503,7 @@ class ScreeningsPageParser(HtmlPageParser):
 
     def set_screen(self, data):
         items = data.split(',')    # Den Haag, Filmhuis Den Haag
-        city = items[0]
+        city = items[0] or home_city
         theater = items[1].strip()
         screen_name = self.screen_name if self.screen_name is not None else theater
         if screen_name is not None:
@@ -600,7 +600,7 @@ class ShoppingCartPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, film, sequence_nr, url):
-        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'SC', debugging=False)
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'SC', debugging=True)
         self.film = film
         self.sequence_nr = sequence_nr
         self.print_debug(self.bar, f'Analysing shopping cart #{sequence_nr} of FILM {film}, {url}')
@@ -645,7 +645,7 @@ class TheaterScreenPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, film, url):
-        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'TS', debugging=False)
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'TS', debugging=True)
         self.print_debug(self.bar, f'Analysing screening location of FILM {film}, {url}')
         self.stateStack = self.StateStack(self.print_debug, self.ScreensParseState.IDLE)
         self.current_screen = None
@@ -668,7 +668,7 @@ class TheaterScreenPageParser(HtmlPageParser):
 class MtmfData(FestivalData):
 
     def __init__(self, planner_data_dir):
-        FestivalData.__init__(self, planner_data_dir)
+        FestivalData.__init__(self, planner_data_dir, home_city)
 
     def film_key(self, film, url):
         return url

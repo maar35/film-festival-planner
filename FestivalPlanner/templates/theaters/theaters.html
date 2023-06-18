@@ -1,0 +1,45 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>Theaters Overview</h3>
+    {% if log %}
+        <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
+        {% for result in log.results %}
+            <p class="log">{{ result }}</p>
+        {% endfor %}
+    {% endif %}
+    <br>
+    {% if theater_rows %}
+        <table>
+            <thead">
+                <tr>
+                    <td class="sticky-thead"><b>City</b></td>
+                    <td class="sticky-thead"><b>Theater</b></td>
+                    <td class="sticky-thead"><b>Abbreviation</b></td>
+                    <td class="sticky-thead"><b>Priority</b></td>
+                    <td class="sticky-thead"><b>Screens</b></td>
+                </tr>
+            </thead>
+            <tbody>
+            {% for theater_row in theater_rows %}
+                <tr>
+                    {% if theater_row.is_festival_city %}
+                        <td style="color:{{ festival_color }}">{{ theater_row.theater.city.name }}</td>
+                    {% else %}
+                        <td>{{ theater_row.theater.city.name }}</td>
+                    {% endif %}
+                    <td style="color:{{ theater_row.priority_color }}">{{ theater_row.theater.parse_name }}</td>
+                    <td style="color:{{ theater_row.priority_color }}">{{ theater_row.theater.abbreviation }}</td>
+                    <td style="color:{{ theater_row.priority_color }}">{{ theater_row.priority_label }}</td>
+                    <td>{{ 0 }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No theaters are loaded</p>
+    {% endif %}<br>
+{% endblock %}
