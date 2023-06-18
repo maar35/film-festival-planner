@@ -29,7 +29,7 @@ class TheatersLoaderView(LoginRequiredMixin, FormView):
     template_name = 'loader/theaters.html'
     form_class = TheaterLoaderForm
     success_url = '/theaters/theaters'
-    # http_method_names = ['get', 'post']
+    http_method_names = ['get', 'post']
 
     def get_context_data(self, **kwargs):
         session = self.request.session

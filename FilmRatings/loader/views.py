@@ -88,7 +88,7 @@ def get_festival_row(festival):
     return festival_row
 
 
-class SectionsLoaderView(ListView):
+class SectionsLoaderView(LoginRequiredMixin, ListView):
     """
     Class-based view to load program sections of a specific festival.
     """
@@ -130,7 +130,7 @@ class TheatersLoaderView(LoginRequiredMixin, FormView):
     template_name = 'loader/theaters.html'
     form_class = LoadTheatersForm
     success_url = '/theaters/theaters'
-    # http_method_names = ['get', 'post']
+    http_method_names = ['get', 'post']
 
     def get_context_data(self, **kwargs):
         session = self.request.session

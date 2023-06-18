@@ -31,8 +31,10 @@
                     {% if count.base_rating < highest_rating %}
                         or higher
                     {% endif %}
-                     so far,
-                    {{ count.projected_plannable_count }} projected to be plannable.
+                    so far
+                    {% if count.plannable_films_count %}
+                        - {{ count.projected_plannable_count }} projected to be plannable
+                    {% endif %}
                 </li>
             {% endfor %}
             </ul>
@@ -65,11 +67,11 @@
     <table>
         <thead>
             <tr>
-                <td class="sticky"><b>Film</b></td>
-                <td class="sticky"><b>Duration</b></td>
-                <td class="sticky"><b>Subsection</b></td>
+                <td class="sticky-thead"><b>Film</b></td>
+                <td class="sticky-thead"><b>Duration</b></td>
+                <td class="sticky-thead"><b>Subsection</b></td>
                 {% for fan in fans %}
-                    <td class="sticky"><b>{{ fan }}</b></td>
+                    <td class="sticky-thead"><b>{{ fan }}</b></td>
                 {% endfor %}
             </tr>
         </thead>

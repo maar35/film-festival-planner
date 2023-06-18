@@ -4,7 +4,6 @@ import datetime
 from django import forms
 
 from FilmRatings.tools import initialize_log, add_log
-from festivals.models import current_festival
 from film_list.models import Film, FilmFanFilmRating, FilmFan
 from sections.models import Section, Subsection
 from theaters.models import Theater, theaters_path, City, cities_path

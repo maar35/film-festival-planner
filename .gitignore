@@ -16,3 +16,4 @@ old_restored_dot_git/
 FilmFestivalLoader/get_filmurls.sh
 FilmFestivalLoader/get_urls.sh
 FilmRatings/film_rating_data.sql
+FestivalPlanner/db.sqlite3

@@ -1,28 +1,40 @@
 from festivals.models import current_festival
 
-
-# Support log cookie.
 from films.models import current_fan, get_user_fan
 
 
 def initialize_log(session, action='Load'):
+    """
+    Initialize log cookie.
+    """
     session['log'] = {'results': [], 'action': action}
 
 
 def add_log(session, text):
+    """
+    Add text to the results of the log cookie.
+    """
     session['log']['results'].append(text)
 
 
 def get_log(session):
+    """
+    Get the log cookie.
+    """
     return session.get('log')
 
 
 def unset_log(session):
+    """
+    Unset the log cookie.
+    """
     session['log'] = None
 
 
-# Support printing form errors.
 def wrap_up_form_errors(form_errors):
+    """
+    Support printing form errors.
+    """
     messages = ['Form is invalid']
     for subject, errors in form_errors.items():
         messages.append(f'{subject}: {",".join([error for error in errors])}')

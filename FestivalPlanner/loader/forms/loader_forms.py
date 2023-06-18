@@ -55,7 +55,7 @@ class BaseLoader:
         """
         Member method to be used by derived classes to read objects from files
         :param objects_file: The CSV file to read the objects from
-        :param object_list: A list to receive the objects read
+        :param values_list: A list to receive the objects read
         :return: Whether reading objects was successful
         """
         # Initialize.
@@ -145,6 +145,7 @@ class SimpleLoader(BaseLoader):
 
         # Read the objects from the member file into the designated list.
         if not self.read_objects(self.objects_file, self.records):
+            self.add_log(f'No {self.object_name} records read.')
             return False
 
         # Update objects and create ones when absent.
@@ -174,7 +175,6 @@ class SimpleLoader(BaseLoader):
         # Delete objects that do not appear in the file.
         if self.delete_disappeared_objects:
             # Select the existing objects.
-            print(f'@@ {self.festival_filter=}')
             if self.festival:
                 existing_objects = self.object_manager.filter(**self.festival_filter)
             else:
@@ -272,7 +272,7 @@ class FilmLoader(SimpleLoader):
             self.add_log(f'File {file} not found.')
             return False
         else:
-            self.add_log(f'{len(ratings)} existing ratings saved.')
+            self.add_log(f'{len(ratings)} existing ratings saved to {file}.')
 
         return True
 

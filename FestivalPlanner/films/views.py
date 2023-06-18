@@ -73,6 +73,7 @@ class SaveView(LoginRequiredMixin, FormView):
     template_name = 'films/save.html'
     form_class = SaveRatingsForm
     success_url = '/films/films/'
+    http_method_names = ['get', 'post']
 
     def get_context_data(self, **kwargs):
         session = self.request.session

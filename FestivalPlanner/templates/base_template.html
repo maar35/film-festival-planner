@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>{% block title %}Festival Planner Page{% endblock %}</title>
     {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'festivals/style.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'films/style.css' %}">
     <link rel="shortcut icon" type="image/png" href="{% static 'festivals/images/Mac-512.png' %}"/>
 </head>
 
@@ -54,7 +54,7 @@
         {% endif %}
         </span>
     </p>
-    <p class="sticky">
+    <p class="sticky-index">
         <span style="text-align: left; width: 40%; display: inline-block;">
             <a href="{% url 'films:index' %}">index</a>
         </span>

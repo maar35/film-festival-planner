@@ -132,8 +132,8 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         self.assertNotContains(redirect_response, 'not found')
         self.assertNotContains(redirect_response, 'Bad value in file')
         self.assertNotContains(redirect_response, 'incompatible header')
-        self.assertContains(redirect_response, '2 films read')
-        self.assertContains(redirect_response, 'No ratings read')
+        self.assertContains(redirect_response, '2 film records read')
+        self.assertContains(redirect_response, 'No rating records read')
 
     def test_admin_can_load_ratings(self):
         """
@@ -164,12 +164,12 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         # Assert.
         self.assert_reading_from_file(get_response, post_response, redirect_response)
-        self.assertContains(redirect_response, '1 films read')
+        self.assertContains(redirect_response, '1 film records read')
         self.assertNotContains(redirect_response, 'not found')
         self.assertNotContains(redirect_response, 'Bad value in file')
         self.assertNotContains(redirect_response, 'incompatible header')
-        self.assertNotContains(redirect_response, 'existing ratings saved')
-        self.assertContains(redirect_response, '2 ratings read')
+        self.assertNotContains(redirect_response, 'existing rating records saved')
+        self.assertContains(redirect_response, '2 rating records read')
 
     def test_admin_can_keep_ratings_while_loading_films(self):
         """
@@ -200,17 +200,18 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         # Assert.
         self.assert_reading_from_file(get_response, post_response, redirect_response)
-        self.assertContains(redirect_response, '1 films read')
+        self.assertContains(redirect_response, '1 film records read')
         self.assertNotContains(redirect_response, 'not found')
         self.assertNotContains(redirect_response, 'Bad value in file')
         self.assertNotContains(redirect_response, 'incompatible header')
         self.assertContains(redirect_response, '2 existing ratings saved')
-        self.assertContains(redirect_response, '2 ratings read')
+        self.assertContains(redirect_response, '2 rating records read')
 
-    def test_non_admin_cannot_load_rating_data(self):
+    def test_regular_user_cannot_load_rating_data(self):
         """
         A non-admin fan can't load data.
         """
+        # Arrange.
         request = self.get_regular_fan_request()
 
         # Act.
@@ -223,7 +224,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
     def test_admin_cannot_load_incompatible_film_file(self):
         """
-        Ad admin fan can't load an incompatible films file.
+        An admin fan can't load an incompatible films file.
         """
         # Arrange.
         request = self.get_admin_request()
@@ -242,12 +243,12 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         # Assert.
         self.assert_reading_from_file(get_response, post_response, redirect_response)
         self.assertContains(redirect_response, 'incompatible header')
-        self.assertNotContains(redirect_response, 'films read')
-        self.assertNotContains(redirect_response, 'ratings read')
+        self.assertContains(redirect_response, 'No film records read')
+        self.assertNotContains(redirect_response, 'rating records read')
 
     def test_admin_cannot_load_corrupt_film(self):
         """
-        Ad admin fan can't load a films file with bad data.
+        An admin fan can't load a films file with bad data.
         """
         # Arrange.
         request = self.get_admin_request()
@@ -270,12 +271,12 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         # Assert.
         self.assert_reading_from_file(get_response, post_response, redirect_response)
         self.assertContains(redirect_response, 'Bad value in file')
-        self.assertNotContains(redirect_response, 'films read')
-        self.assertNotContains(redirect_response, 'ratings read')
+        self.assertContains(redirect_response, 'No film records read')
+        self.assertNotContains(redirect_response, 'rating records read')
 
     def test_admin_cannot_load_corrupt_rating(self):
         """
-        Ad admin fan can't load a ratings file with bad data.
+        An admin fan can't load a ratings file with bad data.
         """
         # Arrange.
         request = self.get_admin_request()
@@ -302,9 +303,9 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         # Assert.
         self.assert_reading_from_file(get_response, post_response, redirect_response)
-        self.assertContains(redirect_response, 'films read')
+        self.assertContains(redirect_response, 'film records read')
         self.assertContains(redirect_response, 'Bad value in file')
-        self.assertContains(redirect_response, 'No ratings read')
+        self.assertContains(redirect_response, 'No rating records read')
 
     def test_admin_can_save_ratings(self):
         """
@@ -313,9 +314,9 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         # Arrange.
         film_1 = create_film(1, 'Ich bin ein Hamburger', 86, festival=self.festival)
         film_2 = create_film(2, 'Böse Banken', 127, festival=self.festival)
-        rating_1 = create_rating(film_1, self.admin_fan, 5)
-        rating_2 = create_rating(film_1, self.regular_fan, 4)
-        rating_3 = create_rating(film_2, self.regular_fan, 8)
+        _ = create_rating(film_1, self.admin_fan, 5)
+        _ = create_rating(film_1, self.regular_fan, 4)
+        _ = create_rating(film_2, self.regular_fan, 8)
 
         request = self.get_admin_request()
         save_view = SaveView()
@@ -341,13 +342,13 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         redirect_response = films(redirect_request)
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
         self.assertNotContains(get_response, 'Not allowed')
-        self.assertContains(get_response, 'Save 3 ratings')
+        self.assertNotContains(get_response, 'existing ratings saved ')
         self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
         self.assertURLEqual(post_response.url, reverse('films:films'))
         self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
         self.assertContains(redirect_response, 'Save results')
-        self.assertContains(redirect_response, '3 existing ratings saved.')
-        log_re = re.compile(r'\b3 existing ratings saved')
+        self.assertContains(redirect_response, '3 existing ratings saved')
+        log_re = re.compile(r'\b3 existing ratings saved to.*?csv')
         self.assertRegex(redirect_response.content.decode('utf-8'), log_re)
 
 
@@ -393,7 +394,7 @@ class SectionLoaderViewsTests(LoaderViewsTests):
 
     def test_admin_can_load_sections(self):
         """
-        A file with correct sections records can be loaded by an admin fan.
+        A file with correct section records can be loaded by an admin fan.
         """
         # Arrange.
         get_response = self.get_get_response(self.get_admin_request())
@@ -421,7 +422,21 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         self.assertContains(redirect_response, 'Reading from file')
         self.assertContains(redirect_response, '2 section records read')
 
-    @skip("Test for test driven development still to be developed.")
     def test_regular_user_can_not_load_sections(self):
-        # TODO use this test for test-driven development of implementing @login_required in a view class.
-        self.assertTrue(False, '@login_required not implemented in the loader view class')
+        """
+        A file with correct section records can't be loaded by an non-admin fan.
+        """
+        # Arrange.
+        section = self.arrange_create_section('Japanese Pink Movies', 'Pink')
+        sections_file = self.festival.sections_file
+        with open(sections_file, 'w', newline='') as csvfile:
+            section_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
+            section_writer.writerow(self.arrange_serialize_section(section))
+
+        # Act.
+        get_response = self.get_get_response(self.get_regular_fan_request())
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertContains(get_response, 'Not allowed')
+        self.assertNotContains(get_response, 'Pick a festival to load section data from')

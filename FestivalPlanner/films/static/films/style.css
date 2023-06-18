@@ -121,7 +121,12 @@ input[type=submit].in-table:hover {
 }
 
 /* Create a sticky, half-transparant header */
-.sticky {
+.sticky-thead {
+    position: sticky;
+    top: 14pt;
+    background-color: #00000090;
+}
+.sticky-index {
     position: sticky;
     top: 0;
     background-color: #00000090;
