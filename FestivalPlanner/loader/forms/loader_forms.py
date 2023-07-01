@@ -148,7 +148,6 @@ class SimpleLoader(BaseLoader):
         updated_object_set = set()
 
         # Select the existing objects.
-        existing_objects = None
         if self.delete_disappeared_objects:
             if self.festival:
                 existing_objects = self.object_manager.filter(**self.festival_filter)
