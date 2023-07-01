@@ -1,6 +1,13 @@
+import inspect
+
 from festivals.models import current_festival
 
 from films.models import current_fan, get_user_fan
+
+
+def caller():
+    frame = inspect.currentframe().f_back
+    return frame.f_code.co_name if frame.f_code is not None else 'code'
 
 
 def initialize_log(session, action='Load'):

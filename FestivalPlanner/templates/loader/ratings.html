@@ -35,7 +35,9 @@
                         <td>{{ festival_item.rating_count_on_file }}</td>
                         <td>{{ festival_item.rating_count }}</td>
                         <td class="with-submit">
-                            <input type="submit" value="Load" name="{{ festival_item.submit_name }}" class="in-table">
+                            {% if festival_item.film_count_on_file %}
+                                <input type="submit" value="Load" name="{{ festival_item.submit_name }}" class="in-table">
+                            {% endif %}
                         </td>
                     </tr>
                 {% endfor %}

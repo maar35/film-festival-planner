@@ -175,16 +175,21 @@ def films(request):
     film_count, rated_films_count, count_dicts = get_rating_statistic(festival, films)
     fan_list = get_present_fans()
     highest_rating = FilmFanFilmRating.Rating.values[-1]
+    unexpected_errors = []
 
     # Get the table rows.
-    film_list_rows = [{
-        'film': film,
-        'duration_str': film.duration_str(),
-        'duration_seconds': film.duration.total_seconds(),
-        'subsection': get_subsection(film),
-        'section': None,
-        'film_ratings': get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix),
-    } for film in films]
+    film_list_rows = []
+    try:
+        film_list_rows = [{
+            'film': film,
+            'duration_str': film.duration_str(),
+            'duration_seconds': film.duration.total_seconds(),
+            'subsection': get_subsection(film),
+            'section': None,
+            'film_ratings': get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix),
+        } for film in films]
+    except Subsection.DoesNotExist as e:
+        unexpected_errors = [f"{e}"]
 
     # Construct the context.
     context = add_base_context(request, {
@@ -196,6 +201,7 @@ def films(request):
         'eligible_counts': count_dicts,
         'short_threshold': timedelta(minutes=max_short_minutes).total_seconds(),
         'film_list_rows': film_list_rows,
+        'unexpected_errors': unexpected_errors,
     })
     refresh_rating_action(session, context)
 
@@ -212,9 +218,9 @@ def films(request):
 
                 return HttpResponseRedirect(reverse('films:films'))
             else:
-                context['unexpected_errors'] = ["Can't identify submit widget."]
+                context['unexpected_errors'].append("Can't identify submit widget.")
         else:
-            context['unexpected_errors'] = wrap_up_form_errors(form.errors)
+            context['unexpected_errors'].append(wrap_up_form_errors(form.errors))
 
     context['log'] = get_log(session)
     return render(request, "films/films.html", context)

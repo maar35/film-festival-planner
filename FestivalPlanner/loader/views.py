@@ -140,11 +140,11 @@ def load_festival_ratings(request):
         form = RatingLoaderForm(request.POST)
         if form.is_valid():
             if festival_indicator is not None:
-                keep_ratings = form.cleaned_data['keep_ratings']
+                import_mode = form.cleaned_data['import_mode']
                 festival_id = int(festival_indicator.strip(submit_name_prefix))
                 festival = Festival.festivals.get(pk=festival_id)
                 festival.set_current(request.session)
-                form.load_rating_data(request.session, festival, keep_ratings)
+                form.load_rating_data(request.session, festival, import_mode)
                 return HttpResponseRedirect(reverse('films:films'))
             else:
                 context['unexpected_error'] = "Can't identify submit widget."

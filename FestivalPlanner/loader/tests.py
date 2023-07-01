@@ -91,7 +91,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         super(RatingLoaderViewsTests, self).setUp()
 
         # Set up POST data for the ratings.html template.
-        self.post_data = {f'festival_{self.festival.id}': ['Load'], 'keep_ratings': []}
+        self.post_data = {f'festival_{self.festival.id}': ['Load'], 'import_mode': []}
 
     def tearDown(self):
         super(RatingLoaderViewsTests, self).tearDown()
@@ -129,11 +129,11 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         # Assert.
         self.assert_reading_from_file(get_response, post_response, redirect_response)
+        self.assertContains(redirect_response, 'No ratings will be effected')
         self.assertNotContains(redirect_response, 'not found')
         self.assertNotContains(redirect_response, 'Bad value in file')
         self.assertNotContains(redirect_response, 'incompatible header')
         self.assertContains(redirect_response, '2 film records read')
-        self.assertContains(redirect_response, 'No rating records read')
 
     def test_admin_can_load_ratings(self):
         """
@@ -157,6 +157,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
             rating_writer.writerow(serialize_rating(rating_1))
             rating_writer.writerow(serialize_rating(rating_2))
 
+        self.post_data['import_mode'] = ['on']
         post_response = self.client.post(reverse('loader:ratings'), self.post_data)
 
         # Act.
@@ -171,7 +172,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         self.assertNotContains(redirect_response, 'existing rating records saved')
         self.assertContains(redirect_response, '2 rating records read')
 
-    def test_admin_can_keep_ratings_while_loading_films(self):
+    def test_admin_can_replace_ratings_while_loading_films(self):
         """
         Existing ratings can be kept when loading films.
         """
@@ -192,7 +193,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
             rating_writer.writerow(RatingLoader.expected_header)
             rating_writer.writerow(serialize_rating(rating_1))
 
-        self.post_data['keep_ratings'] = ['on']
+        self.post_data['import_mode'] = ['on']
         post_response = self.client.post(reverse('loader:ratings'), self.post_data)
 
         # Act.
@@ -205,7 +206,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         self.assertNotContains(redirect_response, 'Bad value in file')
         self.assertNotContains(redirect_response, 'incompatible header')
         self.assertContains(redirect_response, '2 existing ratings saved')
-        self.assertContains(redirect_response, '2 rating records read')
+        self.assertContains(redirect_response, '1 rating records updated')
 
     def test_regular_user_cannot_load_rating_data(self):
         """
@@ -296,6 +297,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
             rating_writer.writerow(serialize_rating(rating_1))
             rating_writer.writerow((serialize_rating(rating_2))[1:])
 
+        self.post_data['import_mode'] = ['on']
         post_response = self.client.post(reverse('loader:ratings'), self.post_data)
 
         # Act.
