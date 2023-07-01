@@ -11,17 +11,20 @@ from theaters.models import Theater, theaters_path, City, cities_path
 
 
 class RatingLoaderForm(forms.Form):
-    keep_ratings = forms.BooleanField(
-        label='Save existing ratings before loading',
+    import_mode = forms.BooleanField(
+        label='Use import mode, all ratings are replaced',
         required=False,
         initial=False,
     )
 
     @staticmethod
-    def load_rating_data(session, festival, keep_ratings):
+    def load_rating_data(session, festival, import_mode=False):
         initialize_log(session)
-        if FilmLoader(session, festival, keep_ratings).load_objects():
-            RatingLoader(session, festival, keep_ratings).load_objects()
+        import_mode or add_log(session, 'No ratings will be effected.')
+        if FilmLoader(session, festival, import_mode).load_objects():
+            if import_mode:
+                add_log(session, 'Import mode. Ratings will be replaced.')
+                RatingLoader(session, festival).load_objects()
 
 
 class TheaterLoaderForm(forms.Form):
@@ -141,7 +144,16 @@ class SimpleLoader(BaseLoader):
     def load_objects(self):
         # Prepare statistics.
         objects_by_created = {}
+        existing_object_set = set()
         updated_object_set = set()
+
+        # Select the existing objects.
+        if self.delete_disappeared_objects:
+            if self.festival:
+                existing_objects = self.object_manager.filter(**self.festival_filter)
+            else:
+                existing_objects = self.object_manager.all()
+            existing_object_set = set(list(existing_objects))
 
         # Read the objects from the member file into the designated list.
         if not self.read_objects(self.objects_file, self.records):
@@ -174,14 +186,7 @@ class SimpleLoader(BaseLoader):
 
         # Delete objects that do not appear in the file.
         if self.delete_disappeared_objects:
-            # Select the existing objects.
-            if self.festival:
-                existing_objects = self.object_manager.filter(**self.festival_filter)
-            else:
-                existing_objects = self.object_manager.all()
-
             # Find existing objects that are not on the file.
-            existing_object_set = set(list(existing_objects))
             disappeared_object_set = existing_object_set - updated_object_set
             disappeared_pk_list = [obj.pk for obj in disappeared_object_set]
             disappeared_objects = existing_objects.filter(pk__in=disappeared_pk_list)
@@ -223,13 +228,15 @@ class FilmLoader(SimpleLoader):
     key_fields = ['festival', 'seq_nr', 'film_id']
     manager = Film.films
 
-    def __init__(self, session, festival, keep_ratings):
+    def __init__(self, session, festival, import_mode):
         super().__init__(session, 'film', self.manager, festival.films_file, festival=festival)
         self.festival = festival
-        self.keep_ratings = keep_ratings
+        self.import_mode = import_mode
+        self.delete_disappeared_objects = True
 
-        # Save ratings if the Keep Ratings flag is set.
-        if self.keep_ratings:
+        # Save ratings if the import mode flag is set and all ratings
+        # are replaced.
+        if self.import_mode:
             _ = self.save_ratings(self.festival.ratings_cache)
 
     def read_row(self, row):
@@ -282,11 +289,12 @@ class RatingLoader(SimpleLoader):
     key_fields = ['film', 'film_fan']
     manager = FilmFanFilmRating.film_ratings
 
-    def __init__(self, session, festival, keep_ratings):
-        file = festival.ratings_cache if keep_ratings else festival.ratings_file
+    def __init__(self, session, festival):
+        file = festival.ratings_file
         super().__init__(session, 'rating', self.manager, file, file_required=False,
                          festival=festival, festival_pk='film__festival__pk')
         self.festival = festival
+        self.delete_disappeared_objects = True
 
     def read_row(self, row):
         film_id = int(row[0])
