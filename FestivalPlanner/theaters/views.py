@@ -4,7 +4,7 @@ from django.views import generic
 
 from festival_planner.tools import add_base_context, get_log
 from festivals.models import current_festival
-from theaters.models import Theater
+from theaters.models import Theater, Screen
 
 
 class IndexView(generic.ListView):
@@ -45,5 +45,6 @@ class IndexView(generic.ListView):
             'theater': theater,
             'priority_color': self.color_by_priority[theater.priority],
             'priority_label': self.label_by_priority[theater.priority],
+            'screen_count': Screen.screens.filter(theater=theater).count()
         }
         return theater_row
