@@ -1,4 +1,5 @@
-from django.contrib.auth.decorators import login_required
+from operator import attrgetter
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
@@ -6,7 +7,7 @@ from django.urls import reverse
 from django.views.generic import FormView, ListView
 
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log
-from festivals.models import Festival, current_festival
+from festivals.models import Festival
 from films.models import Film, FilmFanFilmRating
 from loader.forms.loader_forms import TheaterLoaderForm, SectionLoader, SubsectionLoader, RatingLoaderForm
 from sections.models import Section, Subsection
@@ -22,6 +23,18 @@ def file_record_count(path, has_header=False):
     except FileNotFoundError:
         record_count = 0
     return record_count
+
+
+def get_festival_row(festival):
+    festival_row = {
+        'festival': festival,
+        'id': festival.id,
+        'section_count_on_file': file_record_count(festival.sections_file),
+        'section_count': Section.sections.filter(festival=festival).count,
+        'subsection_count_on_file': file_record_count(festival.subsections_file),
+        'subsection_count': Subsection.subsections.filter(festival=festival).count,
+    }
+    return festival_row
 
 
 class TheatersLoaderView(LoginRequiredMixin, FormView):
@@ -54,19 +67,7 @@ class TheatersLoaderView(LoginRequiredMixin, FormView):
         return super().form_valid(form)
 
 
-def get_festival_row(festival):
-    festival_row = {
-        'festival': festival,
-        'id': festival.id,
-        'section_count_on_file': file_record_count(festival.sections_file),
-        'section_count': Section.sections.filter(festival=festival).count,
-        'subsection_count_on_file': file_record_count(festival.subsections_file),
-        'subsection_count': Subsection.subsections.filter(festival=festival).count,
-    }
-    return festival_row
-
-
-class SectionsLoaderView(ListView):
+class SectionsLoaderView(LoginRequiredMixin, ListView):
     """
     Class-based view to load program sections of a specific festival.
     """
@@ -103,53 +104,64 @@ class SectionsLoaderView(ListView):
         return render(request, 'loader/sections.html', self.get_context_data())
 
 
-@login_required
-def load_festival_ratings(request):
+class RatingsLoaderView(LoginRequiredMixin, ListView):
     """
-    View to start loading ratings of a specific festival.
-    :param request:
-    :return:
+    Class-based view to load film ratings of a specific festival.
     """
+    template_name = 'loader/ratings.html'
+    http_method_names = ['get', 'post']
+    object_list = None
+    context_object_name = 'festival_items'
+    unexpected_error = ''
 
-    # Construct the context.
-    title = 'Load Ratings'
-    festivals = Festival.festivals.order_by('-start_date')
-    submit_name_prefix = 'festival_'
-    festival_items = [{
-        'str': festival,
-        'submit_name': f'{submit_name_prefix}{festival.id}',
-        'color': festival.festival_color,
-        'film_count_on_file': file_record_count(festival.films_file, has_header=True),
-        'film_count': Film.films.filter(festival=festival).count,
-        'rating_count_on_file': file_record_count(festival.ratings_file, has_header=True),
-        'rating_count': FilmFanFilmRating.film_ratings.filter(film__festival=festival).count,
-    } for festival in festivals]
-    context = add_base_context(request, {
-        'title': title,
-        'festival_items': festival_items,
-    })
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.submit_name_prefix = 'ratings_'
 
-    # Check the request.
-    if request.method == 'POST':
-        festival_indicator = None
-        names = [f'{submit_name_prefix}{festival.id}' for festival in festivals]
-        for name in names:
-            if name in request.POST:
-                festival_indicator = name
-                break
-        form = RatingLoaderForm(request.POST)
-        if form.is_valid():
-            if festival_indicator is not None:
-                import_mode = form.cleaned_data['import_mode']
-                festival_id = int(festival_indicator.strip(submit_name_prefix))
-                festival = Festival.festivals.get(pk=festival_id)
-                festival.set_current(request.session)
-                form.load_rating_data(request.session, festival, import_mode)
-                return HttpResponseRedirect(reverse('films:films'))
-            else:
-                context['unexpected_error'] = "Can't identify submit widget."
-    else:
-        form = RatingLoaderForm(initial={'festival': current_festival(request.session).id})
+    def get_queryset(self):
+        festival_list = sorted(Festival.festivals.all(), key=attrgetter('start_date'), reverse=True)
+        festival_rows = [self.get_festival_row(festival) for festival in festival_list]
+        return festival_rows
 
-    context['form'] = form
-    return render(request, 'loader/ratings.html', context)
+    def get_context_data(self, **kwargs):
+        self.object_list = self.get_queryset()
+        context = add_base_context(self.request, super().get_context_data(**kwargs))
+        context['title'] = 'Load Ratings'
+        context['unexpected_error'] = self.unexpected_error
+        context['form'] = RatingLoaderForm()
+        return context
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method == 'POST':
+            festival_indicator = None
+            object_list = self.get_queryset()
+            names = [f'{self.submit_name_prefix}{row["str"].id}' for row in object_list]
+            for name in names:
+                if name in request.POST:
+                    festival_indicator = name
+                    break
+            form = RatingLoaderForm(request.POST)
+            if form.is_valid():
+                if festival_indicator is not None:
+                    import_mode = form.cleaned_data['import_mode']
+                    festival_id = int(festival_indicator.strip(self.submit_name_prefix))
+                    festival = Festival.festivals.get(pk=festival_id)
+                    festival.set_current(request.session)
+                    form.load_rating_data(request.session, festival, import_mode)
+                    return HttpResponseRedirect(reverse('films:films'))
+                else:
+                    self.unexpected_error = "Can't identify submit widget."
+
+        return render(request, 'loader/ratings.html', self.get_context_data())
+
+    def get_festival_row(self, festival):
+        festival_row = {
+            'str': festival,
+            'submit_name': f'{self.submit_name_prefix}{festival.id}',
+            'color': festival.festival_color,
+            'film_count_on_file': file_record_count(festival.films_file, has_header=True),
+            'film_count': Film.films.filter(festival=festival).count,
+            'rating_count_on_file': file_record_count(festival.ratings_file, has_header=True),
+            'rating_count': FilmFanFilmRating.film_ratings.filter(film__festival=festival).count,
+        }
+        return festival_row

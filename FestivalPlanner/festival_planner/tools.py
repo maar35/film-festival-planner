@@ -1,8 +1,19 @@
 import inspect
+import re
+from os import path
 
 from festivals.models import current_festival
 
 from films.models import current_fan, get_user_fan
+
+RE_APP_NAME = re.compile(r'([a-z])([A-Z])')
+REPL_APP_NAME = r'\1 \2'
+
+
+def application_name():
+    base_name = path.basename(path.dirname(path.dirname(__file__)))
+    name = RE_APP_NAME.sub(REPL_APP_NAME, base_name)
+    return name
 
 
 def caller():
@@ -72,6 +83,7 @@ def add_base_context(request, param_dict):
     fan = current_fan(request.session)
 
     base_param_dict = {
+        'app_name': application_name(),
         'festival_color': festival_color,
         'background_image': background_image,
         'festival': festival,

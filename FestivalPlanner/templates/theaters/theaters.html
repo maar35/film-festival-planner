@@ -14,27 +14,31 @@
     <br>
     {% if theater_rows %}
         <table>
-            <thead">
+            <thead>
                 <tr>
-                    <td class="sticky-thead"><b>City</b></td>
-                    <td class="sticky-thead"><b>Theater</b></td>
-                    <td class="sticky-thead"><b>Abbreviation</b></td>
-                    <td class="sticky-thead"><b>Priority</b></td>
-                    <td class="sticky-thead"><b>Screens</b></td>
+                    <td class="sticky-t-head"><b>City</b></td>
+                    <td class="sticky-t-head"><b>Theater</b></td>
+                    <td class="sticky-t-head"><b>Abbreviation</b></td>
+                    <td class="sticky-t-head"><b>Priority</b></td>
+                    <td class="sticky-t-head"><b>Screens</b></td>
                 </tr>
             </thead>
             <tbody>
-            {% for theater_row in theater_rows %}
+            {% for row in theater_rows %}
                 <tr>
-                    {% if theater_row.is_festival_city %}
-                        <td style="color:{{ festival_color }}">{{ theater_row.theater.city.name }}</td>
+                    {% if row.is_festival_city %}
+                        <td style="color:{{ festival_color }}">{{ row.theater.city.name }}</td>
                     {% else %}
-                        <td>{{ theater_row.theater.city.name }}</td>
+                        <td>{{ row.theater.city.name }}</td>
                     {% endif %}
-                    <td style="color:{{ theater_row.priority_color }}">{{ theater_row.theater.parse_name }}</td>
-                    <td style="color:{{ theater_row.priority_color }}">{{ theater_row.theater.abbreviation }}</td>
-                    <td style="color:{{ theater_row.priority_color }}">{{ theater_row.priority_label }}</td>
-                    <td style="color:{{ theater_row.priority_color }}">{{ theater_row.screen_count }}</td>
+                    <td style="color:{{ row.priority_color }}">
+                        <a href="{% url 'theaters:details' row.theater.pk %}">
+                            {{ row.theater.parse_name }}
+                        </a>
+                    </td>
+                    <td style="color:{{ row.priority_color }}">{{ row.theater.abbreviation }}</td>
+                    <td style="color:{{ row.priority_color }}">{{ row.priority_label }}</td>
+                    <td style="color:{{ row.priority_color }}">{{ row.screen_count }}</td>
                 </tr>
             {% endfor %}
             </tbody>

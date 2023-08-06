@@ -15,34 +15,34 @@
             <form method="post">
                 {% csrf_token %}
                 {{ form.as_p }}
-            <br>
-            <table>
-                <thead>
-                    <tr>
-                        <td><b>Festival</b></td>
-                        <td><b>#Films on file</b></td>
-                        <td><b>#Films</b></td>
-                        <td><b>#Ratings on file</b></td>
-                        <td><b>#Ratings</b></td>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for festival_item in festival_items %}
-                    <tr>
-                        <td style="color:{{ festival_item.color }}">{{ festival_item.str }}</td>
-                        <td>{{ festival_item.film_count_on_file }}</td>
-                        <td>{{ festival_item.film_count }}</td>
-                        <td>{{ festival_item.rating_count_on_file }}</td>
-                        <td>{{ festival_item.rating_count }}</td>
-                        <td class="with-submit">
-                            {% if festival_item.film_count_on_file %}
-                                <input type="submit" value="Load" name="{{ festival_item.submit_name }}" class="in-table">
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+                <br>
+                <table>
+                    <thead>
+                        <tr>
+                            <td><b>Festival</b></td>
+                            <td><b>#Films on file</b></td>
+                            <td><b>#Films</b></td>
+                            <td><b>#Ratings on file</b></td>
+                            <td><b>#Ratings</b></td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for festival_item in festival_items %}
+                        <tr>
+                            <td style="color:{{ festival_item.color }}">{{ festival_item.str }}</td>
+                            <td>{{ festival_item.film_count_on_file }}</td>
+                            <td>{{ festival_item.film_count }}</td>
+                            <td>{{ festival_item.rating_count_on_file }}</td>
+                            <td>{{ festival_item.rating_count }}</td>
+                            <td class="with-submit">
+                                {% if festival_item.film_count_on_file %}
+                                    <input type="submit" value="Load" name="{{ festival_item.submit_name }}" class="in-table">
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
             </form>
         {% else %}
             <p>No festivals are available.</p>
