@@ -11,6 +11,9 @@ REPL_APP_NAME = r'\1 \2'
 
 
 def application_name():
+    """
+    Get application name from the project directory name.
+    """
     base_name = path.basename(path.dirname(path.dirname(__file__)))
     name = RE_APP_NAME.sub(REPL_APP_NAME, base_name)
     return name
@@ -19,6 +22,40 @@ def application_name():
 def caller():
     frame = inspect.currentframe().f_back
     return frame.f_code.co_name if frame.f_code is not None else 'code'
+
+
+def debug():
+    frame = inspect.currentframe().f_back
+    lineno = frame.f_lineno
+    code = frame.f_code.co_name if frame.f_code is not None else 'code'
+    return f'@@ {code}:{lineno}'
+
+
+def pr_debug(message):
+    print(f'{debug()} {message}')
+
+
+def set_cookie(session, cookie_key, value):
+    """
+    Initialize cookie.
+    """
+    session[cookie_key] = value
+
+
+def get_cookie(session, cookie_key, default=None):
+    """
+    Get the cookie from the session or default if it doesn't exist.
+    """
+    value = session.get(cookie_key, default)
+    return value
+
+
+def remove_cookie(session, cookie):
+    """
+    Remove cookie.
+    """
+    if cookie in session:
+        del session[cookie]
 
 
 def initialize_log(session, action='Load'):
