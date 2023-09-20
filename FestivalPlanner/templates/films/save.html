@@ -4,10 +4,10 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <span style="text-align: left; width: 49%; display: inline-block;">
+    <span class="left-half">
         <h3>Save ratings of {{ festival }}</h3>
     </span>
-    <span style="text-align: right; width: 50%; display: inline-block;">
+    <span class="right-half">
         <a href="{% url 'films:films' %}">Back to ratings list</a>
     </span>
     {% if form.errors %}

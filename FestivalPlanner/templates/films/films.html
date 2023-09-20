@@ -4,10 +4,10 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <span style="text-align: left; width: 49%; display: inline-block;">
+    <span class="left-half">
         <h3>Film list with ratings</h3>
     </span>
-    <span style="text-align: right; width: 50%; display: inline-block;">
+    <span class="right-half">
         <a href="{% url 'films:save' festival.id %}">Dump ratings</a>
     </span>
     {% if log %}
@@ -67,11 +67,11 @@
     <table>
         <thead>
             <tr>
-                <td class="sticky-thead"><b>Film</b></td>
-                <td class="sticky-thead"><b>Duration</b></td>
-                <td class="sticky-thead"><b>Subsection</b></td>
+                <th class="sticky-t-head">Film</th>
+                <th class="sticky-t-head">Duration</th>
+                <th class="sticky-t-head">Subsection</th>
                 {% for fan in fans %}
-                    <td class="sticky-thead"><b>{{ fan }}</b></td>
+                    <th class="sticky-t-head">{{ fan }}</th>
                 {% endfor %}
             </tr>
         </thead>

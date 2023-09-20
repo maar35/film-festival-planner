@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Festival Planner Page{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_name }} Page{% endblock %}</title>
     {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'films/style.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'festivals/project_style.css' %}">
     <link rel="shortcut icon" type="image/png" href="{% static 'festivals/images/Mac-512.png' %}"/>
 </head>
 
@@ -26,7 +27,7 @@
     <hr>
     <h1>{% block header %} Page Title {% endblock %}</h1>
     <p>
-        <span style="color:{{ festival_color }}; text-align: left; width: 49%; display: inline-block;">
+        <span class="left-half">
         {% if festival %}
             <a href="{% url 'festivals:index' %}">{{ festival }}</a>
             {% now "Y-m-d" as today_as_date %}
@@ -45,7 +46,7 @@
             No festival selected.
         {% endif %}
         </span>
-        <span style="text-align: right; width: 50%; display: inline-block;">
+        <span class="right-half">
         {% if user.is_authenticated %}
             {{ user.username }}
             <a href="{% url 'authentication:logout' %}">Logout</a>
@@ -59,7 +60,7 @@
             <a href="{% url 'films:index' %}">index</a>
         </span>
         <span style="text-align: center; width: 19%; display: inline-block;">
-            <small style="color: ivory;">Festival Planner App</small>
+            <small style="color: ivory;">{{app_name}} App</small>
         </span>
         <span style="text-align: right; width: 40%; display: inline-block;">
         {% if current_fan %}

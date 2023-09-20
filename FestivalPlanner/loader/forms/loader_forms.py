@@ -7,7 +7,7 @@ from django.db import IntegrityError
 from festival_planner.tools import initialize_log, add_log
 from films.models import Film, FilmFanFilmRating, FilmFan
 from sections.models import Section, Subsection
-from theaters.models import Theater, theaters_path, City, cities_path
+from theaters.models import Theater, theaters_path, City, cities_path, Screen, screens_path
 
 
 class RatingLoaderForm(forms.Form):
@@ -33,8 +33,13 @@ class TheaterLoaderForm(forms.Form):
     @staticmethod
     def load_theater_data(session):
         initialize_log(session)
-        if CityLoader(session).load_objects():
-            TheaterLoader(session).load_objects()
+        go_on = True
+        if go_on:
+            go_on = CityLoader(session).load_objects()
+        if go_on:
+            go_on = TheaterLoader(session).load_objects()
+        if go_on:
+            _ = ScreenLoader(session).load_objects()
 
 
 class BaseLoader:
@@ -300,6 +305,7 @@ class RatingLoader(SimpleLoader):
         film_id = int(row[0])
         film_fan_name = row[1]
         rating = int(row[2])
+
         try:
             film = Film.films.get(festival_id=self.festival.id, film_id=film_id)
         except Film.DoesNotExist:
@@ -355,6 +361,7 @@ class SubsectionLoader(SimpleLoader):
         name = row[2]
         description = row[3]
         url = row[4]
+
         try:
             section = Section.sections.get(festival_id=self.festival.id, section_id=section_id)
         except Section.DoesNotExist:
@@ -407,6 +414,7 @@ class TheaterLoader(SimpleLoader):
         parse_name = row[2]
         abbreviation = row[3]
         priority = Theater.Priority(int(row[4]))
+
         try:
             city = City.cities.get(city_id=city_id)
         except City.DoesNotExist:
@@ -419,5 +427,36 @@ class TheaterLoader(SimpleLoader):
             'parse_name': parse_name,
             'abbreviation': abbreviation,
             'priority': priority,
+        }
+        return value_by_field
+
+
+class ScreenLoader(SimpleLoader):
+    key_fields = ['screen_id']
+    manager = Screen.screens
+    file = screens_path()
+
+    def __init__(self, session):
+        super().__init__(session, 'screen', self.manager, self.file)
+
+    def read_row(self, row):
+        screen_id = int(row[0])
+        theater_id = int(row[1])
+        parse_name = row[2]
+        abbreviation = row[3]
+        address_type = Screen.ScreenAddressType(int(row[4]))
+
+        try:
+            theater = Theater.theaters.get(theater_id=theater_id)
+        except Theater.DoesNotExist:
+            self.add_log(f'Theater not found: #{theater_id}')
+            return None
+
+        value_by_field = {
+            'screen_id': screen_id,
+            'theater': theater,
+            'parse_name': parse_name,
+            'abbreviation': abbreviation,
+            'address_type': address_type,
         }
         return value_by_field

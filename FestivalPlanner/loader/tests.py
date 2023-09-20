@@ -17,7 +17,7 @@ from films.models import FilmFanFilmRating
 from films.tests import create_film, ViewsTestCase, get_request_with_session
 from films.views import SaveView, films
 from loader.forms.loader_forms import FilmLoader, RatingLoader
-from loader.views import SectionsLoaderView, get_festival_row, load_festival_ratings
+from loader.views import SectionsLoaderView, get_festival_row, RatingsLoaderView
 from sections.models import Section
 from theaters.models import City
 
@@ -89,12 +89,18 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
     def setUp(self):
         super(RatingLoaderViewsTests, self).setUp()
+        self.ratings_loader_view = RatingsLoaderView()
 
         # Set up POST data for the ratings.html template.
-        self.post_data = {f'festival_{self.festival.id}': ['Load'], 'import_mode': []}
+        self.post_data = {f'ratings_{self.festival.id}': ['Load'], 'import_mode': []}
 
     def tearDown(self):
         super(RatingLoaderViewsTests, self).tearDown()
+
+    def arrange_get_get_response(self, get_request):
+        self.ratings_loader_view.setup(get_request)
+        context = self.ratings_loader_view.get_context_data()
+        return self.ratings_loader_view.render_to_response(context)
 
     def assert_reading_from_file(self, get_response, post_response, redirect_response):
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
@@ -111,7 +117,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         """
         # Arrange.
         request = self.get_admin_request()
-        get_response = load_festival_ratings(request)
+        get_response = self.arrange_get_get_response(request)
 
         film_1 = create_film(1, 'Der Berliner', 103, festival=self.festival)
         film_2 = create_film(2, 'Angst und Freude', 15, festival=self.festival)
@@ -141,7 +147,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         """
         # Arrange.
         request = self.get_admin_request()
-        get_response = load_festival_ratings(request)
+        get_response = self.arrange_get_get_response(request)
 
         film = create_film(1, 'Leben und Sterben in Tirol', 182, festival=self.festival)
         with open(self.festival.films_file, 'w', newline='') as csv_films_file:
@@ -178,7 +184,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         """
         # Arrange.
         request = self.get_admin_request()
-        get_response = load_festival_ratings(request)
+        get_response = self.arrange_get_get_response(request)
 
         film = create_film(1, 'Leben und Sterben in Tirol', 182, festival=self.festival)
         with open(self.festival.films_file, 'w', newline='') as csv_films_file:
@@ -216,7 +222,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         request = self.get_regular_fan_request()
 
         # Act.
-        get_response = load_festival_ratings(request)
+        get_response = self.arrange_get_get_response(request)
 
         # Assert.
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
@@ -229,7 +235,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         """
         # Arrange.
         request = self.get_admin_request()
-        get_response = load_festival_ratings(request)
+        get_response = self.arrange_get_get_response(request)
 
         films_file = self.festival.films_file
         with open(films_file, 'w', newline='') as csvfile:
@@ -253,7 +259,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         """
         # Arrange.
         request = self.get_admin_request()
-        get_response = load_festival_ratings(request)
+        get_response = self.arrange_get_get_response(request)
 
         film = create_film(1, 'Der Faust', 303, festival=self.festival)
         films_file = self.festival.films_file
@@ -281,7 +287,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         """
         # Arrange.
         request = self.get_admin_request()
-        get_response = load_festival_ratings(request)
+        get_response = self.arrange_get_get_response(request)
 
         film = create_film(1, 'Schwestern und Töchter', 95, festival=self.festival)
         with open(self.festival.films_file, 'w', newline='') as csv_films_file:

@@ -20,6 +20,7 @@ small,
 label,
 h2,
 h3,
+h4,
 li,
 table,
 th,
@@ -30,8 +31,10 @@ td {
 
 /* Use b for table head cells. Color these cells a bit brighter than
 the regular cells. */
-b {
+b,
+th {
     color: ivory;
+    text-align: left;
 }
 
 /* Static table styling. Color is dependant of the current festival
@@ -59,7 +62,7 @@ a bit larger. */
 input[type=submit] {
     width: 50%;
     font-size: large;
-    background-color: green;
+    background-color: forestgreen;
     color: ivory;
     padding: 14px 20px;
     margin: 8px 0;
@@ -68,7 +71,7 @@ input[type=submit] {
     cursor: pointer;
 }
 input[type=submit]:hover {
-    background-color: forestgreen;
+    background-color: darkgreen;
 }
 
 /* Customize the text and password input widgets as to make the text
@@ -76,7 +79,7 @@ larger and to create harmony with the submit widget. */
 input[type=password],
 input[type=text] {
     font-size: large;
-    background-color: green;
+    background-color: forestgreen;
     color: ivory;
     padding: 7px 20px;
     border: none;
@@ -84,11 +87,11 @@ input[type=text] {
 }
 input[type=password]:hover,
 input[type=text]:hover {
-    background-color: forestgreen;
+    background-color: darkgreen;
 }
 input[type=password]:focus,
 input[type=text]:focus {
-    background-color: darkgreen;
+    background-color: green;
 }
 
 /* Specifics for in-table input widgets */
@@ -121,7 +124,7 @@ input[type=submit].in-table:hover {
 }
 
 /* Create a sticky, half-transparant header */
-.sticky-thead {
+.sticky-t-head {
     position: sticky;
     top: 14pt;
     background-color: #00000090;
@@ -132,29 +135,42 @@ input[type=submit].in-table:hover {
     background-color: #00000090;
 }
 
-/* Style The Dropdown Button */
-.drop-button {
-    position: relative;
-    top: 4px;
-    color: ivory;
-    background-color: green;
-    padding: 2px;
-    font-size: 16px;
-    border: none;
-    cursor: pointer;
+/* Put an element left and one right on the same line */
+.left-half {
+    display: inline-block;
+    text-align: left;
+    width: 49%;
+}
+.right-half{
+    display: inline-block;
+    text-align: right;
+    width: 50%;
 }
 
 /* The container <div> - needed to position the dropdown content */
 .dropdown {
     position: relative;
-    display: inline-block;
-    background-color: green;
+    display: block;
+    background-color: forestgreen;
     text-align: center;
-    width: 70%;
-    height: 24px;
+    margin: auto;
+    width: auto;
+    height: auto;
 }
 .dropdown:hover {
     background-color: darkgreen;
+}
+
+/* Style The Dropdown Button */
+.drop-button {
+    position: relative;
+    color: ivory;
+    background-color: transparent;
+    margin: auto;
+    padding: 2px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
 }
 
 /* Dropdown Content (Hidden by Default) */

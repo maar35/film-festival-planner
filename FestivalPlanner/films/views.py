@@ -5,10 +5,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
-from django.views import generic
-from django.views.generic import FormView
+from django.views.generic import FormView, DetailView
 
-from festival_planner.tools import add_base_context, unset_log, get_log, wrap_up_form_errors
+from festival_planner.tools import add_base_context, unset_log, get_log, wrap_up_form_errors, application_name
 from festivals.config import Config
 from festivals.models import Festival, current_festival
 from films.forms.film_forms import RatingForm, SaveRatingsForm, PickRating, UserForm
@@ -17,7 +16,7 @@ from loader.views import file_record_count
 from sections.models import Subsection
 
 
-class ResultsView(generic.DetailView):
+class ResultsView(DetailView):
     """
     Define generic view classes.
     """
@@ -108,9 +107,7 @@ def index(request):
     """
 
     # Set-up parameters.
-    title = 'Festival Planner App Index'
-    current_time = datetime.now()
-    time_string = current_time.strftime('%H:%M:%S')
+    title = f'{application_name()} App Index'
     fan = current_fan(request.session)
     user_name = fan if fan is not None else 'Guest'
 
@@ -120,7 +117,6 @@ def index(request):
     # Construct the parameters.
     context = add_base_context(request, {
         'title': title,
-        'hour': time_string,
         'name': user_name,
     })
 
@@ -171,8 +167,8 @@ def films(request):
     session = request.session
     logged_in_fan = current_fan(session)
     festival = current_festival(session)
-    films = Film.films.filter(festival=festival).order_by('seq_nr')
-    film_count, rated_films_count, count_dicts = get_rating_statistic(festival, films)
+    festival_films = Film.films.filter(festival=festival).order_by('seq_nr')
+    film_count, rated_films_count, count_dicts = get_rating_statistic(festival, festival_films)
     fan_list = get_present_fans()
     highest_rating = FilmFanFilmRating.Rating.values[-1]
     unexpected_errors = []
@@ -187,7 +183,7 @@ def films(request):
             'subsection': get_subsection(film),
             'section': None,
             'film_ratings': get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix),
-        } for film in films]
+        } for film in festival_films]
     except Subsection.DoesNotExist as e:
         unexpected_errors = [f"{e}"]
 
