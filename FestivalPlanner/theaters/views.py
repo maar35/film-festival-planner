@@ -79,7 +79,7 @@ class TheaterDetailView(DetailView):
         })
         form = TheaterScreenDetailsForm()
         formset = self.get_screen_formset(screens)
-        screen_items = self.get_screen_items(theater, screens, formset)
+        screen_items = self.get_screen_items(screens, formset)
         context['title'] = 'Theater Details'
         context['form'] = form
         context['theater'] = theater
@@ -100,7 +100,7 @@ class TheaterDetailView(DetailView):
         return screen_formset
 
     @staticmethod
-    def get_screen_items(theater, screens, formset):
+    def get_screen_items(screens, formset):
         screen_items = []
         for i, screen in enumerate(screens):
             form = formset[i]
@@ -129,13 +129,13 @@ class TheaterScreenListFormView(SingleObjectMixin, FormView):
         self.session = request.session
         remove_cookie(self.session, 'form_errors')
 
-        # Remember new theater abbreviation.
+        # Save new theater abbreviation.
         if 'abbreviation' in request.POST:
             self.abbreviation = request.POST['abbreviation']
             return super().post(request, *args, **kwargs)
 
         # Save new theater priority.
-        elif 'priority' in request.POST:
+        if 'priority' in request.POST:
             priority_label = request.POST['priority']
             self.theater.priority = self.priority_by_label[priority_label]
             self.theater.save()
@@ -169,7 +169,7 @@ class TheaterScreenListFormView(SingleObjectMixin, FormView):
     def process_screen_abbreviations(self, request):
         screens = Screen.screens.filter(theater=self.theater)
 
-        # Create a form set based on the POST dictionary.
+        # Create a formset based on the POST dictionary.
         data = {
             'form-TOTAL_FORMS': str(len(screens)),
             'form-INITIAL_FORMS': '0',
@@ -178,8 +178,8 @@ class TheaterScreenListFormView(SingleObjectMixin, FormView):
             field_id = f'form-{index}-screen_abbreviation'
             if field_id in request.POST:
                 data[field_id] = request.POST[field_id]
-        screen_form_set_class = formset_factory(TheaterScreenDetailsForm)
-        result_formset = screen_form_set_class(data)
+        screen_formset_class = formset_factory(TheaterScreenDetailsForm)
+        result_formset = screen_formset_class(data)
 
         # Validate the screen forms.
         field = 'screen_abbreviation'

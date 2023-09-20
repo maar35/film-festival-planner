@@ -34,6 +34,7 @@ the regular cells. */
 b,
 th {
     color: ivory;
+    text-align: left;
 }
 
 /* Static table styling. Color is dependant of the current festival

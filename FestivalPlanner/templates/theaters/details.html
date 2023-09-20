@@ -22,15 +22,15 @@
         <br>
         <table>
             <tbody>
-                <tr><td><b>Theater</b></td><td>{{ theater.parse_name }}</td></tr>
-                <tr><td><b>Theater ID</b></td><td>{{ theater.theater_id }}</td></tr>
-                <tr><td><b>City</b></td><td>{{ theater.city }}</td></tr>
-                <tr><td><b>Country</b></td><td>{{ theater.city.country }}</td></tr>
+                <tr><th>Theater</th><td>{{ theater.parse_name }}</td></tr>
+                <tr><th>Theater ID</th><td>{{ theater.theater_id }}</td></tr>
+                <tr><th>City</th><td>{{ theater.city }}</td></tr>
+                <tr><th>Country</th><td>{{ theater.city.country }}</td></tr>
                 <form method="post">
                 {% csrf_token %}
-                <tr><td><b>Abbreviation</b></td><td>{{ theater_form.abbreviation }}</td></tr>
+                <tr><th>Abbreviation</th><td>{{ theater_form.abbreviation }}</td></tr>
                 </form>
-                <tr><td><b>Priority</b></td>
+                <tr><th>Priority</th>
                     <form method="post">
                     {% csrf_token %}
                     <td class="dropdown">
@@ -53,10 +53,10 @@
         <table>
             <thead>
             <tr>
-                <td class="sticky-t-head"><b>Screen</b></td>
-                <td class="sticky-t-head"><b>PK</b></td>
-                <td class="sticky-t-head"><b>Base abbreviation</b></td>
-                <td class="sticky-t-head"><b>Abbreviation</b></td>
+                <th class="sticky-t-head">Screen</th>
+                <th class="sticky-t-head">PK</th>
+                <th class="sticky-t-head">Base abbreviation</th>
+                <th class="sticky-t-head">Abbreviation</th>
             </tr>
             </thead>
             <tbody>
