@@ -38,7 +38,9 @@ class TheaterViewTests(ViewsTestCase):
         )
 
     @staticmethod
-    def arrange_create_screen(screen_id, theater, parse_name, abbreviation, address_type=Screen.ScreenAddressType.LOCATION):
+    def arrange_create_screen(
+            screen_id, theater, screen_name, abbreviation, address_type=Screen.ScreenAddressType.LOCATION):
+        parse_name = f'{theater.parse_name} {screen_name}'
         return Screen.screens.create(
             screen_id=screen_id,
             theater=theater,
@@ -63,7 +65,7 @@ class TheaterViewTests(ViewsTestCase):
         self.assertNotContains(response, Theater.Priority.LOW.label)
         self.assertContains(response, Theater.Priority.NO_GO.label)
 
-    def test_user_can_not_display_theater_details(self):
+    def test_hacker_can_not_display_theater_details(self):
         # Arrange.
         theater = self.arrange_create_theater(17, 'Festarena der Filme', 'fest', Theater.Priority.LOW)
         pk = theater.pk
@@ -76,12 +78,14 @@ class TheaterViewTests(ViewsTestCase):
         self.assertEqual(get_response.status_code, HTTPStatus.FOUND)
         self.assertContains(redirect_response, 'Application Login')
         self.assertContains(redirect_response, 'Please enter your credentials')
+        self.assertNotContains(redirect_response, theater.parse_name)
+        self.assertNotRegex(redirect_response.rendered_content, r'Abbreviation.*?' + f'{theater.abbreviation}')
 
     def test_admin_can_display_theater_details(self):
         # Arrange.
         theater = self.arrange_create_theater(6, 'Baer Palace', 'b', Theater.Priority.NO_GO)
-        screen_1 = self.arrange_create_screen(11, theater, theater.parse_name + ' Zimmer 1', 'b1')
-        screen_2 = self.arrange_create_screen(12, theater, theater.parse_name + ' Zimmer 2', 'b2')
+        screen_1 = self.arrange_create_screen(11, theater, 'Zimmer 1', '1')
+        screen_2 = self.arrange_create_screen(12, theater, 'Zimmer 2', '2')
         pk = theater.pk
         _ = self.get_admin_request()
 
@@ -98,8 +102,8 @@ class TheaterViewTests(ViewsTestCase):
     def test_regular_fan_can_not_display_theater_details(self):
         # Arrange.
         theater = self.arrange_create_theater(1, 'Theater Georges Méliès', 'gm-', Theater.Priority.HIGH)
-        screen_g = self.arrange_create_screen(7, theater, theater.parse_name + ' großer Raum', 'gm-gr')
-        screen_k = self.arrange_create_screen(4, theater, theater.parse_name + ' kleine Halle', 'gm-kl')
+        screen_g = self.arrange_create_screen(7, theater, 'großer Raum', 'gr')
+        screen_k = self.arrange_create_screen(4, theater, 'kleine Halle', 'kl')
         pk = theater.pk
         _ = self.get_regular_fan_request()
 
