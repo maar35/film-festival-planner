@@ -1,17 +1,18 @@
 import csv
 import datetime
 
-from django import forms
 from django.db import IntegrityError
+from django.forms import Form, BooleanField, SlugField
 
 from festival_planner.tools import initialize_log, add_log
 from films.models import Film, FilmFanFilmRating, FilmFan
 from sections.models import Section, Subsection
-from theaters.models import Theater, theaters_path, City, cities_path, Screen, screens_path
+from theaters.models import Theater, theaters_path, City, cities_path, Screen, screens_path, cities_cache_path, \
+    theaters_cache_path, screens_cache_path
 
 
-class RatingLoaderForm(forms.Form):
-    import_mode = forms.BooleanField(
+class RatingLoaderForm(Form):
+    import_mode = BooleanField(
         label='Use import mode, all ratings are replaced',
         required=False,
         initial=False,
@@ -21,18 +22,43 @@ class RatingLoaderForm(forms.Form):
     def load_rating_data(session, festival, import_mode=False):
         initialize_log(session)
         import_mode or add_log(session, 'No ratings will be effected.')
-        if FilmLoader(session, festival, import_mode).load_objects():
+
+        # Save ratings if the import mode flag is set and all ratings
+        # are replaced.
+        if import_mode:
+            _ = RatingDumper(session).save_ratings(festival, festival.ratings_cache)
+
+        # Load films and, if applicable, ratings.
+        if FilmLoader(session, festival).load_objects():
             if import_mode:
                 add_log(session, 'Import mode. Ratings will be replaced.')
                 RatingLoader(session, festival).load_objects()
 
 
-class TheaterLoaderForm(forms.Form):
-    dummy_field = forms.SlugField(required=False)
+class SaveRatingsForm(Form):
+    dummy_field = SlugField(required=False)
+
+    @staticmethod
+    def save_ratings(session, festival):
+        initialize_log(session, 'Save')
+        add_log(session, f'Saving the {festival} ratings.')
+        if not RatingDumper(session).save_ratings(festival, festival.ratings_file):
+            add_log(session, f'Failed to save the {festival} ratings.')
+
+
+class TheaterDataLoaderForm(Form):
+    dummy_field = SlugField(required=False)
 
     @staticmethod
     def load_theater_data(session):
         initialize_log(session)
+
+        # Cache the database data before it is overwritten.
+        CityDumper(session).dump_objects(cities_cache_path())
+        TheaterDumper(session).dump_objects(theaters_cache_path())
+        ScreenDumper(session).dump_objects(screens_cache_path())
+
+        # Overwrite the festival data in the database.
         go_on = True
         if go_on:
             go_on = CityLoader(session).load_objects()
@@ -40,6 +66,18 @@ class TheaterLoaderForm(forms.Form):
             go_on = TheaterLoader(session).load_objects()
         if go_on:
             _ = ScreenLoader(session).load_objects()
+
+
+class TheaterDataDumperForm(Form):
+    dummy_field = SlugField(required=False)
+
+    @staticmethod
+    def dump_theater_data(session):
+        initialize_log(session, 'Dump')
+        add_log(session, 'Dumping the theater database data.')
+        CityDumper(session).dump_objects(cities_path())
+        TheaterDumper(session).dump_objects(theaters_path())
+        ScreenDumper(session).dump_objects(screens_path())
 
 
 class BaseLoader:
@@ -109,6 +147,7 @@ class BaseLoader:
     def read_row(self, row):
         """
         "Virtual" method to read one object from file
+
         :param row: Line from the file being read
         :return: The object read, None if no object could be read
         """
@@ -233,16 +272,10 @@ class FilmLoader(SimpleLoader):
     key_fields = ['festival', 'seq_nr', 'film_id']
     manager = Film.films
 
-    def __init__(self, session, festival, import_mode):
+    def __init__(self, session, festival):
         super().__init__(session, 'film', self.manager, festival.films_file, festival=festival)
         self.festival = festival
-        self.import_mode = import_mode
         self.delete_disappeared_objects = True
-
-        # Save ratings if the import mode flag is set and all ratings
-        # are replaced.
-        if self.import_mode:
-            _ = self.save_ratings(self.festival.ratings_cache)
 
     def read_row(self, row):
         seq_nr = int(row[0])
@@ -268,25 +301,6 @@ class FilmLoader(SimpleLoader):
             'url': url,
         }
         return value_by_field
-
-    def save_ratings(self, file):
-        festival = self.festival
-        ratings = FilmFanFilmRating.film_ratings.filter(film__festival_id=festival.id)
-
-        try:
-            with open(file, 'w', newline='') as csvfile:
-                rating_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
-                rating_writer.writerow(RatingLoader.expected_header)
-                for rating in ratings:
-                    row = [rating.film.film_id, rating.film_fan.name, rating.rating]
-                    rating_writer.writerow(row)
-        except FileNotFoundError:
-            self.add_log(f'File {file} not found.')
-            return False
-        else:
-            self.add_log(f'{len(ratings)} existing ratings saved to {file}.')
-
-        return True
 
 
 class RatingLoader(SimpleLoader):
@@ -460,3 +474,103 @@ class ScreenLoader(SimpleLoader):
             'address_type': address_type,
         }
         return value_by_field
+
+
+class BaseDumper:
+    """
+    Base class for dumping objects to CSV files.
+    """
+
+    def __init__(self, session, object_name, manager, header=None):
+        self.session = session
+        self.object_name = object_name
+        self.manager = manager
+        self.header = header
+
+    def dump_objects(self, file, objects=None):
+        objects = objects or self.manager.all()
+        self.add_log(f'Dumping {self.object_name} data.')
+        try:
+            with open(file, 'w', newline='') as csvfile:
+                csv_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
+                if self.header:
+                    csv_writer.writerow(self.header)
+                for obj in objects:
+                    row = self.object_row(obj)
+                    csv_writer.writerow(row)
+        except PermissionError as e:
+            self.add_log(f'{e}: File {file} could not be written.')
+            return False
+        else:
+            self.add_log(f'{len(objects)} existing {self.object_name} objects saved in {file}.')
+
+        return True
+
+    def object_row(self, obj):
+        """
+        "Virtual" method to dump one object to file
+
+        :obj: The object to be dumped.
+        :return: List of object attributes to be written
+        """
+        return []
+
+    def add_log(self, text):
+        add_log(self.session, text)
+
+
+class RatingDumper(BaseDumper):
+    manager = FilmFanFilmRating.film_ratings
+    header = RatingLoader.expected_header
+
+    def __init__(self, session):
+        super().__init__(session, 'rating', self.manager, self.header)
+
+    def object_row(self, rating):
+        return [rating.film.film_id, rating.film_fan.name, rating.rating]
+
+    def save_ratings(self, festival, file):
+        festival_ratings = self.manager.filter(film__festival_id=festival.id)
+        return self.dump_objects(file, festival_ratings)
+
+
+class CityDumper(BaseDumper):
+    manager = City.cities
+
+    def __init__(self, session):
+        super().__init__(session, 'city', self.manager)
+
+    def object_row(self, city):
+        return [city.city_id, city.name, city.country]
+
+
+class TheaterDumper(BaseDumper):
+    manager = Theater.theaters
+
+    def __init__(self, session):
+        super().__init__(session, 'theater', self.manager)
+
+    def object_row(self, theater):
+        return [
+            theater.theater_id,
+            theater.city.city_id,
+            theater.parse_name,
+            theater.abbreviation,
+            theater.priority,
+        ]
+
+
+class ScreenDumper(BaseDumper):
+    manager = Screen.screens
+
+    def __init__(self, session):
+        super().__init__(session, 'screen', self.manager)
+
+    def object_row(self, screen):
+        return [
+            screen.screen_id,
+            screen.theater.theater_id,
+            screen.parse_name,
+            screen.abbreviation,
+            screen.address_type,
+        ]

@@ -175,7 +175,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         self.assertNotContains(redirect_response, 'not found')
         self.assertNotContains(redirect_response, 'Bad value in file')
         self.assertNotContains(redirect_response, 'incompatible header')
-        self.assertNotContains(redirect_response, 'existing rating records saved')
+        self.assertContains(redirect_response, 'existing rating objects saved')
         self.assertContains(redirect_response, '2 rating records read')
 
     def test_admin_can_replace_ratings_while_loading_films(self):
@@ -211,7 +211,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         self.assertNotContains(redirect_response, 'not found')
         self.assertNotContains(redirect_response, 'Bad value in file')
         self.assertNotContains(redirect_response, 'incompatible header')
-        self.assertContains(redirect_response, '2 existing ratings saved')
+        self.assertContains(redirect_response, '2 existing rating objects saved')
         self.assertContains(redirect_response, '1 rating records updated')
 
     def test_regular_user_cannot_load_rating_data(self):
@@ -350,13 +350,13 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         redirect_response = films(redirect_request)
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
         self.assertNotContains(get_response, 'Not allowed')
-        self.assertNotContains(get_response, 'existing ratings saved ')
+        self.assertNotContains(get_response, 'existing rating objects saved ')
         self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
         self.assertURLEqual(post_response.url, reverse('films:films'))
         self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
         self.assertContains(redirect_response, 'Save results')
-        self.assertContains(redirect_response, '3 existing ratings saved')
-        log_re = re.compile(r'\b3 existing ratings saved to.*?csv')
+        self.assertContains(redirect_response, '3 existing rating objects saved')
+        log_re = re.compile(r'\b3 existing rating objects saved in.*?csv')
         self.assertRegex(redirect_response.content.decode('utf-8'), log_re)
 
 

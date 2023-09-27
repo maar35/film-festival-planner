@@ -8,7 +8,7 @@ from django.views import View
 from django.views.generic import ListView, DetailView, FormView
 from django.views.generic.detail import SingleObjectMixin
 
-from festival_planner.tools import add_base_context, get_log, set_cookie, get_cookie, remove_cookie
+from festival_planner.tools import add_base_context, get_log, set_cookie, get_cookie, remove_cookie, unset_log
 from festivals.models import current_festival
 from theaters.forms.theater_forms import TheaterDetailsForm, TheaterScreenDetailsForm
 from theaters.models import Theater, Screen
@@ -67,9 +67,10 @@ class TheaterDetailView(DetailView):
     http_method_names = ['get']
 
     def get_context_data(self, **kwargs):
+        session = self.request.session
+        unset_log(session)
         context = add_base_context(self.request, super().get_context_data(**kwargs))
         theater = self.object
-        session = self.request.session
         screens = Screen.screens.filter(theater=theater)
         form_errors = get_cookie(session, 'form_errors', [])
         priority_label = IndexView.label_by_priority[theater.priority]
@@ -128,6 +129,7 @@ class TheaterScreenListFormView(SingleObjectMixin, FormView):
         self.theater = self.object
         self.session = request.session
         remove_cookie(self.session, 'form_errors')
+        unset_log(self.session)
 
         # Save new theater abbreviation.
         if 'abbreviation' in request.POST:

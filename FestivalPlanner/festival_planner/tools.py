@@ -24,15 +24,14 @@ def caller():
     return frame.f_code.co_name if frame.f_code is not None else 'code'
 
 
-def debug():
-    frame = inspect.currentframe().f_back
+def debug(frame=inspect.currentframe().f_back):
     lineno = frame.f_lineno
     code = frame.f_code.co_name if frame.f_code is not None else 'code'
     return f'@@ {code}:{lineno}'
 
 
 def pr_debug(message):
-    print(f'{debug()} {message}')
+    print(f'{debug(frame=inspect.currentframe().f_back)} {message}')
 
 
 def set_cookie(session, cookie_key, value):

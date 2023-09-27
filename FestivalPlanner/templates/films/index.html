@@ -22,7 +22,9 @@
     <br>
     <a href="{% url 'films:films' %}">Film ratings</a>
     <br><br>
-    <a href="{% url 'loader:theaters' %}">Load theater data</a>
+    <a href="/loader/theaters?action=load">Load theater data</a>
+    <br>
+    <a href="/loader/theaters?action=dump">Dump theater data</a>
     <br>
     <a href="{% url 'loader:sections' %}">Load sections</a>
     <br>

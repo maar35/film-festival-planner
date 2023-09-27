@@ -9,9 +9,10 @@ from django.views.generic import FormView, ListView
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log
 from festivals.models import Festival
 from films.models import Film, FilmFanFilmRating
-from loader.forms.loader_forms import TheaterLoaderForm, SectionLoader, SubsectionLoader, RatingLoaderForm
+from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoaderForm, TheaterDataLoaderForm, \
+    TheaterDataDumperForm
 from sections.models import Section, Subsection
-from theaters.models import City, Theater, Screen, cities_path, theaters_path, screens_path
+from theaters.models import Theater, City, cities_path, theaters_path, screens_path, Screen
 
 
 def file_record_count(path, has_header=False):
@@ -37,34 +38,52 @@ def get_festival_row(festival):
     return festival_row
 
 
-class TheatersLoaderView(LoginRequiredMixin, FormView):
+def get_theater_items():
+    theater_items = {
+        'city_count': City.cities.count,
+        'city_count_on_file': file_record_count(cities_path()),
+        'theater_count': Theater.theaters.count,
+        'theater_count_on_file': file_record_count(theaters_path()),
+        'screen_count': Screen.screens.count,
+        'screen_count_on_file': file_record_count(screens_path()),
+    }
+    return theater_items
+
+
+class TheaterDataInterfaceView(LoginRequiredMixin, FormView):
     model = Theater
     template_name = 'loader/theaters.html'
-    form_class = TheaterLoaderForm
-    success_url = '/theaters/theaters'
+    form_class = None
     http_method_names = ['get', 'post']
+    form_class_by_action = {'load': TheaterDataLoaderForm, 'dump': TheaterDataDumperForm}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.action = None
+
+    def dispatch(self, request, *args, **kwargs):
+        if 'action' in request.GET:
+            self.action = request.GET['action']
+        self.form_class = self.form_class_by_action[self.action]
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         session = self.request.session
-        theater_items = {
-            'city_count': City.cities.count,
-            'city_count_on_file': file_record_count(cities_path()),
-            'theater_count': Theater.theaters.count,
-            'theater_count_on_file': file_record_count(theaters_path()),
-            'screen_count': Screen.screens.count,
-            'screen_count_on_file': file_record_count(screens_path()),
-        }
         context = add_base_context(self.request, super().get_context_data(**kwargs))
-        context['title'] = 'Load Theater Data'
-        context['theater_items'] = theater_items
+        context['title'] = f'{self.action} Theater Data'
+        context['action'] = self.action
+        context['theater_items'] = get_theater_items()
         context['log'] = get_log(session)
         unset_log(session)
         return context
 
     def form_valid(self, form):
         session = self.request.session
-        form.load_theater_data(session)
-        return super().form_valid(form)
+        if self.action == 'dump':
+            form.dump_theater_data(session)
+        elif self.action == 'load':
+            form.load_theater_data(session)
+        return HttpResponseRedirect('/theaters/theaters')
 
 
 class SectionsLoaderView(LoginRequiredMixin, ListView):
