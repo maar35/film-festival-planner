@@ -13,12 +13,36 @@ def cities_path():
     return os.path.join(common_data_dir(), 'cities.csv')
 
 
+def cities_cache_path():
+    return os.path.join(common_data_dir(), 'cities_cache.csv')
+
+
 def theaters_path():
     return os.path.join(common_data_dir(), 'theaters.csv')
 
 
+def theaters_cache_path():
+    return os.path.join(common_data_dir(), 'theaters_cache.csv')
+
+
 def screens_path():
     return os.path.join(common_data_dir(), 'screens.csv')
+
+
+def screens_cache_path():
+    return os.path.join(common_data_dir(), 'screens_cache.csv')
+
+
+def new_cities_path():
+    return os.path.join(common_data_dir(), 'new_cities.csv')
+
+
+def new_theaters_path():
+    return os.path.join(common_data_dir(), 'new_theaters.csv')
+
+
+def new_screens_path():
+    return os.path.join(common_data_dir(), 'new~_screens.csv')
 
 
 class City(models.Model):
