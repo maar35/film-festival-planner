@@ -309,7 +309,7 @@ class Theater:
         return f'{text}\n'
 
     def key(self):
-        return self.city, self.name
+        return self.city.city_id, self.name
 
 
 class Screen:
@@ -327,11 +327,25 @@ class Screen:
         return self.abbr
 
     def __repr__(self):
-        text = ';'.join([str(self.screen_id), str(self.theater.theater_id), self.name, self.abbr, self.type])
+        text = ';'.join([
+            str(self.screen_id),
+            str(self.theater.theater_id),
+            self.name,
+            self.abbr,
+            str(self.screen_type_nr(self.type))
+        ])
         return f'{text}\n'
 
     def key(self):
         return self.theater.theater_id, self.name
+
+    @staticmethod
+    def screen_type_nr(screen_type_name):
+        return Screen.screen_types.index(screen_type_name) + 1
+
+    @staticmethod
+    def screen_type_name(screen_type_nr):
+        return Screen.screen_types[screen_type_nr - 1]
 
 
 class Screening:
@@ -421,8 +435,8 @@ class FestivalData:
         self.new_cities_file = os.path.join(self.common_data_dir, 'new_cities.csv')
         self.theaters_file = os.path.join(self.common_data_dir, 'theaters.csv')
         self.new_theaters_file = os.path.join(self.common_data_dir, 'new_theaters.csv')
-        self.screens_file = os.path.join(plandata_dir, 'screens.csv')
-        self.new_screens_file = os.path.join(plandata_dir, 'new_screens.csv')
+        self.screens_file = os.path.join(self.common_data_dir, 'screens.csv')
+        self.new_screens_file = os.path.join(self.common_data_dir, 'new_screens.csv')
         self.screenings_file = os.path.join(plandata_dir, 'screenings.csv')
         self.film_seqnr = 0
         self.read_articles()
@@ -521,7 +535,7 @@ class FestivalData:
 
     def get_theater(self, city_name, name):
         city = self.get_city_by_name(city_name)
-        name = name if name is not None else f'{city.name}-Theater'
+        name = name or f'{city.name}-theater'
         theater_key = (city.city_id, name)
         try:
             theater = self.theater_by_location[theater_key]
@@ -533,20 +547,20 @@ class FestivalData:
             self.theater_by_location[theater_key] = theater
         return theater
 
-    def get_screen(self, city_name, name, theater_name=None):
-        theater = self.get_theater(city_name, theater_name)
-        screen_key = (theater.theater_id, name)
+    def get_screen(self, city_name, screen_parse_name, theater_parse_name=None, screen_abbreviation=None):
+        theater = self.get_theater(city_name, theater_parse_name)
+        screen_key = (theater.theater_id, screen_parse_name)
         try:
             screen = self.screen_by_location[screen_key]
         except KeyError:
             self.curr_screen_id += 1
             screen_id = self.curr_screen_id
-            abbr = name.replace(' ', '').lower()
+            abbr = screen_abbreviation or screen_parse_name.replace(' ', '').lower()
             screen_type = 'OnDemand' if abbr.startswith('ondemand')\
                 else 'OnLine' if abbr.startswith('online')\
                 else 'Location'
-            print(f"NEW SCREEN:  '{theater.city} {theater.name} {name}' => {abbr}")
-            screen = Screen(screen_id, theater, name, abbr, screen_type)
+            print(f"NEW SCREEN:  '{theater.city}' '{theater.name}' '{screen_parse_name}' => {abbr}")
+            screen = Screen(screen_id, theater, screen_parse_name, abbr, screen_type)
             self.screen_by_location[screen_key] = screen
         return screen
 
@@ -652,9 +666,10 @@ class FestivalData:
         try:
             with open(self.theaters_file, 'r') as f:
                 theaters = [create_theater(self.split_rec(line, ';')) for line in f]
-            self.theater_by_location = {theater.key(): theater for theater in theaters}
         except OSError:
             theaters = []
+        else:
+            self.theater_by_location = {theater.key(): theater for theater in theaters}
 
         try:
             self.curr_theater_id = max(theater.theater_id for theater in theaters)
@@ -667,7 +682,7 @@ class FestivalData:
             theater_id = int(fields[1])
             name = fields[2]
             abbr = fields[3]
-            screen_type = fields[4]
+            screen_type = Screen.screen_type_name(int(fields[4]))
             if screen_type not in Screen.screen_types:
                 raise ScreenTypeError(abbr, screen_type)
             theaters = [theater for theater in self.theater_by_location.values() if theater.theater_id == theater_id]
