@@ -38,8 +38,9 @@ plandata_dir = file_keeper.plandata_dir
 film_file_format = file_keeper.film_file_format
 
 # Files.
-filmdata_file = os.path.join(plandata_dir, "filmdata.csv")
-filminfo_file = os.path.join(plandata_dir, "filminfo.xml")
+filmdata_file = os.path.join(plandata_dir, 'filmdata.csv')
+filminfo_file = os.path.join(plandata_dir, 'filminfo.xml')
+az_screenshot_file = os.path.join(webdata_dir, 'az-screencopies.txt')
 
 # URL information.
 nff_hostname = "https://www.filmfestival.nl"
@@ -59,15 +60,20 @@ def main():
     # initialize a festival data object.
     festival_data: NffData = NffData(plandata_dir)
 
+    # Setup counters.
+    counter.start('screenings')
+    counter.start('films')
+    counter.start('film links')
+
     # Try parsing the websites.
     try_parse_festival_sites(parse_nff_sites, festival_data, error_collector, debug_recorder, festival, counter)
 
 
 def parse_nff_sites(festival_data):
     comment("Parsing AZ pages.")
-    get_films(festival_data)
-    # films_loader = FilmsLoader(az_page_count)
-    # films_loader.get_films(festival_data)
+    # get_films(festival_data)
+    films_loader = FilmsLoader(az_screenshot_file)
+    films_loader.get_films(festival_data)
 
     # comment("Parsing premiêre pages.")
     # premieres_loader = PremieresLoader()
@@ -144,52 +150,104 @@ class Subscreening:
 
 
 class FilmsLoader:
+    nl_month_by_name = {"september": 9}
 
     filmparts_re = re.compile(
         r"""
             ^.*Films\ from\ A\ to\ Z  # Ignorable head stuff
             (?P<filmparts>.*)         # Information of each film
             \n1\n\ \n.*$              # Ignorable tail stuff
-        """, re.DOTALL|re.VERBOSE)
+        """, re.DOTALL|re.VERBOSE
+    )
     film_re = re.compile(
         r"""
              \n\ \n(?P<title>[^\n]*)\n\n           # Title is preceeded by a line consisting of one space
              Duration:\ (?P<duration>[0-9]+)min\n  # Duration in minutes
              (?P<description>[^\n]*)\n             # Description is one line of text following Duration
              Director\(s\):\ (?P<directors>[^\n]*) # Directors, optionally followed by competitions
-        """, re.DOTALL|re.VERBOSE)
+        """, re.DOTALL|re.VERBOSE
+    )
     competitions_re = re.compile(
         r"""
             (?P<directors>[^\n]*)                     # Directors list, header stripped off
             \ Competitions:\ (?P<competitions>[^\n]*) # Pattern when competitions list indeed exists
         """, re.VERBOSE
     )
+    screening_re = re.compile(
+        r"""
+            \n(?P<title>[^\n]*)\nDatum\n        # Title
+            (?P<month_day>\d+)\s+               # Day of month
+            (?P<month_name>[a-z]+)\s+           # Dutch name of month
+            om\s+(?P<start_time>\d\d:\d\d)\n    # Start time
+            Locatie\s+(?P<location>[^\n]+)\n    # Location
+        """, re.DOTALL | re.VERBOSE
+    )
+    num_screen_re = re.compile(r'^(?P<theater>.*?) (?P<number>\d+)$')
+    name_screen_re = re.compile(r'^(?P<theater>.*?) - (?P<name>.+)$')
 
-    def __init__(self, page_count):
-        self.page_count = page_count
+    def __init__(self, az_file):
+        self.title = None
+        self.start_dt = None
+        self.screen = None
+        with open(az_file, 'r') as f:
+            az_text = f.read()
+        self.az_text = az_text
     
     def get_films(self, nff_data):
         
-        # Parse AZ pages.
-        self.parse_az_pages(nff_data)
-        nff_data.write_nff_films()
+        # Parse AZ page.
+        self.parse_az_page(nff_data)
+        # nff_data.write_nff_films()
         
-        # Convert NFF films to the format expected by the C# planner.
-        nff_data.fill_films_list()
-        nff_data.write_films()
+        # # Convert NFF films to the format expected by the C# planner.
+        # nff_data.fill_films_list()
+        # nff_data.write_films()
 
-    def parse_az_pages(self, nff_data):
-        pass
-        # for page_number in range(self.page_count):
-        #     az_file = az_copy_paste_file_format.format(page_number)
-        #     print(f"Searching {az_file}...", end="")
-        #     try:
-        #         with open(az_file, 'r') as f:
-        #             az_text = f.read()
-        #         film_count = self.parse_one_az_page(az_text, nff_data.nff_films)
-        #         print(f" {film_count} films found")
-        #     except FileNotFoundError as e:
-        #         error_collector.add(e, "while parsing az pages in FilmsLoader")
+    def parse_az_page(self, festival_data):
+        screening_matches = [match for match in self.screening_re.finditer(self.az_text)]
+        groups = [m.groupdict() for m in screening_matches]
+        for group in groups:
+            self.title = group['title']
+            month = self.nl_month_by_name[group['month_name']]
+            start_date = datetime.date.fromisoformat(f'{festival_year}-{month:02d}-{group["month_day"]}')
+            start_time = datetime.time.fromisoformat(group['start_time'])
+            screen_parse_name = group['location']
+            theater_parse_name, screen_abbreviation = self.split_location(screen_parse_name)
+            self.screen = festival_data.get_screen(
+                festival_city,
+                screen_parse_name,
+                theater_parse_name=theater_parse_name,
+                screen_abbreviation=screen_abbreviation
+            )
+            self.start_dt = datetime.datetime.combine(start_date, start_time)
+            counter.increase('screenings')
+
+    def split_location(self, location):
+        theater_parse_name = location
+        screen_abbreviation = None
+        num_match = self.num_screen_re.match(location)
+        if num_match:
+            theater_parse_name = num_match.group(1)
+            screen_abbreviation = num_match.group(2)
+        else:
+            name_match = self.name_screen_re.match(location)
+            if name_match:
+                theater_parse_name = name_match.group(1)
+                screen_abbreviation = name_match.group(2)
+        return theater_parse_name, screen_abbreviation
+
+    # def parse_az_pages(self, nff_data):
+    #     pass
+    #     for page_number in range(self.page_count):
+    #         az_file = az_copy_paste_file_format.format(page_number)
+    #         print(f"Searching {az_file}...", end="")
+    #         try:
+    #             with open(az_file, 'r') as f:
+    #                 az_text = f.read()
+    #             film_count = self.parse_one_az_page(az_text, nff_data.nff_films)
+    #             print(f" {film_count} films found")
+    #         except FileNotFoundError as e:
+    #             error_collector.add(e, "while parsing az pages in FilmsLoader")
     
     def parse_one_az_page(self, az_text, nff_films):
         filmparts = self.filmparts_re.match(az_text)
