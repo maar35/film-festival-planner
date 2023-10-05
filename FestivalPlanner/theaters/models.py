@@ -17,12 +17,20 @@ def cities_cache_path():
     return os.path.join(common_data_dir(), 'cities_cache.csv')
 
 
+def new_cities_path():
+    return os.path.join(common_data_dir(), 'new_cities.csv')
+
+
 def theaters_path():
     return os.path.join(common_data_dir(), 'theaters.csv')
 
 
 def theaters_cache_path():
     return os.path.join(common_data_dir(), 'theaters_cache.csv')
+
+
+def new_theaters_path():
+    return os.path.join(common_data_dir(), 'new_theaters.csv')
 
 
 def screens_path():
@@ -33,16 +41,8 @@ def screens_cache_path():
     return os.path.join(common_data_dir(), 'screens_cache.csv')
 
 
-def new_cities_path():
-    return os.path.join(common_data_dir(), 'new_cities.csv')
-
-
-def new_theaters_path():
-    return os.path.join(common_data_dir(), 'new_theaters.csv')
-
-
 def new_screens_path():
-    return os.path.join(common_data_dir(), 'new~_screens.csv')
+    return os.path.join(common_data_dir(), 'new_screens.csv')
 
 
 class City(models.Model):
@@ -101,7 +101,7 @@ class Screen(models.Model):
     # Define screen address types as to indicate on location, on demand,
     # etc.
     class ScreenAddressType(models.IntegerChoices):
-        LOCATION = 3
+        PHYSICAL = 3
         ONDEMAND = 2
         ONLINE = 1
 

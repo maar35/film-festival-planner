@@ -313,9 +313,9 @@ class Theater:
 
 
 class Screen:
-    screen_types = ['Location', 'OnLine', 'OnDemand']
+    screen_types = ['OnLine', 'OnDemand', 'Physical']
 
-    def __init__(self, screen_id, theater, name, abbr, screen_type='Location', new=True):
+    def __init__(self, screen_id, theater, name, abbr, screen_type='Physical', new=True):
         self.screen_id = screen_id
         self.theater = theater
         self.name = name
@@ -555,10 +555,10 @@ class FestivalData:
         except KeyError:
             self.curr_screen_id += 1
             screen_id = self.curr_screen_id
-            abbr = screen_abbreviation or screen_parse_name.replace(' ', '').lower()
+            abbr = (screen_abbreviation or screen_parse_name).replace(' ', '').lower()
             screen_type = 'OnDemand' if abbr.startswith('ondemand')\
                 else 'OnLine' if abbr.startswith('online')\
-                else 'Location'
+                else 'Physical'
             print(f"NEW SCREEN:  '{theater.city}' '{theater.name}' '{screen_parse_name}' => {abbr}")
             screen = Screen(screen_id, theater, screen_parse_name, abbr, screen_type)
             self.screen_by_location[screen_key] = screen

@@ -1,3 +1,4 @@
+import csv
 from operator import attrgetter
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -10,9 +11,10 @@ from festival_planner.tools import add_base_context, get_log, unset_log, initial
 from festivals.models import Festival
 from films.models import Film, FilmFanFilmRating
 from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoaderForm, TheaterDataLoaderForm, \
-    TheaterDataDumperForm
+    TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader
 from sections.models import Section, Subsection
-from theaters.models import Theater, City, cities_path, theaters_path, screens_path, Screen
+from theaters.models import Theater, City, cities_path, theaters_path, screens_path, Screen, new_screens_path, \
+    new_cities_path, new_theaters_path
 
 
 def file_record_count(path, has_header=False):
@@ -84,6 +86,55 @@ class TheaterDataInterfaceView(LoginRequiredMixin, FormView):
         elif self.action == 'load':
             form.load_theater_data(session)
         return HttpResponseRedirect('/theaters/theaters')
+
+
+class NewTheaterDataView(LoginRequiredMixin, ListView):
+    """
+    Class-based view to merge new theater data into the corresponding tables.
+    """
+    template_name = 'loader/new_screens.html'
+    http_method_names = ['get']
+    object_list = None
+    queryset = None
+    context_object_name = 'new_screen_items'
+
+    def get_queryset(self):
+        session = self.request.session
+        initialize_log(session)
+        new_cities = []
+        new_theaters = []
+        new_screens = []
+
+        # Load new theater data.
+        _ = CityLoader(session, file=new_cities_path()).load_new_objects(new_cities)
+        _ = TheaterLoader(session, file=new_theaters_path()).load_new_objects(new_theaters, foreign_objects=new_cities)
+        _ = ScreenLoader(session, file=new_screens_path()).load_new_objects(new_screens, foreign_objects=new_theaters)
+
+        # Create the new screen items list.
+        new_screen_items = [self.get_new_screen_item(screen) for screen in new_screens]
+
+        return sorted(
+            new_screen_items,
+            key=lambda new_screen_item: (new_screen_item['theater'], new_screen_item['screen_abbr'])
+        )
+
+    def get_context_data(self, *args, **kwargs):
+        context = add_base_context(self.request, super().get_context_data(**kwargs))
+        context['title'] = 'Merge New Screenings'
+        context['log'] = get_log(self.request.session)
+        return context
+
+    @staticmethod
+    def get_new_screen_item(screen):
+        new_screen_item = {
+            'city': screen.theater.city.name,
+            'theater': screen.theater.parse_name,
+            'theater_abbr': screen.theater.abbreviation,
+            'screen': screen.parse_name,
+            'screen_abbr': screen.abbreviation,
+            'address_type': screen.address_type.label,
+        }
+        return new_screen_item
 
 
 class SectionsLoaderView(LoginRequiredMixin, ListView):

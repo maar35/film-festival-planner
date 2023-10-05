@@ -85,6 +85,7 @@ class BaseLoader:
     Base class for loading objects such as films or ratings from CSV files.
     """
     expected_header = None
+    foreign_objects = None
 
     def __init__(self, session, file_required=True):
         """
@@ -150,6 +151,38 @@ class BaseLoader:
 
         :param row: Line from the file being read
         :return: The object read, None if no object could be read
+        """
+        return None
+
+    def get_foreign_key(self, foreign_class, foreign_manager, **kwargs):
+        foreign_object = None
+        object_str = foreign_class.__name__
+        try:
+            foreign_object = foreign_manager.get(**kwargs)
+        except foreign_class.DoesNotExist:
+            missing_attributes = []
+            for attribute, value in kwargs.items():
+                if self.foreign_objects:
+                    try:
+                        foreign_object = [obj for obj in self.foreign_objects if getattr(obj, attribute) == value][0]
+                    except IndexError as e:
+                        self.add_log(f'{e}: {object_str} with {attribute}={value} not in new foreign objects')
+                        return None
+                    except AttributeError as e:
+                        self.add_log(f'{e}')
+                        return None
+                else:
+                    missing_attributes.append(f'{attribute}={value}')
+            if missing_attributes:
+                attributes_str = ' and '.join(missing_attributes)
+                self.add_log(f'{object_str} with {attributes_str} not found in database.')
+                return None
+        return foreign_object
+
+    def construct_object(self, value_by_field):
+        """
+        "Virtual" method to return a new object from the given value by
+        field dictionary.
         """
         return None
 
@@ -240,6 +273,24 @@ class SimpleLoader(BaseLoader):
 
         return True
 
+    def load_new_objects(self, target_object_list, foreign_objects=None):
+        self.foreign_objects = foreign_objects
+
+        # Get a list of value by field dictionaries from file.
+        if not self.read_objects(self.objects_file, self.records):
+            self.add_log(f'No {self.object_name} records read.')
+            return False
+
+        # Construct new objects from the value by field dictionary list.
+        for value_by_field in self.records:
+            new_object = self.construct_object(value_by_field)
+            if new_object:
+                target_object_list.append(new_object)
+            else:
+                raise ValueError(f"Couldn't construct new {self.object_name} object from {value_by_field}.")
+
+        return True
+
     def read_objects(self, objects_file, records):
         # Read objects from file.
         if not super().read_objects(objects_file, records):
@@ -320,15 +371,12 @@ class RatingLoader(SimpleLoader):
         film_fan_name = row[1]
         rating = int(row[2])
 
-        try:
-            film = Film.films.get(festival_id=self.festival.id, film_id=film_id)
-        except Film.DoesNotExist:
-            self.add_log(f'Film not found: #{film_id}.')
+        film = self.get_foreign_key(Film, Film.films, **{'festival_id': self.festival.id, 'film_id': film_id})
+        if not film:
             return None
-        try:
-            film_fan = FilmFan.film_fans.get(name=film_fan_name)
-        except FilmFan.DoesNotExist:
-            self.add_log(f'Fan not found: {film_fan_name}.')
+
+        film_fan = self.get_foreign_key(FilmFan, FilmFan.film_fans, **{'name': film_fan_name})
+        if not film_fan:
             return None
 
         value_by_field = {
@@ -376,10 +424,9 @@ class SubsectionLoader(SimpleLoader):
         description = row[3]
         url = row[4]
 
-        try:
-            section = Section.sections.get(festival_id=self.festival.id, section_id=section_id)
-        except Section.DoesNotExist:
-            self.add_log(f'Section not found: #{section_id}.')
+        kwargs = {'festival_id': self.festival.id, 'section_id': section_id}
+        section = self.get_foreign_key(Section, Section.sections, **kwargs)
+        if not section:
             return None
 
         value_by_field = {
@@ -398,8 +445,9 @@ class CityLoader(SimpleLoader):
     manager = City.cities
     file = cities_path()
 
-    def __init__(self, session):
-        super().__init__(session, 'city', self.manager, self.file)
+    def __init__(self, session, file=None):
+        file = file or self.file
+        super().__init__(session, 'city', self.manager, file)
 
     def read_row(self, row):
         city_id = int(row[0])
@@ -413,14 +461,19 @@ class CityLoader(SimpleLoader):
         }
         return value_by_field
 
+    def construct_object(self, value_by_field):
+        city = City(**value_by_field)
+        return city
+
 
 class TheaterLoader(SimpleLoader):
     key_fields = ['theater_id']
     manager = Theater.theaters
     file = theaters_path()
 
-    def __init__(self, session):
-        super().__init__(session, 'theater', self.manager, self.file)
+    def __init__(self, session, file=None):
+        file = file or self.file
+        super().__init__(session, 'theater', self.manager, file)
 
     def read_row(self, row):
         theater_id = int(row[0])
@@ -429,10 +482,8 @@ class TheaterLoader(SimpleLoader):
         abbreviation = row[3]
         priority = Theater.Priority(int(row[4]))
 
-        try:
-            city = City.cities.get(city_id=city_id)
-        except City.DoesNotExist:
-            self.add_log(f'City not found: #{city_id}.')
+        city = self.get_foreign_key(City, City.cities, **{'city_id': city_id})
+        if not city:
             return None
 
         value_by_field = {
@@ -444,14 +495,19 @@ class TheaterLoader(SimpleLoader):
         }
         return value_by_field
 
+    def construct_object(self, value_by_field):
+        theater = Theater(**value_by_field)
+        return theater
+
 
 class ScreenLoader(SimpleLoader):
     key_fields = ['screen_id']
     manager = Screen.screens
     file = screens_path()
 
-    def __init__(self, session):
-        super().__init__(session, 'screen', self.manager, self.file)
+    def __init__(self, session, file):
+        file = file or self.file
+        super().__init__(session, 'screen', self.manager, file)
 
     def read_row(self, row):
         screen_id = int(row[0])
@@ -460,10 +516,8 @@ class ScreenLoader(SimpleLoader):
         abbreviation = row[3]
         address_type = Screen.ScreenAddressType(int(row[4]))
 
-        try:
-            theater = Theater.theaters.get(theater_id=theater_id)
-        except Theater.DoesNotExist:
-            self.add_log(f'Theater not found: #{theater_id}')
+        theater = self.get_foreign_key(Theater, Theater.theaters, **{'theater_id': theater_id})
+        if not theater:
             return None
 
         value_by_field = {
@@ -474,6 +528,10 @@ class ScreenLoader(SimpleLoader):
             'address_type': address_type,
         }
         return value_by_field
+
+    def construct_object(self, value_by_field):
+        screen = Screen(**value_by_field)
+        return screen
 
 
 class BaseDumper:
