@@ -68,6 +68,25 @@ class TheaterDataLoaderForm(Form):
             _ = ScreenLoader(session).load_objects()
 
 
+class TheaterDataUpdateForm(Form):
+    dummy_field = SlugField(required=False)
+
+    @staticmethod
+    def add_new_cities(session, new_cities):
+        initialize_log(session, 'Cities insert')
+        CityUpdater(session).add_new_objects(new_cities)
+
+    @staticmethod
+    def add_new_theaters(session, new_theaters):
+        initialize_log(session, 'Theaters insert')
+        TheaterUpdater(session).add_new_objects(new_theaters)
+
+    @staticmethod
+    def add_new_screens(session, new_screens):
+        initialize_log(session, 'Screens insert')
+        ScreenUpdater(session).add_new_objects(new_screens)
+
+
 class TheaterDataDumperForm(Form):
     dummy_field = SlugField(required=False)
 
@@ -121,9 +140,9 @@ class BaseLoader:
                 # Read the data records.
                 for record in object_reader:
                     self.objects_on_file += 1
-                    values_read = self.read_row(record)
-                    if values_read:
-                        values_list.append(values_read)
+                    value_by_field = self.read_row(record)
+                    if value_by_field:
+                        values_list.append(value_by_field)
 
         except FileNotFoundError:
             if self.file_required:
@@ -133,6 +152,13 @@ class BaseLoader:
         except ValueError:
             self.add_log(f'Bad value in file {objects_file}.')
             return False
+
+        # Add result statistics to the log.
+        object_count = len(values_list)
+        if object_count == 0:
+            self.add_log(f'No {self.object_name} records found in file {objects_file}')
+            return False
+        self.add_log(f'{object_count} {self.object_name} records read.')
 
         return True
 
@@ -179,6 +205,13 @@ class BaseLoader:
                 return None
         return foreign_object
 
+    def get_value_by_field(self, obj):
+        """
+        "Virtual" method to return a value by field dictionary from the
+        given object.
+        """
+        return None
+
     def construct_object(self, value_by_field):
         """
         "Virtual" method to return a new object from the given value by
@@ -219,12 +252,11 @@ class SimpleLoader(BaseLoader):
         self.delete_disappeared_objects = True
 
     def load_objects(self):
-        # Prepare statistics.
-        objects_by_created = {}
         existing_object_set = set()
         updated_object_set = set()
 
         # Select the existing objects.
+        existing_objects = None
         if self.delete_disappeared_objects:
             if self.festival:
                 existing_objects = self.object_manager.filter(**self.festival_filter)
@@ -238,28 +270,7 @@ class SimpleLoader(BaseLoader):
             return False
 
         # Update objects and create ones when absent.
-        for value_by_field in self.records:
-            keys, defaults = self.pop_key_fields(value_by_field)
-
-            # Update or create an object.
-            try:
-                affected_object, created = self.object_manager.update_or_create(**keys, defaults=defaults)
-            except IntegrityError as e:
-                created = None
-                print(f'ERROR {e=} {keys=}')
-            else:
-                if not created:
-                    updated_object_set.add(affected_object)
-
-            # Update statistics.
-            try:
-                objects_by_created[created] += 1
-            except KeyError:
-                objects_by_created[created] = 1
-
-        # Log the results.
-        for created, count in objects_by_created.items():
-            self.add_log(f'{count} {self.object_name} records {self.label_by_created[created]}.')
+        self.update_or_create(updated_object_set)
 
         # Delete objects that do not appear in the file.
         if self.delete_disappeared_objects:
@@ -291,19 +302,43 @@ class SimpleLoader(BaseLoader):
 
         return True
 
-    def read_objects(self, objects_file, records):
-        # Read objects from file.
-        if not super().read_objects(objects_file, records):
-            return False
+    def update_or_create(self, updated_object_set):
+        objects_by_created = {}
 
-        # Add result statistics to the log.
-        object_count = len(records)
-        if object_count == 0:
-            self.add_log(f'No {self.object_name} records found in file {objects_file}')
-            return False
-        self.add_log(f'{object_count} {self.object_name} records read.')
+        for value_by_field in self.records:
+            keys, defaults = self.pop_key_fields(value_by_field)
 
-        return True
+            # Update or create an object.
+            try:
+                affected_object, created = self.object_manager.update_or_create(**keys, defaults=defaults)
+            except IntegrityError as e:
+                created = None
+            else:
+                if not created:
+                    updated_object_set.add(affected_object)
+
+            # Update statistics.
+            try:
+                objects_by_created[created] += 1
+            except KeyError:
+                objects_by_created[created] = 1
+
+        # Log the results.
+        for created, count in objects_by_created.items():
+            self.add_log(f'{count} {self.object_name} records {self.label_by_created[created]}.')
+        if not objects_by_created:
+            self.add_log(f'No {self.object_name} records found.')
+
+    def add_new_objects(self, object_list):
+        dummy_set = set()
+        object_kwargs_list = []
+
+        self.add_log(f'Inserting new {self.object_name} records.')
+        for obj in object_list:
+            value_by_field = self.get_value_by_field(obj)
+            object_kwargs_list.append(value_by_field)
+        self.records = object_kwargs_list
+        self.update_or_create(dummy_set)
 
     def pop_key_fields(self, value_by_field):
         value_by_key_field = {}
@@ -505,7 +540,7 @@ class ScreenLoader(SimpleLoader):
     manager = Screen.screens
     file = screens_path()
 
-    def __init__(self, session, file):
+    def __init__(self, session, file=None):
         file = file or self.file
         super().__init__(session, 'screen', self.manager, file)
 
@@ -532,6 +567,61 @@ class ScreenLoader(SimpleLoader):
     def construct_object(self, value_by_field):
         screen = Screen(**value_by_field)
         return screen
+
+
+class CityUpdater(SimpleLoader):
+    key_fields = CityLoader.key_fields
+    manager = CityLoader.manager
+    file = None
+
+    def __init__(self, session):
+        super().__init__(session, 'city', self.manager, self.file)
+
+    def get_value_by_field(self, obj):
+        value_by_field = {
+            'city_id': obj.city_id,
+            'name': obj.name,
+            'country': obj.country,
+        }
+        return value_by_field
+
+
+class TheaterUpdater(SimpleLoader):
+    key_fields = TheaterLoader.key_fields
+    manager = TheaterLoader.manager
+    file = None
+
+    def __init__(self, session):
+        super().__init__(session, 'theater', self.manager, self.file)
+
+    def get_value_by_field(self, obj):
+        value_by_field = {
+            'theater_id': obj.theater_id,
+            'city': obj.city,
+            'parse_name': obj.parse_name,
+            'abbreviation': obj.abbreviation,
+            'priority': obj.priority,
+        }
+        return value_by_field
+
+
+class ScreenUpdater(SimpleLoader):
+    key_fields = ScreenLoader.key_fields
+    manager = ScreenLoader.manager
+    file = None
+
+    def __init__(self, session):
+        super().__init__(session, 'screen', self.manager, self.file)
+
+    def get_value_by_field(self, obj):
+        value_by_field = {
+            'screen_id': obj.screen_id,
+            'theater': obj.theater,
+            'parse_name': obj.parse_name,
+            'abbreviation': obj.abbreviation,
+            'address_type': obj.address_type,
+        }
+        return value_by_field
 
 
 class BaseDumper:
