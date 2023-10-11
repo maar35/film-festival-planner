@@ -54,9 +54,9 @@ class TheaterDataLoaderForm(Form):
         initialize_log(session)
 
         # Cache the database data before it is overwritten.
-        CityDumper(session).dump_objects(cities_cache_path())
-        TheaterDumper(session).dump_objects(theaters_cache_path())
-        ScreenDumper(session).dump_objects(screens_cache_path())
+        _ = CityDumper(session).dump_objects(cities_cache_path())
+        _ = TheaterDumper(session).dump_objects(theaters_cache_path())
+        _ = ScreenDumper(session).dump_objects(screens_cache_path())
 
         # Overwrite the festival data in the database.
         go_on = True
@@ -109,6 +109,7 @@ class BaseLoader:
     def __init__(self, session, file_required=True):
         """
         Initialize the member variables
+
         :param session: Session to store the log as a cookie
         :param file_required: Boolean to indicate whether the input file is required
         """
@@ -120,6 +121,7 @@ class BaseLoader:
     def read_objects(self, objects_file, values_list):
         """
         Member method to be used by derived classes to read objects from files
+
         :param objects_file: The CSV file to read the objects from
         :param values_list: A list to receive the objects read
         :return: Whether reading objects was successful
@@ -163,6 +165,7 @@ class BaseLoader:
         return True
 
     def check_header(self, file, reader):
+        """Internal method to handle presence of a data header"""
         if self.expected_header is None:
             return True
         header = reader.__next__()
@@ -181,6 +184,14 @@ class BaseLoader:
         return None
 
     def get_foreign_key(self, foreign_class, foreign_manager, **kwargs):
+        """
+        Member method to be used by derived classes to get an object to use as foreign key
+
+        :param foreign_class: class of the foreign key object
+        :param foreign_manager: Manager of the foreign key object class
+        :param kwargs: Keyword arguments to crate the foreign key object
+
+        """
         foreign_object = None
         object_str = foreign_class.__name__
         try:
@@ -220,6 +231,7 @@ class BaseLoader:
         return None
 
     def delete_objects(self, objects):
+        """Facility method to delete given objects without questions"""
         deleted_object_count, deleted_count_by_object_type = objects.delete()
         if deleted_object_count == 0:
             self.add_log(f'No existing {self.object_name}s need to be deleted.')
@@ -227,6 +239,7 @@ class BaseLoader:
             self.add_log(f'{deleted_count} existing {object_type.split(".")[-1]}s deleted.')
 
     def add_log(self, text):
+        """Shorthand method to add text to the current log"""
         add_log(self.session, text)
 
 
@@ -248,7 +261,7 @@ class SimpleLoader(BaseLoader):
         self.objects_file = objects_file
         self.festival = festival
         self.festival_filter = None if festival is None else {festival_pk or 'festival__pk': self.festival.pk}
-        self.records = []
+        self.value_by_field_list = []
         self.delete_disappeared_objects = True
 
     def load_objects(self):
@@ -265,7 +278,7 @@ class SimpleLoader(BaseLoader):
             existing_object_set = set(list(existing_objects))
 
         # Read the objects from the member file into the designated list.
-        if not self.read_objects(self.objects_file, self.records):
+        if not self.read_objects(self.objects_file, self.value_by_field_list):
             self.add_log(f'No {self.object_name} records read.')
             return False
 
@@ -288,12 +301,12 @@ class SimpleLoader(BaseLoader):
         self.foreign_objects = foreign_objects
 
         # Get a list of value by field dictionaries from file.
-        if not self.read_objects(self.objects_file, self.records):
+        if not self.read_objects(self.objects_file, self.value_by_field_list):
             self.add_log(f'No {self.object_name} records read.')
             return False
 
         # Construct new objects from the value by field dictionary list.
-        for value_by_field in self.records:
+        for value_by_field in self.value_by_field_list:
             new_object = self.construct_object(value_by_field)
             if new_object:
                 target_object_list.append(new_object)
@@ -305,7 +318,7 @@ class SimpleLoader(BaseLoader):
     def update_or_create(self, updated_object_set):
         objects_by_created = {}
 
-        for value_by_field in self.records:
+        for value_by_field in self.value_by_field_list:
             keys, defaults = self.pop_key_fields(value_by_field)
 
             # Update or create an object.
@@ -331,13 +344,13 @@ class SimpleLoader(BaseLoader):
 
     def add_new_objects(self, object_list):
         dummy_set = set()
-        object_kwargs_list = []
+        value_by_field_list = []
 
         self.add_log(f'Inserting new {self.object_name} records.')
         for obj in object_list:
             value_by_field = self.get_value_by_field(obj)
-            object_kwargs_list.append(value_by_field)
-        self.records = object_kwargs_list
+            value_by_field_list.append(value_by_field)
+        self.value_by_field_list = value_by_field_list
         self.update_or_create(dummy_set)
 
     def pop_key_fields(self, value_by_field):

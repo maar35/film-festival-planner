@@ -24,10 +24,12 @@ namespace PresentScreenings.TableView
         public static string FestivalYear { get; private set; }
         public static bool VisitPhysical { get; private set; }
         public static string HomePath => GetHomePath();
+        public static string CommonDataFolder => GetCommonDataPath();
         public static string DocumentsFolder => GetDocumentsPath();
         public static string WebColorsFolder => GetWebColorsPath();
         public static string ConfigFile => GetConfigFilePath();
         public static string AvailabilitiesFile { get; private set; }
+        public static string CitiesFile { get; private set; }
         public static string TheatersFile { get; private set; }
         public static string ScreensFile { get; private set; }
         public static string FilmsFile { get; private set; }
@@ -86,8 +88,9 @@ namespace PresentScreenings.TableView
 
             // Set load/unload file names.
             AvailabilitiesFile = Path.Combine(DocumentsFolder, "availabilities.csv");
-            TheatersFile = Path.Combine(DocumentsFolder, "theaters.csv");
-            ScreensFile = Path.Combine(DocumentsFolder, "screens.csv");
+            CitiesFile = Path.Combine(CommonDataFolder, "cities.csv");
+            TheatersFile = Path.Combine(CommonDataFolder, "theaters.csv");
+            ScreensFile = Path.Combine(CommonDataFolder, "screens.csv");
             FilmsFile = Path.Combine(DocumentsFolder, "films.csv");
             SectionsFile = Path.Combine(DocumentsFolder, "sections.csv");
             SubsectionsFile = Path.Combine(DocumentsFolder, "subsections.csv");
@@ -234,6 +237,12 @@ namespace PresentScreenings.TableView
         private static string GetConfigFilePath()
         {
             return $"{HomePath}/Projects/FilmFestivalPlanner/Configs/common.yml";
+        }
+
+        private static string GetCommonDataPath()
+        {
+            var commonDataPath = Config.Paths["CommonDataDirectory"];
+            return $"{HomePath}/{commonDataPath}";
         }
 
         private static string GetDocumentsPath()

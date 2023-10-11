@@ -126,7 +126,7 @@ class NewTheaterDataListView(ListView):
         context = add_base_context(self.request, super().get_context_data(**kwargs))
         context['title'] = 'Merge New Screenings'
         context['log'] = get_log(self.request.session)
-        context['objects_label'] = NewTheaterDataView.states[NewTheaterDataView.state_nr]
+        context['objects_label'] = NewTheaterDataView.current_objects_label()
         return context
 
     def get_new_screen_item(self, screen):
@@ -149,7 +149,6 @@ class NewTheaterDataListView(ListView):
             _ = manager.get(**kwargs)
         except cls.DoesNotExist:
             exists = False
-        # exists = manager.filter(pk=obj.pk).exists()
         color = self.color_by_exists[exists]
         return color
 
@@ -167,18 +166,18 @@ class NewTheaterDataFormView(FormView):
 
         # Handle all entities separate, to avoid "save() prohibited to
         # prevent data loss due to unsaved related object" error.
-        state = NewTheaterDataView.states[NewTheaterDataView.state_nr]
-        if state == 'cities':
+        objects_label = NewTheaterDataView.current_objects_label()
+        if objects_label == 'cities':
             form.add_new_cities(session, NewTheaterDataView.new_cities)
             NewTheaterDataView.next_objects_label()
-        elif state == 'theaters':
+        elif objects_label == 'theaters':
             form.add_new_theaters(session, NewTheaterDataView.new_theaters)
             NewTheaterDataView.next_objects_label()
-        elif state == 'screens':
+        elif objects_label == 'screens':
             form.add_new_screens(session, NewTheaterDataView.new_screens)
             NewTheaterDataView.state_nr = 0
         else:
-            raise ValueError(f'Unexpected state value: {state}')
+            raise ValueError(f'Unexpected state value: {objects_label}')
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -200,6 +199,10 @@ class NewTheaterDataView(LoginRequiredMixin, View):
     }
     states = [k for k in new_objects_by_label.keys()]
     state_nr = 0
+
+    @classmethod
+    def current_objects_label(cls):
+        return cls.states[cls.state_nr]
 
     @classmethod
     def next_objects_label(cls):

@@ -39,7 +39,7 @@ class TheaterViewTests(ViewsTestCase):
 
     @staticmethod
     def arrange_create_screen(
-            screen_id, theater, screen_name, abbreviation, address_type=Screen.ScreenAddressType.LOCATION):
+            screen_id, theater, screen_name, abbreviation, address_type=Screen.ScreenAddressType.PHYSICAL):
         parse_name = f'{theater.parse_name} {screen_name}'
         return Screen.screens.create(
             screen_id=screen_id,
