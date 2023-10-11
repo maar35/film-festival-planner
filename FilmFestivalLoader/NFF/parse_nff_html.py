@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Load films, screens and screenings from the NNF 2020 website.
+Load films, screens and screenings from the actual NNF website.
 
 Created on Fri Oct  2 21:35:14 2020
 
@@ -11,77 +11,96 @@ Created on Fri Oct  2 21:35:14 2020
 import datetime
 import os
 import re
+from enum import Enum, auto
 from html.parser import HTMLParser
 
-from Shared.application_tools import DebugRecorder, ErrorCollector
-from Shared.parse_tools import ScreeningKey
+from Shared.application_tools import DebugRecorder, ErrorCollector, Counter, comment
+from Shared.parse_tools import ScreeningKey, FileKeeper, try_parse_festival_sites, HtmlPageParser
 from Shared.planner_interface import UnicodeMapper, Film, Screening, FestivalData, FilmInfo
-from Shared.web_tools import get_charset
+# from Shared.web_tools import get_charset
+from Shared.web_tools import get_encoding_from_file, iri_slug_to_url, UrlFile
 
-# Parameters.
-festival_year = 2020
+festival = 'NFF'
+festival_year = 2023
+festival_city = 'Utrecht'
 az_page_count = 6
 
+# Files
+file_keeper = FileKeeper(festival, festival_year)
+debug_file = file_keeper.debug_file
+
 # Directories.
-project_dir = os.path.expanduser("~/Documents/Film/NFF/NFF2020")
-webdata_dir = os.path.join(project_dir, "_website_data")
-plandata_dir = os.path.join(project_dir, "_planner_data")
+webdata_dir = file_keeper.webdata_dir
+plandata_dir = file_keeper.plandata_dir
 
 # Filename formats.
-az_copy_paste_file_format = os.path.join(webdata_dir, "copy_paste_az_{:02d}.txt")
-film_file_format = os.path.join(webdata_dir, "filmpage_{:03d}.html")
+# az_copy_paste_file_format = os.path.join(webdata_dir, "copy_paste_az_{:02d}.txt")
+film_file_format = file_keeper.film_file_format
 
 # Files.
-filmdata_file = os.path.join(plandata_dir, "filmdata.csv")
-filminfo_file = os.path.join(plandata_dir, "filminfo.xml")
-debug_file = os.path.join(plandata_dir, "debug.txt")
+filmdata_file = os.path.join(plandata_dir, 'filmdata.csv')
+filminfo_file = os.path.join(plandata_dir, 'filminfo.xml')
+az_screenshot_file = os.path.join(webdata_dir, 'az-screencopies.txt')
 
 # URL information.
+nff_hostname = "https://www.filmfestival.nl"
 films_webroot = "https://www.filmfestival.nl/en/films/"
 premiere_prefix = "festivalpremiere-"
 
 # Global unicode mapper.
 unicode_mapper = UnicodeMapper()
 
+# Application tools.
+error_collector = ErrorCollector()
+debug_recorder = DebugRecorder(debug_file)
+counter = Counter()
+
 
 def main():
-    # Initialize globals.
-    Globals.error_collector = ErrorCollector()
-    Globals.debug_recorder = DebugRecorder(debug_file)
-    
     # initialize a festival data object.
-    nff_data = NffData(plandata_dir)
-    
+    festival_data: NffData = NffData(plandata_dir)
+
+    # Setup counters.
+    counter.start('screenings')
+    counter.start('films')
+    counter.start('film links')
+
+    # Try parsing the websites.
+    try_parse_festival_sites(parse_nff_sites, festival_data, error_collector, debug_recorder, festival, counter)
+
+
+def parse_nff_sites(festival_data):
     comment("Parsing AZ pages.")
-    films_loader = FilmsLoader(az_page_count)
-    films_loader.get_films(nff_data)
-    
-    comment("Parsing premiêre pages.")
-    premieres_loader = PremieresLoader()
-    premieres_loader.get_screenings(nff_data)
-    
-    comment("Parsing regular film pages.")
-    screenings_loader = ScreeningsLoader()
-    screenings_loader.get_screenings(nff_data)
-    
-    if(Globals.error_collector.error_count() > 0):
-        comment("Encountered some errors:")
-        print(Globals.error_collector)
-        
-    comment("Done laoding NFF data.")
-    nff_data.write_screens()
-    nff_data.write_screenings()
-    nff_data.write_films()
-    nff_data.write_filminfo()
-    Globals.debug_recorder.write_debug()
+    # get_films(festival_data)
+    films_loader = FilmsLoader(az_screenshot_file)
+    films_loader.get_films(festival_data)
 
-def comment(text):
-    print(f"\n{datetime.datetime.now()}  - {text}")
+    # comment("Parsing premiêre pages.")
+    # premieres_loader = PremieresLoader()
+    # premieres_loader.get_screenings(festival_data)
+    #
+    # comment("Parsing regular film pages.")
+    # screenings_loader = ScreeningsLoader()
+    # screenings_loader.get_screenings(festival_data)
 
 
-class Globals:
-    error_collector = None
-    debug_recorder = None
+def get_films(festival_data):
+    az_url_path = 'programma'
+    az_url = iri_slug_to_url(nff_hostname, az_url_path)
+    az_file = file_keeper.az_file()
+    url_file = UrlFile(az_url, az_file, error_collector, debug_recorder, byte_count=200)
+    az_html = url_file.get_text()
+    if az_html is not None:
+        AzPageParser(festival_data).feed(az_html)
+
+
+class AzPageParser(HtmlPageParser):
+    class AzParseState(Enum):
+        IDLE = auto()
+        DONE = auto()
+
+    def __init__(self, festival_date):
+        super().__init__(festival_date, debug_recorder, 'AZ', debugging=True)
 
 
 class NffFilm:
@@ -116,7 +135,7 @@ class NffScreening(Screening):
         self.exclude = False
 
 
-class Subscreening():
+class Subscreening:
     
     def __init__(self, time, title, description):
         self.time = time
@@ -130,51 +149,105 @@ class Subscreening():
         return hash((self.time, self.title, self.description))
 
 
-class FilmsLoader():
+class FilmsLoader:
+    nl_month_by_name = {"september": 9}
 
     filmparts_re = re.compile(
-    r"""
-        ^.*Films\ from\ A\ to\ Z  # Ignorable head stuff
-        (?P<filmparts>.*)         # Information of each film
-        \n1\n\ \n.*$              # Ignorable tail stuff
-    """, re.DOTALL|re.VERBOSE)
+        r"""
+            ^.*Films\ from\ A\ to\ Z  # Ignorable head stuff
+            (?P<filmparts>.*)         # Information of each film
+            \n1\n\ \n.*$              # Ignorable tail stuff
+        """, re.DOTALL|re.VERBOSE
+    )
     film_re = re.compile(
-    r"""
-         \n\ \n(?P<title>[^\n]*)\n\n           # Title is preceeded by a line consisting of one space
-         Duration:\ (?P<duration>[0-9]+)min\n  # Duration in minutes
-         (?P<description>[^\n]*)\n             # Description is one line of text following Duration
-         Director\(s\):\ (?P<directors>[^\n]*) # Directors, optionally followed by competitions
-    """, re.DOTALL|re.VERBOSE)
+        r"""
+             \n\ \n(?P<title>[^\n]*)\n\n           # Title is preceeded by a line consisting of one space
+             Duration:\ (?P<duration>[0-9]+)min\n  # Duration in minutes
+             (?P<description>[^\n]*)\n             # Description is one line of text following Duration
+             Director\(s\):\ (?P<directors>[^\n]*) # Directors, optionally followed by competitions
+        """, re.DOTALL|re.VERBOSE
+    )
     competitions_re = re.compile(
-    r"""
-        (?P<directors>[^\n]*)                     # Directors list, header stripped off
-        \ Competitions:\ (?P<competitions>[^\n]*) # Pattern when competitions list indeed exists
-    """, re.VERBOSE)
+        r"""
+            (?P<directors>[^\n]*)                     # Directors list, header stripped off
+            \ Competitions:\ (?P<competitions>[^\n]*) # Pattern when competitions list indeed exists
+        """, re.VERBOSE
+    )
+    screening_re = re.compile(
+        r"""
+            \n(?P<title>[^\n]*)\nDatum\n        # Title
+            (?P<month_day>\d+)\s+               # Day of month
+            (?P<month_name>[a-z]+)\s+           # Dutch name of month
+            om\s+(?P<start_time>\d\d:\d\d)\n    # Start time
+            Locatie\s+(?P<location>[^\n]+)\n    # Location
+        """, re.DOTALL | re.VERBOSE
+    )
+    num_screen_re = re.compile(r'^(?P<theater>.*?) (?P<number>\d+)$')
+    name_screen_re = re.compile(r'^(?P<theater>.*?) - (?P<name>.+)$')
 
-    def __init__(self, page_count):
-        self.page_count = page_count
+    def __init__(self, az_file):
+        self.title = None
+        self.start_dt = None
+        self.screen = None
+        with open(az_file, 'r') as f:
+            az_text = f.read()
+        self.az_text = az_text
     
     def get_films(self, nff_data):
         
-        # Parse AZ pages.
-        self.parse_az_pages(nff_data)
-        nff_data.write_nff_films()
+        # Parse AZ page.
+        self.parse_az_page(nff_data)
+        # nff_data.write_nff_films()
         
-        # Convert NFF films to the format expected by the C# planner.
-        nff_data.fill_films_list()
-        nff_data.write_films()
+        # # Convert NFF films to the format expected by the C# planner.
+        # nff_data.fill_films_list()
+        # nff_data.write_films()
 
-    def parse_az_pages(self, nff_data):
-        for page_number in range(self.page_count):
-            az_file = az_copy_paste_file_format.format(page_number)
-            print(f"Searching {az_file}...", end="")
-            try:
-                with open(az_file, 'r') as f:
-                    az_text = f.read()
-                film_count = self.parse_one_az_page(az_text, nff_data.nff_films)
-                print(f" {film_count} films found")
-            except FileNotFoundError as e:
-                Globals.error_collector.add(e, "while parsing az pages in FilmsLoader")
+    def parse_az_page(self, festival_data):
+        screening_matches = [match for match in self.screening_re.finditer(self.az_text)]
+        groups = [m.groupdict() for m in screening_matches]
+        for group in groups:
+            self.title = group['title']
+            month = self.nl_month_by_name[group['month_name']]
+            start_date = datetime.date.fromisoformat(f'{festival_year}-{month:02d}-{group["month_day"]}')
+            start_time = datetime.time.fromisoformat(group['start_time'])
+            screen_parse_name = group['location']
+            theater_parse_name, screen_abbreviation = self.split_location(screen_parse_name)
+            self.screen = festival_data.get_screen(
+                festival_city,
+                screen_parse_name,
+                theater_parse_name=theater_parse_name,
+                screen_abbreviation=screen_abbreviation
+            )
+            self.start_dt = datetime.datetime.combine(start_date, start_time)
+            counter.increase('screenings')
+
+    def split_location(self, location):
+        theater_parse_name = location
+        screen_abbreviation = None
+        num_match = self.num_screen_re.match(location)
+        if num_match:
+            theater_parse_name = num_match.group(1)
+            screen_abbreviation = num_match.group(2)
+        else:
+            name_match = self.name_screen_re.match(location)
+            if name_match:
+                theater_parse_name = name_match.group(1)
+                screen_abbreviation = name_match.group(2)
+        return theater_parse_name, screen_abbreviation
+
+    # def parse_az_pages(self, nff_data):
+    #     pass
+    #     for page_number in range(self.page_count):
+    #         az_file = az_copy_paste_file_format.format(page_number)
+    #         print(f"Searching {az_file}...", end="")
+    #         try:
+    #             with open(az_file, 'r') as f:
+    #                 az_text = f.read()
+    #             film_count = self.parse_one_az_page(az_text, nff_data.nff_films)
+    #             print(f" {film_count} films found")
+    #         except FileNotFoundError as e:
+    #             error_collector.add(e, "while parsing az pages in FilmsLoader")
     
     def parse_one_az_page(self, az_text, nff_films):
         filmparts = self.filmparts_re.match(az_text)
@@ -200,14 +273,14 @@ class FilmsLoader():
             return film_count
 
 
-class PremieresLoader():
+class PremieresLoader:
     
     def __init__(self):
         self.film = None
         self.url = ""
         
     def print_debug(self, str1, str2):
-        Globals.debug_recorder.add('AZ ' + str(str1) + ' ' + str(str2))
+        debug_recorder.add('AZ ' + str(str1) + ' ' + str(str2))
 
     def get_screenings(self, nff_data):
         nff_data.read_screens()
@@ -221,7 +294,7 @@ class PremieresLoader():
                 self.get_screenings_of_one_film(url_file, nff_data)
                 files_read_count += 1
         print(f"\nDone reading screenings of {files_read_count} premiêre.")
-        nff_data.write_screens()
+        nff_data.write_new_screens()
         nff_data.write_screenings()
 
     def get_screenings_of_one_film(self, film_html_file, nff_data):
@@ -229,13 +302,13 @@ class PremieresLoader():
         if os.path.isfile(film_html_file):
             self.print_debug("--  Analysing premiêre page of title:", title)
             premiere_parser = PremierePageParser(self.film, nff_data)
-            charset = get_charset(film_html_file)
+            charset = get_encoding_from_file(film_html_file, debug_recorder)
             with open(film_html_file, 'r', encoding=charset) as f:
                 text = '\n' + '\n'.join([line for line in f])
             premiere_parser.feed(text)
 
 
-class ScreeningsLoader():
+class ScreeningsLoader:
     
     def __init__(self):
         self.nff_screenings = []
@@ -244,7 +317,7 @@ class ScreeningsLoader():
         self.common_keys = None
         
     def print_debug(self, str1, str2):
-        Globals.debug_recorder.add('RF ' + str(str1) + ' ' + str(str2))
+        debug_recorder.add('RF ' + str(str1) + ' ' + str(str2))
 
     def get_screenings(self, nff_data):
         self.parse_film_pages(nff_data)
@@ -256,12 +329,12 @@ class ScreeningsLoader():
             film_file = film_file_format.format(film.filmid)
             print(f"Now reading {film_file} - {film.title} ({film.duration_str()})")
             try:
-                charset = get_charset(film_file)
+                charset = get_encoding_from_file(film_file, debug_recorder)
                 with open(film_file, 'r', encoding=charset) as f:
                     film_text = f.read()
                 self.parse_one_film_page(film, film_text, nff_data)
             except FileNotFoundError as e:
-                Globals.error_collector.add(e, "while parsing film pages in ScreeningsLoader")
+                error_collector.add(e, "while parsing film pages in ScreeningsLoader")
             
     def parse_one_film_page(self, film, film_text, nff_data):
         self.print_debug(f"--  Analysing regular film page of title:", "{film.title} ({film.duration_str()})")
@@ -382,7 +455,7 @@ class ScreeningsLoader():
                     end_dt = start_dt + film.duration
                 add_screening(film, screen, start_dt, end_dt)
             else:
-                Globals.error_collector.add(f"Subscreening name {sub.name} not found as film",
+                error_collector.add(f"Subscreening name {sub.name} not found as film",
                                             "in add_screening_from_sub")
                 
         def add_screening(film, screen, start_dt, end_dt, dry_run=False):
@@ -439,11 +512,11 @@ class ScreeningsLoader():
             comment = "while combining coinsiding films and compilations"
             excess_samescreening_count = len(self.films_by_samescreening) - common_count
             if excess_samescreening_count > 0:
-                Globals.error_collector.add(f"{excess_samescreening_count} screenings exist with coinsiding films {but}",
+                error_collector.add(f"{excess_samescreening_count} screenings exist with coinsiding films {but}",
                                             comment)
             excess_multi_subscreenings_count = len(self.subsset_by_screening) - common_count
             if excess_multi_subscreenings_count > 0:
-                Globals.error_collector.add(f"{excess_multi_subscreenings_count} screenings exist with multiple subscreenings {but}",
+                error_collector.add(f"{excess_multi_subscreenings_count} screenings exist with multiple subscreenings {but}",
                                             comment)
         
         def add_singlet_screenings():
@@ -452,7 +525,7 @@ class ScreeningsLoader():
             for key in singlet_keys:
                 singlet_screenings = [s for s in self.nff_screenings if (ScreeningKey(s) == key)]
                 if len(singlet_screenings) != 1:
-                    Globals.error_collector.add(f"Regular screening has {len(singlet_screenings)} variations",
+                    error_collector.add(f"Regular screening has {len(singlet_screenings)} variations",
                                                 "while adding regular screenings")
                 screening = singlet_screenings[0]
                 if len(screening.subscreenings) > 1:
@@ -512,7 +585,7 @@ class HtmlPageParser(HTMLParser):
 
     def print_debug(self, str1, str2):
         if self.debugging:
-            Globals.debug_recorder.add('F ' + str(str1) + ' ' + str(str2))
+            debug_recorder.add('F ' + str(str1) + ' ' + str(str2))
 
     def init_screening_data(self):
         self.location = None
@@ -778,8 +851,8 @@ class NffData(FestivalData):
     url_by_title['Teledoc Campus - When You Hear the Divine Call'] = 'https://www.filmfestival.nl/en/films/teledoc-campus-a-divine-call'
     url_by_title['The Undercurrent'] = 'https://www.filmfestival.nl/en/films/-1'
 
-    def __init__(self, plandata_dir):
-        FestivalData.__init__(self, plandata_dir)
+    def __init__(self, plan_dir):
+        FestivalData.__init__(self, plan_dir)
         self.nff_films = []
 
     def __repr__(self):

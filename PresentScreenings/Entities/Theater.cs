@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace PresentScreenings.TableView
 {
@@ -15,7 +16,7 @@ namespace PresentScreenings.TableView
 
         #region Properties
         public int TheaterId { get; }
-        public string City { get; }
+        public City City { get; }
         public string Name { get; }
         public string Abbreviation { get; }
         public PriorityValue Priority { get; private set; }
@@ -38,13 +39,17 @@ namespace PresentScreenings.TableView
             // Assign the fields of the input string.
             string[] fields = theaterText.Split(';');
             string theaterId = fields[0];
-            City = fields[1];
+            string cityIdString = fields[1];
             Name = fields[2];
             Abbreviation = fields[3];
             string priorityString = fields[4];
 
             // Assign properties that need calculating.
             TheaterId = int.Parse(theaterId);
+            int cityId = int.Parse(cityIdString);
+            City = ScreeningsPlan.Cities
+                .Where(c => c.CityId == cityId)
+                .First();
             Priority = PriorityByNumber[int.Parse(priorityString)];
         }
 

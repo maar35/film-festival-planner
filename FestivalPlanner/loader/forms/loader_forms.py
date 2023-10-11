@@ -1,17 +1,18 @@
 import csv
 import datetime
 
-from django import forms
 from django.db import IntegrityError
+from django.forms import Form, BooleanField, SlugField
 
 from festival_planner.tools import initialize_log, add_log
 from films.models import Film, FilmFanFilmRating, FilmFan
 from sections.models import Section, Subsection
-from theaters.models import Theater, theaters_path, City, cities_path, Screen, screens_path
+from theaters.models import Theater, theaters_path, City, cities_path, Screen, screens_path, cities_cache_path, \
+    theaters_cache_path, screens_cache_path
 
 
-class RatingLoaderForm(forms.Form):
-    import_mode = forms.BooleanField(
+class RatingLoaderForm(Form):
+    import_mode = BooleanField(
         label='Use import mode, all ratings are replaced',
         required=False,
         initial=False,
@@ -21,18 +22,43 @@ class RatingLoaderForm(forms.Form):
     def load_rating_data(session, festival, import_mode=False):
         initialize_log(session)
         import_mode or add_log(session, 'No ratings will be effected.')
-        if FilmLoader(session, festival, import_mode).load_objects():
+
+        # Save ratings if the import mode flag is set and all ratings
+        # are replaced.
+        if import_mode:
+            _ = RatingDumper(session).save_ratings(festival, festival.ratings_cache)
+
+        # Load films and, if applicable, ratings.
+        if FilmLoader(session, festival).load_objects():
             if import_mode:
                 add_log(session, 'Import mode. Ratings will be replaced.')
                 RatingLoader(session, festival).load_objects()
 
 
-class TheaterLoaderForm(forms.Form):
-    dummy_field = forms.SlugField(required=False)
+class SaveRatingsForm(Form):
+    dummy_field = SlugField(required=False)
+
+    @staticmethod
+    def save_ratings(session, festival):
+        initialize_log(session, 'Save')
+        add_log(session, f'Saving the {festival} ratings.')
+        if not RatingDumper(session).save_ratings(festival, festival.ratings_file):
+            add_log(session, f'Failed to save the {festival} ratings.')
+
+
+class TheaterDataLoaderForm(Form):
+    dummy_field = SlugField(required=False)
 
     @staticmethod
     def load_theater_data(session):
         initialize_log(session)
+
+        # Cache the database data before it is overwritten.
+        _ = CityDumper(session).dump_objects(cities_cache_path())
+        _ = TheaterDumper(session).dump_objects(theaters_cache_path())
+        _ = ScreenDumper(session).dump_objects(screens_cache_path())
+
+        # Overwrite the festival data in the database.
         go_on = True
         if go_on:
             go_on = CityLoader(session).load_objects()
@@ -42,15 +68,48 @@ class TheaterLoaderForm(forms.Form):
             _ = ScreenLoader(session).load_objects()
 
 
+class TheaterDataUpdateForm(Form):
+    dummy_field = SlugField(required=False)
+
+    @staticmethod
+    def add_new_cities(session, new_cities):
+        initialize_log(session, 'Cities insert')
+        CityUpdater(session).add_new_objects(new_cities)
+
+    @staticmethod
+    def add_new_theaters(session, new_theaters):
+        initialize_log(session, 'Theaters insert')
+        TheaterUpdater(session).add_new_objects(new_theaters)
+
+    @staticmethod
+    def add_new_screens(session, new_screens):
+        initialize_log(session, 'Screens insert')
+        ScreenUpdater(session).add_new_objects(new_screens)
+
+
+class TheaterDataDumperForm(Form):
+    dummy_field = SlugField(required=False)
+
+    @staticmethod
+    def dump_theater_data(session):
+        initialize_log(session, 'Dump')
+        add_log(session, 'Dumping the theater database data.')
+        CityDumper(session).dump_objects(cities_path())
+        TheaterDumper(session).dump_objects(theaters_path())
+        ScreenDumper(session).dump_objects(screens_path())
+
+
 class BaseLoader:
     """
     Base class for loading objects such as films or ratings from CSV files.
     """
     expected_header = None
+    foreign_objects = None
 
     def __init__(self, session, file_required=True):
         """
         Initialize the member variables
+
         :param session: Session to store the log as a cookie
         :param file_required: Boolean to indicate whether the input file is required
         """
@@ -62,6 +121,7 @@ class BaseLoader:
     def read_objects(self, objects_file, values_list):
         """
         Member method to be used by derived classes to read objects from files
+
         :param objects_file: The CSV file to read the objects from
         :param values_list: A list to receive the objects read
         :return: Whether reading objects was successful
@@ -82,9 +142,9 @@ class BaseLoader:
                 # Read the data records.
                 for record in object_reader:
                     self.objects_on_file += 1
-                    values_read = self.read_row(record)
-                    if values_read:
-                        values_list.append(values_read)
+                    value_by_field = self.read_row(record)
+                    if value_by_field:
+                        values_list.append(value_by_field)
 
         except FileNotFoundError:
             if self.file_required:
@@ -95,9 +155,17 @@ class BaseLoader:
             self.add_log(f'Bad value in file {objects_file}.')
             return False
 
+        # Add result statistics to the log.
+        object_count = len(values_list)
+        if object_count == 0:
+            self.add_log(f'No {self.object_name} records found in file {objects_file}')
+            return False
+        self.add_log(f'{object_count} {self.object_name} records read.')
+
         return True
 
     def check_header(self, file, reader):
+        """Internal method to handle presence of a data header"""
         if self.expected_header is None:
             return True
         header = reader.__next__()
@@ -109,12 +177,61 @@ class BaseLoader:
     def read_row(self, row):
         """
         "Virtual" method to read one object from file
+
         :param row: Line from the file being read
         :return: The object read, None if no object could be read
         """
         return None
 
+    def get_foreign_key(self, foreign_class, foreign_manager, **kwargs):
+        """
+        Member method to be used by derived classes to get an object to use as foreign key
+
+        :param foreign_class: class of the foreign key object
+        :param foreign_manager: Manager of the foreign key object class
+        :param kwargs: Keyword arguments to crate the foreign key object
+
+        """
+        foreign_object = None
+        object_str = foreign_class.__name__
+        try:
+            foreign_object = foreign_manager.get(**kwargs)
+        except foreign_class.DoesNotExist:
+            missing_attributes = []
+            for attribute, value in kwargs.items():
+                if self.foreign_objects:
+                    try:
+                        foreign_object = [obj for obj in self.foreign_objects if getattr(obj, attribute) == value][0]
+                    except IndexError as e:
+                        self.add_log(f'{e}: {object_str} with {attribute}={value} not in new foreign objects')
+                        return None
+                    except AttributeError as e:
+                        self.add_log(f'{e}')
+                        return None
+                else:
+                    missing_attributes.append(f'{attribute}={value}')
+            if missing_attributes:
+                attributes_str = ' and '.join(missing_attributes)
+                self.add_log(f'{object_str} with {attributes_str} not found in database.')
+                return None
+        return foreign_object
+
+    def get_value_by_field(self, obj):
+        """
+        "Virtual" method to return a value by field dictionary from the
+        given object.
+        """
+        return None
+
+    def construct_object(self, value_by_field):
+        """
+        "Virtual" method to return a new object from the given value by
+        field dictionary.
+        """
+        return None
+
     def delete_objects(self, objects):
+        """Facility method to delete given objects without questions"""
         deleted_object_count, deleted_count_by_object_type = objects.delete()
         if deleted_object_count == 0:
             self.add_log(f'No existing {self.object_name}s need to be deleted.')
@@ -122,6 +239,7 @@ class BaseLoader:
             self.add_log(f'{deleted_count} existing {object_type.split(".")[-1]}s deleted.')
 
     def add_log(self, text):
+        """Shorthand method to add text to the current log"""
         add_log(self.session, text)
 
 
@@ -143,16 +261,15 @@ class SimpleLoader(BaseLoader):
         self.objects_file = objects_file
         self.festival = festival
         self.festival_filter = None if festival is None else {festival_pk or 'festival__pk': self.festival.pk}
-        self.records = []
+        self.value_by_field_list = []
         self.delete_disappeared_objects = True
 
     def load_objects(self):
-        # Prepare statistics.
-        objects_by_created = {}
         existing_object_set = set()
         updated_object_set = set()
 
         # Select the existing objects.
+        existing_objects = None
         if self.delete_disappeared_objects:
             if self.festival:
                 existing_objects = self.object_manager.filter(**self.festival_filter)
@@ -161,33 +278,12 @@ class SimpleLoader(BaseLoader):
             existing_object_set = set(list(existing_objects))
 
         # Read the objects from the member file into the designated list.
-        if not self.read_objects(self.objects_file, self.records):
+        if not self.read_objects(self.objects_file, self.value_by_field_list):
             self.add_log(f'No {self.object_name} records read.')
             return False
 
         # Update objects and create ones when absent.
-        for value_by_field in self.records:
-            keys, defaults = self.pop_key_fields(value_by_field)
-
-            # Update or create an object.
-            try:
-                affected_object, created = self.object_manager.update_or_create(**keys, defaults=defaults)
-            except IntegrityError as e:
-                created = None
-                print(f'ERROR {e=} {keys=}')
-            else:
-                if not created:
-                    updated_object_set.add(affected_object)
-
-            # Update statistics.
-            try:
-                objects_by_created[created] += 1
-            except KeyError:
-                objects_by_created[created] = 1
-
-        # Log the results.
-        for created, count in objects_by_created.items():
-            self.add_log(f'{count} {self.object_name} records {self.label_by_created[created]}.')
+        self.update_or_create(updated_object_set)
 
         # Delete objects that do not appear in the file.
         if self.delete_disappeared_objects:
@@ -201,19 +297,61 @@ class SimpleLoader(BaseLoader):
 
         return True
 
-    def read_objects(self, objects_file, records):
-        # Read objects from file.
-        if not super().read_objects(objects_file, records):
+    def load_new_objects(self, target_object_list, foreign_objects=None):
+        self.foreign_objects = foreign_objects
+
+        # Get a list of value by field dictionaries from file.
+        if not self.read_objects(self.objects_file, self.value_by_field_list):
+            self.add_log(f'No {self.object_name} records read.')
             return False
 
-        # Add result statistics to the log.
-        object_count = len(records)
-        if object_count == 0:
-            self.add_log(f'No {self.object_name} records found in file {objects_file}')
-            return False
-        self.add_log(f'{object_count} {self.object_name} records read.')
+        # Construct new objects from the value by field dictionary list.
+        for value_by_field in self.value_by_field_list:
+            new_object = self.construct_object(value_by_field)
+            if new_object:
+                target_object_list.append(new_object)
+            else:
+                raise ValueError(f"Couldn't construct new {self.object_name} object from {value_by_field}.")
 
         return True
+
+    def update_or_create(self, updated_object_set):
+        objects_by_created = {}
+
+        for value_by_field in self.value_by_field_list:
+            keys, defaults = self.pop_key_fields(value_by_field)
+
+            # Update or create an object.
+            try:
+                affected_object, created = self.object_manager.update_or_create(**keys, defaults=defaults)
+            except IntegrityError as e:
+                created = None
+            else:
+                if not created:
+                    updated_object_set.add(affected_object)
+
+            # Update statistics.
+            try:
+                objects_by_created[created] += 1
+            except KeyError:
+                objects_by_created[created] = 1
+
+        # Log the results.
+        for created, count in objects_by_created.items():
+            self.add_log(f'{count} {self.object_name} records {self.label_by_created[created]}.')
+        if not objects_by_created:
+            self.add_log(f'No {self.object_name} records found.')
+
+    def add_new_objects(self, object_list):
+        dummy_set = set()
+        value_by_field_list = []
+
+        self.add_log(f'Inserting new {self.object_name} records.')
+        for obj in object_list:
+            value_by_field = self.get_value_by_field(obj)
+            value_by_field_list.append(value_by_field)
+        self.value_by_field_list = value_by_field_list
+        self.update_or_create(dummy_set)
 
     def pop_key_fields(self, value_by_field):
         value_by_key_field = {}
@@ -233,16 +371,10 @@ class FilmLoader(SimpleLoader):
     key_fields = ['festival', 'seq_nr', 'film_id']
     manager = Film.films
 
-    def __init__(self, session, festival, import_mode):
+    def __init__(self, session, festival):
         super().__init__(session, 'film', self.manager, festival.films_file, festival=festival)
         self.festival = festival
-        self.import_mode = import_mode
         self.delete_disappeared_objects = True
-
-        # Save ratings if the import mode flag is set and all ratings
-        # are replaced.
-        if self.import_mode:
-            _ = self.save_ratings(self.festival.ratings_cache)
 
     def read_row(self, row):
         seq_nr = int(row[0])
@@ -269,25 +401,6 @@ class FilmLoader(SimpleLoader):
         }
         return value_by_field
 
-    def save_ratings(self, file):
-        festival = self.festival
-        ratings = FilmFanFilmRating.film_ratings.filter(film__festival_id=festival.id)
-
-        try:
-            with open(file, 'w', newline='') as csvfile:
-                rating_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
-                rating_writer.writerow(RatingLoader.expected_header)
-                for rating in ratings:
-                    row = [rating.film.film_id, rating.film_fan.name, rating.rating]
-                    rating_writer.writerow(row)
-        except FileNotFoundError:
-            self.add_log(f'File {file} not found.')
-            return False
-        else:
-            self.add_log(f'{len(ratings)} existing ratings saved to {file}.')
-
-        return True
-
 
 class RatingLoader(SimpleLoader):
     expected_header = ['filmid', 'filmfan', 'rating']
@@ -306,15 +419,12 @@ class RatingLoader(SimpleLoader):
         film_fan_name = row[1]
         rating = int(row[2])
 
-        try:
-            film = Film.films.get(festival_id=self.festival.id, film_id=film_id)
-        except Film.DoesNotExist:
-            self.add_log(f'Film not found: #{film_id}.')
+        film = self.get_foreign_key(Film, Film.films, **{'festival_id': self.festival.id, 'film_id': film_id})
+        if not film:
             return None
-        try:
-            film_fan = FilmFan.film_fans.get(name=film_fan_name)
-        except FilmFan.DoesNotExist:
-            self.add_log(f'Fan not found: {film_fan_name}.')
+
+        film_fan = self.get_foreign_key(FilmFan, FilmFan.film_fans, **{'name': film_fan_name})
+        if not film_fan:
             return None
 
         value_by_field = {
@@ -362,10 +472,9 @@ class SubsectionLoader(SimpleLoader):
         description = row[3]
         url = row[4]
 
-        try:
-            section = Section.sections.get(festival_id=self.festival.id, section_id=section_id)
-        except Section.DoesNotExist:
-            self.add_log(f'Section not found: #{section_id}.')
+        kwargs = {'festival_id': self.festival.id, 'section_id': section_id}
+        section = self.get_foreign_key(Section, Section.sections, **kwargs)
+        if not section:
             return None
 
         value_by_field = {
@@ -384,8 +493,9 @@ class CityLoader(SimpleLoader):
     manager = City.cities
     file = cities_path()
 
-    def __init__(self, session):
-        super().__init__(session, 'city', self.manager, self.file)
+    def __init__(self, session, file=None):
+        file = file or self.file
+        super().__init__(session, 'city', self.manager, file)
 
     def read_row(self, row):
         city_id = int(row[0])
@@ -399,14 +509,19 @@ class CityLoader(SimpleLoader):
         }
         return value_by_field
 
+    def construct_object(self, value_by_field):
+        city = City(**value_by_field)
+        return city
+
 
 class TheaterLoader(SimpleLoader):
     key_fields = ['theater_id']
     manager = Theater.theaters
     file = theaters_path()
 
-    def __init__(self, session):
-        super().__init__(session, 'theater', self.manager, self.file)
+    def __init__(self, session, file=None):
+        file = file or self.file
+        super().__init__(session, 'theater', self.manager, file)
 
     def read_row(self, row):
         theater_id = int(row[0])
@@ -415,10 +530,8 @@ class TheaterLoader(SimpleLoader):
         abbreviation = row[3]
         priority = Theater.Priority(int(row[4]))
 
-        try:
-            city = City.cities.get(city_id=city_id)
-        except City.DoesNotExist:
-            self.add_log(f'City not found: #{city_id}.')
+        city = self.get_foreign_key(City, City.cities, **{'city_id': city_id})
+        if not city:
             return None
 
         value_by_field = {
@@ -430,14 +543,19 @@ class TheaterLoader(SimpleLoader):
         }
         return value_by_field
 
+    def construct_object(self, value_by_field):
+        theater = Theater(**value_by_field)
+        return theater
+
 
 class ScreenLoader(SimpleLoader):
     key_fields = ['screen_id']
     manager = Screen.screens
     file = screens_path()
 
-    def __init__(self, session):
-        super().__init__(session, 'screen', self.manager, self.file)
+    def __init__(self, session, file=None):
+        file = file or self.file
+        super().__init__(session, 'screen', self.manager, file)
 
     def read_row(self, row):
         screen_id = int(row[0])
@@ -446,10 +564,8 @@ class ScreenLoader(SimpleLoader):
         abbreviation = row[3]
         address_type = Screen.ScreenAddressType(int(row[4]))
 
-        try:
-            theater = Theater.theaters.get(theater_id=theater_id)
-        except Theater.DoesNotExist:
-            self.add_log(f'Theater not found: #{theater_id}')
+        theater = self.get_foreign_key(Theater, Theater.theaters, **{'theater_id': theater_id})
+        if not theater:
             return None
 
         value_by_field = {
@@ -460,3 +576,162 @@ class ScreenLoader(SimpleLoader):
             'address_type': address_type,
         }
         return value_by_field
+
+    def construct_object(self, value_by_field):
+        screen = Screen(**value_by_field)
+        return screen
+
+
+class CityUpdater(SimpleLoader):
+    key_fields = CityLoader.key_fields
+    manager = CityLoader.manager
+    file = None
+
+    def __init__(self, session):
+        super().__init__(session, 'city', self.manager, self.file)
+
+    def get_value_by_field(self, obj):
+        value_by_field = {
+            'city_id': obj.city_id,
+            'name': obj.name,
+            'country': obj.country,
+        }
+        return value_by_field
+
+
+class TheaterUpdater(SimpleLoader):
+    key_fields = TheaterLoader.key_fields
+    manager = TheaterLoader.manager
+    file = None
+
+    def __init__(self, session):
+        super().__init__(session, 'theater', self.manager, self.file)
+
+    def get_value_by_field(self, obj):
+        value_by_field = {
+            'theater_id': obj.theater_id,
+            'city': obj.city,
+            'parse_name': obj.parse_name,
+            'abbreviation': obj.abbreviation,
+            'priority': obj.priority,
+        }
+        return value_by_field
+
+
+class ScreenUpdater(SimpleLoader):
+    key_fields = ScreenLoader.key_fields
+    manager = ScreenLoader.manager
+    file = None
+
+    def __init__(self, session):
+        super().__init__(session, 'screen', self.manager, self.file)
+
+    def get_value_by_field(self, obj):
+        value_by_field = {
+            'screen_id': obj.screen_id,
+            'theater': obj.theater,
+            'parse_name': obj.parse_name,
+            'abbreviation': obj.abbreviation,
+            'address_type': obj.address_type,
+        }
+        return value_by_field
+
+
+class BaseDumper:
+    """
+    Base class for dumping objects to CSV files.
+    """
+
+    def __init__(self, session, object_name, manager, header=None):
+        self.session = session
+        self.object_name = object_name
+        self.manager = manager
+        self.header = header
+
+    def dump_objects(self, file, objects=None):
+        objects = objects or self.manager.all()
+        self.add_log(f'Dumping {self.object_name} data.')
+        try:
+            with open(file, 'w', newline='') as csvfile:
+                csv_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
+                if self.header:
+                    csv_writer.writerow(self.header)
+                for obj in objects:
+                    row = self.object_row(obj)
+                    csv_writer.writerow(row)
+        except PermissionError as e:
+            self.add_log(f'{e}: File {file} could not be written.')
+            return False
+        else:
+            self.add_log(f'{len(objects)} existing {self.object_name} objects saved in {file}.')
+
+        return True
+
+    def object_row(self, obj):
+        """
+        "Virtual" method to dump one object to file
+
+        :obj: The object to be dumped.
+        :return: List of object attributes to be written
+        """
+        return []
+
+    def add_log(self, text):
+        add_log(self.session, text)
+
+
+class RatingDumper(BaseDumper):
+    manager = FilmFanFilmRating.film_ratings
+    header = RatingLoader.expected_header
+
+    def __init__(self, session):
+        super().__init__(session, 'rating', self.manager, self.header)
+
+    def object_row(self, rating):
+        return [rating.film.film_id, rating.film_fan.name, rating.rating]
+
+    def save_ratings(self, festival, file):
+        festival_ratings = self.manager.filter(film__festival_id=festival.id)
+        return self.dump_objects(file, festival_ratings)
+
+
+class CityDumper(BaseDumper):
+    manager = City.cities
+
+    def __init__(self, session):
+        super().__init__(session, 'city', self.manager)
+
+    def object_row(self, city):
+        return [city.city_id, city.name, city.country]
+
+
+class TheaterDumper(BaseDumper):
+    manager = Theater.theaters
+
+    def __init__(self, session):
+        super().__init__(session, 'theater', self.manager)
+
+    def object_row(self, theater):
+        return [
+            theater.theater_id,
+            theater.city.city_id,
+            theater.parse_name,
+            theater.abbreviation,
+            theater.priority,
+        ]
+
+
+class ScreenDumper(BaseDumper):
+    manager = Screen.screens
+
+    def __init__(self, session):
+        super().__init__(session, 'screen', self.manager)
+
+    def object_row(self, screen):
+        return [
+            screen.screen_id,
+            screen.theater.theater_id,
+            screen.parse_name,
+            screen.abbreviation,
+            screen.address_type,
+        ]

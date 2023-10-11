@@ -66,7 +66,7 @@ class ScreensTestCase(unittest.TestCase):
         screen_2 = data.get_screen(city, 'Kriterion Kleine Zaal', theater_name)
         screen_1.abbr = 'krgr'
         screen_2.abbr = 'krkl'
-        data.write_screens()
+        data.write_new_screens()
 
         # Act.
         data.read_screens()

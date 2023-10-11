@@ -197,6 +197,7 @@
     </Compile>
     <Compile Include="Entities\Configuration.cs" />
     <Compile Include="Entities\Theater.cs" />
+    <Compile Include="Entities\City.cs" />
   </ItemGroup>
   <ItemGroup>
     <InterfaceDefinition Include="Main.storyboard" />

@@ -33,7 +33,7 @@ namespace PresentScreenings.TableView
         #region Properties
         public int ScreenId { get; }
         public Theater Theater { get; }
-        public string City { get; }
+        public City City { get; }
         public string ParseName { get; }
         public string Abbreviation { get; }
         public ScreenType Type { get; }
@@ -61,14 +61,17 @@ namespace PresentScreenings.TableView
             string screenIdString = fields[0];
             string theaterIdString = fields[1];
             ParseName = fields[2];
-            Abbreviation = fields[3];
-            string screenType = fields[4];
+            string screenAbbreviation = fields[3];
+
+            // TODO: Workaround should be fixed.
+            string screenType = (int.Parse(fields[4]) - 1).ToString();
 
             // Assign properties that need calculating.
             ScreenId = int.Parse(screenIdString);
             int theaterId = int.Parse(theaterIdString);
             Theater = (from Theater t in ScreeningsPlan.Theaters where t.TheaterId == theaterId select t).First();
             City = Theater.City;
+            Abbreviation = Theater.Abbreviation + screenAbbreviation;
             Type = (ScreenType)Enum.Parse(typeof(ScreenType), screenType);
         }
 

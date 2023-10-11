@@ -1,17 +1,21 @@
+import csv
 from operator import attrgetter
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
+from django.views import View
 from django.views.generic import FormView, ListView
 
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log
 from festivals.models import Festival
 from films.models import Film, FilmFanFilmRating
-from loader.forms.loader_forms import TheaterLoaderForm, SectionLoader, SubsectionLoader, RatingLoaderForm
+from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoaderForm, TheaterDataLoaderForm, \
+    TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm
 from sections.models import Section, Subsection
-from theaters.models import City, Theater, Screen, cities_path, theaters_path, screens_path
+from theaters.models import Theater, City, cities_path, theaters_path, screens_path, Screen, new_screens_path, \
+    new_cities_path, new_theaters_path
 
 
 def file_record_count(path, has_header=False):
@@ -37,34 +41,188 @@ def get_festival_row(festival):
     return festival_row
 
 
-class TheatersLoaderView(LoginRequiredMixin, FormView):
+def get_theater_items():
+    theater_items = {
+        'city_count': City.cities.count,
+        'city_count_on_file': file_record_count(cities_path()),
+        'theater_count': Theater.theaters.count,
+        'theater_count_on_file': file_record_count(theaters_path()),
+        'screen_count': Screen.screens.count,
+        'screen_count_on_file': file_record_count(screens_path()),
+    }
+    return theater_items
+
+
+class TheaterDataInterfaceView(LoginRequiredMixin, FormView):
     model = Theater
     template_name = 'loader/theaters.html'
-    form_class = TheaterLoaderForm
-    success_url = '/theaters/theaters'
+    form_class = None
     http_method_names = ['get', 'post']
+    form_class_by_action = {'load': TheaterDataLoaderForm, 'dump': TheaterDataDumperForm}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.action = None
+
+    def dispatch(self, request, *args, **kwargs):
+        if 'action' in request.GET:
+            self.action = request.GET['action']
+        self.form_class = self.form_class_by_action[self.action]
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         session = self.request.session
-        theater_items = {
-            'city_count': City.cities.count,
-            'city_count_on_file': file_record_count(cities_path()),
-            'theater_count': Theater.theaters.count,
-            'theater_count_on_file': file_record_count(theaters_path()),
-            'screen_count': Screen.screens.count,
-            'screen_count_on_file': file_record_count(screens_path()),
-        }
         context = add_base_context(self.request, super().get_context_data(**kwargs))
-        context['title'] = 'Load Theater Data'
-        context['theater_items'] = theater_items
+        context['title'] = f'{self.action} Theater Data'
+        context['action'] = self.action
+        context['theater_items'] = get_theater_items()
         context['log'] = get_log(session)
         unset_log(session)
         return context
 
     def form_valid(self, form):
         session = self.request.session
-        form.load_theater_data(session)
+        if self.action == 'dump':
+            form.dump_theater_data(session)
+        elif self.action == 'load':
+            form.load_theater_data(session)
+        return HttpResponseRedirect('/theaters/theaters')
+
+
+class NewTheaterDataListView(ListView):
+    """
+    Class-based view to merge new theater data into the corresponding tables.
+    """
+    template_name = 'loader/new_screens.html'
+    http_method_names = ['get']
+    object_list = None
+    queryset = None
+    context_object_name = 'new_screen_items'
+    color_by_exists = {True: 'silver', False: 'MediumSpringGreen'}
+
+    def get_queryset(self):
+        session = self.request.session
+        if NewTheaterDataView.state_nr == 0:
+            initialize_log(session)
+        NewTheaterDataView.reset_new_theater_data()
+        new_cities = NewTheaterDataView.new_cities
+        new_theaters = NewTheaterDataView.new_theaters
+        new_screens = NewTheaterDataView.new_screens
+
+        # Load new theater data.
+        _ = CityLoader(session, file=new_cities_path()).load_new_objects(new_cities)
+        _ = TheaterLoader(session, file=new_theaters_path()).load_new_objects(new_theaters, foreign_objects=new_cities)
+        _ = ScreenLoader(session, file=new_screens_path()).load_new_objects(new_screens, foreign_objects=new_theaters)
+
+        # Create the new screen items list.
+        new_screen_items = [self.get_new_screen_item(screen) for screen in new_screens]
+
+        return sorted(
+            new_screen_items,
+            key=lambda new_screen_item: (new_screen_item['theater'], new_screen_item['screen_abbr'])
+        )
+
+    def get_context_data(self, *args, **kwargs):
+        context = add_base_context(self.request, super().get_context_data(**kwargs))
+        context['title'] = 'Merge New Screenings'
+        context['log'] = get_log(self.request.session)
+        context['objects_label'] = NewTheaterDataView.current_objects_label()
+        return context
+
+    def get_new_screen_item(self, screen):
+        new_screen_item = {
+            'city': screen.theater.city.name,
+            'city_color': self.color(City, City.cities, **{'country': 'nl', 'name': screen.theater.city.name}),
+            'theater': screen.theater.parse_name,
+            'theater_abbr': screen.theater.abbreviation,
+            'theater_color': self.color(Theater, Theater.theaters, **{'parse_name': screen.theater.parse_name}),
+            'screen': screen.parse_name,
+            'screen_abbr': screen.abbreviation,
+            'address_type': screen.address_type.label,
+            'screen_color': self.color(Screen, Screen.screens, **{'parse_name': screen.parse_name}),
+        }
+        return new_screen_item
+
+    def color(self, cls, manager, **kwargs):
+        exists = True
+        try:
+            _ = manager.get(**kwargs)
+        except cls.DoesNotExist:
+            exists = False
+        color = self.color_by_exists[exists]
+        return color
+
+
+class NewTheaterDataFormView(FormView):
+    template_name = 'loader/new_screens.html'
+    form_class = TheaterDataUpdateForm
+    http_method_names = ['post']
+
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        session = self.request.session
+
+        # Handle all entities separate, to avoid "save() prohibited to
+        # prevent data loss due to unsaved related object" error.
+        objects_label = NewTheaterDataView.current_objects_label()
+        if objects_label == 'cities':
+            form.add_new_cities(session, NewTheaterDataView.new_cities)
+            NewTheaterDataView.next_objects_label()
+        elif objects_label == 'theaters':
+            form.add_new_theaters(session, NewTheaterDataView.new_theaters)
+            NewTheaterDataView.next_objects_label()
+        elif objects_label == 'screens':
+            form.add_new_screens(session, NewTheaterDataView.new_screens)
+            NewTheaterDataView.state_nr = 0
+        else:
+            raise ValueError(f'Unexpected state value: {objects_label}')
         return super().form_valid(form)
+
+    def get_success_url(self):
+        if NewTheaterDataView.state_nr:
+            url = reverse('loader:new_screens')
+        else:
+            url = reverse('theaters:theaters')
+        return url
+
+
+class NewTheaterDataView(LoginRequiredMixin, View):
+    new_cities = []
+    new_theaters = []
+    new_screens = []
+    new_objects_by_label = {
+        'cities': new_cities,
+        'theaters': new_theaters,
+        'screens': new_screens,
+    }
+    states = [k for k in new_objects_by_label.keys()]
+    state_nr = 0
+
+    @classmethod
+    def current_objects_label(cls):
+        return cls.states[cls.state_nr]
+
+    @classmethod
+    def next_objects_label(cls):
+        cls.state_nr += 1
+
+    @classmethod
+    def reset_new_theater_data(cls):
+        cls.new_cities = []
+        cls.new_theaters = []
+        cls.new_screens = []
+
+    @staticmethod
+    def get(request, *args, **kwargs):
+        view = NewTheaterDataListView.as_view()
+        return view(request, *args, **kwargs)
+
+    @staticmethod
+    def post(request, *args, **kwargs):
+        view = NewTheaterDataFormView.as_view()
+        return view(request, *args, **kwargs)
 
 
 class SectionsLoaderView(LoginRequiredMixin, ListView):

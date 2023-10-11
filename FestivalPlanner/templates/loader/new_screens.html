@@ -1,0 +1,51 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title|title }}{% endblock %}
+{% block header %}{{ title|title }}{% endblock %}
+
+{% block content %}
+    {% load static %}
+    {% if log %}
+        <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
+        {% for result in log.results %}
+            <p class="log">{{ result }}</p>
+        {% endfor %}
+        <br>
+    {% endif %}
+    {% if user_is_admin %}
+        <h3>New theater data</h3>
+        <br>
+        <table>
+          <thead>
+            <tr>
+                <th>City</th>
+                <th>Theater parse name</th>
+                <th>Theater</th>
+                <th>Screen parse name</th>
+                <th>Screen</th>
+                <th>Location</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for item in new_screen_items %}
+            <tr>
+                <td style="text-align: left; color:{{ item.city_color }}">{{ item.city }}</td>
+                <td style="text-align: left; color:{{ item.theater_color }}">{{ item.theater }}</td>
+                <td style="text-align: left">{{ item.theater_abbr }}</td>
+                <td style="text-align: left; color:{{ item.screen_color }}">{{ item.screen }}</td>
+                <td style="text-align: left">{{ item.screen_abbr }}</td>
+                <td style="text-align: left">{{ item.address_type }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        <br>
+        <form method="post">
+            {% csrf_token %}
+            <input type="submit"; value="Insert new {{ objects_label }}">
+        </form>
+    {% else %}
+        <h2 class="error">Not allowed</h2>
+        <p>Only an admin fan can merge new theater data.</p>
+    {% endif %}
+{% endblock %}}

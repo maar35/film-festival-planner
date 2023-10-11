@@ -132,7 +132,8 @@ class UrlFile:
 class UrlReader:
     user_agent = 'Mozilla/5.0 (Windows NT 6.1; Win64; x64)'
     alt_user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.90 Safari/537.36'
-    headers = {'User-Agent': alt_user_agent}
+    mac_user_agent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Safari/605.1.15'
+    headers = {'User-Agent': mac_user_agent}
 
     def __init__(self, error_collector, timeout=DEFAULT_TIMEOUT):
         self.error_collector = error_collector

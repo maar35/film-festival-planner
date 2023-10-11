@@ -4,7 +4,14 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3>Theaters Overview</h3>
+    <span class="left-half">
+        <h3>Theaters Overview</h3>
+    </span>
+    <span class="right-half">
+        <a href="/loader/theaters?action=dump">Dump theater data</a>
+        <br>
+        <a href="{% url 'loader:new_screens' %}">Insert new theater data</a>
+    </span>
     {% if log %}
         <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
         {% for result in log.results %}

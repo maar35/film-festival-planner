@@ -1,5 +1,5 @@
-from django import forms
 from django.core.validators import RegexValidator
+from django.forms import Form, CharField
 
 TheaterAbbreviationValidator = RegexValidator(
     r'^[a-z]*[-]?$',
@@ -14,8 +14,8 @@ ScreenAbbreviationValidator = RegexValidator(
 )
 
 
-class TheaterDetailsForm(forms.Form):
-    abbreviation = forms.CharField(
+class TheaterDetailsForm(Form):
+    abbreviation = CharField(
         empty_value='EMPTY',
         label='Theater abbreviation',
         validators=[TheaterAbbreviationValidator],
@@ -23,11 +23,10 @@ class TheaterDetailsForm(forms.Form):
     )
 
 
-class TheaterScreenDetailsForm(forms.Form):
-    screen_abbreviation = forms.CharField(
+class TheaterScreenDetailsForm(Form):
+    screen_abbreviation = CharField(
         empty_value='EMPTY',
         label='Screen abbreviation',
         validators=[ScreenAbbreviationValidator],
         required=False,
     )
-

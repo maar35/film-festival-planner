@@ -10,8 +10,9 @@ from django.views.generic import FormView, DetailView
 from festival_planner.tools import add_base_context, unset_log, get_log, wrap_up_form_errors, application_name
 from festivals.config import Config
 from festivals.models import Festival, current_festival
-from films.forms.film_forms import RatingForm, SaveRatingsForm, PickRating, UserForm
+from films.forms.film_forms import RatingForm, PickRating, UserForm
 from films.models import FilmFanFilmRating, Film, get_rating_name, FilmFan, current_fan, get_present_fans
+from loader.forms.loader_forms import SaveRatingsForm
 from loader.views import file_record_count
 from sections.models import Subsection
 

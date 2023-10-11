@@ -34,9 +34,9 @@ def write_lists(festival_data, write_film_list, write_other_lists):
     if write_other_lists:
         festival_data.write_film_ids()
         festival_data.write_filminfo()
-        festival_data.write_cities()
-        festival_data.write_theaters()
-        festival_data.write_screens()
+        festival_data.write_new_cities()
+        festival_data.write_new_theaters()
+        festival_data.write_new_screens()
         festival_data.write_screenings()
         festival_data.write_sections()
         festival_data.write_subsections()
@@ -268,10 +268,11 @@ class Subsection:
 class City:
     default_country = 'nl'
 
-    def __init__(self, city_id, name, country=None):
+    def __init__(self, city_id, name, country=None, new=True):
         self.city_id = city_id
         self.name = name
         self.country = country or self.default_country
+        self.new = new
 
     def __str__(self):
         return self.name
@@ -287,12 +288,13 @@ class City:
 class Theater:
     default_prio = 1
 
-    def __init__(self, theater_id, city, name, abbr, prio=None):
+    def __init__(self, theater_id, city, name, abbr, prio=None, new=True):
         self.theater_id = theater_id
         self.city = city
         self.name = name
         self.abbr = abbr
         self.prio = prio or self.default_prio
+        self.new = new
 
     def __str__(self):
         return self.name
@@ -307,28 +309,43 @@ class Theater:
         return f'{text}\n'
 
     def key(self):
-        return self.city, self.name
+        return self.city.city_id, self.name
 
 
 class Screen:
-    screen_types = ['Location', 'OnLine', 'OnDemand']
+    screen_types = ['OnLine', 'OnDemand', 'Physical']
 
-    def __init__(self, screen_id, theater, name, abbr, screen_type='Location'):
+    def __init__(self, screen_id, theater, name, abbr, screen_type='Physical', new=True):
         self.screen_id = screen_id
         self.theater = theater
         self.name = name
         self.abbr = abbr
         self.type = screen_type
+        self.new = new
 
     def __str__(self):
         return self.abbr
 
     def __repr__(self):
-        text = ';'.join([str(self.screen_id), str(self.theater.theater_id), self.name, self.abbr, self.type])
+        text = ';'.join([
+            str(self.screen_id),
+            str(self.theater.theater_id),
+            self.name,
+            self.abbr,
+            str(self.screen_type_nr(self.type))
+        ])
         return f'{text}\n'
 
     def key(self):
         return self.theater.theater_id, self.name
+
+    @staticmethod
+    def screen_type_nr(screen_type_name):
+        return Screen.screen_types.index(screen_type_name) + 1
+
+    @staticmethod
+    def screen_type_name(screen_type_nr):
+        return Screen.screen_types[screen_type_nr - 1]
 
 
 class Screening:
@@ -407,6 +424,7 @@ class FestivalData:
         self.screen_by_location = {}
         self.theater_by_location = {}
         self.city_by_location = {}
+        self.city_by_id = {}
         self.films_file = os.path.join(plandata_dir, 'films.csv')
         self.filmids_file = os.path.join(plandata_dir, 'filmids.txt')
         self.filminfo_file = os.path.join(plandata_dir, 'filminfo.xml')
@@ -414,8 +432,11 @@ class FestivalData:
         self.subsections_file = os.path.join(plandata_dir, 'subsections.csv')
         self.subsections_file = os.path.join(plandata_dir, 'subsections.csv')
         self.cities_file = os.path.join(self.common_data_dir, 'cities.csv')
+        self.new_cities_file = os.path.join(self.common_data_dir, 'new_cities.csv')
         self.theaters_file = os.path.join(self.common_data_dir, 'theaters.csv')
-        self.screens_file = os.path.join(plandata_dir, 'screens.csv')
+        self.new_theaters_file = os.path.join(self.common_data_dir, 'new_theaters.csv')
+        self.screens_file = os.path.join(self.common_data_dir, 'screens.csv')
+        self.new_screens_file = os.path.join(self.common_data_dir, 'new_screens.csv')
         self.screenings_file = os.path.join(plandata_dir, 'screenings.csv')
         self.film_seqnr = 0
         self.read_articles()
@@ -492,7 +513,7 @@ class FestivalData:
             self.subsection_by_name[name] = subsection
         return subsection
 
-    def get_city(self, city_name, country=None):
+    def get_city_by_name(self, city_name, country=None):
         country = country or City.default_country
         city_name = city_name or self.default_city_name
         city_key = (country, city_name)
@@ -505,9 +526,16 @@ class FestivalData:
             self.city_by_location[city_key] = city
         return city
 
+    def get_city_by_id(self, city_id):
+        try:
+            city = self.city_by_id[city_id]
+        except KeyError:
+            raise KeyError(f'City ID ({city_id}) not found in dictionary')
+        return city
+
     def get_theater(self, city_name, name):
-        city = self.get_city(city_name)
-        name = name if name is not None else f'{city.name}-Theater'
+        city = self.get_city_by_name(city_name)
+        name = name or f'{city.name}-theater'
         theater_key = (city.city_id, name)
         try:
             theater = self.theater_by_location[theater_key]
@@ -519,20 +547,20 @@ class FestivalData:
             self.theater_by_location[theater_key] = theater
         return theater
 
-    def get_screen(self, city_name, name, theater_name=None):
-        theater = self.get_theater(city_name, theater_name)
-        screen_key = (theater.theater_id, name)
+    def get_screen(self, city_name, screen_parse_name, theater_parse_name=None, screen_abbreviation=None):
+        theater = self.get_theater(city_name, theater_parse_name)
+        screen_key = (theater.theater_id, screen_parse_name)
         try:
             screen = self.screen_by_location[screen_key]
         except KeyError:
             self.curr_screen_id += 1
             screen_id = self.curr_screen_id
-            abbr = name.replace(' ', '').lower()
+            abbr = (screen_abbreviation or screen_parse_name).replace(' ', '').lower()
             screen_type = 'OnDemand' if abbr.startswith('ondemand')\
                 else 'OnLine' if abbr.startswith('online')\
-                else 'Location'
-            print(f"NEW SCREEN:  '{theater.city} {theater.name} {name}' => {abbr}")
-            screen = Screen(screen_id, theater, name, abbr, screen_type)
+                else 'Physical'
+            print(f"NEW SCREEN:  '{theater.city}' '{theater.name}' '{screen_parse_name}' => {abbr}")
+            screen = Screen(screen_id, theater, screen_parse_name, abbr, screen_type)
             self.screen_by_location[screen_key] = screen
         return screen
 
@@ -611,12 +639,13 @@ class FestivalData:
             city_id = int(fields[0])
             name = fields[1]
             country = fields[2]
-            return City(city_id, name, country)
+            return City(city_id, name, country, new=False)
 
         try:
             with open(self.cities_file, 'r') as f:
                 cities = [create_city(self.split_rec(line, ';')) for line in f]
             self.city_by_location = {city.key(): city for city in cities}
+            self.city_by_id = {city.city_id: city for city in cities}
         except OSError:
             cities = []
 
@@ -628,18 +657,19 @@ class FestivalData:
     def read_theaters(self):
         def create_theater(fields):
             theater_id = int(fields[0])
-            city = self.get_city(fields[1])
+            city = self.get_city_by_id(int(fields[1]))
             name = fields[2]
             abbr = fields[3]
             prio = fields[4]
-            return Theater(theater_id, city, name, abbr, prio)
+            return Theater(theater_id, city, name, abbr, prio, new=False)
 
         try:
             with open(self.theaters_file, 'r') as f:
                 theaters = [create_theater(self.split_rec(line, ';')) for line in f]
-            self.theater_by_location = {theater.key(): theater for theater in theaters}
         except OSError:
             theaters = []
+        else:
+            self.theater_by_location = {theater.key(): theater for theater in theaters}
 
         try:
             self.curr_theater_id = max(theater.theater_id for theater in theaters)
@@ -652,7 +682,7 @@ class FestivalData:
             theater_id = int(fields[1])
             name = fields[2]
             abbr = fields[3]
-            screen_type = fields[4]
+            screen_type = Screen.screen_type_name(int(fields[4]))
             if screen_type not in Screen.screen_types:
                 raise ScreenTypeError(abbr, screen_type)
             theaters = [theater for theater in self.theater_by_location.values() if theater.theater_id == theater_id]
@@ -660,7 +690,7 @@ class FestivalData:
                 theater = theaters[0]
             else:
                 raise TheaterIdError(abbr, theater_id)
-            return Screen(screen_id, theater, name, abbr, screen_type)
+            return Screen(screen_id, theater, name, abbr, screen_type, new=False)
 
         try:
             with open(self.screens_file, 'r') as f:
@@ -766,23 +796,26 @@ class FestivalData:
                 f.write(repr(subsection))
         print(f'Done writing {len(self.subsection_by_name)} records to {self.subsections_file}.')
 
-    def write_cities(self):
-        with open(self.cities_file, 'w') as f:
-            for city in self.city_by_location.values():
+    def write_new_cities(self):
+        new_cities = [city for city in self.city_by_location.values() if city.new]
+        with open(self.new_cities_file, 'w') as f:
+            for city in new_cities:
                 f.write(repr(city))
-        print(f'Done writing {len(self.city_by_location)} records to {self.cities_file}')
+        print(f'Done writing {len(new_cities)} records to {self.new_cities_file}')
 
-    def write_theaters(self):
-        with open(self.theaters_file, 'w') as f:
-            for theater in self.theater_by_location.values():
+    def write_new_theaters(self):
+        new_theaters = [theater for theater in self.theater_by_location.values() if theater.new]
+        with open(self.new_theaters_file, 'w') as f:
+            for theater in new_theaters:
                 f.write(repr(theater))
-        print(f'Done writing {len(self.theater_by_location)} records to {self.theaters_file}')
+        print(f'Done writing {len(new_theaters)} records to {self.new_theaters_file}')
 
-    def write_screens(self):
-        with open(self.screens_file, 'w') as f:
-            for screen in self.screen_by_location.values():
+    def write_new_screens(self):
+        new_screens = [screen for screen in self.screen_by_location.values() if screen.new]
+        with open(self.new_screens_file, 'w') as f:
+            for screen in new_screens:
                 f.write(repr(screen))
-        print(f'Done writing {len(self.screen_by_location)} records to {self.screens_file}.')
+        print(f'Done writing {len(new_screens)} records to {self.new_screens_file}.')
 
     def write_screenings(self):
         public_screenings = []
