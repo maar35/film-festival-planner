@@ -19,6 +19,7 @@ namespace PresentScreenings.TableView
             Location
         }
         private static Dictionary<ScreenType, ScreenTypeSortCode> sortCodeByType;
+        public static Dictionary<string, string> screenTypeByAddressType;
         #endregion
 
         #region Public Members
@@ -48,6 +49,11 @@ namespace PresentScreenings.TableView
             sortCodeByType.Add(ScreenType.OnLine, ScreenTypeSortCode.OnLine);
             sortCodeByType.Add(ScreenType.OnDemand, ScreenTypeSortCode.OnDemand);
             sortCodeByType.Add(ScreenType.Location, ScreenTypeSortCode.Location);
+
+            screenTypeByAddressType = new Dictionary<string, string> { };
+            screenTypeByAddressType["1"] = "2";
+            screenTypeByAddressType["2"] = "1";
+            screenTypeByAddressType["3"] = "0";
         }
 
         // Empty constructor to facilitate ListStreamer method calls.
@@ -62,9 +68,7 @@ namespace PresentScreenings.TableView
             string theaterIdString = fields[1];
             ParseName = fields[2];
             string screenAbbreviation = fields[3];
-
-            // TODO: Workaround should be fixed.
-            string screenType = (int.Parse(fields[4]) - 1).ToString();
+            string addresType = fields[4];
 
             // Assign properties that need calculating.
             ScreenId = int.Parse(screenIdString);
@@ -72,6 +76,7 @@ namespace PresentScreenings.TableView
             Theater = (from Theater t in ScreeningsPlan.Theaters where t.TheaterId == theaterId select t).First();
             City = Theater.City;
             Abbreviation = Theater.Abbreviation + screenAbbreviation;
+            string screenType = screenTypeByAddressType[addresType];
             Type = (ScreenType)Enum.Parse(typeof(ScreenType), screenType);
         }
 
