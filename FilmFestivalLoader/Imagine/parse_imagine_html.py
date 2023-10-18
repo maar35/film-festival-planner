@@ -64,7 +64,7 @@ def get_details_of_all_films(festival_data):
 
 def get_details_of_one_film(festival_data, film):
     film_file = fileKeeper.film_webdata_file(film.filmid)
-    url_file = UrlFile(film.url, film_file, error_collector, debug_recorder, byte_count=30000)
+    url_file = UrlFile(film.url, film_file, error_collector, debug_recorder, byte_count=256)
     film_html = url_file.get_text(f'Downloading site of {film.title}: {film.url}')
 
     if film_html is not None:

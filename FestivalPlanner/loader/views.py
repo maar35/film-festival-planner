@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import FormView, ListView
 
-from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log
+from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, pr_debug
 from festivals.models import Festival
 from films.models import Film, FilmFanFilmRating
 from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoaderForm, TheaterDataLoaderForm, \
@@ -130,12 +130,13 @@ class NewTheaterDataListView(ListView):
         return context
 
     def get_new_screen_item(self, screen):
+        theater_kwargs = {'city': screen.theater.city, 'abbreviation': screen.theater.abbreviation}
         new_screen_item = {
             'city': screen.theater.city.name,
             'city_color': self.color(City, City.cities, **{'country': 'nl', 'name': screen.theater.city.name}),
             'theater': screen.theater.parse_name,
             'theater_abbr': screen.theater.abbreviation,
-            'theater_color': self.color(Theater, Theater.theaters, **{'parse_name': screen.theater.parse_name}),
+            'theater_color': self.color(Theater, Theater.theaters, **theater_kwargs),
             'screen': screen.parse_name,
             'screen_abbr': screen.abbreviation,
             'address_type': screen.address_type.label,
@@ -232,6 +233,7 @@ class SectionsLoaderView(LoginRequiredMixin, ListView):
     template_name = 'loader/sections.html'
     http_method_names = ['get', 'post']
     object_list = [get_festival_row(festival) for festival in Festival.festivals.order_by('-start_date')]
+    queryset = object_list
     context_object_name = 'festival_rows'
     unexpected_error = ''
 

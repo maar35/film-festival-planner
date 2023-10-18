@@ -63,7 +63,7 @@ namespace PresentScreenings.TableView
                     PopulateScreens(ref label);
                     label.StringValue = screen.ToString();
                     label.TextColor = _colorByPriority[screen.Theater.Priority];
-                    label.ToolTip = $"Theater priority {screen.Theater.Priority}";
+                    label.ToolTip = $"{screen.ParseName}, theater priority {screen.Theater.Priority}";
                     return label;
                 case "Screenings":
                     NSClipView clipview = (NSClipView)cellview;
