@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using AppKit;
 using Foundation;
 
@@ -20,6 +21,7 @@ namespace PresentScreenings.TableView
         ScreeningsTableDataSource _dataSource;
         ScreeningsView _screeningsView;
         ViewController _controller;
+        Dictionary<Theater.PriorityValue, NSColor> _colorByPriority;
         #endregion
 
         #region Constructors
@@ -28,6 +30,10 @@ namespace PresentScreenings.TableView
             _dataSource = datasource;
             _screeningsView = view;
             _controller = controller;
+            _colorByPriority = new Dictionary<Theater.PriorityValue, NSColor> { };
+            _colorByPriority.Add(Theater.PriorityValue.High, NSColor.SystemRed);
+            _colorByPriority.Add(Theater.PriorityValue.Low, NSColor.SystemBlue);
+            _colorByPriority.Add(Theater.PriorityValue.NoGo, NSColor.SystemGray);
         }
         #endregion
 
@@ -56,6 +62,8 @@ namespace PresentScreenings.TableView
                     NSTextField label = (NSTextField)cellview;
                     PopulateScreens(ref label);
                     label.StringValue = screen.ToString();
+                    label.TextColor = _colorByPriority[screen.Theater.Priority];
+                    label.ToolTip = $"{screen.ParseName}, theater priority {screen.Theater.Priority}";
                     return label;
                 case "Screenings":
                     NSClipView clipview = (NSClipView)cellview;

@@ -72,7 +72,7 @@ namespace PresentScreenings.TableView
             Config = GetConfiguration();
 
             // Preferences.
-            Festival = "MTMF";
+            Festival = "Imagine";
             FestivalYear = "2023";
             VisitPhysical = true;
 
@@ -83,8 +83,9 @@ namespace PresentScreenings.TableView
             FilmRatingDialogController.OnlyFilmsWithScreenings = false;
             DaySchemaScreeningControl.UseCoreGraphics = false;
 
-            // Make sure the documents directory exists.
+            // Make sure the documents directories exist.
             _ = Directory.CreateDirectory(DocumentsFolder);
+            _ = Directory.CreateDirectory(CommonDataFolder);
 
             // Set load/unload file names.
             AvailabilitiesFile = Path.Combine(DocumentsFolder, "availabilities.csv");

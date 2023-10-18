@@ -490,14 +490,14 @@ class FestivalData:
             return films[0]
         return None
 
-    def get_section(self, name):
+    def get_section(self, name, color=None):
         if name is None:
             return None
         try:
             section = self.section_by_name[name]
         except KeyError:
             self.curr_section_id += 1
-            section = Section(self.curr_section_id, name)
+            section = Section(self.curr_section_id, name, color=color)
             self.section_by_name[name] = section
             self.section_by_id[section.section_id] = section
         return section

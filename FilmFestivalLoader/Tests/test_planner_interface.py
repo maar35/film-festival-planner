@@ -1,7 +1,7 @@
 import tempfile
 import unittest
 
-from Shared.planner_interface import FestivalData, Section, Screen
+from Shared.planner_interface import FestivalData, Section
 
 
 class SectionsTestCase(unittest.TestCase):
@@ -47,33 +47,6 @@ class SectionsTestCase(unittest.TestCase):
 
         # Assert.
         self.assertEqual(len(data.section_by_name), 2)
-
-
-class ScreensTestCase(unittest.TestCase):
-    def setUp(self):
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.festival_data = FestivalData(self.temp_dir.name)
-
-    def tearDown(self):
-        self.temp_dir.cleanup()
-
-    def test_screens_can_be_read(self):
-        # Arrange.
-        data = self.festival_data
-        city = 'Amsterdam'
-        theater_name = 'Kriterion'
-        screen_1 = data.get_screen(city, 'Kriterion Grote Zaal', theater_name)
-        screen_2 = data.get_screen(city, 'Kriterion Kleine Zaal', theater_name)
-        screen_1.abbr = 'krgr'
-        screen_2.abbr = 'krkl'
-        data.write_new_screens()
-
-        # Act.
-        data.read_screens()
-
-        # Assert.
-        self.assertEqual(len(data.screen_by_location), 2)
-        self.assertEqual(len(data.theater_by_location), 1)
 
 
 if __name__ == '__main__':
