@@ -457,8 +457,7 @@ class FestivalData:
             self.title_by_film_id[film_id] = title
             self.film_id_by_url[url] = film_id
             return Film(self.film_seqnr, film_id, title, url)
-        else:
-            return None
+        return None
 
     def new_film_id(self, key):
         try:

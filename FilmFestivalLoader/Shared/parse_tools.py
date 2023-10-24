@@ -167,6 +167,10 @@ class BaseHtmlPageParser(HTMLParser):
     def bar(self):
         return f'{40 * "-"} '
 
+    @staticmethod
+    def headed_bar(header=''):
+        return f'{header:-^72}'
+
     def print_debug(self, str1, str2=''):
         if self.debugging:
             self.debug_recorder.add(f'{self.debug_prefix}  {str1} {str2}')

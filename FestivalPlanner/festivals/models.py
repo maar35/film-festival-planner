@@ -148,11 +148,11 @@ class Festival(models.Model):
 
     @property
     def sections_file(self):
-        return os.path.join(self.festival_data_dir, 'sections.csv')
+        return os.path.join(self.planner_data_dir, 'sections.csv')
 
     @property
     def subsections_file(self):
-        return os.path.join(self.festival_data_dir, 'subsections.csv')
+        return os.path.join(self.planner_data_dir, 'subsections.csv')
 
     def set_current(self, session):
         session['festival'] = self.id

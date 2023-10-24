@@ -683,6 +683,17 @@ namespace PresentScreenings.TableView
             var rating = ratings.Max();
             return rating;
         }
+
+        public static FilmRating GetSecondRating(Film film)
+        {
+            FilmRating maxRating = film.MaxRating;
+            var ratings = ScreeningInfo.FilmFans
+                .Select(f => GetFilmFanFilmRating(film, f));
+            var lower_ratings = ratings
+                .Where(r => r != maxRating);
+            FilmRating secondRating = lower_ratings.Max();
+            return secondRating;
+        }
         #endregion
 
         #region Public Methods working with Screening Attendance
