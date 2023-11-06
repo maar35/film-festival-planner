@@ -258,7 +258,7 @@ class HtmlPageParser(BaseHtmlPageParser):
             if len(self.description) > descr_threshold:
                 self.description = self.description[:descr_threshold] + '…'
         else:
-            self.description = title
+            self.description = self.description or title
             self.article = ''
 
 

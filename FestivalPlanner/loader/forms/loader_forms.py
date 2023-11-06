@@ -1,7 +1,7 @@
 import csv
 import datetime
 
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.forms import Form, BooleanField, SlugField
 
 from festival_planner.tools import initialize_log, add_log
@@ -282,11 +282,18 @@ class SimpleLoader(BaseLoader):
             self.add_log(f'No {self.object_name} records read.')
             return False
 
-        # Update objects and create ones when absent.
-        self.update_or_create(updated_object_set)
+        # Update or create either all objects or none.
+        transaction_committed = False
+        try:
+            with transaction.atomic():
+                self.update_or_create(updated_object_set)
+                transaction_committed = True
+        except IntegrityError as e:
+            updated_object_set = set()
+            self.add_log(f'{e}: database rolled back.')
 
         # Delete objects that do not appear in the file.
-        if self.delete_disappeared_objects:
+        if self.delete_disappeared_objects and transaction_committed:
             # Find existing objects that are not on the file.
             disappeared_object_set = existing_object_set - updated_object_set
             disappeared_pk_list = [obj.pk for obj in disappeared_object_set]
@@ -318,17 +325,14 @@ class SimpleLoader(BaseLoader):
     def update_or_create(self, updated_object_set):
         objects_by_created = {}
 
+        # Update objects or create ones when absent.
         for value_by_field in self.value_by_field_list:
             keys, defaults = self.pop_key_fields(value_by_field)
 
             # Update or create an object.
-            try:
-                affected_object, created = self.object_manager.update_or_create(**keys, defaults=defaults)
-            except IntegrityError as e:
-                created = None
-            else:
-                if not created:
-                    updated_object_set.add(affected_object)
+            affected_object, created = self.object_manager.update_or_create(**keys, defaults=defaults)
+            if not created:
+                updated_object_set.add(affected_object)
 
             # Update statistics.
             try:

@@ -43,6 +43,7 @@ counter = Counter()
 
 DEBUGGING = True
 ALWAYS_DOWNLOAD = False
+AUDIENCE_PUBLIC = 'publiek'
 
 
 def main():
@@ -57,17 +58,25 @@ def main():
     counter.start('film title')
     counter.start('sections with css data')
     counter.start('no description')
+    counter.start('meta dicts')
+    counter.start('corrected urls')
+    counter.start('articles')
+    counter.start('improper dates')
+    counter.start('improper times')
+    counter.start('filminfo update')
+    counter.start('filminfo extended')
+    counter.start('combination screenings')
 
     # Try parsing the websites.
     try_parse_festival_sites(parse_idfa_sites, festival_data, error_collector, debug_recorder, festival, counter)
 
 
 def parse_idfa_sites(festival_data):
-    comment('Parsing section pages and film pages.')
+    comment('Parsing section pages.')
     get_films(festival_data)
 
-    # comment('Parsing special programs page.')
-    # get_specials(festival_data)
+    comment('Parsing film pages')
+    FilmDetailsReader(festival_data).get_film_details()
 
 
 def get_films(festival_data):
@@ -91,6 +100,38 @@ def get_films_by_section(festival_data, section_urls):
             FilmsFromSectionPageParser(festival_data, section_url).feed(section_html)
 
 
+class FilmDetailsReader:
+    required_part_by_part = {
+        re.compile(r'%23'): '!',
+        re.compile(r'Jasmin%27s'): 'Jasmin’s',
+        re.compile(r'J%27Accuse'): 'J’Accuse',
+        re.compile(r'Rembrandt%27s'): 'Rembrandt’s',
+        re.compile(r'%27'): "'",
+        re.compile(r'%28'): '(',
+        re.compile(r'%29'): ')',
+        re.compile(r'%3A'): ':',
+    }
+
+    def __init__(self, festival_data):
+        self.festival_data = festival_data
+
+    def get_film_details(self):
+        always_download = ALWAYS_DOWNLOAD
+        for film, sections in FilmsFromSectionPageParser.sections_by_film.items():
+            comment(f'Parsing film details of {film.title}')
+            film_file = fileKeeper.film_webdata_file(film.filmid)
+            url = film.url
+            for actual_part, required_part in self.required_part_by_part.items():
+                url = re.sub(actual_part, required_part, film.url)
+            url_file = UrlFile(url, film_file, error_collector, debug_recorder, byte_count=200)
+            film_html = url_file.get_text(always_download=always_download,
+                                          comment_at_download=f'Downloading {film.url}')
+            if film_html:
+                print(f'Analysing film page, encoding={url_file.encoding}')
+                corrected_url = None if url == film.url else url
+                FilmPageParser(self.festival_data, film, sections, corrected_url=corrected_url).feed(film_html)
+
+
 class SectionsPageParser(HtmlPageParser):
     class SectionParseState(Enum):
         AWAITING_URL = auto()
@@ -112,7 +153,6 @@ class SectionsPageParser(HtmlPageParser):
 
     def add_theme(self, slug):
         url = iri_slug_to_url(festival_hostname, slug)
-        print(f'{url=}')
         theme = slug.split('/')[1]
         if theme == 'section':
             self.add_section(url)
@@ -173,6 +213,8 @@ class FilmsFromSectionPageParser(HtmlPageParser):
         23: 'Orchid',
         24: 'DarkSeaGreen',
         25: 'PaleVioletRed',
+        26: 'PeachPuff',
+        27: 'PapayaWhip',
     }
     sections_by_film = {}
 
@@ -192,12 +234,7 @@ class FilmsFromSectionPageParser(HtmlPageParser):
         self.init_film_data()
 
         # Draw a bar with section info.
-        url_obj = urlparse(section_url)
-        url_parts = url_obj.path.split('/')
-        theme_type = url_parts[1]
-        slug = url_parts[3]
-        print(f'{theme_type} {self.headed_bar(header=slug)}')
-        self.print_debug(self.headed_bar(header=slug))
+        self.draw_headed_bar(section_url)
 
         # Initialize the state stack.
         self.state_stack = self.StateStack(self.print_debug, self.FilmsParseState.AWAITING_TITLE)
@@ -216,6 +253,14 @@ class FilmsFromSectionPageParser(HtmlPageParser):
         self.add_film()
         self.init_film_data()
 
+    def draw_headed_bar(self, section_url):
+        url_obj = urlparse(section_url)
+        url_parts = url_obj.path.split('/')
+        theme_type = url_parts[1]
+        slug = url_parts[3]
+        print(f'{theme_type} {self.headed_bar(header=slug)}')
+        self.print_debug(self.headed_bar(header=slug))
+
     def get_subsection(self, section_description=None):
         if self.section_name:
             section = self.festival_data.get_section(self.section_name)
@@ -225,7 +270,6 @@ class FilmsFromSectionPageParser(HtmlPageParser):
                 error_collector.add(e, f'No color for section {section.name}')
             subsection = self.festival_data.get_subsection(section.name, self.section_url, section)
             subsection.description = section_description or section.name
-            print(f'{subsection=}')
             return subsection
         return None
 
@@ -247,7 +291,6 @@ class FilmsFromSectionPageParser(HtmlPageParser):
             self.sections_by_film[self.film] = [self.subsection]
 
             # Add the film to the list.
-            print(f'Created film {self.film}')
             self.festival_data.films.append(self.film)
 
     def set_duration(self):
@@ -258,10 +301,6 @@ class FilmsFromSectionPageParser(HtmlPageParser):
         else:
             minutes = int(film_length.split(' ')[0])  # '84 min'
         self.film_duration = datetime.timedelta(minutes=minutes)
-
-    def add_sections_property(self):
-        for film, sections in self.sections_by_film.items():
-            self.film_property_by_label['sections'] = sections  # TODO: make this usefull.
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -287,7 +326,7 @@ class FilmsFromSectionPageParser(HtmlPageParser):
         elif self.state_stack.state_is(self.FilmsParseState.IN_FILM_URL) and tag == 'a' and len(attrs):
             if attrs[0][0] == 'href':
                 slug = attrs[0][1]
-                self.film_url = iri_slug_to_url(festival_hostname, slug)
+                self.film_url = festival_hostname + slug    # Use literal slug, iri codes are not well understood.
                 counter.increase('film URLs')
                 self.state_stack.change(self.FilmsParseState.AWAITING_FILM_TITLE)
         elif self.state_stack.state_is(self.FilmsParseState.AWAITING_FILM_TITLE) and tag == 'h2' and len(attrs) == 3:
@@ -326,117 +365,125 @@ class FilmsFromSectionPageParser(HtmlPageParser):
             self.film_property_by_label[self.metadata_key] = data
 
 
-class AzPageParser(HtmlPageParser):
-    class AzParseState(Enum):
-        IDLE = auto()
-        IN_FILM_SECTION = auto()
-
-    def __init__(self, festival_data):
-        super().__init__(festival_data, debug_recorder, 'AZ', debugging=DEBUGGING)
-        self.film = None
-        self.title = None
-        self.url = None
-        self.duration = None
-        self.description = None
-        self.stateStack = self.StateStack(self.print_debug, self.AzParseState.IDLE)
-        self.init_film_data()
-
-    def init_film_data(self):
-        self.film = None
-        self.title = None
-        self.url = None
-        self.duration = None
-        self.description = None
-
-    def add_filminfo(self, film, description, article, screened_films=None):
-        if screened_films is None:
-            screened_films = []
-        if description is not None or article is not None:
-            filminfo = FilmInfo(film.filmid, description, article, screened_films)
-            self.festival_data.filminfos.append(filminfo)
-
-    def get_film(self):
-        get_film_details(self.festival_data, self.url)
-
-    def handle_starttag(self, tag, attrs):
-        HtmlPageParser.handle_starttag(self, tag, attrs)
-
-        if self.stateStack.state_is(self.AzParseState.IDLE) and tag == 'article':
-            self.stateStack.push(self.AzParseState.IN_FILM_SECTION)
-        if self.stateStack.state_is(self.AzParseState.IN_FILM_SECTION) and tag == 'a':
-            if len(attrs) > 1 and attrs[0][1] == 'collectionitem-module__link___2NQ6Q':
-                slug = attrs[1][1]
-                self.url = iri_slug_to_url(festival_hostname, slug)
-                self.get_film()
-
-    def handle_endtag(self, tag):
-        HtmlPageParser.handle_endtag(self, tag)
-
-    def handle_data(self, data):
-        HtmlPageParser.handle_data(self, data)
-
-
 class FilmPageParser(HtmlPageParser):
     class FilmParseState(Enum):
         IDLE = auto()
-        AWAITING_DICT = auto()
-        IN_DICT = auto()
         AWAITING_TITLE = auto()
         IN_TITLE = auto()
+        AWAITING_META_DICT = auto()
+        IN_META_DICT = auto()
+        IN_META_PROPERTY = auto()
+        AWAITING_PAGE_SECTION = auto()
+        IN_PAGE_SECTION = auto()
         AWAITING_ARTICLE = auto()
         IN_ARTICLE = auto()
         AWAITING_SCREENINGS = auto()
         IN_SCREENINGS = auto()
-        IN_SCREENING = auto()
+        IN_SCREENING_DATE = auto()
+        AWAITING_SCREENING_INFO = auto()
+        IN_SCREENING_INFO = auto()
+        AWAITING_TIMES = auto()
+        IN_TIMES = auto()
         AWAITING_LOCATION = auto()
         IN_LOCATION = auto()
-        IN_AUDIENCE = auto()
+        AWAITING_CREDITS = auto()
+        IN_DICT = auto()
+        IN_PROPERTY = auto()
         DONE = auto()
 
-    nl_month_by_name: Dict[str, int] = {'nov.': 11}
-    re_dict = re.compile(r'"runtime":(?P<duration>\d+),')
+    url_by_combi_title = {
+        '16 Worlds on 16: American Experimental': 'https://festival.idfa.nl/section/2d577533-3b56-4ab9-8032-f85a8ccb332e/focus:-16-worlds-on-16/',
+        'And How Miserable Is the Home of Evil & Talking with Rivers': 'https://festival.idfa.nl/composition/4472f00e-f123-4056-840f-0fed9d2503d2/and-how-miserable-is-the-home-of-evil-and-talking-with-rivers/',
+        'Before Sandstorm & Mud': 'https://festival.idfa.nl/composition/72273ed4-8eef-4b76-aaf5-690e41dc6574/before-sandstorm-and-mud/',
+        'Before Sandstorm & Mud, Georganiseerd door Soapbox': 'https://festival.idfa.nl/composition/72273ed4-8eef-4b76-aaf5-690e41dc6574/before-sandstorm-and-mud/',
+        'Before Sandstorm & Mud, Sensory friendly screening': 'https://festival.idfa.nl/composition/72273ed4-8eef-4b76-aaf5-690e41dc6574/before-sandstorm-and-mud/',
+        'Corresponding Cinemas: Basma al-Sharif & Jumana Manna': 'https://festival.idfa.nl/composition/ba8adeb9-2825-484f-9fd4-213508cd2756/corresponding-cinemas:-basma-al-sharif-and-jumana-manna/',
+        'Corresponding Cinemas: Basma al-Sharif': 'https://festival.idfa.nl/composition/143d0dc2-b950-4da6-a587-5ff0ef3c1440/corresponding-cinemas:-basma-al-sharif/',
+        'Corresponding Cinemas: Ibrahim Shaddad': 'https://festival.idfa.nl/composition/e5421cef-9f7b-488b-b107-0f409b9a7819/corresponding-cinemas:-ibrahim-shaddad/',
+        'De Groene Amsterdammer-dag, De must-sees van IDFA 2023 volgens de redacteuren van De Groene Amsterdammer.': 'https://festival.idfa.nl/composition/28f44ee2-358d-4961-90c8-1c6c858956db/de-groene-amsterdammer-dag/',
+        'DocLab Exhibition: Phenomenal Friction': 'https://festival.idfa.nl/section/502a3ed8-572f-498d-b41a-940494f47c7a/idfa-doclab:-phenomenal-friction/',
+        'DocLab Live: Koyaanisqatsi Special': 'https://festival.idfa.nl/composition/515ac5a7-8a7b-4b47-becf-9d60254a572e/doclab-live:-koyaanisqatsi-special/',
+        'DocLab: VR Booth in Main Exhibition': 'https://festival.idfa.nl/composition/4f653351-6b52-4317-a650-de5b73434a13/doclab:-vr-booth-in-main-exhibition/',
+        'DocLab: VR Gallery': 'https://festival.idfa.nl/composition/3c3d05ae-4307-4c24-b87a-de5c335dfd2a/doclab:-vr-gallery/',
+        'Fogo île de feu & On the Other Island': 'https://festival.idfa.nl/composition/3ff6602f-90a1-4965-825b-4934666f6371/fogo-ile-de-feu-and-on-the-other-island/',
+        'How to Please & Nightwatchers': 'https://festival.idfa.nl/composition/b2f5b1d2-a2e9-481b-929a-2f57719127b0/how-to-please-and-nightwatchers/',
+        'IDFA Junior': 'https://festival.idfa.nl/composition/25252b1c-1782-42a4-8917-cbd4d7705b7a/idfa-junior/',
+        'IDFA Meets x Subbacultcha, Avant-pop band Sergeant laat zich inspireren door twee shorts uit het Paradocs programma.': 'https://festival.idfa.nl/composition/df281ce5-154a-430f-a47e-48b83e922961/idfa-meets-x-subbacultcha/',
+        'IDFA Shorts 1': 'https://festival.idfa.nl/composition/d2c54e11-34eb-446f-b6d5-a248e2239f17/idfa-shorts-1/',
+        'IDFA Shorts 2': 'https://festival.idfa.nl/composition/f7aa259a-7962-478f-8b88-9558b0e1c76a/idfa-shorts-2/',
+        'IDFA Shorts 2, The Story of Ne Kuko, met een Talk verzorgd door Oneworld.': 'https://festival.idfa.nl/composition/f7aa259a-7962-478f-8b88-9558b0e1c76a/idfa-shorts-2/',
+        "IDFA Shorts 2, Meervaart Studio bespreekt 'reclaiming space' met de filmmaker van Hotel Mokum.": 'https://festival.idfa.nl/composition/f7aa259a-7962-478f-8b88-9558b0e1c76a/idfa-shorts-2/',
+        'IDFA Shorts 3': 'https://festival.idfa.nl/composition/8da51942-d67d-45a2-b89d-2e864ef34db5/idfa-shorts-3/',
+        'IDFA Shorts 4': 'https://festival.idfa.nl/composition/e1442ffb-4062-4c49-b6e1-7d47caa80793/idfa-shorts-4/',
+        'IDFA Shorts 4, Gratis toegankelijk voor Cineville pashouders.': 'https://festival.idfa.nl/composition/e1442ffb-4062-4c49-b6e1-7d47caa80793/idfa-shorts-4/',
+        'IDFA Shorts 5': 'https://festival.idfa.nl/composition/f71393b8-5989-4f5e-8817-7e08ad77ef23/idfa-shorts-5/',
+        'IDFA Shorts 6': 'https://festival.idfa.nl/composition/c093cec5-0c9a-40b3-80ff-cb6203c47be3/idfa-shorts-6/',
+        'IDFA Shorts 7': 'https://festival.idfa.nl/composition/34a02290-6862-424c-9b66-e150117aad81/idfa-shorts-7/',
+        'Incident & Landslide': 'https://festival.idfa.nl/composition/9a175161-71f5-4543-86f6-8be60beb3222/incident-and-landslide/',
+        'Jeugdvoorstelling': 'https://festival.idfa.nl/composition/8ee6e4f5-72cc-4575-aeb1-15928c1afa63/jeugdvoorstelling/',
+        'Paradocs Shorts': 'https://festival.idfa.nl/composition/e8a63491-759d-4e5e-ae2d-dadd3874785b/paradocs-shorts/',
+        'People from the Heart of the Earth & Marungka Tjalatjunu': 'https://festival.idfa.nl/composition/108f4942-1b03-4356-bfd2-1929beb54243/people-from-the-heart-of-the-earth-and-marungka-tjalatjunu/',
+        'Red Flag & Postcards from the Verge': 'https://festival.idfa.nl/composition/7ef93f13-f1a2-4ef6-b91d-9c4f3110d595/red-flag-and-postcards-from-the-verge/',
+        'Step by Step & First Case, Second Case': 'https://festival.idfa.nl/composition/1879bf5a-128b-4d78-8b2a-efd5d02d3dfb/step-by-step-and-first-case-second-case/',
+        "Tomorrow's Classics": "https://festival.idfa.nl/composition/72d8a429-a1d1-4f31-80a3-6276a8e61a3b/tomorrow's-classics/",
+        'VPRO Preview': 'https://festival.idfa.nl/composition/1ea96e78-2d83-4239-9831-5b0f54c8e9e1/vpro-preview/',
+        'VPRO Review': 'https://festival.idfa.nl/composition/d90434c6-035c-4d1f-9a84-c2b2fbd76a17/vpro-review/',
+        'Vriendenvoorstelling: Glass, My Unfulfilled Life, Vrienden worden uitgenodigd voor de Vriendenvoorstelling. Kijk op idfa.nl/vriend.': 'https://festival.idfa.nl/composition/ad9a1be6-809f-4e65-9604-afbddf50ffcd/vriendenvoorstelling:-glass-my-unfulfilled-life/',
+        'WePresent Night, Talk met Amanda Kim + borrel in Eye van 19:00 - 20:30, aangeboden door WePresent.': 'https://festival.idfa.nl/composition/fc3878cc-4d24-4bc2-95e1-a309192ee24c/wepresent-night/',
+        'Who Tells the Story? & Citizen Sleuth': 'https://festival.idfa.nl/composition/a24cb2b4-3395-4afa-98f2-25f0f3cf1a37/who-tells-the-story-and-citizen-sleuth/',
+        'Youth 13+: Love, Your Neighbour & Another Body': 'https://festival.idfa.nl/composition/087c205c-9141-4388-9aac-a41e2db17b4b/youth-13+:-love-your-neighbour-and-another-body/',
+        'Youth 13+: Unfiltered Reality': 'https://festival.idfa.nl/composition/d4b56229-5115-4f4e-ab85-5caf4a4980d9/youth-13+:-unfiltered-reality/',
+        'Youth 13+: Where Am I From? & Boyz': 'https://festival.idfa.nl/composition/0bb709ec-9f4c-4a6c-849f-e4da98f0fdf2/youth-13+:-where-am-i-from-and-boyz/',
+        'Youth 9-12: Extraordinary Life': 'https://festival.idfa.nl/composition/ccf51b8c-8bf3-4cb4-bde4-76a7d9c9d97c/youth-9-12:-extraordinary-life/',
+        'Youth 9-12: Figure & JessZilla': 'https://festival.idfa.nl/composition/e7d5ce72-41e0-447f-b8b3-0bd88a4810c4/youth-9-12:-figure-and-jesszilla/',
+        "Youth 9-12: Girls' Stories & And a Happy New Year": "https://festival.idfa.nl/composition/49c06e0f-7a05-445c-bcd3-f9cb2d48fe0f/youth-9-12:-girls'-stories-and-and-a-happy-new-year/",
+        'de Volkskrantdag': 'https://festival.idfa.nl/composition/f12b7b9c-29e1-4596-a6a0-d8e231a6af47/de-volkskrantdag/',
+    }
+    re_desc = re.compile(r'(?P<title>.*), (?P<desc>[A-Z].*\.)$')
+    re_num_screen = re.compile(r'^(?P<theater>.*?)\s+(?P<number>\d+)$')
+    re_colon_screen = re.compile(r'^(?P<theater>.*?):\s+(?P<room>.+)$')
+    nl_month_by_name: Dict[str, int] = {'november': 11}
 
-    def __init__(self, festival_data, film_id, url, debug_prefix='F'):
+    def __init__(self, festival_data, film, sections, debug_prefix='F', corrected_url=None):
         super().__init__(festival_data, debug_recorder, debug_prefix, debugging=DEBUGGING)
-        self.film_id = film_id
-        self.url = url
-        self.title = None
+        self.film = film
+        self.sections = sections
+        self.corrected_url = corrected_url
+        self.title = film.title
+        self.film_property_by_label = {}
+        self.film_info = None
         self.duration = None
-        self.film = None
 
+        # Initialize screening data.
+        self.metadata_key = None
+        self.start_date = None
         self.start_dt = None
         self.end_dt = None
         self.screen = None
-        self.audience_categories = None
+        self.qa = None
         self.audience = None
-        self.state_stack = self.StateStack(self.print_debug, self.FilmParseState.IDLE)
+        self.extra = None
+        self.combi_title = None
         self.init_screening_data()
 
+        # Draw a bar with section info.
+        self.print_debug(self.headed_bar(header=str(self.film)))
+        if corrected_url:
+            counter.increase('corrected urls')
+
+        # Initialize the state stack.
+        self.state_stack = self.StateStack(self.print_debug, self.FilmParseState.IDLE)
+
     def init_screening_data(self):
+        self.metadata_key = None
+        self.start_date = None
         self.start_dt = None
         self.end_dt = None
         self.screen = None
-        self.audience_categories = []
-        self.audience = None
-
-    def get_properties_from_dict(self, data):
-        matches = self.re_dict.search(data)
-        minutes = int(matches.group('duration')) if matches else 0
-        self.duration = datetime.timedelta(minutes=minutes)
-
-    def add_film(self):
-        # Create a new film.
-        self.film = self.festival_data.create_film(self.title, self.url)
-        if self.film is None:
-            error_collector.add(f'Could not create film:', '{self.title} ({self.url})')
-        else:
-            # Fill details.
-            self.film.duration = self.duration
-            self.film.medium_category = Film.category_string_films
-
-            # Add the film to the list.
-            print(f'Created film {self.film}')
-            self.festival_data.films.append(self.film)
+        self.qa = ''
+        self.audience = AUDIENCE_PUBLIC
+        self.extra = ''
+        self.combi_title = None
 
     def add_paragraph(self):
         paragraph = self.article_paragraph
@@ -447,89 +494,248 @@ class FilmPageParser(HtmlPageParser):
     def set_article(self):
         self.article = '\n\n'.join(self.article_paragraphs)
         self.set_description_from_article(self.film.title)
+        counter.increase('articles')
 
     def add_film_info(self):
-        film_info = FilmInfo(self.film.filmid, self.description, self.article)
-        self.festival_data.filminfos.append(film_info)
+        self.film_info = FilmInfo(self.film.filmid, self.description, self.article)
+        self.festival_data.filminfos.append(self.film_info)
+
+    def update_film_info(self):
+        counter.increase('filminfo update')
+        if self.film_property_by_label:
+            counter.increase('meta dicts')
+            properties = [f'{key}: {value}' for (key, value) in self.film_property_by_label.items()]
+            metadata = '\n'.join(properties)
+            self.film_info.article += f'\n\n{metadata}'
+            counter.increase('filminfo extended')
+
+    def set_screening_date(self, data):
+        parts = data.split()  # '10 november'
+        try:
+            day = int(parts[0])
+            month = int(FilmPageParser.nl_month_by_name[parts[1]])
+        except ValueError as e:
+            counter.increase('improper dates')
+            self.print_debug(f'{e} in {self.film}', 'Proceeding to next page section')
+            return False
+        else:
+            self.start_date = datetime.date(day=day, month=month, year=festival_year)
+        return True
 
     def set_screening_times(self, data):
-        self.start_dt, self.end_dt = get_screening_times(data)
+        try:
+            start_time = datetime.time(int(data[:2]), int(data[3:5]))   # '14.00–15.28'
+            end_time = datetime.time(int(data[6:8]), int(data[9:]))
+        except ValueError as e:
+            counter.increase('improper times')
+            self.print_debug(f'{e} in times of {self.film} screening', 'Proceeding to next page section')
+            return False
+        else:
+            start_date = self.start_date
+            end_date = start_date if end_time > start_time else start_date + datetime.timedelta(days=1)
+            self.start_dt = datetime.datetime.combine(start_date, start_time)
+            self.end_dt = datetime.datetime.combine(end_date, end_time)
+        return True
 
     def get_screen(self, data):
-        screen_name = data.strip()
-        screen = self.festival_data.get_screen(festival_city, screen_name)
+        screen_parse_name = data.strip()
+        city_name, theater_parse_name, screen_abbreviation = self.split_location(screen_parse_name)
+        screen = self.festival_data.get_screen(
+            city_name,
+            screen_parse_name,
+            theater_parse_name=theater_parse_name,
+            screen_abbreviation=screen_abbreviation
+        )
         return screen
 
-    def get_audience(self):
-        no_audience_categories = len(self.audience_categories) == 0
-        return Screening.audience_type_public if no_audience_categories else '|'.join(self.audience_categories)
+    def split_location(self, location):
+        city_name = festival_city
+        theater_parse_name = location
+        screen_abbreviation = 'zaal'
+        colon_match = self.re_colon_screen.match(location)
+        if colon_match:
+            theater_parse_name = colon_match.group(1)
+            screen_abbreviation = colon_match.group(2)
+        else:
+            num_match = self.re_num_screen.match(location)
+            if num_match:
+                theater_parse_name = num_match.group(1)
+                screen_abbreviation = num_match.group(2)
+        return city_name, theater_parse_name, screen_abbreviation
+
+    def process_screening_info(self, data):
+        qa_words = ['gesprek', 'Q&amp;A', 'Talk', 'nagesprek']
+        private_words = ['Exclusief', 'Pashouders']
+        part_of_prefix = 'Onderdeel van'
+        self.qa = 'QA' if len([w for w in qa_words if w in data]) else ''
+        self.audience = 'private' if len([w for w in private_words if w in data]) else AUDIENCE_PUBLIC
+        if data.startswith(part_of_prefix):
+            self.combi_title = data[len(part_of_prefix):].strip()
+            self.print_debug('FOUND COMBINATION TITLE', f'{self.combi_title}')
 
     def add_idfa_screening(self, display=False):
-        HtmlPageParser.add_screening_from_fields(self, self.film, self.screen, self.start_dt, self.end_dt,
-                                                 audience=self.audience, display=display)
+        # Create an IDFA screening from the gathered data.
+        self.screening = IdfaScreening(self.film, self.screen, self.start_dt, self.end_dt,
+                                       qa=self.qa, audience=self.audience, extra=self.extra,
+                                       combi_title=self.combi_title)
+        self.add_screening(self.screening, display=display)
+
+        # Prepare combination film data if applicable.
+        if self.combi_title in self.url_by_combi_title.keys():
+            self.screening.combi_url = self.url_by_combi_title[self.combi_title]
+            m = re.match(self.re_desc, self.combi_title)
+            if m:
+                g = m.groupdict()
+                self.combi_title = g['title']
+                print(f"{g['title']:-<80}{g['desc']}")
+            self.set_combination(self.screening)
+
+        # Reset data as to find the next screening.
         self.init_screening_data()
 
-    def handle_starttag(self, tag, attrs):
-        ahead_audience = 'color:var(--background-color);background-color:var(--text-color)'
+    def store_combination(self, screening, combi_title):
+        pass
 
+    def set_combination(self, screening):
+        combi_url = screening.combi_url
+
+        # Get the combination film or create it.
+        combi_film = self.festival_data.create_film(self.combi_title, combi_url)
+        if combi_film is None:
+            try:
+                combi_film = self.festival_data.get_film_by_key(self.combi_title, combi_url)
+            except KeyError:
+                error_collector.add(f'Could not create combination film:', f'{self.combi_title} ({combi_url})')
+                return
+        else:
+            combi_film.duration = screening.end_datetime - screening.start_datetime
+            combi_film.medium_category = Film.category_string_combinations
+            self.festival_data.films.append(combi_film)
+        combi_screening = IdfaScreening(
+            combi_film, screening.screen, screening.start_datetime, screening.end_datetime, audience=AUDIENCE_PUBLIC
+        )
+        if combi_screening not in combi_film.screenings(self.festival_data):
+            self.festival_data.screenings.append(combi_screening)
+            counter.increase('combination screenings')
+
+        # Update the combination film info.
+        combi_film_info = combi_film.film_info(self.festival_data)
+        screened_film_info = self.film.film_info(self.festival_data)
+        if not combi_film_info.filmid:
+            combi_film_info.filmid = combi_film.filmid
+            combi_film_info.description = self.combi_title
+            self.festival_data.filminfos.append(combi_film_info)
+        if self.film.filmid not in [sf.filmid for sf in combi_film_info.screened_films]:
+            screened_film = ScreenedFilm(self.film.filmid, self.film.title, screened_film_info.description)
+            combi_film_info.screened_films.append(screened_film)
+
+        # Update the screened film info.
+        if combi_film.filmid not in [cf.filmid for cf in screened_film_info.combination_films]:
+            screened_film_info.combination_films.append(combi_film)
+
+    def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
 
         if self.state_stack.state_is(self.FilmParseState.IDLE) and tag == 'script':
-            self.state_stack.push(self.FilmParseState.IN_DICT)
+            self.state_stack.push(self.FilmParseState.AWAITING_TITLE)
         elif self.state_stack.state_is(self.FilmParseState.AWAITING_TITLE) and tag == 'h1':
             self.state_stack.change(self.FilmParseState.IN_TITLE)
-        elif self.state_stack.state_is(self.FilmParseState.AWAITING_ARTICLE) and tag == 'section':
-            if len(attrs) > 0 and attrs[0] == ('class', 'contentpanel-module__section___1qeQt'):
-                self.state_stack.change(self.FilmParseState.IN_ARTICLE)
-        elif self.state_stack.state_is(self.FilmParseState.AWAITING_SCREENINGS) and tag == 'section':
-            if len(attrs) > 1 and attrs[0] == ('class', 'tickets-module__ticketBlock___3ROpA'):
+        elif self.state_stack.state_in([
+                self.FilmParseState.AWAITING_META_DICT,
+                self.FilmParseState.IN_META_DICT,
+                self.FilmParseState.AWAITING_CREDITS]):
+            if tag == 'div' and len(attrs) and attrs[0][0] == 'data-meta':
+                self.metadata_key = attrs[0][1]
+                self.state_stack.change(self.FilmParseState.IN_META_PROPERTY)
+        elif self.state_stack.state_is(self.FilmParseState.AWAITING_PAGE_SECTION) and tag in ['div', 'h2']:
+            if len(attrs) == 2 and attrs[0] == ('variant', '3'):
+                if attrs[1] == ('class', 'e10q2t3u0 css-1bg59lt-Heading-Heading-Heading'):
+                    self.state_stack.push(self.FilmParseState.IN_PAGE_SECTION)
+        elif self.state_stack.state_is(self.FilmParseState.AWAITING_ARTICLE) and tag == 'p':
+            self.state_stack.change(self.FilmParseState.IN_ARTICLE)
+        elif self.state_stack.state_is(self.FilmParseState.AWAITING_SCREENINGS) and tag == 'div':
+            if len(attrs) == 2 and attrs[0] == ('variant', '4'):
                 self.state_stack.change(self.FilmParseState.IN_SCREENINGS)
-        elif self.state_stack.state_is(self.FilmParseState.IN_SCREENINGS):
-            if tag == 'div' and len(attrs) > 0 and attrs[0][1] == 'table-module__name___3d5Hi':
-                self.state_stack.push(self.FilmParseState.IN_SCREENING)
-            elif tag == 'span' and len(attrs) > 1 and attrs[1] == ('style', ahead_audience):
-                self.state_stack.push(self.FilmParseState.IN_AUDIENCE)
-            elif tag == 'svg' and len(attrs) > 0 and attrs[0][0] == 'xmlns':
-                self.audience = self.get_audience()
-                self.add_idfa_screening()
-        elif self.state_stack.state_is(self.FilmParseState.AWAITING_LOCATION) and tag == 'div':
-            if len(attrs) > 0 and attrs[0][1] == 'tickets-module__location___3qPel':
-                self.state_stack.change(self.FilmParseState.IN_LOCATION)
+                self.state_stack.push(self.FilmParseState.IN_SCREENING_DATE)
+        elif self.state_stack.state_is(self.FilmParseState.AWAITING_SCREENING_INFO) and tag == 'div':
+            if len(attrs) and attrs[0] == ('class', 'ey43j5h0 css-1cky3te-Body-Body'):
+                self.state_stack.change(self.FilmParseState.IN_SCREENING_INFO)
+        elif self.state_stack.state_is(self.FilmParseState.AWAITING_TIMES) and tag == 'span':
+            self.state_stack.change(self.FilmParseState.IN_TIMES)
+        elif self.state_stack.state_is(self.FilmParseState.IN_SCREENINGS) and tag == 'div' and len(attrs) == 2:
+            if attrs[0] == ('variant', '4'):
+                self.state_stack.push(self.FilmParseState.IN_SCREENING_DATE)
+            elif attrs[0] == ('variant', '3'):
+                self.state_stack.change(self.FilmParseState.IN_PAGE_SECTION)
 
     def handle_endtag(self, tag):
         HtmlPageParser.handle_endtag(self, tag)
 
-        if self.state_stack.state_is(self.FilmParseState.IN_DICT):
+        if self.state_stack.state_is(self.FilmParseState.IN_META_PROPERTY) and tag == 'div':
+            self.state_stack.change(self.FilmParseState.IN_META_DICT)
+        elif self.state_stack.state_is(self.FilmParseState.IN_META_DICT) and tag == 'div':
+            print(f'{self.film_property_by_label=}')
+            self.print_debug('FOUND DICT', f'{self.film_property_by_label=}')
+            self.state_stack.change(self.FilmParseState.AWAITING_PAGE_SECTION)
+        elif self.state_stack.state_is(self.FilmParseState.IN_DICT):
             self.state_stack.change(self.FilmParseState.AWAITING_TITLE)
         elif self.state_stack.state_is(self.FilmParseState.IN_ARTICLE):
             if tag == 'p':
                 self.add_paragraph()
-            elif tag == 'section':
+            elif tag == 'div':
                 self.set_article()
                 self.add_film_info()
-                self.state_stack.change(self.FilmParseState.AWAITING_SCREENINGS)
-        elif self.state_stack.state_is(self.FilmParseState.IN_SCREENINGS) and tag == 'section':
-            self.state_stack.change(self.FilmParseState.DONE)
+                self.state_stack.pop()
+        elif self.state_stack.state_is(self.FilmParseState.IN_SCREENING_INFO) and tag == 'div':
+            self.state_stack.change(self.FilmParseState.AWAITING_TIMES)
+        elif self.state_stack.state_is(self.FilmParseState.AWAITING_LOCATION) and tag == 'svg':
+            self.state_stack.change(self.FilmParseState.IN_LOCATION)
 
     def handle_data(self, data):
         HtmlPageParser.handle_data(self, data)
 
-        if self.state_stack.state_is(self.FilmParseState.IN_DICT):
-            self.get_properties_from_dict(data)
-        elif self.state_stack.state_is(self.FilmParseState.IN_TITLE):
+        if self.state_stack.state_is(self.FilmParseState.IN_TITLE):
             self.title = data
-            self.add_film()
-            self.state_stack.change(self.FilmParseState.AWAITING_ARTICLE)
+            if self.film.title != self.title:
+                error_desc = f'"{self.title}" while parsing "{self.film}"'
+                debug_text = '\n'.join([
+                    error_desc,
+                    f'{"registered url":-<20}{self.film.url}',
+                    f'{"corrected url":-<20}{self.corrected_url}',
+                ])
+                error_collector.add('DIFFERENT TITLE', error_desc)
+                self.print_debug(f'DIFFERENT TITLE: {debug_text}')
+            self.state_stack.change(self.FilmParseState.AWAITING_META_DICT)
+        elif self.state_stack.state_is(self.FilmParseState.IN_META_PROPERTY):
+            self.film_property_by_label[self.metadata_key] = data
+        elif self.state_stack.state_is(self.FilmParseState.IN_PAGE_SECTION):
+            if data == 'Synopsis':
+                self.state_stack.change(self.FilmParseState.AWAITING_ARTICLE)
+            elif data.startswith('Tickets'):
+                self.state_stack.change(self.FilmParseState.AWAITING_SCREENINGS)
+            elif data == 'Credits':
+                self.state_stack.change(self.FilmParseState.AWAITING_CREDITS)
+            elif data == 'Stills':
+                self.update_film_info()
+                self.state_stack.change(self.FilmParseState.DONE)
+        elif self.state_stack.state_is(self.FilmParseState.IN_SCREENING_INFO):
+            self.process_screening_info(data)
         elif self.state_stack.state_is(self.FilmParseState.IN_ARTICLE):
-            self.article_paragraph += data
-        elif self.state_stack.state_is(self.FilmParseState.IN_SCREENING):
-            self.set_screening_times(data)
-            self.state_stack.change(self.FilmParseState.AWAITING_LOCATION)
+            if not data.startswith('.css'):
+                self.article_paragraph += data
+        elif self.state_stack.state_is(self.FilmParseState.IN_SCREENING_DATE):
+            if self.set_screening_date(data):
+                self.state_stack.change(self.FilmParseState.AWAITING_SCREENING_INFO)
+            else:
+                self.state_stack.pop()
+        elif self.state_stack.state_is(self.FilmParseState.IN_TIMES):
+            if self.set_screening_times(data):
+                self.state_stack.change(self.FilmParseState.AWAITING_LOCATION)
+            else:
+                self.state_stack.pop()
         elif self.state_stack.state_is(self.FilmParseState.IN_LOCATION):
             self.screen = self.get_screen(data)
-            self.state_stack.pop()
-        elif self.state_stack.state_is(self.FilmParseState.IN_AUDIENCE):
-            self.audience_categories.append(data)
+            self.add_idfa_screening(True)
             self.state_stack.pop()
 
 
@@ -636,214 +842,6 @@ class SpecialsPageParser(HtmlPageParser):
             self.state_stack.pop()
 
 
-class SpecialFeaturePageParser(FilmPageParser):
-    class FeatureParseState(Enum):
-        IDLE = auto()
-        IN_DESCRIPTION = auto()
-        AWAITING_SCREENINGS = auto()
-        IN_TIMES = auto()
-        IN_LOCATION = auto()
-        AWAITING_SCREENED_FILMS = auto()
-        IN_SCREENED_FILMS = auto()
-        IN_SCREENED_TITLE = auto()
-        AWAITING_SCREENED_DESCRIPTION = auto()
-        IN_SCREENED_DESCRIPTION = auto()
-        AWAITING_SCREENED_URL = auto()
-        DONE = auto()
-
-    compilation_by_title = {}
-    film_id_by_title = {}
-
-    def __init__(self, festival_data, film):
-        super().__init__(festival_data, film.filmid, film.url, 'SF')
-        if not self.debugging:
-            raise ValueError('Debugging not set')
-        self.festival_data = festival_data
-        self.film = film
-        self.film_info = self.film.film_info(self.festival_data)
-        self.compilation_url = film.url
-        self.duration = None
-        self.film_article = None
-        self.screenings = []
-        self.screened_films = []
-        self.screened_description = None
-        self.screened_title = None
-        self.screened_url = None
-        self.state_stack = self.StateStack(self.print_debug, self.FeatureParseState.IDLE)
-        self.init_screened_film()
-        self.film_id_by_title = {title: film_id for film_id, title in self.festival_data.title_by_film_id.items()}
-
-    def init_screened_film(self):
-        self.screened_title = None
-        self.screened_description = None
-        self.screened_url = None
-
-    def add_film_article(self, article):
-        self.film_info.article = article
-
-    def add_screened_film(self):
-        try:
-            film = self.festival_data.get_film_by_key(self.screened_title, self.screened_url)
-        except KeyError as key_error:
-            try:
-                film_id = self.film_id_by_title[self.screened_title]
-            except KeyError:
-                err_text = 'Title not found'
-            else:
-                f = self.festival_data.get_film_by_id(film_id)
-                if f is not None:
-                    err_text = f'film id={film_id}, title={f.title} url={f.url}'
-                else:
-                    err_text = f'Found a film id({film_id}), but it refers to nothing'
-            error_collector.add(repr(key_error), f'Result of searching by title: {err_text}')
-        except ValueError as value_error:
-            error_collector.add(repr(value_error), f'Film ID found, but no corresponding film found in list')
-        else:
-            screened_film = ScreenedFilm(film.filmid, self.screened_title, self.screened_description)
-            self.screened_films.append(screened_film)
-
-    def add_screened_films(self):
-        self.film_info.screened_films = self.screened_films
-        for screened_film in self.screened_films:
-            film_id = screened_film.filmid
-            film = self.festival_data.get_film_by_id(film_id)
-            film_info = film.film_info(self.festival_data)
-            film_info.combination_films.append(self.film)
-        screened_films_str = '\n'.join([str(screened_film) for screened_film in self.screened_films])
-        print(f'Combination {self.film} linked to screened films:\n{screened_films_str}')
-
-    def set_screening_times(self, data):
-        self.start_dt, self.end_dt = get_screening_times(data)
-        zero_td = datetime.timedelta(minutes=0)
-        if self.film.duration is None or self.film.duration == zero_td:
-            self.film.duration = self.end_dt - self.start_dt
-
-    def handle_starttag(self, tag, attrs):
-        ahead_screened_films = 'contentpanel-module__sectionTitle___Z2ucG contentpanel-module__collectionTitle___26a79'
-        ahead_screened_film = 'collectionitem-module__title___1Cpb- type-module__title___2UQhK'
-        ahead_screened_url = 'ButtonText__Container-sc-yfgqnf-0 kpnqEd'
-        ahead_screened_description = 'collectionitem-module__description___2o688 type-module__copySmall___29O6A'
-
-        HtmlPageParser.handle_starttag(self, tag, attrs)
-
-        if self.state_stack.state_is(self.FeatureParseState.IDLE) and tag == 'meta':
-            if len(attrs) > 2 and attrs[1] == ('name', 'description') and attrs[2][0] == 'content':
-                self.article = attrs[2][1]
-                self.add_film_article(self.article)
-                self.state_stack.change(self.FeatureParseState.AWAITING_SCREENINGS)
-        elif self.state_stack.state_is(self.FeatureParseState.AWAITING_SCREENINGS) and tag == 'div':
-            if len(attrs) > 0 and attrs[0] == ('class', 'table-module__name___3d5Hi'):
-                self.state_stack.push(self.FeatureParseState.IN_TIMES)
-        elif self.state_stack.state_is(self.FeatureParseState.AWAITING_SCREENED_FILMS) and tag == 'h2':
-            if len(attrs) > 0 and attrs[0] == ('class', ahead_screened_films):
-                self.state_stack.change(self.FeatureParseState.IN_SCREENED_FILMS)
-        elif self.state_stack.state_is(self.FeatureParseState.IN_SCREENED_FILMS) and tag == 'h2':
-            if len(attrs) > 0 and attrs[0] == ('class', ahead_screened_film):
-                self.state_stack.push(self.FeatureParseState.IN_SCREENED_TITLE)
-            elif len(attrs) == 0:
-                self.add_screened_films()
-                self.state_stack.pop()
-                self.state_stack.change(self.FeatureParseState.DONE)
-        elif self.state_stack.state_is(self.FeatureParseState.AWAITING_SCREENED_DESCRIPTION) and tag == 'p':
-            if len(attrs) > 0 and attrs[0] == ('class', ahead_screened_description):
-                self.state_stack.change(self.FeatureParseState.IN_SCREENED_DESCRIPTION)
-        elif self.state_stack.state_is(self.FeatureParseState.AWAITING_SCREENED_URL) and tag == 'a':
-            if len(attrs) > 2 and attrs[1] == ('class', ahead_screened_url) and attrs[2][0] == 'href':
-                slug = attrs[2][1]
-                self.screened_url = iri_slug_to_url(festival_hostname, slug)
-                self.add_screened_film()
-                self.init_screened_film()
-                self.state_stack.pop()
-
-    def handle_endtag(self, tag):
-        HtmlPageParser.handle_endtag(self, tag)
-
-    def handle_data(self, data):
-        HtmlPageParser.handle_data(self, data)
-
-        if self.state_stack.state_is(self.FeatureParseState.IN_TIMES):
-            self.set_screening_times(data)
-            self.state_stack.change(self.FeatureParseState.IN_LOCATION)
-        elif self.state_stack.state_is(self.FeatureParseState.IN_LOCATION):
-            self.screen = self.get_screen(data)
-            self.audience = self.get_audience()
-            self.add_idfa_screening(display=True)
-            self.state_stack.change(self.FeatureParseState.AWAITING_SCREENED_FILMS)
-        elif self.state_stack.state_is(self.FeatureParseState.IN_SCREENED_TITLE):
-            self.screened_title = data
-            self.state_stack.change(self.FeatureParseState.AWAITING_SCREENED_DESCRIPTION)
-        elif self.state_stack.state_is(self.FeatureParseState.IN_SCREENED_DESCRIPTION):
-            self.screened_description = data
-            self.state_stack.change(self.FeatureParseState.AWAITING_SCREENED_URL)
-
-
-def get_films_az(festival_data):
-    az_url = festival_hostname + az_path
-    az_file = fileKeeper.az_file()
-    url_file = UrlFile(az_url, az_file, error_collector, debug_recorder, byte_count=200)
-    az_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=f'Downloading {az_url}', repeat=18)
-    if az_html is not None:
-        comment(f'Analysing az page, encoding={url_file.encoding}')
-        AzPageParser(festival_data).feed(az_html)
-
-
-def get_film_details(festival_data, url):
-    comment(f'Parsing film detail url {url}')
-    film_id = festival_data.new_film_id(url)
-    film_file = fileKeeper.film_webdata_file(film_id)
-    url_file = UrlFile(url, film_file, error_collector, debug_recorder, byte_count=200)
-    film_html = url_file.get_text(f'Downloading film with ID {film_id} from {url}')
-    if film_html is not None:
-        print(f'Analysing HTML text, encoding={url_file.encoding}')
-        FilmPageParser(festival_data, film_id, url, 'F').feed(film_html)
-    else:
-        error_collector.add('HTML text not found', f'Trying to add new film with ID {film_id}')
-
-
-def get_specials(festival_data):
-    # Read special features as films.
-    specials_file = os.path.join(fileKeeper.webdata_dir, 'specials.html')
-    specials_url = festival_hostname + specials_path
-    url_file = UrlFile(specials_url, specials_file, error_collector, debug_recorder, byte_count=200)
-    specials_html = url_file.get_text()
-    if specials_html is not None:
-        comment(f'Analysing specials page from {specials_file}, encoding={url_file.encoding}')
-        SpecialsPageParser(festival_data).feed(specials_html)
-
-    # Get details for all special features.
-    combinations = SpecialsPageParser.combination_programs
-    for combination in combinations:
-        if combination.medium_category != Film.category_string_films:
-            get_special_feature_details(festival_data, combination)
-
-    # Print a summary.
-    feature_count = len(combinations)
-    features = '\n'.join([str(film) for film in combinations])
-    comment(f'Found {feature_count} special features:\n{features}')
-
-
-def get_special_feature_details(festival_data, combination_program):
-    combination_file = fileKeeper.film_webdata_file(combination_program.filmid)
-    url_file = UrlFile(combination_program.url, combination_file, error_collector, debug_recorder, byte_count=500)
-    combination_html = url_file.get_text()
-    if combination_html is not None:
-        comment(f'Analysing special feature {combination_program}, encoding={url_file.encoding}')
-        SpecialFeaturePageParser(festival_data, combination_program).feed(combination_html)
-
-
-def get_screening_times(data):
-    parts = data.split()  # 13 nov. 13:00 - 15:00 (14:00 - 16:00 AMS)
-    day = int(parts[0])
-    month = int(FilmPageParser.nl_month_by_name[parts[1]])
-    start_time = datetime.time.fromisoformat(parts[5].strip('('))
-    end_time = datetime.time.fromisoformat(parts[7])
-    start_date = datetime.date(year=festival_year, month=month, day=day)
-    end_date = start_date if end_time > start_time else start_date + datetime.timedelta(days=1)
-    start_dt = datetime.datetime.combine(start_date, start_time)
-    end_dt = datetime.datetime.combine(end_date, end_time)
-    return start_dt, end_dt
-
-
 class IdfaFilm(Film):
 
     def __init__(self, film):
@@ -862,12 +860,15 @@ class IdfaFilm(Film):
 
 
 class IdfaScreening(Screening):
-    def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, combination_program_url):
+    def __init__(self, film, screen, start_datetime, end_datetime,
+                 qa='', extra='', audience=None, combi_title=None, combi_url=None):
         super().__init__(film, screen, start_datetime, end_datetime, qa, extra, audience)
-        self.combination_program_url = combination_program_url
+        self.combi_title = combi_title
+        self.combi_url = combi_url
 
 
 class IdfaData(FestivalData):
+    duplicates_by_screening = {}
 
     def __init__(self, directory):
         super().__init__(directory, festival_city)
@@ -876,14 +877,28 @@ class IdfaData(FestivalData):
     def film_key(self, title, url):
         return url
 
+    def screening_can_go_to_planner(self, screening):
+        can_go = screening.is_public()
+        if can_go:
+            try:
+                self.duplicates_by_screening[screening] += 1
+                can_go = False
+            except KeyError:
+                self.duplicates_by_screening[screening] = 0
+        if can_go:
+            can_go = screening.combi_url is None
+        if can_go:
+            can_go = screening.screen.screen_id != 126      # de Brakke Grond
+        if can_go:
+            can_go = not self.is_coinciding(screening)
+        return can_go
+
+    def film_can_go_to_planner(self, film_id):
+        return True
+
     def is_coinciding(self, screening):
         # Get the film info.
         film_info = screening.film.film_info(self)
-
-        # Check if the film is a combination program.
-        screened_films = film_info.screened_films
-        if len(screened_films):
-            return False
 
         # Check if the film is screened as part of a combination
         # program.
@@ -898,14 +913,10 @@ class IdfaData(FestivalData):
         # This screening doesn't coincide with a combination program.
         return False
 
-    def screening_can_go_to_planner(self, screening):
-        can_go = screening.is_public()
-        if can_go:
-            can_go = not self.is_coinciding(screening)
-        return can_go
-
-    def film_can_go_to_planner(self, film_id):
-        return True
+    @classmethod
+    def summarize_duplicates(cls):
+        summary = [f'{screening}: {count:%4d}' for screening, count in cls.duplicates_by_screening.items()]
+        debug_recorder.add('\n\nDuplicate screenings:\n' + '\n'.join(summary))
 
 
 if __name__ == "__main__":

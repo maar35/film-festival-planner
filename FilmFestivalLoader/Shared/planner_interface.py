@@ -369,6 +369,16 @@ class Screening:
         end_time = self.end_datetime.time().isoformat()
         return f'{start_time} - {end_time}, {self.screen.abbr}, {self.film.title}'
 
+    def __eq__(self, other):
+        lhs = (self.film.filmid, self.screen.screen_id, self.start_datetime, self.end_datetime)
+        rhs = (other.film.filmid, other.screen.screen_id, other.start_datetime, other.end_datetime)
+        return lhs == rhs
+
+    def __hash__(self):
+        return hash((
+            self.film.filmid, self.screen.screen_id, self.start_datetime, self.end_datetime
+        ))
+
     @staticmethod
     def screening_repr_csv_head():
         text = ";".join([

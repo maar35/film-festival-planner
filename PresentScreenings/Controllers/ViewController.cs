@@ -519,7 +519,7 @@ namespace PresentScreenings.TableView
                 // Compose duplicates info.
                 string line = Environment.NewLine;
                 StringBuilder builder = new StringBuilder($"Duplicate screenings:{line}{line}");
-                builder.AppendJoin<Screening>($",{line}", removedScreenings);
+                builder.AppendJoin($"{line}{line}", removedScreenings);
 
                 // Write duplicates info.
                 AlertRaiser.WriteInfo(builder.ToString());
