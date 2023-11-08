@@ -233,6 +233,7 @@ class SectionsLoaderView(LoginRequiredMixin, ListView):
     template_name = 'loader/sections.html'
     http_method_names = ['get', 'post']
     object_list = None
+    queryset = None
     context_object_name = 'festival_rows'
     unexpected_error = ''
 

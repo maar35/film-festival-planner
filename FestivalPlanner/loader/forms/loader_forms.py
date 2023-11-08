@@ -372,7 +372,7 @@ class SimpleLoader(BaseLoader):
 class FilmLoader(SimpleLoader):
     expected_header = ['seqnr', 'filmid', 'sort', 'title', 'titlelanguage',
                        'section', 'duration', 'mediumcategory', 'url']
-    key_fields = ['festival', 'seq_nr', 'film_id']
+    key_fields = ['festival', 'film_id']
     manager = Film.films
 
     def __init__(self, session, festival):
