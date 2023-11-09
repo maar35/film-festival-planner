@@ -232,12 +232,18 @@ class SectionsLoaderView(LoginRequiredMixin, ListView):
     """
     template_name = 'loader/sections.html'
     http_method_names = ['get', 'post']
-    object_list = [get_festival_row(festival) for festival in Festival.festivals.order_by('-start_date')]
-    queryset = object_list
+    object_list = None
+    queryset = None
     context_object_name = 'festival_rows'
     unexpected_error = ''
 
+    def get_queryset(self):
+        festivals = Festival.festivals.order_by('-start_date')
+        object_rows = [get_festival_row(festival) for festival in festivals]
+        return object_rows
+
     def get_context_data(self, **kwargs):
+        self.object_list = self.get_queryset()
         context = add_base_context(self.request, super().get_context_data(**kwargs))
         context['title'] = 'Program Sections Loader'
         context['unexpected_error'] = self.unexpected_error
@@ -246,6 +252,7 @@ class SectionsLoaderView(LoginRequiredMixin, ListView):
     def dispatch(self, request, *args, **kwargs):
         if request.method == 'POST':
             picked_festival = None
+            self.object_list = self.get_queryset()
             names = [(f'{row["id"]}', row['festival']) for row in self.object_list]
             for name, festival in names:
                 if name in request.POST:

@@ -20,6 +20,17 @@ articles_file = os.path.join(interface_dir, "articles.txt")
 unicode_file = os.path.join(interface_dir, "unicodemap.txt")
 
 
+def get_screen_from_parse_name(festival_data, screen_parse_name, split_location):
+    city_name, theater_parse_name, screen_abbreviation = split_location(screen_parse_name)
+    screen = festival_data.get_screen(
+        city_name,
+        screen_parse_name,
+        theater_parse_name=theater_parse_name,
+        screen_abbreviation=screen_abbreviation
+    )
+    return screen
+
+
 def write_lists(festival_data, write_film_list, write_other_lists):
 
     if write_film_list or write_other_lists:
@@ -369,6 +380,16 @@ class Screening:
         end_time = self.end_datetime.time().isoformat()
         return f'{start_time} - {end_time}, {self.screen.abbr}, {self.film.title}'
 
+    def __eq__(self, other):
+        lhs = (self.film.filmid, self.screen.screen_id, self.start_datetime, self.end_datetime)
+        rhs = (other.film.filmid, other.screen.screen_id, other.start_datetime, other.end_datetime)
+        return lhs == rhs
+
+    def __hash__(self):
+        return hash((
+            self.film.filmid, self.screen.screen_id, self.start_datetime, self.end_datetime
+        ))
+
     @staticmethod
     def screening_repr_csv_head():
         text = ";".join([
@@ -457,8 +478,7 @@ class FestivalData:
             self.title_by_film_id[film_id] = title
             self.film_id_by_url[url] = film_id
             return Film(self.film_seqnr, film_id, title, url)
-        else:
-            return None
+        return None
 
     def new_film_id(self, key):
         try:

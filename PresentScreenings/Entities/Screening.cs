@@ -48,6 +48,7 @@ namespace PresentScreenings.TableView
         public DateTime StartDate => StartTime.Date;
         public TimeSpan Duration => EndTime - StartTime;
         public FilmRating Rating => Film.Rating;
+        public FilmRating SecondRating => Film.SecondRating;
         public bool HasQAndA => QAndA != string.Empty;
         public List<string> AttendingFilmFans { get => _screeningInfo.Attendees; set => _screeningInfo.Attendees = value; }
         public bool IAttend => _screeningInfo.IAttend;

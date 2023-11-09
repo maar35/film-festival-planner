@@ -11,7 +11,7 @@ Created on Tue Nov 24 16:18:02 2020
 import datetime
 import unittest
 
-from IDFA.parse_idfa_html import IdfaData, plandata_dir, Film, FilmPageParser
+from IDFA.parse_idfa_html import IdfaData, plandata_dir, IdfaFilm, FilmPageParser
 from Shared.planner_interface import FilmTitleError, ScreenedFilm
 
 
@@ -53,7 +53,7 @@ class CompareIdfaFilmsTestCase(unittest.TestCase):
         for test_film in test_films:
             film = self.idfa_data.create_film(test_film.title, test_film.url)
             film.duration = test_film.duration
-            self.idfa_films.append(Film(film))
+            self.idfa_films.append(IdfaFilm(film))
 
     def test_compare_alpha_digit(self):
         # Arrange.

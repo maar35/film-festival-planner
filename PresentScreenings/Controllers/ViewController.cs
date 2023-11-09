@@ -519,7 +519,7 @@ namespace PresentScreenings.TableView
                 // Compose duplicates info.
                 string line = Environment.NewLine;
                 StringBuilder builder = new StringBuilder($"Duplicate screenings:{line}{line}");
-                builder.AppendJoin<Screening>($",{line}", removedScreenings);
+                builder.AppendJoin($"{line}{line}", removedScreenings);
 
                 // Write duplicates info.
                 AlertRaiser.WriteInfo(builder.ToString());
@@ -682,6 +682,17 @@ namespace PresentScreenings.TableView
             var ratings = ScreeningInfo.FilmFans.Select(f => GetFilmFanFilmRating(film, f));
             var rating = ratings.Max();
             return rating;
+        }
+
+        public static FilmRating GetSecondRating(Film film)
+        {
+            FilmRating maxRating = film.MaxRating;
+            var ratings = ScreeningInfo.FilmFans
+                .Select(f => GetFilmFanFilmRating(film, f));
+            var lower_ratings = ratings
+                .Where(r => r != maxRating);
+            FilmRating secondRating = lower_ratings.Max();
+            return secondRating;
         }
         #endregion
 

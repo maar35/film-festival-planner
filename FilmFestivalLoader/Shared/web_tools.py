@@ -9,6 +9,7 @@ Created on Mon Nov  2 18:27:20 2020
 import json
 import os
 from enum import Enum, auto
+from time import sleep
 from urllib.error import HTTPError
 from urllib.parse import quote, urlparse, urlunparse
 from urllib.request import urlopen, Request
@@ -104,15 +105,15 @@ class UrlFile:
             self.error_collector.add(str(e), f'{self.url}')
             self.encoding = self.default_encoding
 
-    def get_text(self, comment_at_download=None):
-        if os.path.isfile(self.path):
+    def get_text(self, comment_at_download=None, always_download=False):
+        if not always_download and os.path.isfile(self.path):
             with open(self.path, 'r', encoding=self.encoding) as f:
                 html_text = f.read()
         else:
             if comment_at_download is not None:
                 print(comment_at_download)
             reader = UrlReader(self.error_collector)
-            html_text = reader.load_url(self.url, self.path, self.encoding)
+            html_text = reader.load_url(self.url, target_file=self.path, encoding=self.encoding)
         return html_text
 
     def set_encoding(self):
@@ -169,7 +170,7 @@ class HtmlCharsetParser(BaseHtmlPageParser):
     default_charset = None
 
     def __init__(self, debug_recorder):
-        BaseHtmlPageParser.__init__(self, debug_recorder, 'CH', debugging=True)
+        BaseHtmlPageParser.__init__(self, debug_recorder, 'CH', debugging=False)
         self.state_stack = self.StateStack(self.print_debug, self.CharsetParseState.AWAITING_CHARSET)
         self.charset = None
 
