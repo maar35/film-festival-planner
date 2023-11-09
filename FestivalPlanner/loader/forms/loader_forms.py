@@ -283,14 +283,7 @@ class SimpleLoader(BaseLoader):
             return False
 
         # Update or create either all objects or none.
-        transaction_committed = False
-        try:
-            with transaction.atomic():
-                self.update_or_create(updated_object_set)
-                transaction_committed = True
-        except IntegrityError as e:
-            updated_object_set = set()
-            self.add_log(f'{e}: database rolled back.')
+        transaction_committed = self.atomic_update_or_create(updated_object_set)
 
         # Delete objects that do not appear in the file.
         if self.delete_disappeared_objects and transaction_committed:
@@ -321,6 +314,16 @@ class SimpleLoader(BaseLoader):
                 raise ValueError(f"Couldn't construct new {self.object_name} object from {value_by_field}.")
 
         return True
+
+    def atomic_update_or_create(self, updated_object_set):
+        transaction_committed = False
+        try:
+            with transaction.atomic():
+                self.update_or_create(updated_object_set)
+                transaction_committed = True
+        except IntegrityError as e:
+            self.add_log(f'{e}: database rolled back.')
+        return transaction_committed
 
     def update_or_create(self, updated_object_set):
         objects_by_created = {}
@@ -355,7 +358,7 @@ class SimpleLoader(BaseLoader):
             value_by_field = self.get_value_by_field(obj)
             value_by_field_list.append(value_by_field)
         self.value_by_field_list = value_by_field_list
-        self.update_or_create(dummy_set)
+        self.atomic_update_or_create(dummy_set)
 
     def pop_key_fields(self, value_by_field):
         value_by_key_field = {}

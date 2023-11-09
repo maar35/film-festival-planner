@@ -12,7 +12,7 @@ from enum import Enum, auto
 
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment
 from Shared.parse_tools import FileKeeper, HtmlPageParser, try_parse_festival_sites
-from Shared.planner_interface import FilmInfo, FestivalData, Film
+from Shared.planner_interface import FilmInfo, FestivalData, Film, get_screen_from_parse_name
 from Shared.web_tools import UrlFile
 
 # Parameters.
@@ -141,16 +141,9 @@ class AzPageParser(HtmlPageParser):
         duration = datetime.timedelta(minutes=int(minutes))
         return duration
 
-    def get_screen(self, data):
+    def get_imagine_screen(self, data):
         screen_parse_name = data.strip()
-        city_name, theater_parse_name, screen_abbreviation = self.split_location(screen_parse_name)
-        screen = self.festival_data.get_screen(
-            city_name,
-            screen_parse_name,
-            theater_parse_name=theater_parse_name,
-            screen_abbreviation=screen_abbreviation
-        )
-        return screen
+        return get_screen_from_parse_name(self.festival_data, screen_parse_name, self.split_location)
 
     def split_location(self, location):
         city_name = festival_city
@@ -293,7 +286,7 @@ class AzPageParser(HtmlPageParser):
             self.title = self.get_title(data)
             self.stateStack.pop()
         elif self.stateStack.state_is(self.AzParseState.IN_SCREEN):
-            self.screen = self.get_screen(data)
+            self.screen = self.get_imagine_screen(data)
             self.stateStack.pop()
         elif self.stateStack.state_is(self.AzParseState.IN_DURATION):
             self.duration = self.get_duration(data)

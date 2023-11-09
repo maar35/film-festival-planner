@@ -577,7 +577,7 @@ class TheaterDataLoaderViewsTests(LoaderViewsTests):
 
     @skip("Importing planner interface doesn't work anymore")
     def test_regular_user_cannot_load_new_screens(self):
-        # Arrange.
+        # # Arrange.
         # self.arrange_new_screens()
 
         # Act.

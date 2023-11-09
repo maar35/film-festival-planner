@@ -105,7 +105,7 @@ class UrlFile:
             self.error_collector.add(str(e), f'{self.url}')
             self.encoding = self.default_encoding
 
-    def get_text(self, comment_at_download=None, always_download=False, repeat=0):
+    def get_text(self, comment_at_download=None, always_download=False):
         if not always_download and os.path.isfile(self.path):
             with open(self.path, 'r', encoding=self.encoding) as f:
                 html_text = f.read()
@@ -113,7 +113,7 @@ class UrlFile:
             if comment_at_download is not None:
                 print(comment_at_download)
             reader = UrlReader(self.error_collector)
-            html_text = reader.load_url(self.url, target_file=self.path, encoding=self.encoding, repeat=repeat)
+            html_text = reader.load_url(self.url, target_file=self.path, encoding=self.encoding)
         return html_text
 
     def set_encoding(self):
@@ -144,13 +144,9 @@ class UrlReader:
     def get_request(cls, url):
         return Request(url, headers=cls.headers)
 
-    def load_url(self, url, target_file=None, encoding=DEFAULT_ENCODING, repeat=0):
+    def load_url(self, url, target_file=None, encoding=DEFAULT_ENCODING):
         request = self.get_request(url)
         try:
-            for i in range(repeat):
-                with urlopen(request, timeout=self.timeout) as response:
-                    _ = response.read(100)
-                sleep(0.4)
             with urlopen(request, timeout=self.timeout) as response:
                 html_bytes = response.read()
         except HTTPError as e:
@@ -174,7 +170,7 @@ class HtmlCharsetParser(BaseHtmlPageParser):
     default_charset = None
 
     def __init__(self, debug_recorder):
-        BaseHtmlPageParser.__init__(self, debug_recorder, 'CH', debugging=True)
+        BaseHtmlPageParser.__init__(self, debug_recorder, 'CH', debugging=False)
         self.state_stack = self.StateStack(self.print_debug, self.CharsetParseState.AWAITING_CHARSET)
         self.charset = None
 

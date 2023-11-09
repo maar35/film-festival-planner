@@ -20,6 +20,17 @@ articles_file = os.path.join(interface_dir, "articles.txt")
 unicode_file = os.path.join(interface_dir, "unicodemap.txt")
 
 
+def get_screen_from_parse_name(festival_data, screen_parse_name, split_location):
+    city_name, theater_parse_name, screen_abbreviation = split_location(screen_parse_name)
+    screen = festival_data.get_screen(
+        city_name,
+        screen_parse_name,
+        theater_parse_name=theater_parse_name,
+        screen_abbreviation=screen_abbreviation
+    )
+    return screen
+
+
 def write_lists(festival_data, write_film_list, write_other_lists):
 
     if write_film_list or write_other_lists:
