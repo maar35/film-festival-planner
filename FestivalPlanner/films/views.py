@@ -175,18 +175,30 @@ def films(request):
     unexpected_errors = []
 
     # Get the table rows.
-    film_list_rows = []
+    film_rating_rows = []
+    fragment_name_by_row_nr = {}
     try:
-        film_list_rows = [{
-            'film': film,
-            'duration_str': film.duration_str(),
-            'duration_seconds': film.duration.total_seconds(),
-            'subsection': get_subsection(film),
-            'section': None,
-            'film_ratings': get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix),
-        } for film in festival_films]
+        for row_nr, film in enumerate(festival_films):
+            fragment_row = row_nr - 2 if row_nr > 2 else 0
+            fragment_name_by_row_nr[fragment_row] = f'film{film.film_id}'
+            film_rating_row = {
+                'film': film,
+                'fragment_name': None,
+                'duration_str': film.duration_str(),
+                'duration_seconds': film.duration.total_seconds(),
+                'subsection': get_subsection(film),
+                'section': None,
+                'film_ratings': get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix),
+            }
+            film_rating_rows.append(film_rating_row)
     except Subsection.DoesNotExist as e:
         unexpected_errors = [f"{e}"]
+    else:
+        for row_nr, film_rating_row in enumerate(film_rating_rows):
+            try:
+                film_rating_row['fragment_name'] = fragment_name_by_row_nr[row_nr]
+            except KeyError:
+                film_rating_row['fragment_name'] = 0
 
     # Construct the context.
     context = add_base_context(request, {
@@ -197,7 +209,7 @@ def films(request):
         'highest_rating': highest_rating,
         'eligible_counts': count_dicts,
         'short_threshold': timedelta(minutes=max_short_minutes).total_seconds(),
-        'film_list_rows': film_list_rows,
+        'film_rating_rows': film_rating_rows,
         'unexpected_errors': unexpected_errors,
     })
     refresh_rating_action(session, context)

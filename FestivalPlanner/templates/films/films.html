@@ -75,9 +75,10 @@
             </tr>
         </thead>
         <tbody>
-        {% for row in film_list_rows %}
+        {% for row in film_rating_rows %}
         <tr>
             <td style="max-width: 720px">
+                <a name="{{ row.fragment_name }}"></a>
                 <a href="{% url 'films:results' row.film.id %}">
                     {{ row.film.title }}
                 </a>
