@@ -5,9 +5,10 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
-from django.views.generic import FormView, DetailView
+from django.views import View
+from django.views.generic import FormView, DetailView, ListView
 
-from festival_planner.tools import add_base_context, unset_log, get_log, wrap_up_form_errors, application_name
+from festival_planner.tools import add_base_context, unset_log, get_log, wrap_up_form_errors, application_name, pr_debug
 from festivals.config import Config
 from festivals.models import Festival, current_festival
 from films.forms.film_forms import RatingForm, PickRating, UserForm
@@ -15,6 +16,129 @@ from films.models import FilmFanFilmRating, Film, get_rating_name, FilmFan, curr
 from loader.forms.loader_forms import SaveRatingsForm
 from loader.views import file_record_count
 from sections.models import Subsection
+
+
+class FilmsView(LoginRequiredMixin, View):
+    """
+    Film list with updatable ratings.
+    """
+    template_name = 'films/films.html'
+    submit_name_prefix = 'list_'
+    unexpected_errors = None
+
+    @staticmethod
+    def get(request, *args, **kwargs):
+        view = FilmsListView.as_view()
+        return view(request, *args, **kwargs)
+
+    @staticmethod
+    def post(request, *args, **kwargs):
+        view = FilmsFormView.as_view()
+        return view(request, *args, **kwargs)
+
+
+class FilmsListView(LoginRequiredMixin, ListView):
+    template_name = FilmsView.template_name
+    http_method_names = ['get']
+    queryset = None
+    context_object_name = 'film_rows'
+    display_shorts = True
+    title = 'Film Rating List'
+    highest_rating = FilmFanFilmRating.Rating.values[-1]
+    config = Config().config
+    max_short_minutes = config['Constants']['MaxShortMinutes']
+    fragment_name_by_row_nr = {}
+    fan_list = get_present_fans()
+    logged_in_fan = None
+    festival = None
+    festival_films = None
+
+    def get_queryset(self):
+        FilmsView.unexpected_errors = []
+        session = self.request.session
+        self.logged_in_fan = current_fan(session)
+        self.festival = current_festival(session)
+        self.festival_films = Film.films.filter(festival=self.festival).order_by('seq_nr')
+        self.fragment_name_by_row_nr = {}
+        film_rows = [self.get_film_row(row_nr, film) for row_nr, film in enumerate(self.festival_films)]
+        for row_nr, film_row in enumerate(film_rows):
+            try:
+                film_row['fragment_name'] = self.fragment_name_by_row_nr[row_nr]
+            except KeyError:
+                film_row['fragment_name'] = 0
+        pr_debug(f'{len(self.fragment_name_by_row_nr)=}')
+        return film_rows
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        super_context = super().get_context_data(**kwargs)
+        film_count, rated_films_count, count_dicts = get_rating_statistic(self.festival, self.festival_films)
+        new_context = {
+            'title': self.title,
+            'fans': self.fan_list,
+            'feature_count': film_count,
+            'rated_features_count': rated_films_count,
+            'highest_rating': self.highest_rating,
+            'eligible_counts': count_dicts,
+            'short_threshold': timedelta(minutes=self.max_short_minutes).total_seconds(),
+            'unexpected_errors': FilmsView.unexpected_errors,
+        }
+        context = add_base_context(self.request, {**super_context, **new_context})
+        pr_debug(f'{context["festival"]=}')
+        session = self.request.session
+        PickRating.refresh_rating_action(session, context)
+        context['log'] = get_log(session)
+        return context
+
+    def get_film_row(self, row_nr, film):
+        fragment_row = row_nr - 2 if row_nr > 2 else 0
+        self.fragment_name_by_row_nr[fragment_row] = f'film{film.film_id}'
+        film_rating_row = {
+            'film': film,
+            'fragment_name': None,
+            'duration_str': film.duration_str(),
+            'duration_seconds': film.duration.total_seconds(),
+            'subsection': self.get_subsection(film),
+            'section': None,
+            'film_ratings': get_fan_ratings(film, self.fan_list, self.logged_in_fan, FilmsView.submit_name_prefix),
+        }
+        return film_rating_row
+
+    @staticmethod
+    def get_subsection(film):
+        if len(film.subsection) == 0:
+            return ''
+        try:
+            subsection = Subsection.subsections.get(festival=film.festival, subsection_id=film.subsection)
+        except Subsection.DoesNotExist as e:
+            FilmsView.unexpected_errors.append(f'{e}')
+            subsection = ''
+        return subsection
+
+
+class FilmsFormView(LoginRequiredMixin, FormView):
+    template_name = FilmsView.template_name
+    form_class = PickRating
+    http_method_names = ['post']
+    film = None
+
+    def form_valid(self, form):
+        submitted_name = list(self.request.POST.keys())[-1]
+        if submitted_name is not None:
+            film_pk, rating_value = submitted_name.strip(FilmsView.submit_name_prefix).split('_')
+            self.film = Film.films.get(id=film_pk)
+            session = self.request.session
+            fan = current_fan(session)
+            form.update_rating(session, self.film, fan, rating_value)
+        else:
+            FilmsView.unexpected_errors.append("Can't identify submit widget.")
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        FilmsView.unexpected_errors.append(f'Form {form} invalid:\n{wrap_up_form_errors(form.errors)}')
+        return super().form_invalid(form)
+
+    def get_success_url(self):
+        return reverse('films:films') + f'#film{self.film.film_id}'
 
 
 class ResultsView(DetailView):
@@ -58,7 +182,7 @@ class ResultsView(DetailView):
             if submitted_name is not None:
                 [film_pk, rating_value] = submitted_name.strip(self.submit_name_prefix).split('_')
                 film = Film.films.get(id=film_pk)
-                update_rating(session, film, current_fan(session), rating_value)
+                PickRating.update_rating(session, film, current_fan(session), rating_value)
 
                 return HttpResponseRedirect(reverse('films:results', args=(film_pk,)))
             else:
@@ -150,89 +274,6 @@ def film_fan(request):
     })
 
     return render(request, 'films/film_fan.html', context)
-
-
-@login_required
-def films(request):
-    """
-    Film ratings view.
-    :param request:
-    :return: the rendered ratings page
-    """
-
-    # Initialize.
-    title = 'Film Rating List'
-    submit_name_prefix = 'list_'
-    config = Config().config
-    max_short_minutes = config['Constants']['MaxShortMinutes']
-    session = request.session
-    logged_in_fan = current_fan(session)
-    festival = current_festival(session)
-    festival_films = Film.films.filter(festival=festival).order_by('seq_nr')
-    film_count, rated_films_count, count_dicts = get_rating_statistic(festival, festival_films)
-    fan_list = get_present_fans()
-    highest_rating = FilmFanFilmRating.Rating.values[-1]
-    unexpected_errors = []
-
-    # Get the table rows.
-    film_rating_rows = []
-    fragment_name_by_row_nr = {}
-    try:
-        for row_nr, film in enumerate(festival_films):
-            fragment_row = row_nr - 2 if row_nr > 2 else 0
-            fragment_name_by_row_nr[fragment_row] = f'film{film.film_id}'
-            film_rating_row = {
-                'film': film,
-                'fragment_name': None,
-                'duration_str': film.duration_str(),
-                'duration_seconds': film.duration.total_seconds(),
-                'subsection': get_subsection(film),
-                'section': None,
-                'film_ratings': get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix),
-            }
-            film_rating_rows.append(film_rating_row)
-    except Subsection.DoesNotExist as e:
-        unexpected_errors = [f"{e}"]
-    else:
-        for row_nr, film_rating_row in enumerate(film_rating_rows):
-            try:
-                film_rating_row['fragment_name'] = fragment_name_by_row_nr[row_nr]
-            except KeyError:
-                film_rating_row['fragment_name'] = 0
-
-    # Construct the context.
-    context = add_base_context(request, {
-        'title': title,
-        'fans': fan_list,
-        'feature_count': film_count,
-        'rated_features_count': rated_films_count,
-        'highest_rating': highest_rating,
-        'eligible_counts': count_dicts,
-        'short_threshold': timedelta(minutes=max_short_minutes).total_seconds(),
-        'film_rating_rows': film_rating_rows,
-        'unexpected_errors': unexpected_errors,
-    })
-    refresh_rating_action(session, context)
-
-    # Check the request.
-    if request.method == 'POST':
-        unset_log(session)
-        form = PickRating(request.POST)
-        if form.is_valid():
-            submitted_name = list(request.POST.keys())[-1]
-            if submitted_name is not None:
-                [film_pk, rating_value] = submitted_name.strip(submit_name_prefix).split('_')
-                film = Film.films.get(id=film_pk)
-                update_rating(session, film, logged_in_fan, rating_value)
-
-                return HttpResponseRedirect(reverse('films:films'))
-            else:
-                context['unexpected_errors'].append("Can't identify submit widget.")
-        else:
-            context['unexpected_errors'].append(wrap_up_form_errors(form.errors))
-
-    context['log'] = get_log(session)
-    return render(request, "films/films.html", context)
 
 
 def get_rating_statistic(festival, films):
@@ -335,45 +376,6 @@ def get_submitted_name(request, submit_names):
     return submitted_name
 
 
-def update_rating(session, film, fan, rating_value):
-    old_rating_str = fan.fan_rating_str(film)
-    new_rating, created = FilmFanFilmRating.film_ratings.update_or_create(
-        film=film,
-        film_fan=fan,
-        defaults={'rating': rating_value},
-    )
-    zero_ratings = FilmFanFilmRating.film_ratings.filter(film=film, film_fan=fan, rating=0)
-    if len(zero_ratings) > 0:
-        zero_ratings.delete()
-    init_rating_action(session, old_rating_str, new_rating)
-
-
-def init_rating_action(session, old_rating_str, new_rating):
-    new_rating_name = get_rating_name(new_rating.rating)
-    rating_action = {
-        'fan': str(current_fan(session)),
-        'old_rating': old_rating_str,
-        'new_rating': str(new_rating.rating),
-        'new_rating_name': new_rating_name,
-        'rated_film': str(new_rating.film),
-        'rated_film_id': new_rating.film.id,
-        'action_time': datetime.now().isoformat(),
-    }
-    session[rating_action_key(session)] = rating_action
-
-
-def refresh_rating_action(session, context):
-    key = rating_action_key(session)
-    if key in session:
-        action = session[key]
-        context['action'] = action
-        context['action']['action_time'] = datetime.fromisoformat(action['action_time'])
-
-
-def rating_action_key(session):
-    return f'rating_action_{current_festival(session).id}'
-
-
 @login_required
 def rating(request, film_pk):
     """
@@ -390,7 +392,7 @@ def rating(request, film_pk):
         form = RatingForm(request.POST)
         if form.is_valid():
             selected_rating = form.cleaned_data['fan_rating']
-            update_rating(request.session, film, fan, selected_rating)
+            PickRating.update_rating(request.session, film, fan, selected_rating)
             return HttpResponseRedirect(reverse('films:results', args=[film_pk]))
     else:
         try:

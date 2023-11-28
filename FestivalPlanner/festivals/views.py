@@ -11,7 +11,6 @@ from festivals.forms.set_festival import FestivalEdition, TestNearestFestival
 from festivals.models import Festival, default_festival
 
 
-# Define generic view classes.
 class IndexView(generic.ListView):
     template_name = 'festivals/index.html'
     http_method_names = ['get', 'post']
@@ -43,10 +42,11 @@ class IndexView(generic.ListView):
         return render(request, 'festivals/index.html', self.get_context_data())
 
 
-# Festival details view.
 @login_required
 def detail(request, festival_id):
-
+    """
+    Festival details view.
+    """
     # Preset some parameters.
     title = "Festival Picker"
     festival = get_object_or_404(Festival, id=festival_id)

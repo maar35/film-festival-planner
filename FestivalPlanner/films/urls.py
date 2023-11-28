@@ -12,8 +12,7 @@ urlpatterns = [
     path('film_fan/', views.film_fan, name='film_fan'),
 
     # Display ratings of all films by all fans.
-    # Allows to access a detail page for a specific film.
-    path('films/', views.films, name='films'),
+    path('films/', views.FilmsView.as_view(), name='films'),
 
     # Display ratings by fans of a specific film.
     # Example: /films/5/results/
