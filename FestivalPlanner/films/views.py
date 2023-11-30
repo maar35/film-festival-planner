@@ -1,18 +1,20 @@
-from datetime import datetime, timedelta
+import copy
+from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Exists, OuterRef
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import View
 from django.views.generic import FormView, DetailView, ListView
 
-from festival_planner.tools import add_base_context, unset_log, get_log, wrap_up_form_errors, application_name, pr_debug
+from festival_planner.tools import add_base_context, unset_log, get_log, wrap_up_form_errors, application_name
 from festivals.config import Config
 from festivals.models import Festival, current_festival
 from films.forms.film_forms import RatingForm, PickRating, UserForm
-from films.models import FilmFanFilmRating, Film, get_rating_name, FilmFan, current_fan, get_present_fans
+from films.models import FilmFanFilmRating, Film, FilmFan, current_fan, get_present_fans
 from loader.forms.loader_forms import SaveRatingsForm
 from loader.views import file_record_count
 from sections.models import Subsection
@@ -25,6 +27,8 @@ class FilmsView(LoginRequiredMixin, View):
     template_name = 'films/films.html'
     submit_name_prefix = 'list_'
     unexpected_errors = None
+    display_shorts = True
+    display_rated_by_fan = {fan.name: True for fan in get_present_fans()}
 
     @staticmethod
     def get(request, *args, **kwargs):
@@ -42,55 +46,84 @@ class FilmsListView(LoginRequiredMixin, ListView):
     http_method_names = ['get']
     queryset = None
     context_object_name = 'film_rows'
-    display_shorts = True
     title = 'Film Rating List'
     highest_rating = FilmFanFilmRating.Rating.values[-1]
     config = Config().config
     max_short_minutes = config['Constants']['MaxShortMinutes']
+    short_threshold = timedelta(minutes=max_short_minutes)
+    sticky_height = 2
     fragment_name_by_row_nr = {}
+    action_by_display_shorts = {True: 'Hide shorts', False: 'Include shorts'}
+    action_by_display_rated = {True: 'Hide rated', False: 'Include rated'}
     fan_list = get_present_fans()
     logged_in_fan = None
     festival = None
-    festival_films = None
+    selected_films = None
+    festival_feature_films = None
+
+    def dispatch(self, request, *args, **kwargs):
+        if 'filter' in request.GET:
+            column_filter = request.GET['filter']
+            if column_filter == 'shorts':
+                FilmsView.display_shorts = not FilmsView.display_shorts
+        for fan in self.fan_list:
+            if f'filter_{fan}' in request.GET:
+                column_filter = request.GET[f'filter_{fan}']
+                if column_filter == 'rated':
+                    FilmsView.display_rated_by_fan[fan.name] = not FilmsView.display_rated_by_fan[fan.name]
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         FilmsView.unexpected_errors = []
         session = self.request.session
         self.logged_in_fan = current_fan(session)
         self.festival = current_festival(session)
-        self.festival_films = Film.films.filter(festival=self.festival).order_by('seq_nr')
         self.fragment_name_by_row_nr = {}
-        film_rows = [self.get_film_row(row_nr, film) for row_nr, film in enumerate(self.festival_films)]
+
+        # Filter the films as requested.
+        filter_kwargs = {'festival': self.festival}
+        if not FilmsView.display_shorts:
+            filter_kwargs['duration__gt'] = self.short_threshold
+        self.selected_films = Film.films.filter(**filter_kwargs).order_by('seq_nr')
+        self.festival_feature_films = copy.deepcopy(self.selected_films)
+        for fan in self.fan_list:
+            if not FilmsView.display_rated_by_fan[fan.name]:
+                self.selected_films = self.selected_films.filter(
+                    ~Exists(FilmFanFilmRating.film_ratings.filter(film=OuterRef('pk'), film_fan=fan))
+                )
+        film_rows = [self.get_film_row(row_nr, film) for row_nr, film in enumerate(self.selected_films)]
+
+        # Add a fragment name as to be able to address a specific film.
         for row_nr, film_row in enumerate(film_rows):
             try:
                 film_row['fragment_name'] = self.fragment_name_by_row_nr[row_nr]
             except KeyError:
                 film_row['fragment_name'] = 0
-        pr_debug(f'{len(self.fragment_name_by_row_nr)=}')
+
         return film_rows
 
     def get_context_data(self, *, object_list=None, **kwargs):
         super_context = super().get_context_data(**kwargs)
-        film_count, rated_films_count, count_dicts = get_rating_statistic(self.festival, self.festival_films)
+        film_count, rated_films_count, count_dicts = get_rating_statistic(self.festival_feature_films)
         new_context = {
             'title': self.title,
-            'fans': self.fan_list,
+            'fan_headers': self.get_fan_headers(),
             'feature_count': film_count,
             'rated_features_count': rated_films_count,
             'highest_rating': self.highest_rating,
             'eligible_counts': count_dicts,
-            'short_threshold': timedelta(minutes=self.max_short_minutes).total_seconds(),
+            'short_threshold': self.short_threshold.total_seconds(),
+            'display_shorts_action': self.action_by_display_shorts[FilmsView.display_shorts],
             'unexpected_errors': FilmsView.unexpected_errors,
         }
         context = add_base_context(self.request, {**super_context, **new_context})
-        pr_debug(f'{context["festival"]=}')
         session = self.request.session
         PickRating.refresh_rating_action(session, context)
         context['log'] = get_log(session)
         return context
 
     def get_film_row(self, row_nr, film):
-        fragment_row = row_nr - 2 if row_nr > 2 else 0
+        fragment_row = row_nr - self.sticky_height if row_nr > self.sticky_height else 0
         self.fragment_name_by_row_nr[fragment_row] = f'film{film.film_id}'
         film_rating_row = {
             'film': film,
@@ -113,6 +146,13 @@ class FilmsListView(LoginRequiredMixin, ListView):
             FilmsView.unexpected_errors.append(f'{e}')
             subsection = ''
         return subsection
+
+    def get_fan_headers(self):
+        fan_headers = [{
+            'fan': fan,
+            'action': self.action_by_display_rated[FilmsView.display_rated_by_fan[fan.name]]
+        } for fan in self.fan_list]
+        return fan_headers
 
 
 class FilmsFormView(LoginRequiredMixin, FormView):
@@ -276,8 +316,7 @@ def film_fan(request):
     return render(request, 'films/film_fan.html', context)
 
 
-def get_rating_statistic(festival, films):
-
+def get_rating_statistic(films):
     def get_stats_for_rating(base_rating):
         counts = [count for r, count in count_by_eligible_rating.items() if r >= base_rating]
         plannable_films_count = sum(counts)
