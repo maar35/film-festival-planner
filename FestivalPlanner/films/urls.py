@@ -21,8 +21,4 @@ urlpatterns = [
     # Allow the current user to rate a specific film.
     # Example: /films/5/rating/
     path('<int:film_pk>/rating/', views.rating, name='rating'),
-
-    # Allow an admin user to save the ratings.
-    # Example: /films/5/save/
-    path('<int:pk>/save/', views.SaveView.as_view(), name='save'),
 ]

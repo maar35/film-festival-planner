@@ -8,7 +8,7 @@ from django.views import generic
 
 from festival_planner.tools import add_base_context
 from festivals.forms.set_festival import FestivalEdition, TestNearestFestival
-from festivals.models import Festival, default_festival
+from festivals.models import Festival, default_festival, switch_festival
 
 
 class IndexView(generic.ListView):
@@ -34,7 +34,7 @@ class IndexView(generic.ListView):
                     picked_festival = festival
                     break
             if picked_festival is not None:
-                picked_festival.set_current(request.session)
+                switch_festival(request.session, picked_festival)
                 return HttpResponseRedirect(reverse('films:index'))
             else:
                 self.unexpected_error = f'Submit name not found in POST ({request.POST}'
@@ -57,7 +57,7 @@ def detail(request, festival_id):
         if form.is_valid():
             selected_festival_id = form.cleaned_data['festival']
             selected_festival = Festival.festivals.get(pk=selected_festival_id)
-            selected_festival.set_current(request.session)
+            switch_festival(request.session, selected_festival)
             return HttpResponseRedirect(reverse('festivals:detail', args=[selected_festival_id]))
     else:
         form = FestivalEdition(initial={'festival': festival.id}, auto_id=False)
@@ -92,7 +92,7 @@ def test_default_festival(request):
         if form.is_valid():
             sample_date = form.cleaned_data['sample_date']
             festival = default_festival(sample_date)
-            festival.set_current(session)
+            switch_festival(session, festival)
             session['sample_date'] = str(sample_date)
             session['default_festival'] = str(festival)
             return HttpResponseRedirect(reverse('festivals:test_default_festival'))

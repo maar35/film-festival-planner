@@ -4,8 +4,11 @@ import datetime
 from django.db import IntegrityError, transaction
 from django.forms import Form, BooleanField, SlugField
 
+from festival_planner.cache import FilmRatingCache
 from festival_planner.tools import initialize_log, add_log
+from films.forms.film_forms import PickRating
 from films.models import Film, FilmFanFilmRating, FilmFan
+from films.views import FilmsView
 from sections.models import Section, Subsection
 from theaters.models import Theater, theaters_path, City, cities_path, Screen, screens_path, cities_cache_path, \
     theaters_cache_path, screens_cache_path
@@ -22,6 +25,11 @@ class RatingLoaderForm(Form):
     def load_rating_data(session, festival, import_mode=False):
         initialize_log(session)
         import_mode or add_log(session, 'No ratings will be effected.')
+
+        # Invalidate the cache associated with the current festival.
+        if not PickRating.film_rating_cache:
+            PickRating.film_rating_cache = FilmRatingCache(session, FilmsView.unexpected_errors)
+        PickRating.film_rating_cache.invalidate_festival_caches(festival)
 
         # Save ratings if the import mode flag is set and all ratings
         # are replaced.

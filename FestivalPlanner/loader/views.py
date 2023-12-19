@@ -1,4 +1,3 @@
-import csv
 from operator import attrgetter
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -8,11 +7,11 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import FormView, ListView
 
-from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, pr_debug
-from festivals.models import Festival
+from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log
+from festivals.models import Festival, switch_festival, current_festival
 from films.models import Film, FilmFanFilmRating
 from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoaderForm, TheaterDataLoaderForm, \
-    TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm
+    TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm, SaveRatingsForm
 from sections.models import Section, Subsection
 from theaters.models import Theater, City, cities_path, theaters_path, screens_path, Screen, new_screens_path, \
     new_cities_path, new_theaters_path
@@ -260,7 +259,7 @@ class SectionsLoaderView(LoginRequiredMixin, ListView):
                     break
             if picked_festival is not None:
                 session = request.session
-                picked_festival.set_current(session)
+                switch_festival(session, picked_festival)
                 initialize_log(session)
                 if SectionLoader(session, picked_festival).load_objects():
                     SubsectionLoader(session, picked_festival).load_objects()
@@ -313,7 +312,7 @@ class RatingsLoaderView(LoginRequiredMixin, ListView):
                     import_mode = form.cleaned_data['import_mode']
                     festival_id = int(festival_indicator.strip(self.submit_name_prefix))
                     festival = Festival.festivals.get(pk=festival_id)
-                    festival.set_current(request.session)
+                    switch_festival(request.session, festival)
                     form.load_rating_data(request.session, festival, import_mode)
                     return HttpResponseRedirect(reverse('films:films'))
                 else:
@@ -332,3 +331,35 @@ class RatingsLoaderView(LoginRequiredMixin, ListView):
             'rating_count': FilmFanFilmRating.film_ratings.filter(film__festival=festival).count,
         }
         return festival_row
+
+
+class SaveView(LoginRequiredMixin, FormView):
+    model = Festival
+    template_name = 'loader/save.html'
+    form_class = SaveRatingsForm
+    success_url = '/films/films/'
+    http_method_names = ['get', 'post']
+
+    def get_context_data(self, **kwargs):
+        session = self.request.session
+        festival = current_festival(session)
+        festival_items = {
+            'festival': festival,
+            'film_count': len(Film.films.filter(festival=festival)),
+            'film_count_on_file': file_record_count(festival.films_file, has_header=True),
+            'rating_count': len(FilmFanFilmRating.film_ratings.filter(film__festival=festival)),
+            'rating_count_on_file': file_record_count(festival.ratings_file, has_header=True),
+            'ratings_file': festival.ratings_file,
+        }
+        context = add_base_context(self.request, super().get_context_data(**kwargs))
+        context['title'] = 'Save Ratings'
+        context['festival_items'] = festival_items
+        context['log'] = get_log(session)
+        unset_log(session)
+        return context
+
+    def form_valid(self, form):
+        session = self.request.session
+        festival = current_festival(session)
+        form.save_ratings(session, festival)
+        return super().form_valid(form)

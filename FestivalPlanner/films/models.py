@@ -106,6 +106,11 @@ class FilmFan(models.Model):
     def fan_rating_str(self, film):
         fan_rating = self.fan_rating(film)
         return f'{fan_rating.rating}' if fan_rating is not None else '-'
+        # return self.rating_str(fan_rating.rating)
+
+    @staticmethod
+    def rating_str(rating):
+        return '-' if rating == '0' else rating
 
     def fan_rating_name(self, film):
         fan_rating = self.fan_rating(film)

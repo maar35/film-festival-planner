@@ -11,14 +11,15 @@ from unittest import skip
 from django.test import RequestFactory
 from django.urls import reverse
 
-from festival_planner.tools import pr_debug
+from festival_planner.debug_tools import pr_debug
 from festivals.tests import create_festival, mock_base_festival_mnemonic
 from films.models import FilmFanFilmRating, Film
 from films.tests import create_film, ViewsTestCase, get_request_with_session
-from films.views import SaveView, films
+# from films.views import SaveView, films
+from films.views import FilmsView
 from loader.forms.loader_forms import FilmLoader, RatingLoader
 from loader.views import SectionsLoaderView, get_festival_row, RatingsLoaderView, NewTheaterDataView, \
-    NewTheaterDataListView
+    NewTheaterDataListView, SaveView
 from sections.models import Section
 from theaters.models import City
 
@@ -440,7 +441,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         # Assert.
         redirect_request = get_request_with_session(request)
-        redirect_response = films(redirect_request)
+        redirect_response = FilmsView.as_view()(redirect_request)
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
         self.assertNotContains(get_response, 'Not allowed')
         self.assertNotContains(get_response, 'existing rating objects saved ')
