@@ -1,9 +1,7 @@
-import inspect
 import re
 from os import path
 
 from festivals.models import current_festival
-
 from films.models import current_fan, get_user_fan
 
 RE_APP_NAME = re.compile(r'([a-z])([A-Z])')
@@ -17,21 +15,6 @@ def application_name():
     base_name = path.basename(path.dirname(path.dirname(__file__)))
     name = RE_APP_NAME.sub(REPL_APP_NAME, base_name)
     return name
-
-
-def caller():
-    frame = inspect.currentframe().f_back
-    return frame.f_code.co_name if frame.f_code is not None else 'code'
-
-
-def debug(frame=inspect.currentframe().f_back):
-    lineno = frame.f_lineno
-    code = frame.f_code.co_name if frame.f_code is not None else 'code'
-    return f'@@ {code}:{lineno}'
-
-
-def pr_debug(message):
-    print(f'{debug(frame=inspect.currentframe().f_back)} {message}')
 
 
 def set_cookie(session, cookie_key, value):

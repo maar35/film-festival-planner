@@ -47,7 +47,7 @@ def default_festival(today=None):
 
 def set_current_festival(session):
     festival = current_festival(session)
-    festival.set_current(session)
+    switch_festival(session, festival)
 
 
 def current_festival(session):
@@ -58,6 +58,14 @@ def current_festival(session):
     if festival is None:
         return default_festival()
     return festival
+
+
+def switch_festival(session, festival, film_rating_cache=None):
+    session['festival'] = festival.id
+
+
+def rating_action_key(session):
+    return f'rating_action_{current_festival(session).id}'
 
 
 def base_dir():
@@ -153,6 +161,3 @@ class Festival(models.Model):
     @property
     def subsections_file(self):
         return os.path.join(self.planner_data_dir, 'subsections.csv')
-
-    def set_current(self, session):
-        session['festival'] = self.id

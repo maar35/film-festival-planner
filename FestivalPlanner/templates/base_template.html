@@ -21,11 +21,16 @@
     em {
         color: {{ festival_color }};
     }
+    .sticky-footer {
+        position: sticky;
+        bottom: 0;
+        background-color: #00000090;
+    }
 </style>
 
 <body>
     <hr>
-    <h1>{% block header %} Page Title {% endblock %}</h1>
+    <h1><a name="top"></a>{% block header %} Page Title {% endblock %}</h1>
     <p>
         <span class="left-half">
         {% if festival %}
@@ -82,10 +87,15 @@
     {% endblock %}
 </body>
 
-<footer>
+<footer class="sticky-footer">
     <hr>
-    <small>
-        {% block footer %} ©MR {% endblock %}
-    </small>
+        <span class="left-half">
+            <a href="#top">Top</a>
+        </span>
+        <span class="right-half">
+            <small>
+                {% block footer %} ©MR {% endblock %}
+            </small>
+        </span>
 </footer>
 </html>

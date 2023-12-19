@@ -56,5 +56,7 @@
     </table>
     </form>
     <br><br>
+    <a href="{% url 'films:films' %}#film{{ film.film_id }}">Back to ratings of {{ film.title }}</a>
+    <br>
     <a href="{% url 'films:films' %}">Back to ratings</a>
 {% endblock %}
