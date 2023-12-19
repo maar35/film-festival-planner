@@ -15,8 +15,6 @@ class FilmRatingCache:
     cache_by_key = {}
     FESTIVAL_FILTER_INDEX = 0
     NO_FILTERS = {}
-    filter_by_display_shorts = {True: 'shorts', False: 'no_shorts'}
-    filter_by_display_rated = {True: 'rated', False: 'no_rated'}
 
     def __init__(self, session, errors):
         self.initialize_filters(session)

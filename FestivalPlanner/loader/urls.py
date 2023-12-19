@@ -5,7 +5,7 @@ from loader import views
 app_name = 'loader'
 urlpatterns = [
     path('ratings', views.RatingsLoaderView.as_view(), name='ratings'),
-    path('<int:pk>/save/', views.SaveView.as_view(), name='save'),          # TODO: better name! (RatingSaveView?)
+    path('<int:pk>/save_ratings/', views.SaveRatingsView.as_view(), name='save_ratings'),
     path('sections', views.SectionsLoaderView.as_view(), name='sections'),
     path('theaters', views.TheaterDataInterfaceView.as_view(), name='theaters'),
     path('new_screens', views.NewTheaterDataView.as_view(), name='new_screens'),

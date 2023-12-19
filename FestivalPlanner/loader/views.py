@@ -333,9 +333,9 @@ class RatingsLoaderView(LoginRequiredMixin, ListView):
         return festival_row
 
 
-class SaveView(LoginRequiredMixin, FormView):
+class SaveRatingsView(LoginRequiredMixin, FormView):
     model = Festival
-    template_name = 'loader/save.html'
+    template_name = 'loader/save_ratings.html'
     form_class = SaveRatingsForm
     success_url = '/films/films/'
     http_method_names = ['get', 'post']

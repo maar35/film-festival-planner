@@ -426,7 +426,6 @@ def get_submitted_name(request, submit_names):
     return submitted_name
 
 
-@skip("View can only be called from the film ratings view, which initializes the cache data")
 @login_required
 def rating(request, film_pk):
     """

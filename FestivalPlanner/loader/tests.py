@@ -15,11 +15,10 @@ from festival_planner.debug_tools import pr_debug
 from festivals.tests import create_festival, mock_base_festival_mnemonic
 from films.models import FilmFanFilmRating, Film
 from films.tests import create_film, ViewsTestCase, get_request_with_session
-# from films.views import SaveView, films
 from films.views import FilmsView
 from loader.forms.loader_forms import FilmLoader, RatingLoader
 from loader.views import SectionsLoaderView, get_festival_row, RatingsLoaderView, NewTheaterDataView, \
-    NewTheaterDataListView, SaveView
+    NewTheaterDataListView, SaveRatingsView
 from sections.models import Section
 from theaters.models import City
 
@@ -421,7 +420,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         _ = create_rating(film_2, self.regular_fan, 8)
 
         request = self.get_admin_request()
-        save_view = SaveView()
+        save_view = SaveRatingsView()
         save_view.object = self.festival
         save_view.setup(request)
         context = save_view.get_context_data()
@@ -437,7 +436,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         post_request.session = request.session
 
         # Act.
-        post_response = SaveView.as_view()(post_request)
+        post_response = SaveRatingsView.as_view()(post_request)
 
         # Assert.
         redirect_request = get_request_with_session(request)
