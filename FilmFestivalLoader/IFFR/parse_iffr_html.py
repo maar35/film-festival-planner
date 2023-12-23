@@ -5,7 +5,6 @@ import datetime
 import re
 from copy import copy
 from enum import Enum, auto
-from json import JSONDecodeError
 from typing import Dict
 from urllib.error import HTTPError
 
@@ -14,8 +13,11 @@ from Shared.parse_tools import FileKeeper, try_parse_festival_sites, HtmlPagePar
 from Shared.planner_interface import FilmInfo, Screening, ScreenedFilmType, ScreenedFilm, FestivalData, Film
 from Shared.web_tools import UrlFile, iri_slug_to_url, fix_json, get_encoding, UrlReader
 
+ALWAYS_DOWNLOAD = False
+DEBUGGING = True
+
 festival = 'IFFR'
-festival_year = 2023
+festival_year = 2024
 festival_city = 'Rotterdam'
 
 # Files.
@@ -36,6 +38,7 @@ def main():
     festival_data: IffrData = IffrData(file_keeper.plandata_dir)
 
     # Set-up counters.
+    counter.start('no description')
     counter.start('combinations')
     counter.start('feature films')
     counter.start('shorts')
@@ -53,9 +56,9 @@ def parse_iffr_sites(festival_data):
     comment('Parsing AZ pages.')
     get_films(festival_data)
 
-    comment('Parsing film pages.')
-    get_film_details(festival_data)
-
+    # comment('Parsing film pages.')
+    # get_film_details(festival_data)
+    #
     comment('Parsing subsection pages.')
     get_subsection_details(festival_data)
 
@@ -66,14 +69,15 @@ def get_films(festival_data):
     az_url = iri_slug_to_url(iffr_hostname, az_url_path)
     az_file = file_keeper.az_file()
     url_file = UrlFile(az_url, az_file, error_collector, debug_recorder, byte_count=200)
-    az_html = url_file.get_text()
+    az_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=f'Downloading AZ page')
     if az_html is not None:
+        comment(f'Analysing AZ page, encoding={url_file.encoding}')
         AzPageParser(festival_data).feed(az_html)
 
 
 def get_film_details(festival_data):
     combi_keeper = CombinationKeeper()
-    films = [film for film in festival_data.films if film.medium_category == Film.category_string_films]
+    films = [film for film in festival_data.films if film.medium_category == Film.category_by_string['films']]
     for film in films:
         film_file = file_keeper.film_webdata_file(film.filmid)
         url_file = UrlFile(film.url, film_file, error_collector, debug_recorder, byte_count=300)
@@ -145,7 +149,7 @@ def get_subsection_details(festival_data):
         comment_at_download = f'Downloading {subsection.name} page: {subsection.url}, encoding: {url_file.encoding}'
         subsection_html = url_file.get_text(comment_at_download)
         if subsection_html is not None:
-            print(f'Analysing html file {subsection.subsection_id} of {subsection.name}.')
+            print(f'Analysing subsection page {subsection.subsection_id}, {subsection.name}, encoding={url_file.encoding}.')
             SubsectionPageParser(festival_data, subsection).feed(subsection_html)
 
 
@@ -157,74 +161,105 @@ class AzPageParser(HtmlPageParser):
 
     props_re = re.compile(
         r"""
-            "Film","id":"[^"]*?","title":"(?P<title>[^"]+)"                     # Title
-            .*?,"url\(\{\\"language\\":\\"nl\\"\}\)":"(?P<url>[^"]+)"           # Film URL
-            ,"description\(\{.*?\}\)":"(?P<grid_desc>.+?)"                      # Grid description
-            ,"description\(\{.*?\}\)":"(?P<list_desc>.+?)"                      # List description
+            "(?P<medium>Film|CombinedProgram|OtherProgram)","id":"[^"]*?"       # Medium category
+            ,"title":"(?P<title>.+?)",.*?                      # Title
+            ,"url\(\{\\"language\\":\\"nl\\"\}\)":"(?P<url>[^"]+)"           # Film URL
+            ,"description\(\{.*?\}\)":"(?P<grid_desc>.*?)"                      # Grid description
+            ,"description\(\{.*?\}\)":"(?P<list_desc>.*?)"                      # List description
             ,"section":([^:]*?:"Section","title":"(?P<section>[^"]+)".*?|null)  # IFFR Section
-            ,"subSection":([^:]*?:"SubSection","title":"(?P<subsection>[^"]+)"  # IFFR Sub-section
-            ,"url\(\{.*?\}\)":"(?P<subsection_url>[^"]+)".*?|null)              # Sub-section URL
-            ,"duration":(?P<duration>\d+),".*?                                  # Duration
-            ,"sortedTitle":"(?P<sorted_title>[^"]+)"                            # Sorted Title
+            ,"subSection":([^:]*?:"SubSection","title":"(?P<subsection>[^"]+)"  # IFFR Subsection
+            ,"url\(\{.*?\}\)":"(?P<subsection_url>[^"]+)"|null).*?              # Sub-section URL
+            (,"duration":(?P<duration>\d+),".*?)?                                  # Duration
+            ,"sortedTitle":"(?P<sorted_title>.+?)",                             # Sorted Title
         """, re.VERBOSE)
 
+    color_by_section_id = {
+        1: 'DodgerBlue',
+        2: 'PapayaWhip',
+        3: 'DarkMagenta',
+        4: 'LimeGreen',
+        5: 'LightCoral',
+    }
     film_id_by_title = {}
 
     def __init__(self, festival_data):
-        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'AZ', debugging=False)
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'AZ', debugging=DEBUGGING)
         self.config = Config().config
         self.max_short_duration = datetime.timedelta(minutes=self.config['Constants']['MaxShortMinutes'])
         self.film = None
         self.title = None
         self.url = None
         self.description = None
+        self.article = None
         self.section_name = None
         self.subsection_name = None
         self.subsection_url = None
         self.sorted_title = None
         self.duration = None
+        self.medium_category = None
         self.state_stack = self.StateStack(self.print_debug, self.AzParseState.IDLE)
         self.init_film_data()
+        self.init_categories()
 
     def init_film_data(self):
         self.film = None
         self.title = None
         self.url = None
         self.duration = None
+        self.medium_category = None
         self.description = None
+        self.article = None
         self.section_name = None
         self.subsection_name = None
         self.subsection_url = None
         self.sorted_title = None
+
+    @staticmethod
+    def init_categories():
+        Film.category_by_string['Film'] = Film.category_films
+        Film.category_by_string['CombinedProgram'] = Film.category_combinations
+        Film.category_by_string['OtherProgram'] = Film.category_events
 
     def parse_props(self, data):
         i = self.props_re.finditer(data)
         matches = [match for match in i]
         groups = [m.groupdict() for m in matches]
         for g in groups:
-            self.title = fix_json(g['title'])
+            self.medium_category = g['medium']
+            self.title = fix_json(g['title'], error_collector=error_collector)
             self.url = iri_slug_to_url(iffr_hostname, g['url'])
-            self.description = self.get_description(g['list_desc'])
+            self.description, self.article = self.get_description(g['grid_desc'], g['list_desc'])
             if g['section']:
-                self.section_name = fix_json(g['section'])
+                self.section_name = fix_json(g['section'], error_collector=error_collector)
             if g['subsection']:
-                self.subsection_name = fix_json(g['subsection']).rstrip()
+                self.subsection_name = fix_json(g['subsection'], error_collector=error_collector).rstrip()
             if g['subsection_url']:
                 self.subsection_url = iri_slug_to_url(iffr_hostname, g['subsection_url'])
-            self.sorted_title = fix_json(g['sorted_title']).lower()
+            # print(f'@@ {self.title=}, sorted title: {g["sorted_title"]}')
+            self.sorted_title = fix_json(g['sorted_title'], error_collector=error_collector).lower()
+            if not self.sorted_title:
+                self.sorted_title = re.sub(r'\\', '', g['sorted_title'])
+                print(f'{self.sorted_title}')
             self.duration = self.get_duration(g['duration'])
             self.add_film()
             self.init_film_data()
 
-    def get_description(self, parsed_description):
-        try:
-            description = fix_json(parsed_description)
-        except JSONDecodeError as e:
-            error_collector.add(f'{self.title}: {e}:', parsed_description)
+    @staticmethod
+    def get_description(grid_description, list_description):
+        description = fix_json(grid_description, error_collector=error_collector)
+        article = fix_json(list_description, error_collector=error_collector)
+        if not description:
+            description = article
+            if not description:
+                counter.increase('no description')
+        if list_description == 'Binnenkort meer informatie over deze film.':
             description = ''
-        if parsed_description == 'Binnenkort meer informatie over deze film.':
-            description = ''
-        return description
+        if description:
+            if not article:
+                article = description
+            if article != description:
+                article = description + 2*'\n' + article
+        return description, article
 
     @staticmethod
     def get_duration(minutes_str):
@@ -232,36 +267,45 @@ class AzPageParser(HtmlPageParser):
         duration = datetime.timedelta(minutes=minutes)
         return duration
 
+    def get_subsection(self):
+        section = self.festival_data.get_section(self.section_name, color_by_id=self.color_by_section_id)
+        if section:
+            subsection = self.festival_data.get_subsection(self.subsection_name, self.subsection_url, section)
+        else:
+            subsection = None
+        return subsection
+
     def add_film(self):
         self.film = self.festival_data.create_film(self.title, self.url)
         if self.film is None:
             error_collector.add(f'Could\'t create film from {self.title}', self.url)
         else:
-            self.film.medium_category = self.url.split('/')[6]   # https://iffr.com/nl/iffr/2023/films/firaaq
-            if self.film.medium_category != Film.category_string_films:
-                error_collector.add(f'Unexpected category in: {self.film.title}', f'{self.film.medium_category} from {self.url}')
+            self.film.medium_category = self.medium_category
+            if self.film.medium_category not in Film.category_by_string:
+                error_msg = f'{self.film.title}', f'{self.film.medium_category} from {self.url}'
+                error_collector.add(f'Unexpected category "{self.film.medium_category}"', error_msg)
             self.film.duration = self.duration
             self.film.sortstring = self.sorted_title
             self.increase_film_counter(self.film)
+            self.increase_combination_counter()
             self.film_id_by_title[self.film.title] = self.film.filmid
             print(f'Adding FILM: {self.title} ({self.film.duration_str()}) {self.film.medium_category}')
             self.festival_data.films.append(self.film)
-            if len(self.description) == 0:
-                self.subsection_name = 'NO DESCRIPTION'
-            section = self.festival_data.get_section(self.section_name)
-            if section is not None:
-                subsection = self.festival_data.get_subsection(self.subsection_name, self.subsection_url, section)
-                self.film.subsection = subsection
+            self.film.subsection = self.get_subsection()
             self.add_film_info()
 
     def add_film_info(self):
         if len(self.description) > 0:
-            film_info = FilmInfo(self.film.filmid, self.description, '')
+            film_info = FilmInfo(self.film.filmid, self.description, self.article)
             self.festival_data.filminfos.append(film_info)
 
     def increase_film_counter(self, film):
         key = 'feature films' if film.duration > self.max_short_duration else 'shorts'
         counter.increase(key)
+
+    def increase_combination_counter(self):
+        if Film.category_by_string[self.film.medium_category] == Film.category_combinations:
+            counter.increase('combinations')
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -326,7 +370,7 @@ class ScreeningParser(HtmlPageParser):
         'Gepresenteerd als onderdeel van ': ScreenedFilmType.PART_OF_COMBINATION_PROGRAM,
         'Wordt vertoond in combinatie met ': ScreenedFilmType.DIRECTLY_COMBINED}
 
-    def __init__(self, festival_data, combi_keeper, debug_recorder, debug_prefix, debugging=False):
+    def __init__(self, festival_data, combi_keeper, debug_recorder, debug_prefix, debugging=DEBUGGING):
         HtmlPageParser.__init__(self, festival_data, debug_recorder, debug_prefix, debugging=debugging)
         self.combi_keeper = combi_keeper
         self.film = None
@@ -492,7 +536,7 @@ class FilmInfoPageParser(ScreeningParser):
         IN_COMBINATION_LINK = auto()
         DONE = auto()
 
-    debugging = True
+    debugging = DEBUGGING
     intro_span = datetime.timedelta(minutes=4)
     combination_loaded_by_url = {}
 
@@ -630,7 +674,7 @@ class CombinationPageParser(ScreeningParser):
     fabricated_film_ids = []
 
     def __init__(self, festival_data, combi_keeper, url):
-        ScreeningParser.__init__(self, festival_data, combi_keeper, debug_recorder, 'CO', debugging=True)
+        ScreeningParser.__init__(self, festival_data, combi_keeper, debug_recorder, 'CO', debugging=DEBUGGING)
         self.festival_data = festival_data
         self.url = url
         self.title = None
@@ -667,7 +711,7 @@ class CombinationPageParser(ScreeningParser):
             self.add_existing_combination_film()
 
     def add_existing_combination_film(self):
-        self.combination_program.medium_category = Film.category_string_combinations
+        self.combination_program.medium_category = Film.category_by_string['combinations']
         self.combination_program.duration = datetime.timedelta(minutes=0)
         if len(self.description) == 0:
             self.subsection_name = 'NO DESCRIPTION'
@@ -755,10 +799,8 @@ class SubsectionPageParser(HtmlPageParser):
         IN_DESCRIPTION = auto()
         DONE = auto()
 
-    debugging = False
-
     def __init__(self, festival_data, subsection):
-        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'SEC', debugging=True)
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'SEC', debugging=DEBUGGING)
         self.festival_data = festival_data
         self.subsection = subsection
         self.state_stack = self.StateStack(self.print_debug, self.SubsectionsParseState.IDLE)

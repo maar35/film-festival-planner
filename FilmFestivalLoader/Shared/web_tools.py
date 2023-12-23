@@ -9,6 +9,7 @@ Created on Mon Nov  2 18:27:20 2020
 import json
 import os
 from enum import Enum, auto
+from json import JSONDecodeError
 from time import sleep
 from urllib.error import HTTPError
 from urllib.parse import quote, urlparse, urlunparse
@@ -69,14 +70,20 @@ def get_encoding(url, error_collector, debug_recorder, byte_count=DEFAULT_BYTE_C
     return encoding
 
 
-def fix_json(code_point_str):
+def fix_json(code_point_str, error_collector=None):
     """Replace HTML entity code points by the corresponding symbols.
 
     @param code_point_str: String possibly containing not decoded HTML code points like '\u003c'.
+    @param error_collector: Optional ErrorCollector instance to add possible errors to.
     @return: String with code points replaced by the corresponding symbols.
     """
 
-    result_str = json.loads('"' + code_point_str + '"')
+    try:
+        result_str = json.loads('"' + code_point_str + '"')
+    except JSONDecodeError as e:
+        if error_collector:
+            error_collector.add(e, f'{code_point_str}')
+        result_str = ''
     return result_str
 
 

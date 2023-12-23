@@ -159,8 +159,8 @@ class BaseLoader:
                 self.add_log(f'File {objects_file} not found.')
             return False
 
-        except ValueError:
-            self.add_log(f'Bad value in file {objects_file}.')
+        except ValueError as e:
+            self.add_log(f'{e}. Bad value in file {objects_file}.')
             return False
 
         # Add result statistics to the log.

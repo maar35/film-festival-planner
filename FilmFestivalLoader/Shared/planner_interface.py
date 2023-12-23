@@ -7,7 +7,7 @@ Created on Sat Oct 10 18:13:42 2020
 
 @author: maarten
 """
-
+import csv
 import os
 import re
 import xml.etree.ElementTree as ET
@@ -84,16 +84,13 @@ class Article:
 
 class Film:
 
-    category_string_films = 'films'
-    category_string_combinations = 'verzamelprogrammas'
-    category_string_events = 'events'
     category_films = "Films"
     category_combinations = "CombinedProgrammes"
     category_events = "Events"
     category_by_string = {
-        category_string_films: category_films,
-        category_string_combinations: category_combinations,
-        category_string_events: category_events,
+        'films': category_films,
+        'combinations': category_combinations,
+        'events': category_events,
     }
     mapper = UnicodeMapper()
     articles_by_language = {}
@@ -119,7 +116,7 @@ class Film:
 
     @staticmethod
     def film_repr_csv_head():
-        text = ';'.join([
+        row = [
             'seqnr',
             'filmid',
             'sort',
@@ -129,22 +126,22 @@ class Film:
             'duration',
             'mediumcategory',
             'url'
-        ])
-        return f'{text}\n'
+        ]
+        return row
 
-    def __repr__(self):
-        text = ';'.join([
+    def row_repr(self):
+        row = [
             str(self.seqnr),
             str(self.filmid),
-            self.sortstring.replace(';', '.,'),
-            self.title.replace(';', '.,'),
+            self.sortstring,
+            self.title,
             self.title_language,
             str(self.subsection.subsection_id) if self.subsection is not None else '',
             self.duration_str(),
             self.category_by_string[self.medium_category],
             self.url
-        ])
-        return f'{text}\n'
+        ]
+        return row
 
     def short_str(self):
         return f'{self.title} ({self.duration_str()})'
@@ -430,6 +427,8 @@ class FestivalData:
     curr_subsection_id = None
     common_data_dir = os.path.expanduser(f'~/{config()["Paths"]["CommonDataDirectory"]}')
     default_city_name = 'Bullshit City'
+    dialect = None
+    print(f'@@ {dialect=}')
 
     def __init__(self, plandata_dir, default_city_name=None):
         self.default_city_name = default_city_name or self.default_city_name
@@ -446,6 +445,7 @@ class FestivalData:
         self.theater_by_location = {}
         self.city_by_location = {}
         self.city_by_id = {}
+        self.set_csv_dialect()
         self.films_file = os.path.join(plandata_dir, 'films.csv')
         self.filmids_file = os.path.join(plandata_dir, 'filmids.txt')
         self.filminfo_file = os.path.join(plandata_dir, 'filminfo.xml')
@@ -467,6 +467,13 @@ class FestivalData:
         self.read_theaters()
         self.read_screens()
         self.read_filmids()
+
+    def set_csv_dialect(self):
+        self.dialect = csv.unix_dialect
+        self.dialect.delimiter = ';'
+        self.dialect.quotechar = '"'
+        self.dialect.doublequote = True
+        self.dialect.quoting = csv.QUOTE_MINIMAL
 
     def film_key(self, title, url):
         return title
@@ -510,13 +517,18 @@ class FestivalData:
             return films[0]
         return None
 
-    def get_section(self, name, color=None):
+    def get_section(self, name, color=None, color_by_id=None):
         if name is None:
             return None
         try:
             section = self.section_by_name[name]
         except KeyError:
             self.curr_section_id += 1
+            if color_by_id and not color:
+                try:
+                    color = color_by_id[self.curr_section_id]
+                except KeyError:
+                    color = None
             section = Section(self.curr_section_id, name, color=color)
             self.section_by_name[name] = section
             self.section_by_id[section.section_id] = section
@@ -758,10 +770,11 @@ class FestivalData:
     def write_films(self):
         public_films = [f for f in self.films if self.film_can_go_to_planner(f.filmid)]
         if len(self.films):
-            with open(self.films_file, 'w') as f:
-                f.write(Film.film_repr_csv_head())
+            with open(self.films_file, 'w', newline='') as csvfile:
+                csv_writer = csv.writer(csvfile, self.dialect)
+                csv_writer.writerow(Film.film_repr_csv_head())
                 for film in public_films:
-                    f.write(repr(film))
+                    csv_writer.writerow(film.row_repr())
             print(f'Done writing {len(public_films)} of {len(self.films)} records to {self.films_file}.')
         else:
             print('No films to be written.')
