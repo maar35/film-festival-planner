@@ -13,7 +13,7 @@ from Shared.parse_tools import FileKeeper, try_parse_festival_sites, HtmlPagePar
 from Shared.planner_interface import FilmInfo, Screening, ScreenedFilmType, ScreenedFilm, FestivalData, Film
 from Shared.web_tools import UrlFile, iri_slug_to_url, fix_json, get_encoding, UrlReader
 
-ALWAYS_DOWNLOAD = False
+ALWAYS_DOWNLOAD = True
 DEBUGGING = True
 
 festival = 'IFFR'
@@ -147,7 +147,7 @@ def get_subsection_details(festival_data):
         subsection_file = file_keeper.numbered_webdata_file('subsection_file', subsection.subsection_id)
         url_file = UrlFile(subsection.url, subsection_file, error_collector, debug_recorder, byte_count=300)
         comment_at_download = f'Downloading {subsection.name} page: {subsection.url}, encoding: {url_file.encoding}'
-        subsection_html = url_file.get_text(comment_at_download)
+        subsection_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=comment_at_download)
         if subsection_html is not None:
             print(f'Analysing subsection page {subsection.subsection_id}, {subsection.name}, encoding={url_file.encoding}.')
             SubsectionPageParser(festival_data, subsection).feed(subsection_html)

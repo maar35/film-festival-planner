@@ -44,6 +44,7 @@ def write_lists(festival_data, write_film_list, write_other_lists):
 
     if write_other_lists:
         festival_data.write_film_ids()
+        festival_data.write_yaml_filminfo()
         festival_data.write_filminfo()
         festival_data.write_new_cities()
         festival_data.write_new_theaters()
@@ -428,7 +429,6 @@ class FestivalData:
     common_data_dir = os.path.expanduser(f'~/{config()["Paths"]["CommonDataDirectory"]}')
     default_city_name = 'Bullshit City'
     dialect = None
-    print(f'@@ {dialect=}')
 
     def __init__(self, plandata_dir, default_city_name=None):
         self.default_city_name = default_city_name or self.default_city_name
@@ -448,6 +448,7 @@ class FestivalData:
         self.set_csv_dialect()
         self.films_file = os.path.join(plandata_dir, 'films.csv')
         self.filmids_file = os.path.join(plandata_dir, 'filmids.txt')
+        self.filminfo_yaml_file = os.path.join(plandata_dir, 'filminfo.yml')
         self.filminfo_file = os.path.join(plandata_dir, 'filminfo.xml')
         self.sections_file = os.path.join(plandata_dir, 'sections.csv')
         self.subsections_file = os.path.join(plandata_dir, 'subsections.csv')
@@ -788,6 +789,16 @@ class FestivalData:
                     text = ";".join([str(film_id), title.replace(";", ".,"), url])
                     f.write(f'{text}\n')
             print(f'Done writing {film_id_count} records to {self.filmids_file}.')
+
+    def write_yaml_filminfo(self):
+        data = [i for i in self.filminfos if self.film_can_go_to_planner(i.filmid)]
+        # with open(self.filminfo_yaml_file, 'w') as stream:
+        #     yaml.dump(data, stream, indent=4)
+        rows = [[i.filmid, i.description] for i in data]
+        with open(self.filminfo_yaml_file, 'w') as csvfile:
+            csv_writer = csv.writer(csvfile, self.dialect)
+            csv_writer.writerows(rows)
+        print(f'Done writing {len(data)} objects to {self.filminfo_yaml_file}')
 
     def write_filminfo(self):
         info_count = 0

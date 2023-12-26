@@ -1,6 +1,6 @@
 import copy
+import csv
 from datetime import timedelta
-from unittest import skip
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -57,6 +57,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
     fragment_name_by_row_nr = {}
     action_by_display_shorts = {True: 'Hide shorts', False: 'Include shorts'}
     action_by_display_rated = {True: 'Hide rated', False: 'Include rated'}
+    description_by_film_id = {}
     fan_list = get_present_fans()
     logged_in_fan = None
     festival = None
@@ -114,6 +115,14 @@ class FilmsListView(LoginRequiredMixin, ListView):
                 self.selected_films = self.selected_films.filter(
                     ~Exists(FilmFanFilmRating.film_ratings.filter(film=OuterRef('pk'), film_fan=fan))
                 )
+
+        # Read the descriptions.
+        film_info_file = self.festival.filminfo_file
+        with open(film_info_file, 'r', newline='') as csvfile:
+            object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+            self.description_by_film_id = {int(row[0]): row[1] for row in object_reader}
+
+        # Fill the film rows.
         film_rows = [self.get_film_row(row_nr, film) for row_nr, film in enumerate(self.selected_films)]
 
         # Add a fragment name as to be able to address a specific film.
@@ -170,6 +179,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'duration_seconds': film.duration.total_seconds(),
             'subsection': self.get_subsection(film),
             'section': None,
+            'description': self.get_description(film),
             'film_ratings': get_fan_ratings(film, self.fan_list, self.logged_in_fan, FilmsView.submit_name_prefix),
         }
         return film_rating_row
@@ -184,6 +194,13 @@ class FilmsListView(LoginRequiredMixin, ListView):
             FilmsView.unexpected_errors.append(f'{e}')
             subsection = ''
         return subsection
+
+    def get_description(self, film):
+        try:
+            description = self.description_by_film_id[film.film_id]
+        except KeyError:
+            description = None
+        return description
 
     def get_fan_headers(self):
         fan_headers = [{
@@ -234,27 +251,6 @@ class ResultsView(DetailView):
     submit_names = []
     unexpected_error = ''
 
-    def get_context_data(self, **kwargs):
-        film = self.object
-        subsection = get_subsection(film)
-        fan_rows = []
-        fans = FilmFan.film_fans.all()
-        logged_in_fan = current_fan(self.request.session)
-        for fan in fans:
-            choices = get_fan_choices(self.submit_name_prefix, film, fan, logged_in_fan, self.submit_names)
-            fan_rows.append({
-                'fan': fan,
-                'rating_str': fan.fan_rating_str(film),
-                'rating_name': fan.fan_rating_name(film),
-                'choices': choices,
-            })
-        context = add_base_context(self.request, super().get_context_data(**kwargs))
-        context['title'] = 'Film Rating Results'
-        context['subsection'] = subsection
-        context['fan_rows'] = fan_rows
-        context['unexpected_error'] = self.unexpected_error
-        return context
-
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
 
@@ -272,6 +268,40 @@ class ResultsView(DetailView):
 
         unset_log(request.session)
         return response
+
+    def get_context_data(self, **kwargs):
+        film = self.object
+        subsection = get_subsection(film)
+        fan_rows = []
+        fans = FilmFan.film_fans.all()
+        logged_in_fan = current_fan(self.request.session)
+        for fan in fans:
+            choices = get_fan_choices(self.submit_name_prefix, film, fan, logged_in_fan, self.submit_names)
+            fan_rows.append({
+                'fan': fan,
+                'rating_str': fan.fan_rating_str(film),
+                'rating_name': fan.fan_rating_name(film),
+                'choices': choices,
+            })
+        context = add_base_context(self.request, super().get_context_data(**kwargs))
+        context['title'] = 'Film Rating Results'
+        context['subsection'] = subsection
+        context['description'] = self.get_description(film)
+        context['fan_rows'] = fan_rows
+        context['unexpected_error'] = self.unexpected_error
+        return context
+
+    @staticmethod
+    def get_description(film):
+        film_info_file = film.festival.filminfo_file
+        # with open(film_info_file, 'r') as stream:
+        #     info = yaml.safe_load(stream)
+        # description = info['description']
+        with open(film_info_file, 'r', newline='') as csvfile:
+            object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+            descriptions = [row[1] for row in object_reader if film.film_id == int(row[0])]
+        description = descriptions[0] if descriptions else '-'
+        return description
 
 
 def index(request):

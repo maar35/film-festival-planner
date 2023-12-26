@@ -147,6 +147,10 @@ class Festival(models.Model):
         return os.path.join(self.planner_data_dir, 'films.csv')
 
     @property
+    def filminfo_file(self):
+        return os.path.join(self.planner_data_dir, 'filminfo.yml')
+
+    @property
     def ratings_file(self):
         return os.path.join(self.festival_data_dir, 'ratings.csv')
 
