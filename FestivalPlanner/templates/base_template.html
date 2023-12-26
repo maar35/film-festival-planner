@@ -21,10 +21,53 @@
     em {
         color: {{ festival_color }};
     }
+
     .sticky-footer {
         position: sticky;
         bottom: 0;
         background-color: #00000090;
+    }
+
+    .cell-dropdown {
+        position: relative;
+        display: table-cell;
+        background-color: forestgreen;
+        text-align: center;
+        margin: auto;
+        width: auto;
+        height: auto;
+    }
+    .cell-dropdown:hover {
+        background-color: darkgreen;
+    }
+    .cell-dropdown-content {
+        display: none;
+        position: absolute;
+        cursor: pointer;
+        background-color: forestgreen;
+        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+        min-width: 200px;
+        padding: 6px 8px;
+        z-index: 1;
+    }
+    .cell-dropdown-content input {
+        color: ivory;
+        background-color: forestgreen;
+        width: 100%;
+        margin: 0px;
+        padding: 4px 16px;
+        text-decoration: none;
+        text-align: left;
+        display: block;
+    }
+    .cell-dropdown-content input:hover {
+        background-color: darkgreen
+    }
+    .cell-dropdown:hover .cell-dropdown-content {
+        display: block;
+    }
+    .cell-dropdown:hover .drop-button {
+        background-color: darkgreen;
     }
 </style>
 

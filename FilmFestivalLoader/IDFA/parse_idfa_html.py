@@ -272,7 +272,7 @@ class FilmsFromSectionPageParser(HtmlPageParser):
             # Fill details.
             self.film.duration = self.film_duration
             self.film.subsection = self.subsection
-            self.film.medium_category = Film.category_string_films
+            self.film.medium_category = Film.category_by_string['films']
             self.sections_by_film[self.film] = [self.subsection]
 
             # Add the film to the list.
@@ -586,7 +586,7 @@ class FilmPageParser(HtmlPageParser):
                 return
         else:
             combi_film.duration = screening.end_datetime - screening.start_datetime
-            combi_film.medium_category = Film.category_string_combinations
+            combi_film.medium_category = Film.category_by_string['combinations']
             self.festival_data.films.append(combi_film)
         combi_screening = IdfaScreening(
             combi_film, screening.screen, screening.start_datetime, screening.end_datetime, audience=AUDIENCE_PUBLIC

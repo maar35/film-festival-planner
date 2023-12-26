@@ -8,6 +8,7 @@ declare -r files="
     sections.csv
     subsections.csv
     filminfo.xml
+    filminfo.yml
 "
 declare -r film_file=films.csv
 declare -r tools_dir=~/Projects/FilmFestivalPlanner/Tools/

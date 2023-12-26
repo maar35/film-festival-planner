@@ -85,11 +85,19 @@
         <tbody>
         {% for row in film_rows %}
         <tr>
-            <td style="max-width: 720px">
+            <td style="max-width: 720px;">
                 <a name="{{ row.fragment_name }}"></a>
-                <a href="{% url 'films:results' row.film.id %}">
-                    {{ row.film.title }}
-                </a>
+                {% if row.description %}
+                    <a href="{% url 'films:results' row.film.id %}">
+                        {{ row.film.title }}
+                    </a>
+                    <br>
+                    {{ row.description }}
+                {% else %}
+                    <a href="{% url 'films:results' row.film.id %}" style="color: darkgreen;">
+                        {{ row.film.title }}
+                    </a>
+                {% endif %}
             </td>
             {% if row.duration_seconds <= short_threshold %}
                 <td style="color:SlateGray">{{ row.duration_str }}</td>
@@ -99,11 +107,11 @@
             <td style="color:{{ row.subsection.section.color }}">{{ row.subsection.name }}</td>
             {% for fan_rating in row.film_ratings %}
                 {% if fan_rating.fan == current_fan %}
-                    <td class="dropdown">
+                    <td class="cell-dropdown">
                         <span class="drop-button">
                             {{ fan_rating.rating }}
                         </span>
-                        <div class="dropdown-content">
+                        <div class="cell-dropdown-content">
                             {% for choice in fan_rating.choices %}
                                 <input type="submit" value="{{ choice.value | stringformat:'2d' }}  {{ choice.rating_name }}" name="{{ choice.submit_name }}">
                             {% endfor %}
