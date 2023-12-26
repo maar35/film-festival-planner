@@ -162,14 +162,14 @@ class AzPageParser(HtmlPageParser):
     props_re = re.compile(
         r"""
             "(?P<medium>Film|CombinedProgram|OtherProgram)","id":"[^"]*?"       # Medium category
-            ,"title":"(?P<title>.+?)",.*?                      # Title
-            ,"url\(\{\\"language\\":\\"nl\\"\}\)":"(?P<url>[^"]+)"           # Film URL
+            ,"title":"(?P<title>.+?)",.*?                                       # Title
+            ,"url\(\{\\"language\\":\\"nl\\"\}\)":"(?P<url>[^"]+)"              # Film URL
             ,"description\(\{.*?\}\)":"(?P<grid_desc>.*?)"                      # Grid description
             ,"description\(\{.*?\}\)":"(?P<list_desc>.*?)"                      # List description
             ,"section":([^:]*?:"Section","title":"(?P<section>[^"]+)".*?|null)  # IFFR Section
             ,"subSection":([^:]*?:"SubSection","title":"(?P<subsection>[^"]+)"  # IFFR Subsection
             ,"url\(\{.*?\}\)":"(?P<subsection_url>[^"]+)"|null).*?              # Sub-section URL
-            (,"duration":(?P<duration>\d+),".*?)?                                  # Duration
+            (,"duration":(?P<duration>\d+),".*?)?                               # Duration
             ,"sortedTitle":"(?P<sorted_title>.+?)",                             # Sorted Title
         """, re.VERBOSE)
 
@@ -235,11 +235,11 @@ class AzPageParser(HtmlPageParser):
                 self.subsection_name = fix_json(g['subsection'], error_collector=error_collector).rstrip()
             if g['subsection_url']:
                 self.subsection_url = iri_slug_to_url(iffr_hostname, g['subsection_url'])
-            # print(f'@@ {self.title=}, sorted title: {g["sorted_title"]}')
             self.sorted_title = fix_json(g['sorted_title'], error_collector=error_collector).lower()
             if not self.sorted_title:
                 self.sorted_title = re.sub(r'\\', '', g['sorted_title'])
-                print(f'{self.sorted_title}')
+                """Workaround for the 2024 edition to handle one double quote in sort string."""
+                print(f'{self.sorted_title=} after fix.')
             self.duration = self.get_duration(g['duration'])
             self.add_film()
             self.init_film_data()
