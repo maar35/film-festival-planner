@@ -258,8 +258,8 @@ class AzPageParser(HtmlPageParser):
                 error_collector.add(f'Unexpected category "{self.film.medium_category}"', error_msg)
             self.film.duration = self.duration
             self.film.sortstring = self.sorted_title
-            self.increase_fieature_short_counter(self.film)
-            self.increase_film_category_counter()
+            self.increase_per_duration_class_counter(self.film)
+            self.increase_per_film_category_counter()
             self.film_id_by_title[self.film.title] = self.film.filmid
             print(f'Adding FILM: {self.title} ({self.film.duration_str()}) {self.film.medium_category}')
             self.festival_data.films.append(self.film)
@@ -271,11 +271,11 @@ class AzPageParser(HtmlPageParser):
             film_info = FilmInfo(self.film.filmid, self.description, self.article)
             self.festival_data.filminfos.append(film_info)
 
-    def increase_fieature_short_counter(self, film):
+    def increase_per_duration_class_counter(self, film):
         key = 'feature films' if film.duration > self.max_short_duration else 'shorts'
         counter.increase(key)
 
-    def increase_film_category_counter(self):
+    def increase_per_film_category_counter(self):
         counter.increase(self.film.medium_category)
 
     def handle_starttag(self, tag, attrs):
@@ -517,6 +517,7 @@ class FilmInfoPageParser(ScreeningParser):
         self.film_info.article = self.article
 
     def set_combination(self):
+        self.print_debug('Updating combination program', f'{self.film}')
         self.film_info.screened_films = []
         for screened_film_slug in self.screened_film_slugs:
             if self.event_is_combi:
@@ -582,7 +583,6 @@ class FilmInfoPageParser(ScreeningParser):
                     self.screened_film_slugs.append(screened_film_slug)
                     self.state_stack.change(self.FilmInfoParseState.IN_SCREENED_FILM_LINK)
             elif tag == 'section':
-                self.print_debug('Updating combination program', f'{self.film}')
                 if has_category(self.film, Film.category_combinations) or self.event_is_combi:
                     self.set_combination()
                 self.state_stack.change(self.FilmInfoParseState.DONE)
