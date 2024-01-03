@@ -72,8 +72,8 @@ namespace PresentScreenings.TableView
             Config = GetConfiguration();
 
             // Preferences.
-            Festival = "IDFA";
-            FestivalYear = "2023";
+            Festival = "IFFR";
+            FestivalYear = "2024";
             VisitPhysical = true;
 
             MaxShortMinutes = int.Parse(Config.Constants["MaxShortMinutes"]);

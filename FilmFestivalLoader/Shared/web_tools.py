@@ -10,7 +10,6 @@ import json
 import os
 from enum import Enum, auto
 from json import JSONDecodeError
-from time import sleep
 from urllib.error import HTTPError
 from urllib.parse import quote, urlparse, urlunparse
 from urllib.request import urlopen, Request
