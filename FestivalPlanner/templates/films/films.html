@@ -72,14 +72,14 @@
                 <th class="sticky-t-head">
                     Duration
                     <br>
-                    <a href="/films/films?filter=shorts">{{ display_shorts_action }}</a>
+                    <a href="/films/films?shorts={{ display_shorts_query }}">{{ display_shorts_action }}</a>
                 </th>
                 <th class="sticky-t-head" style="vertical-align: text-top;">Subsection<br></th>
                 {% for fan_header in fan_headers %}
                     <th class="sticky-t-head">
                         {{ fan_header.fan }}
                         <br>
-                        <a href="/films/films?filter_{{ fan_header.fan }}=rated">{{ fan_header.action }}</a>
+                        <a href="/films/films?rated_{{ fan_header.fan }}={{ fan_header.query }}">{{ fan_header.action }}</a>
                     </th>
                 {% endfor %}
             </tr>

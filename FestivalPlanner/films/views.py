@@ -13,7 +13,8 @@ from django.views.generic import FormView, DetailView, ListView
 
 from festival_planner.cache import FilmRatingCache
 from festival_planner.debug_tools import pr_debug
-from festival_planner.tools import add_base_context, unset_log, wrap_up_form_errors, application_name, get_log
+from festival_planner.tools import add_base_context, unset_log, wrap_up_form_errors, application_name, get_log, \
+    set_cookie, get_cookie
 from festivals.config import Config
 from festivals.models import current_festival
 from films.forms.film_forms import RatingForm, PickRating, UserForm
@@ -30,8 +31,6 @@ class FilmsView(LoginRequiredMixin, View):
     template_name = 'films/films.html'
     submit_name_prefix = 'list_'
     unexpected_errors = []
-    display_shorts = True
-    display_rated_by_fan = {fan.name: True for fan in get_present_fans()}
 
     @staticmethod
     def get(request, *args, **kwargs):
@@ -46,15 +45,16 @@ class FilmsView(LoginRequiredMixin, View):
 
 class FilmsListView(LoginRequiredMixin, ListView):
     template_name = FilmsView.template_name
-    http_method_names = ['get']
-    queryset = None
     context_object_name = 'film_rows'
+    http_method_names = ['get']
     title = 'Film Rating List'
     highest_rating = FilmFanFilmRating.Rating.values[-1]
     config = Config().config
     max_short_minutes = config['Constants']['MaxShortMinutes']
     short_threshold = timedelta(minutes=max_short_minutes)
     fragment_name_by_row_nr = {}
+    include_by_query = {'hide': False, 'include': True}
+    query_by_include = {include: query for query, include in include_by_query.items()}
     action_by_display_shorts = {True: 'Hide shorts', False: 'Include shorts'}
     action_by_display_rated = {True: 'Hide rated', False: 'Include rated'}
     description_by_film_id = {}
@@ -64,28 +64,35 @@ class FilmsListView(LoginRequiredMixin, ListView):
     selected_films = None
     festival_feature_films = None
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.display_shorts = True
+        self.display_rated_by_fan = {fan: True for fan in self.fan_list}
+
     def dispatch(self, request, *args, **kwargs):
         pr_debug('start', with_time=True)
         session = self.request.session
+
+        # Initialize the filter cookies when necessary.
+        set_cookie(session, 'shorts', get_cookie(session, 'shorts', self.display_shorts))
+        for fan, display_rated in self.display_rated_by_fan.items():
+            key = rated_key(fan)
+            set_cookie(session, key, get_cookie(session, key, self.display_rated_by_fan[fan]))
 
         # Ensure the film rating cache is initialized.
         if not PickRating.film_rating_cache:
             PickRating.film_rating_cache = FilmRatingCache(request.session, FilmsView.unexpected_errors)
 
-        # Apply filters form url query part.
-        if 'filter' in request.GET:
-            column_filter = request.GET['filter']
-            if column_filter == 'shorts':
-                FilmsView.display_shorts = not FilmsView.display_shorts
+        # Apply filters from url query part.
+        filter_dict = {}
+        self.set_cookie_filter('shorts')
+        filter_dict['shorts'] = get_cookie(session, 'shorts')
         for fan in self.fan_list:
-            if f'filter_{fan}' in request.GET:
-                column_filter = request.GET[f'filter_{fan}']
-                if column_filter == 'rated':
-                    FilmsView.display_rated_by_fan[fan.name] = not FilmsView.display_rated_by_fan[fan.name]
+            key = rated_key(fan)
+            self.set_cookie_filter(key)
+            filter_dict[key] = get_cookie(session, key)
 
         # Add the filters to the cache key.
-        filter_dict = copy.deepcopy(FilmsView.display_rated_by_fan)
-        filter_dict['shorts'] = FilmsView.display_shorts
         FilmRatingCache.set_filters(session, filter_dict)
 
         pr_debug('done', with_time=True)
@@ -106,21 +113,25 @@ class FilmsListView(LoginRequiredMixin, ListView):
         # Filter the films as requested.
         pr_debug('start filtered query', with_time=True)
         filter_kwargs = {'festival': self.festival}
-        if not FilmsView.display_shorts:
+        if not get_cookie(session, 'shorts'):
             filter_kwargs['duration__gt'] = self.short_threshold
         self.selected_films = Film.films.filter(**filter_kwargs).order_by('seq_nr')
         self.festival_feature_films = copy.deepcopy(self.selected_films)
         for fan in self.fan_list:
-            if not FilmsView.display_rated_by_fan[fan.name]:
+            if not get_cookie(session, rated_key(fan)):
                 self.selected_films = self.selected_films.filter(
                     ~Exists(FilmFanFilmRating.film_ratings.filter(film=OuterRef('pk'), film_fan=fan))
                 )
 
         # Read the descriptions.
         film_info_file = self.festival.filminfo_file
-        with open(film_info_file, 'r', newline='') as csvfile:
-            object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
-            self.description_by_film_id = {int(row[0]): row[1] for row in object_reader}
+        try:
+            with open(film_info_file, 'r', newline='') as csvfile:
+                object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                self.description_by_film_id = {int(row[0]): row[1] for row in object_reader}
+        except FileNotFoundError as e:
+            self.description_by_film_id = {}
+            FilmsView.unexpected_errors.append(e)
 
         # Fill the film rows.
         film_rows = [self.get_film_row(row_nr, film) for row_nr, film in enumerate(self.selected_films)]
@@ -144,6 +155,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
         pr_debug(f'start, {len(PickRating.film_rating_cache.get_film_rows(session))} records in cache', with_time=True)
         super_context = super().get_context_data(**kwargs)
         film_count, rated_films_count, count_dicts = get_rating_statistics(session)
+        display_shorts = get_cookie(session, 'shorts')
         new_context = {
             'title': self.title,
             'fan_headers': self.get_fan_headers(),
@@ -152,7 +164,8 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'highest_rating': self.highest_rating,
             'eligible_counts': count_dicts,
             'short_threshold': self.short_threshold.total_seconds(),
-            'display_shorts_action': self.action_by_display_shorts[FilmsView.display_shorts],
+            'display_shorts_query': self.query_by_include[not display_shorts],
+            'display_shorts_action': self.action_by_display_shorts[display_shorts],
             'unexpected_errors': FilmsView.unexpected_errors,
             'log': get_log(session)
         }
@@ -163,11 +176,17 @@ class FilmsListView(LoginRequiredMixin, ListView):
         return context
 
     def render_to_response(self, context, **response_kwargs):
-        pr_debug(f'start, {response_kwargs=}', with_time=True)
         response = super().render_to_response(context, **response_kwargs)
         FilmsView.unexpected_errors = []
-        pr_debug('done', with_time=True)
         return response
+
+    def set_cookie_filter(self, request_key, cookie_key=None):
+        cookie_key = cookie_key or request_key
+        request = self.request
+        if request_key in request.GET:
+            query_key = request.GET[request_key]
+            include = self.include_by_query[query_key]
+            set_cookie(request.session, cookie_key, include)
 
     def get_film_row(self, row_nr, film):
         fragment_row = row_nr - STICKY_HEIGHT if row_nr > STICKY_HEIGHT else 0
@@ -203,9 +222,11 @@ class FilmsListView(LoginRequiredMixin, ListView):
         return description
 
     def get_fan_headers(self):
+        session = self.request.session
         fan_headers = [{
             'fan': fan,
-            'action': self.action_by_display_rated[FilmsView.display_rated_by_fan[fan.name]]
+            'query': self.query_by_include[not get_cookie(session, rated_key(fan))],
+            'action': self.action_by_display_rated[get_cookie(session, rated_key(fan))],
         } for fan in self.fan_list]
         return fan_headers
 
@@ -354,6 +375,10 @@ def film_fan(request):
     })
 
     return render(request, 'films/film_fan.html', context)
+
+
+def rated_key(fan):
+    return f'rated_{fan}'
 
 
 def get_rating_statistics(session):

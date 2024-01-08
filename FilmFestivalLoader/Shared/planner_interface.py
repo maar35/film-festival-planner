@@ -794,7 +794,7 @@ class FestivalData:
         data = [i for i in self.filminfos if self.film_can_go_to_planner(i.filmid)]
         # with open(self.filminfo_yaml_file, 'w') as stream:
         #     yaml.dump(data, stream, indent=4)
-        rows = [[i.filmid, i.description] for i in data]
+        rows = sorted([[i.filmid, i.description] for i in data], key=lambda row: row[0])
         with open(self.filminfo_yaml_file, 'w') as csvfile:
             csv_writer = csv.writer(csvfile, self.dialect)
             csv_writer.writerows(rows)

@@ -17,7 +17,10 @@ ALWAYS_DOWNLOAD = True
 DEBUGGING = True
 DISPLAY_ADDED_SCREENING = True
 COMBINATION_EVENT_TITLES = ['Babyfilmclub']
-DUPLICATE_EVENTS_TITLES = ['Opening Night 2024: Head South']
+DUPLICATE_EVENTS_TITLES_BY_MAIN = {
+    'Head South': ['Opening Night 2024: Head South'],
+    'La Luna': ['Closing Night: La Luna (film only)', 'Closing Night: La Luna & Party'],
+}
 
 festival = 'IFFR'
 festival_year = 2024
@@ -129,7 +132,8 @@ def get_subsection_details(festival_data):
         comment_at_download = f'Downloading {subsection.name} page: {subsection.url}, encoding: {url_file.encoding}'
         subsection_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=comment_at_download)
         if subsection_html is not None:
-            print(f'Analysing subsection page {subsection.subsection_id}, {subsection.name}, encoding={url_file.encoding}.')
+            encoding_str = f'encoding={url_file.encoding}'
+            print(f'Analysing subsection page {subsection.subsection_id}, {subsection.name}, {encoding_str}.')
             SubsectionPageParser(festival_data, subsection).feed(subsection_html)
 
 
@@ -230,7 +234,7 @@ class AzPageParser(HtmlPageParser):
             if not article:
                 article = description
             if article != description:
-                article = description + 2*'\n' + article
+                article = description + 2 * '\n' + article
         return description, article
 
     @staticmethod
@@ -297,7 +301,6 @@ class AzPageParser(HtmlPageParser):
 
 
 class ScreeningParser(HtmlPageParser):
-
     class ScreeningParseState(Enum):
         IDLE = auto()
         IN_SCREENINGS = auto()
@@ -376,8 +379,8 @@ class ScreeningParser(HtmlPageParser):
         self.end_dt = datetime.datetime.combine(end_date, end_time)
 
     def add_on_location_screening(self):
-        if self.film.title in DUPLICATE_EVENTS_TITLES and has_category(self.film, Film.category_events):
-            print(f'Screening skipped of duplicate event: {self.film.title}')
+        if self.event_starts_simultaneous():
+            print(f'Screening skipped in favour of derived event: {self.film.title}')
             counter.increase('duplicate events')
             return
         self.screen = self.get_screen()
@@ -388,6 +391,19 @@ class ScreeningParser(HtmlPageParser):
         self.add_screening(iffr_screening, display=DISPLAY_ADDED_SCREENING)
         counter.increase('public' if self.audience == Screening.audience_type_public else 'industry')
         self.screenings.append(self.screening)
+
+    def event_starts_simultaneous(self):
+        main_title = self.film.title
+        if main_title in DUPLICATE_EVENTS_TITLES_BY_MAIN:
+            for event_title in DUPLICATE_EVENTS_TITLES_BY_MAIN[main_title]:
+                events = [f for f in self.festival_data.films if f.title == event_title]
+                if not events:
+                    error_collector.add(f'Derived event {event_title} not found')
+                    break
+                event = events[0]
+                if [s for s in event.screenings(self.festival_data) if s.start_datetime == self.start_dt]:
+                    return True
+        return False
 
     def get_screen(self):
         screen_parse_name = self.location
@@ -408,6 +424,9 @@ class ScreeningParser(HtmlPageParser):
                 theater_parse_name = location
             elif location.startswith('TR Schouwburg'):
                 theater_parse_name = 'Schouwburg'
+                screen_abbreviation = ' '.join(location.split()[2:])
+            elif location.startswith('de Doelen'):
+                theater_parse_name = 'de Doelen'
                 screen_abbreviation = ' '.join(location.split()[2:])
         return city_name, theater_parse_name, screen_abbreviation
 
@@ -624,7 +643,6 @@ class FilmInfoPageParser(ScreeningParser):
 
 
 class CombinationPageParser(ScreeningParser):
-
     class CombinationParserState(Enum):
         IDLE = auto()
         IN_TITLE = auto()
@@ -758,7 +776,6 @@ class CombinationPageParser(ScreeningParser):
 
 
 class SubsectionPageParser(HtmlPageParser):
-
     class SubsectionsParseState(Enum):
         IDLE = auto()
         AWAITING_DESCRIPTION = auto()
