@@ -79,7 +79,8 @@ namespace PresentScreenings.TableView
             MaxShortMinutes = int.Parse(Config.Constants["MaxShortMinutes"]);
             MaxShortDuration = new TimeSpan(0, MaxShortMinutes, 0);
             PauseBetweenOnDemandScreenings = new TimeSpan(0, 30, 0);
-            Screening.TravelTime = new TimeSpan(0, 30, 0);
+            Screening.WalkTimeSameTheater = new TimeSpan(0, 15, 0);
+            Screening.TravelTimeOtherTheater = new TimeSpan(0, 40, 0);
             FilmRatingDialogController.OnlyFilmsWithScreenings = false;
             DaySchemaScreeningControl.UseCoreGraphics = false;
 

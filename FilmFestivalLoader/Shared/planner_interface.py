@@ -333,7 +333,7 @@ class Screen:
         self.new = new
 
     def __str__(self):
-        return self.abbr
+        return f'{self.theater.abbr}{self.abbr}'
 
     def __repr__(self):
         text = ';'.join([

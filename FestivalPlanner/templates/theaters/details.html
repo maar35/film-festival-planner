@@ -10,6 +10,8 @@
         </span>
         <span class="right-half">
             <a href="{% url 'theaters:theaters' %}">Back to theater index</a>
+            <br>
+            <a href="{% url 'loader:new_screens' %}">New theater data</a>
         </span>
         {% if form_errors %}
             <h2 class="error">Form Error</h2>

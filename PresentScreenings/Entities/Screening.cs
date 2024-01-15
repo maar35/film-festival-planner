@@ -78,7 +78,8 @@ namespace PresentScreenings.TableView
 
         #region Static Properties
         public static Action<Screening> GoToScreening { get; set; }
-        public static TimeSpan TravelTime { get; set; }
+        public static TimeSpan WalkTimeSameTheater { get; set; }
+        public static TimeSpan TravelTimeOtherTheater { get; set; }
         public static bool InOutliningOverlaps { get; set; } = false;
         public static Dictionary<string, int> IndexByName { get; }
         #endregion
@@ -290,9 +291,16 @@ namespace PresentScreenings.TableView
 
         public bool Overlaps(Screening otherScreening, bool useTravelTime = false)
         {
-            var travelTime = useTravelTime ? TravelTime : TimeSpan.Zero;
+            var travelTime = useTravelTime ? GetTravelTime(otherScreening) : TimeSpan.Zero;
             return otherScreening.StartTime <= EndTime + travelTime
                 && otherScreening.EndTime >= StartTime - travelTime;
+        }
+
+        public TimeSpan GetTravelTime(Screening otherScreening)
+        {
+            var sameTheater = Screen.Theater.TheaterId == otherScreening.Screen.Theater.TheaterId;
+            var travelTime = sameTheater ? WalkTimeSameTheater : TravelTimeOtherTheater;
+            return travelTime;
         }
         #endregion
 

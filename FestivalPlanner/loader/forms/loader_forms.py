@@ -299,6 +299,8 @@ class SimpleLoader(BaseLoader):
             disappeared_object_set = existing_object_set - updated_object_set
             disappeared_pk_list = [obj.pk for obj in disappeared_object_set]
             disappeared_objects = existing_objects.filter(pk__in=disappeared_pk_list)
+            for obj in disappeared_objects:
+                self.add_log(f'{obj=} will be deleted')
 
             # Delete disappeared objects from the database.
             self.delete_objects(disappeared_objects)

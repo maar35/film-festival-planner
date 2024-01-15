@@ -3,23 +3,24 @@
 
 import datetime
 import re
-from copy import copy
 from enum import Enum, auto
 from typing import Dict
 
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Config, Counter
-from Shared.parse_tools import FileKeeper, try_parse_festival_sites, HtmlPageParser
+from Shared.parse_tools import FileKeeper, try_parse_festival_sites, HtmlPageParser, ScreeningKey
 from Shared.planner_interface import FilmInfo, Screening, ScreenedFilmType, ScreenedFilm, FestivalData, Film, \
     get_screen_from_parse_name
 from Shared.web_tools import UrlFile, iri_slug_to_url, fix_json
 
-ALWAYS_DOWNLOAD = True
+ALWAYS_DOWNLOAD = False
 DEBUGGING = True
 DISPLAY_ADDED_SCREENING = True
 COMBINATION_EVENT_TITLES = ['Babyfilmclub']
 DUPLICATE_EVENTS_TITLES_BY_MAIN = {
     'Head South': ['Opening Night 2024: Head South'],
     'La Luna': ['Closing Night: La Luna (film only)', 'Closing Night: La Luna & Party'],
+    'How to Have Sex': ['IFFR x EUR: How to Have Sex'],
+    'Blackbird Blackbird Blackberry': ['IFFR Young Selectors: Blackbird Blackbird Blackberry'],
 }
 
 festival = 'IFFR'
@@ -59,9 +60,9 @@ def main():
     counter.start('combination events')
     counter.start('public')
     counter.start('industry')
-    counter.start('fabricated screenings')
-    counter.start('extras in screening')
-    counter.start('fabricated combinations')
+    counter.start('combinations from screenings')
+    for screened_film_type in ScreenedFilmType:
+        counter.start(screened_film_type.name)
 
     # Try parsing the websites.
     try_parse_festival_sites(parse_iffr_sites, festival_data, error_collector, debug_recorder, festival, counter)
@@ -82,6 +83,9 @@ def parse_iffr_sites(festival_data):
 
     comment('Parsing regular film pages.')
     get_regular_films(festival_data)
+
+    comment('Constructing combinations from screening data')
+    set_combinations_from_screening_data(festival_data)
 
 
 def get_films(festival_data):
@@ -135,6 +139,22 @@ def get_subsection_details(festival_data):
             encoding_str = f'encoding={url_file.encoding}'
             print(f'Analysing subsection page {subsection.subsection_id}, {subsection.name}, {encoding_str}.')
             SubsectionPageParser(festival_data, subsection).feed(subsection_html)
+
+
+def set_combinations_from_screening_data(festival_data):
+    for main_film, screening_key in ScreeningParser.screening_key_by_main_film.items():
+        main_film_info = main_film.film_info(festival_data)
+        screened_film_type = ScreeningParser.screened_film_type_by_screening_key[screening_key]
+        films = [s.film for s in festival_data.screenings if s.film.filmid != main_film.filmid and ScreeningKey(s) == screening_key]
+        screened_films = set(films)
+        if screened_films:
+            counter.increase('combinations from screenings')
+            counter.increase(screened_film_type.name)
+        for film in screened_films:
+            screened_film_info = film.film_info(festival_data)
+            screened_film_info.combination_films.append(main_film)
+            screened_film = ScreenedFilm(film.filmid, film.title, screened_film_info.description, screened_film_type)
+            main_film_info.screened_films.append(screened_film)
 
 
 class AzPageParser(HtmlPageParser):
@@ -322,6 +342,8 @@ class ScreeningParser(HtmlPageParser):
         'Te zien na ': ScreenedFilmType.SCREENED_AFTER,
         'Gepresenteerd als onderdeel van ': ScreenedFilmType.PART_OF_COMBINATION_PROGRAM,
         'Wordt vertoond in combinatie met ': ScreenedFilmType.DIRECTLY_COMBINED}
+    screened_film_type_by_screening_key = {}
+    screening_key_by_main_film = {}
     re_num_screen = re.compile(r'^(?P<theater>.*?)\s+(?P<number>\d+)$')
     re_separator = re.compile(r'^(?P<theater>.*?)\s+-\s+(?P<room>[^-]+)$')
 
@@ -335,7 +357,6 @@ class ScreeningParser(HtmlPageParser):
         self.end_dt = None
         self.location = None
         self.screen = None
-        self.combination_program = None
         self.screened_film_type = None
         self.combination_part = None
         self.combination_parts = None
@@ -343,6 +364,7 @@ class ScreeningParser(HtmlPageParser):
         self.extra = None
         self.subtitles = None
         self.q_and_a = None
+        self.sold_out = None
         self.screenings = []
 
         # Initialize the state stack.
@@ -354,7 +376,6 @@ class ScreeningParser(HtmlPageParser):
         self.end_dt = None
         self.location = None
         self.screen = None
-        self.combination_program = None
         self.screened_film_type = None
         self.combination_part = ''
         self.combination_parts = []
@@ -362,6 +383,7 @@ class ScreeningParser(HtmlPageParser):
         self.extra = ''
         self.subtitles = ''
         self.q_and_a = ''
+        self.sold_out = False
 
     def parse_screening_date(self, data):
         items = data.split()  # woensdag 01 februari 2023
@@ -378,6 +400,19 @@ class ScreeningParser(HtmlPageParser):
         end_date = self.start_date if end_time > start_time else self.start_date + datetime.timedelta(days=1)
         self.end_dt = datetime.datetime.combine(end_date, end_time)
 
+    def set_screening_data(self, data):
+        if data == 'Voor professionals':
+            self.audience = data
+        if 'Q&A' in data:
+            self.q_and_a = 'Q&A'
+        if 'Met voorfilm' in data:
+            self.extra = 'voorfilm'
+            self.screened_film_type = ScreenedFilmType.SCREENED_BEFORE
+        if 'Uitverkocht' in data:
+            self.sold_out = True
+        if data.endswith('ondertiteld'):
+            self.subtitles = data
+
     def add_on_location_screening(self):
         if self.event_starts_simultaneous():
             print(f'Screening skipped in favour of derived event: {self.film.title}')
@@ -385,8 +420,9 @@ class ScreeningParser(HtmlPageParser):
             return
         self.screen = self.get_screen()
         iffr_screening = IffrScreening(self.film, self.screen, self.start_dt, self.end_dt, self.q_and_a,
-                                       self.extra, self.audience, self.screened_film_type)
-        iffr_screening.combination_program = self.combination_program
+                                       self.extra, self.audience, self.screened_film_type, self.sold_out)
+        self.set_combination_data(iffr_screening)
+        self.set_combination_main_film(iffr_screening)
         iffr_screening.subtitles = self.subtitles
         self.add_screening(iffr_screening, display=DISPLAY_ADDED_SCREENING)
         counter.increase('public' if self.audience == Screening.audience_type_public else 'industry')
@@ -405,6 +441,46 @@ class ScreeningParser(HtmlPageParser):
                     return True
         return False
 
+    def set_combination_main_film(self, iffr_screening):
+        main_title = None   # Lords of Lockdown (hoofdprogramma)
+        extra_title = None  # In hi ko (onderdeel van het programma)
+        for part in self.combination_parts:
+            if part.endswith('(hoofdprogramma)'):
+                main_title = part.split('(')[0].strip()
+            elif part.endswith('(onderdeel van het programma)'):
+                extra_title = part.split('(')[0].strip()
+        if extra_title == self.film.title:
+            try:
+                # Find the film in the list of regular films.
+                main_film_id = AzPageParser.film_id_by_title[main_title]
+            except KeyError:
+                # Combination programs are handled differently.
+                pass
+            else:
+                main_film = self.festival_data.get_film_by_id(main_film_id)
+                if main_film is None:
+                    error_collector.add('Main film not found', f'Film ID: {main_film_id}')
+                else:
+                    if not self.is_combination(main_film):
+                        iffr_screening.screened_film_type = ScreenedFilmType.DIRECTLY_COMBINED
+                        self.set_combination_data(iffr_screening, main_film)
+
+    def set_combination_data(self, iffr_screening, main_film=None):
+        if self.is_combination(self.film):
+            # Already combined in film info page parser.
+            return
+        if iffr_screening.screened_film_type:
+            main_film = main_film or self.film
+            screening_key = ScreeningKey(iffr_screening)
+            self.screened_film_type_by_screening_key[screening_key] = iffr_screening.screened_film_type
+            self.screening_key_by_main_film[main_film] = screening_key
+
+    def is_combination(self, film):
+        is_combo = has_category(film, Film.category_combinations) \
+            or film in self.screening_key_by_main_film \
+            or (film.title in COMBINATION_EVENT_TITLES and has_category(film, Film.category_events))
+        return is_combo
+
     def get_screen(self):
         screen_parse_name = self.location
         return get_screen_from_parse_name(self.festival_data, screen_parse_name, self.split_location)
@@ -413,28 +489,28 @@ class ScreeningParser(HtmlPageParser):
         city_name = festival_city
         theater_parse_name = None
         screen_abbreviation = 'zaal'
-        for regex in [self.re_num_screen, self.re_separator]:
-            match = regex.match(location)
-            if match:
-                theater_parse_name = match.group(1)
-                screen_abbreviation = match.group(2)
-                break
+        one_room_theaters = ['SKVR Centrum', 'V2', 'BRUTUS', 'Frank Taal Galerie', 'OX.Space', 'OX.Space',
+                             'Secret locations', 'HAKA-gebouw', 'JOEY RAMONE', 'Oude Luxor',
+                             'Station Rotterdam Centraal', 'Depot Boijmans Van Beuningen']
+        if location in one_room_theaters:
+            theater_parse_name = location
+        elif location.startswith('de Doelen'):
+            theater_parse_name = 'de Doelen'
+            screen_abbreviation = ' '.join(location.split()[2:])
+        elif location.startswith('TR Schouwburg'):
+            theater_parse_name = 'Schouwburg'
+            screen_abbreviation = ' '.join(location.split()[2:])
+        elif location.startswith('WORM'):
+            theater_parse_name = 'WORM'
+            screen_abbreviation = ' '.join(location.split()[1:])
         if not theater_parse_name:
-            if location == 'SKVR Centrum':
-                theater_parse_name = location
-            elif location.startswith('TR Schouwburg'):
-                theater_parse_name = 'Schouwburg'
-                screen_abbreviation = ' '.join(location.split()[2:])
-            elif location.startswith('de Doelen'):
-                theater_parse_name = 'de Doelen'
-                screen_abbreviation = ' '.join(location.split()[2:])
+            for regex in [self.re_num_screen, self.re_separator]:
+                match = regex.match(location)
+                if match:
+                    theater_parse_name = match.group(1)
+                    screen_abbreviation = match.group(2)
+                    break
         return city_name, theater_parse_name, screen_abbreviation
-
-    def update_screenings(self):
-        combination_films = self.film_info.combination_films
-        if len(combination_films) > 0:
-            for screening in self.screenings:
-                screening.combination_program = combination_films[0]
 
     def handle_screening_starttag(self, tag, attrs, state_stack, state_awaiting, state_done):
         if state_stack.state_is(state_awaiting) and tag == 'h3':
@@ -470,7 +546,6 @@ class ScreeningParser(HtmlPageParser):
             self.state_stack.pop()
             self.state_stack.pop()
         elif self.state_stack.state_is(self.ScreeningParseState.IN_SCREENINGS) and tag == 'ul':
-            self.update_screenings()
             self.state_stack.pop()
             state_stack.change(state_done)
 
@@ -486,15 +561,7 @@ class ScreeningParser(HtmlPageParser):
         elif self.state_stack.state_is(self.ScreeningParseState.IN_COMBINATION_PART):
             self.combination_part += data
         elif self.state_stack.state_is(self.ScreeningParseState.AFTER_SCREENING_DATA):
-            if data == 'Voor professionals':
-                self.audience = data
-            if 'Q&A' in data:
-                self.q_and_a = 'Q&A'
-            if 'voorfilm' in data:
-                self.extra = 'voorfilm'
-                self.screened_film_type = ScreenedFilmType.SCREENED_BEFORE
-            if data.endswith('ondertiteld'):
-                self.subtitles = data
+            self.set_screening_data(data)
 
 
 class FilmInfoPageParser(ScreeningParser):
@@ -528,7 +595,7 @@ class FilmInfoPageParser(ScreeningParser):
         # Initialize the state stack.
         self.state_stack = self.StateStack(self.print_debug, self.FilmInfoParseState.IDLE)
 
-        # Get the film info of the current film. Its unique existence is guaranteed in AzPageParser. NOT YET!
+        # Get the film info of the current film. Its unique existence is guaranteed in AzPageParser.
         self.film_info = self.film.film_info(self.festival_data)
 
     def set_article(self):
@@ -554,27 +621,6 @@ class FilmInfoPageParser(ScreeningParser):
             print(f'{len(self.screened_film_slugs)} screened films found.')
         if self.event_is_combi:
             counter.increase('combination events')
-        #     # If this combination was fabricated because IFFR introduced
-        #     # a gupta, fabricate its screenings.
-        #     self.check_set_fabricated_screenings(combination_program)
-
-    def check_set_fabricated_screenings(self, combination_program):
-        if combination_program.filmid in CombinationPageParser.fabricated_film_ids:
-            screenings = self.film.screenings(self.festival_data)
-
-            # If the fabricated program has no screenings yet, copy them
-            # fom the screened film screenings.
-            combination_program_screening_count = len(combination_program.screenings(self.festival_data))
-            if combination_program_screening_count == 0:
-                for screening in screenings:
-                    counter.increase('fabricated screenings')
-                    combi_screening = copy(screening)
-                    combi_screening.film = combination_program
-                    self.add_screening(combi_screening)
-
-            # Set the combination program in all screened film screenings.
-            for screening in screenings:
-                screening.combination_program = combination_program
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -642,139 +688,6 @@ class FilmInfoPageParser(ScreeningParser):
             self.handle_screening_data(data)
 
 
-class CombinationPageParser(ScreeningParser):
-    class CombinationParserState(Enum):
-        IDLE = auto()
-        IN_TITLE = auto()
-        AWAITING_SECTION = auto()
-        IN_SUBSECTION = auto()
-        AWAITING_DESCRIPTION = auto()
-        IN_PARAGRAPH = auto()
-        IN_EMPHASIS = auto()
-        AWAITING_SCREENINGS = auto()
-        DONE = auto()
-
-    combination_program_by_url = {}
-    fabricated_film_ids = []
-
-    def __init__(self, festival_data, url):
-        ScreeningParser.__init__(self, festival_data, 'CO', debugging=DEBUGGING)
-        self.festival_data = festival_data
-        self.url = url
-        self.title = None
-        self.combination_program = None
-        self.film_info = None
-        self.section_name = None
-        self.subsection_name = None
-        self.subsection_url = None
-
-        # Print a bar in the debug file when debugging.
-        self.print_debug(self.bar, f'Analysing COMBINATION PROGRAM {self.url}')
-
-        # Initialize the state stack.
-        self.state_stack = self.StateStack(self.print_debug, self.CombinationParserState.IDLE)
-
-    def fabricate_combination_program(self):
-        film_id = self.festival_data.film_id_by_url[self.url]
-        title = self.festival_data.title_by_film_id[film_id]
-        self.festival_data.film_seqnr += 1
-        self.combination_program = Film(self.festival_data.film_seqnr, film_id, title, self.url)
-        if self.combination_program is None:
-            error_collector.add('Could not fabricate combination film', f'title {title}, url {self.url}')
-        else:
-            counter.increase('fabricated combinations')
-            self.fabricated_film_ids.append(film_id)
-            self.description = 'No description'
-            self.add_existing_combination_film()
-
-    def add_combination_film(self):
-        self.combination_program = self.festival_data.create_film(self.title, self.url)
-        if self.combination_program is None:
-            error_collector.add(f'Could\'t create combination program from {self.title}', self.url)
-        else:
-            self.add_existing_combination_film()
-
-    def add_existing_combination_film(self):
-        self.combination_program.medium_category = Film.category_by_string['combinations']
-        self.combination_program.duration = datetime.timedelta(minutes=0)
-        if len(self.description) == 0:
-            self.subsection_name = 'NO DESCRIPTION'
-        section = self.festival_data.get_section(self.section_name)
-        if section is not None:
-            subsection = self.festival_data.get_subsection(self.subsection_name, self.subsection_url, section)
-            self.combination_program.subsection = subsection
-        print(f'Adding COMBINATION PROGRAM: {self.title}')
-        counter.increase('combinations')
-        self.festival_data.films.append(self.combination_program)
-        self.film = self.combination_program
-        self.print_debug('-- STORING COMBI BY URL', f'title: {self.combination_program.title}, url: {self.url}')
-        self.combination_program_by_url[self.url] = self.combination_program
-        self.add_combination_film_info()
-
-    def add_combination_film_info(self):
-        if len(self.description) > 0:
-            self.film_info = FilmInfo(self.combination_program.filmid, self.description, '')
-            self.festival_data.filminfos.append(self.film_info)
-
-    def handle_starttag(self, tag, attrs):
-        HtmlPageParser.handle_starttag(self, tag, attrs)
-
-        if self.state_stack.state_is(self.CombinationParserState.IDLE) and tag == 'h1':
-            if len(attrs) > 0 and attrs[0][1].endswith('header__title'):
-                self.state_stack.change(self.CombinationParserState.IN_TITLE)
-        elif self.state_stack.state_is(self.CombinationParserState.AWAITING_SECTION) and tag == 'a':
-            if len(attrs) > 6 and attrs[0][0] == 'tagcolor':
-                self.section_name = attrs[0][1]
-                self.subsection_url = attrs[6][1]
-                self.state_stack.change(self.CombinationParserState.IN_SUBSECTION)
-        elif self.state_stack.state_is(self.CombinationParserState.AWAITING_DESCRIPTION) and tag == 'div':
-            if len(attrs) > 0 and attrs[0][0] == 'class':
-                self.state_stack.push(self.CombinationParserState.IN_PARAGRAPH)
-        elif self.state_stack.state_is(self.CombinationParserState.IN_PARAGRAPH) and tag == 'em':
-            self.state_stack.push(self.CombinationParserState.IN_EMPHASIS)
-
-        # Screening part.
-        else:
-            self.handle_screening_starttag(tag, attrs, self.state_stack,
-                                           self.CombinationParserState.AWAITING_SCREENINGS,
-                                           self.CombinationParserState.DONE)
-
-    def handle_endtag(self, tag):
-        HtmlPageParser.handle_endtag(self, tag)
-
-        if self.state_stack.state_in([self.CombinationParserState.IN_EMPHASIS]) and tag == 'em':
-            self.state_stack.pop()
-        elif self.state_stack.state_is(self.CombinationParserState.IN_PARAGRAPH) and tag == 'div':
-            self.state_stack.pop()
-            self.add_paragraph()
-            self.set_article()
-            self.description = self.article
-            self.add_combination_film()
-            self.state_stack.change(self.CombinationParserState.AWAITING_SCREENINGS)
-        elif tag == 'html' and not self.state_stack.state_is(self.CombinationParserState.DONE):
-            self.print_debug('WORK AROUND THE APPEARANCE OF A GUPTA', f'url {self.url}')
-            self.fabricate_combination_program()
-            self.state_stack.change(self.CombinationParserState.DONE)
-        else:
-            self.handle_screening_endtag(tag, self.state_stack, self.CombinationParserState.DONE)
-
-    def handle_data(self, data):
-        HtmlPageParser.handle_data(self, data)
-
-        if self.state_stack.state_is(self.CombinationParserState.IN_TITLE):
-            self.title = data.strip()
-            self.print_debug(self.bar, f'Analysing COMBINATION PROGRAM {self.title} {self.url}')
-            self.state_stack.change(self.CombinationParserState.AWAITING_SECTION)
-        elif self.state_stack.state_is(self.CombinationParserState.IN_SUBSECTION):
-            self.subsection_name = data.strip()
-            self.state_stack.change(self.CombinationParserState.AWAITING_DESCRIPTION)
-        if self.state_stack.state_in([self.CombinationParserState.IN_PARAGRAPH,
-                                      self.CombinationParserState.IN_EMPHASIS]):
-            self.article_paragraph += data.replace('\n', ' ')
-        else:
-            self.handle_screening_data(data)
-
-
 class SubsectionPageParser(HtmlPageParser):
     class SubsectionsParseState(Enum):
         IDLE = auto()
@@ -813,9 +726,11 @@ class SubsectionPageParser(HtmlPageParser):
 
 class IffrScreening(Screening):
 
-    def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, screened_film_type=None):
+    def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience,
+                 screened_film_type=None, sold_out=None):
         Screening.__init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience)
         self.screened_film_type = screened_film_type
+        self.sold_out = sold_out
 
 
 class IffrData(FestivalData):
