@@ -6,7 +6,12 @@
 {% block content %}
     {% load static %}
     {% if log %}
-        <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
+        <span class="left-half">
+            <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
+        </span>
+        <span class="right-half">
+            <a href="{% url 'theaters:theaters' %}">Theater index</a>
+        </span>
         {% for result in log.results %}
             <p class="log">{{ result }}</p>
         {% endfor %}
