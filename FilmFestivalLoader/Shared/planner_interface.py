@@ -31,6 +31,14 @@ def get_screen_from_parse_name(festival_data, screen_parse_name, split_location)
     return screen
 
 
+def link_screened_film(festival_data, sub_film, main_film, main_film_info=None, screened_film_type=None):
+    sub_film_info = sub_film.film_info(festival_data)
+    sub_film_info.combination_films.append(main_film)
+    screened_film = ScreenedFilm(sub_film.filmid, sub_film.title, sub_film_info.description, screened_film_type)
+    main_film_info = main_film_info or main_film.film_info(festival_data)
+    main_film_info.screened_films.append(screened_film)
+
+
 def write_lists(festival_data, write_film_list, write_other_lists):
 
     if write_film_list or write_other_lists:
@@ -207,7 +215,7 @@ class ScreenedFilmType(Enum):
 
 class ScreenedFilm:
 
-    def __init__(self, film_id, title, description, sf_type: ScreenedFilmType = ScreenedFilmType.PART_OF_COMBINATION_PROGRAM):
+    def __init__(self, film_id, title, description, screened_film_type=None):
         """
         Screened Film: representation of a film that
         is displayed as part of combination program.
@@ -216,12 +224,13 @@ class ScreenedFilm:
         @type title: str
         @type description: str
         """
+        screened_film_type = screened_film_type or ScreenedFilmType.PART_OF_COMBINATION_PROGRAM
         self.filmid = film_id
         if title is None or len(title) == 0:
             raise FilmTitleError(description)
         self.title = title
         self.description = description.strip() if description is not None else ''
-        self.screened_film_type = sf_type
+        self.screened_film_type = screened_film_type
 
     def __str__(self):
         return ' - '.join([str(self.filmid), self.title])
@@ -361,7 +370,7 @@ class Screening:
     audience_type_public = 'publiek'
 
     def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience,
-                 combination_program=None, subtitles=''):
+                 combination_program=None, subtitles='', sold_out=None):
         self.film = film
         self.screen = screen
         self.start_datetime = start_datetime
@@ -372,6 +381,7 @@ class Screening:
         self.combination_program = combination_program
         self.q_and_a = qa
         self.audience = audience
+        self.sold_out = sold_out
 
     def __str__(self):
         start_time = self.start_datetime.isoformat(sep=" ", timespec="minutes")
@@ -399,6 +409,7 @@ class Screening:
             "subtitles",
             "qanda",
             "extra",
+            "sold_out",
         ])
         return "{}\n".format(text)
 
@@ -411,7 +422,8 @@ class Screening:
             str(self.combination_program.filmid if self.combination_program is not None else ''),
             self.subtitles,
             self.q_and_a,
-            self.extra
+            self.extra,
+            str(self.sold_out) if self.sold_out is not None else ''
         ])
         return f'{text}\n'
 

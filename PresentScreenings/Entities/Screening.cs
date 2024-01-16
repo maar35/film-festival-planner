@@ -98,6 +98,7 @@ namespace PresentScreenings.TableView
             IndexByName.Add("Subtitles", ++n);
             IndexByName.Add("QAndA", ++n);
             IndexByName.Add("Extra", ++n);
+            IndexByName.Add("SoldOut", ++n);
         }
 
         public Screening() { }
@@ -114,6 +115,7 @@ namespace PresentScreenings.TableView
             string subtitles = fields[IndexByName["Subtitles"]];
             string qAndA = fields[IndexByName["QAndA"]];
             string extra = fields[IndexByName["Extra"]];
+            string soldOut = fields[IndexByName["SoldOut"]];
 
             // Assign key properties.
             OriginalFilmId = filmId;
@@ -159,6 +161,10 @@ namespace PresentScreenings.TableView
             Subtitles = subtitles;
             QAndA = qAndA;
             Extra = extra;
+            if (soldOut.Length > 0)
+            {
+                SoldOut = bool.Parse(soldOut);
+            }
         }
         #endregion
 

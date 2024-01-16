@@ -9,12 +9,17 @@ from typing import Dict
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Config, Counter
 from Shared.parse_tools import FileKeeper, try_parse_festival_sites, HtmlPageParser, ScreeningKey
 from Shared.planner_interface import FilmInfo, Screening, ScreenedFilmType, ScreenedFilm, FestivalData, Film, \
-    get_screen_from_parse_name
+    get_screen_from_parse_name, link_screened_film
 from Shared.web_tools import UrlFile, iri_slug_to_url, fix_json
 
 ALWAYS_DOWNLOAD = False
 DEBUGGING = True
 DISPLAY_ADDED_SCREENING = True
+COMBINATION_TITLE_BY_ABBREVIATION = {
+    'The Battle Of Chile': 'The Battle Of Chile (Part 1): The Insurrection of the Bourgeoisie',
+    'Extranjeros': 'Extranjeros (Främlingar)',
+    '': 'Cloud Migration',
+}
 COMBINATION_EVENT_TITLES = ['Babyfilmclub']
 DUPLICATE_EVENTS_TITLES_BY_MAIN = {
     'Head South': ['Opening Night 2024: Head South'],
@@ -63,6 +68,7 @@ def main():
     counter.start('combinations from screenings')
     for screened_film_type in ScreenedFilmType:
         counter.start(screened_film_type.name)
+    counter.start('wrong_title')
 
     # Try parsing the websites.
     try_parse_festival_sites(parse_iffr_sites, festival_data, error_collector, debug_recorder, festival, counter)
@@ -142,19 +148,22 @@ def get_subsection_details(festival_data):
 
 
 def set_combinations_from_screening_data(festival_data):
+    def coinciding(screening, key, other_film):
+        return ScreeningKey(screening) == key and screening.film.filmid != other_film.filmid
+
     for main_film, screening_key in ScreeningParser.screening_key_by_main_film.items():
         main_film_info = main_film.film_info(festival_data)
         screened_film_type = ScreeningParser.screened_film_type_by_screening_key[screening_key]
-        films = [s.film for s in festival_data.screenings if s.film.filmid != main_film.filmid and ScreeningKey(s) == screening_key]
-        screened_films = set(films)
+        screened_films = [s.film for s in festival_data.screenings if coinciding(s, screening_key, main_film)]
         if screened_films:
             counter.increase('combinations from screenings')
             counter.increase(screened_film_type.name)
         for film in screened_films:
-            screened_film_info = film.film_info(festival_data)
-            screened_film_info.combination_films.append(main_film)
-            screened_film = ScreenedFilm(film.filmid, film.title, screened_film_info.description, screened_film_type)
-            main_film_info.screened_films.append(screened_film)
+            link_screened_film(festival_data, film, main_film, main_film_info, screened_film_type)
+
+
+def is_combination_event(film):
+    return film.title in COMBINATION_EVENT_TITLES and has_category(film, Film.category_events)
 
 
 class AzPageParser(HtmlPageParser):
@@ -365,12 +374,12 @@ class ScreeningParser(HtmlPageParser):
         self.subtitles = None
         self.q_and_a = None
         self.sold_out = None
-        self.screenings = []
 
         # Initialize the state stack.
         self.state_stack = self.StateStack(self.print_debug, self.ScreeningParseState.IDLE)
 
     def init_screening_data(self):
+        self.start_date = None
         self.times_str = ''
         self.start_dt = None
         self.end_dt = None
@@ -383,7 +392,6 @@ class ScreeningParser(HtmlPageParser):
         self.extra = ''
         self.subtitles = ''
         self.q_and_a = ''
-        self.sold_out = False
 
     def parse_screening_date(self, data):
         items = data.split()  # woensdag 01 februari 2023
@@ -409,7 +417,7 @@ class ScreeningParser(HtmlPageParser):
             self.extra = 'voorfilm'
             self.screened_film_type = ScreenedFilmType.SCREENED_BEFORE
         if 'Uitverkocht' in data:
-            self.sold_out = True
+            pass    # Word is not encountered in the HTML text.
         if data.endswith('ondertiteld'):
             self.subtitles = data
 
@@ -422,11 +430,9 @@ class ScreeningParser(HtmlPageParser):
         iffr_screening = IffrScreening(self.film, self.screen, self.start_dt, self.end_dt, self.q_and_a,
                                        self.extra, self.audience, self.screened_film_type, self.sold_out)
         self.set_combination_data(iffr_screening)
-        self.set_combination_main_film(iffr_screening)
         iffr_screening.subtitles = self.subtitles
         self.add_screening(iffr_screening, display=DISPLAY_ADDED_SCREENING)
         counter.increase('public' if self.audience == Screening.audience_type_public else 'industry')
-        self.screenings.append(self.screening)
 
     def event_starts_simultaneous(self):
         main_title = self.film.title
@@ -441,8 +447,22 @@ class ScreeningParser(HtmlPageParser):
                     return True
         return False
 
-    def set_combination_main_film(self, iffr_screening):
-        main_title = None   # Lords of Lockdown (hoofdprogramma)
+    def set_combination_data(self, iffr_screening):
+        # First use combination data with specific screened file type.
+        self.set_combination_from_screened_film_type(iffr_screening, main_film=self.film)
+
+        # Use the unspecific combination data.
+        self.set_combination_from_summery(iffr_screening)
+
+    def set_combination_from_screened_film_type(self, iffr_screening, main_film=None):
+        main_film = main_film or self.film
+        if iffr_screening.screened_film_type and not self.is_combination(main_film):
+            screening_key = ScreeningKey(iffr_screening)
+            self.screened_film_type_by_screening_key[screening_key] = iffr_screening.screened_film_type
+            self.screening_key_by_main_film[main_film] = screening_key
+
+    def set_combination_from_summery(self, iffr_screening):
+        main_title = None  # Lords of Lockdown (hoofdprogramma)
         extra_title = None  # In hi ko (onderdeel van het programma)
         for part in self.combination_parts:
             if part.endswith('(hoofdprogramma)'):
@@ -450,35 +470,20 @@ class ScreeningParser(HtmlPageParser):
             elif part.endswith('(onderdeel van het programma)'):
                 extra_title = part.split('(')[0].strip()
         if extra_title == self.film.title:
-            try:
-                # Find the film in the list of regular films.
-                main_film_id = AzPageParser.film_id_by_title[main_title]
-            except KeyError:
-                # Combination programs are handled differently.
-                pass
-            else:
-                main_film = self.festival_data.get_film_by_id(main_film_id)
-                if main_film is None:
-                    error_collector.add('Main film not found', f'Film ID: {main_film_id}')
-                else:
-                    if not self.is_combination(main_film):
-                        iffr_screening.screened_film_type = ScreenedFilmType.DIRECTLY_COMBINED
-                        self.set_combination_data(iffr_screening, main_film)
-
-    def set_combination_data(self, iffr_screening, main_film=None):
-        if self.is_combination(self.film):
-            # Already combined in film info page parser.
-            return
-        if iffr_screening.screened_film_type:
-            main_film = main_film or self.film
-            screening_key = ScreeningKey(iffr_screening)
-            self.screened_film_type_by_screening_key[screening_key] = iffr_screening.screened_film_type
-            self.screening_key_by_main_film[main_film] = screening_key
+            if main_title in COMBINATION_TITLE_BY_ABBREVIATION:
+                main_title = COMBINATION_TITLE_BY_ABBREVIATION[main_title]
+            if main_title not in AzPageParser.film_id_by_title:
+                counter.increase('wrong_title')
+                print(f'Wrong title: {main_title}')
+            main_film_id = AzPageParser.film_id_by_title[main_title]
+            main_film = self.festival_data.get_film_by_id(main_film_id)
+            iffr_screening.screened_film_type = ScreenedFilmType.DIRECTLY_COMBINED
+            self.set_combination_from_screened_film_type(iffr_screening, main_film=main_film)
 
     def is_combination(self, film):
         is_combo = has_category(film, Film.category_combinations) \
-            or film in self.screening_key_by_main_film \
-            or (film.title in COMBINATION_EVENT_TITLES and has_category(film, Film.category_events))
+                   or film in self.screening_key_by_main_film \
+                   or is_combination_event(film)
         return is_combo
 
     def get_screen(self):
@@ -583,7 +588,7 @@ class FilmInfoPageParser(ScreeningParser):
         self.festival_data = festival_data
         self.film = film
         self.charset = charset
-        self.event_is_combi = film.title in COMBINATION_EVENT_TITLES and has_category(film, Film.category_events)
+        self.event_is_combi = is_combination_event(film)
         self.article_paragraphs = []
         self.article_paragraph = ''
         self.article = None
@@ -613,10 +618,7 @@ class FilmInfoPageParser(ScreeningParser):
                 # Slug is already internationalized.
                 screened_film_url = iffr_hostname + screened_film_slug
             film = self.festival_data.get_film_by_key('', screened_film_url)
-            film_info = film.film_info(self.festival_data)
-            film_info.combination_films.append(self.film)
-            screened_film = ScreenedFilm(film.filmid, film.title, film_info.description)
-            self.film_info.screened_films.append(screened_film)
+            link_screened_film(self.festival_data, film, self.film, self.film_info)
         if self.screened_film_slugs:
             print(f'{len(self.screened_film_slugs)} screened films found.')
         if self.event_is_combi:
@@ -728,7 +730,7 @@ class IffrScreening(Screening):
 
     def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience,
                  screened_film_type=None, sold_out=None):
-        Screening.__init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience)
+        Screening.__init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, sold_out=sold_out)
         self.screened_film_type = screened_film_type
         self.sold_out = sold_out
 
