@@ -238,17 +238,22 @@ class ScreenedFilm:
 
 class FilmInfo:
 
-    def __init__(self, film_id, description, article, combination_films=None, screened_films=None):
+    def __init__(self, film_id, description, article, metadata=None, combination_films=None, screened_films=None):
         self.filmid = film_id
         self.description = description.strip()
+        self.metadata = metadata or {}
         self.article = article.strip()
-        self.combination_films = [] if combination_films is None else combination_films
-        self.screened_films = [] if screened_films is None else screened_films
+        self.combination_films = combination_films or []
+        self.screened_films = screened_films or []
 
     def __str__(self):
         combinations_str = '\nCombinations:\n' + '\n'.join([str(cf) for cf in self.combination_films])
         screened_str = '\nScreened:\n' + '\n'.join([str(sf) for sf in self.screened_films])
         return '\n'.join([str(self.filmid), self.description, self.article, combinations_str, screened_str]) + '\n'
+
+    def format_metadata(self):
+        properties = [f'{key}: {value}' for (key, value) in self.metadata.items()]
+        return '\n'.join(properties)
 
 
 class Section:
@@ -819,6 +824,8 @@ class FestivalData:
             info_count += 1
             id = str(filminfo.filmid)
             article = filminfo.article
+            if filminfo.metadata:
+                article += f'\n\n{filminfo.format_metadata()}'
             descr = filminfo.description
             info = ET.SubElement(filminfos, 'FilmInfo',
                                  FilmId=id,

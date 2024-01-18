@@ -65,9 +65,10 @@ namespace PresentScreenings.TableView
         #endregion
 
         #region Private Methods
-        private NSColor GetColor(string colorString)
+        private NSColor GetColor(string colorCode)
         {
             NSColor color;
+            string colorString = colorCode.ToLower();
             if (colorString.StartsWith("#"))
             {
                 color = ColorView.GetColor(colorString);
