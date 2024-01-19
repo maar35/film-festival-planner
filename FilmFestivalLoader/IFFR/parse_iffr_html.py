@@ -647,9 +647,8 @@ class FilmInfoPageParser(ScreeningParser):
         elif self.state_stack.state_is(self.FilmInfoParseState.IN_PARAGRAPH) and tag == 'em':
             self.state_stack.push(self.FilmInfoParseState.IN_EMPHASIS)
         elif self.state_stack.state_is(self.FilmInfoParseState.ARTICLE_DONE):
-            if tag == 'h3' and len(attrs) > 0:
-                if attrs[0][1].endswith('bookingtable__title'):
-                    self.state_stack.push(self.ScreeningParseState.IN_SCREENINGS)
+            if tag == 'h3' and len(attrs) > 0 and attrs[0][1].endswith('bookingtable__title'):
+                self.state_stack.push(self.ScreeningParseState.IN_SCREENINGS)
             elif tag == 'dl':
                 self.state_stack.push(self.FilmInfoParseState.IN_METADATA)
 
@@ -661,11 +660,10 @@ class FilmInfoPageParser(ScreeningParser):
 
         # Combination part.
         elif self.state_stack.state_is(self.FilmInfoParseState.AWAITING_SCREENED_FILM_LINK):
-            if tag == 'a':
-                if len(attrs) > 1 and attrs[0][1] == 'favourite-link':
-                    screened_film_slug = attrs[1][1]
-                    self.screened_film_slugs.append(screened_film_slug)
-                    self.state_stack.change(self.FilmInfoParseState.IN_SCREENED_FILM_LINK)
+            if tag == 'a' and len(attrs) > 1 and attrs[0][1] == 'favourite-link':
+                screened_film_slug = attrs[1][1]
+                self.screened_film_slugs.append(screened_film_slug)
+                self.state_stack.change(self.FilmInfoParseState.IN_SCREENED_FILM_LINK)
             elif tag == 'section':
                 self.finish_film_info()
                 self.state_stack.change(self.FilmInfoParseState.DONE)
@@ -710,7 +708,7 @@ class FilmInfoPageParser(ScreeningParser):
         if self.state_stack.state_in([self.FilmInfoParseState.IN_PARAGRAPH,
                                       self.FilmInfoParseState.IN_EMPHASIS,
                                       self.FilmInfoParseState.IN_ARTICLE]):
-            self.article_paragraph += data.replace('\n', ' ')
+            self.add_article_text(data)
 
         # Metadata part.
         elif self.state_stack.state_is(self.FilmInfoParseState.IN_METADATA_KEY):
