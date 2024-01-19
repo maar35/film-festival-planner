@@ -243,6 +243,9 @@ class HtmlPageParser(BaseHtmlPageParser):
         # Add the screening to the list.
         self.festival_data.screenings.append(screening)
 
+    def add_article_text(self, data):
+        self.article_paragraph += data.replace('\n', ' ')
+
     def add_paragraph(self):
         self.article_paragraphs.append(self.article_paragraph)
         self.article_paragraph = ''

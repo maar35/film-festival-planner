@@ -499,7 +499,7 @@ class ScreeningParser(HtmlPageParser):
                              'Station Rotterdam Centraal', 'Depot Boijmans Van Beuningen']
         if location in one_room_theaters:
             theater_parse_name = location
-        elif location.startswith('de Doelen'):
+        elif location.startswith('de Doelen') or location.startswith('De Doelen'):
             theater_parse_name = 'de Doelen'
             screen_abbreviation = ' '.join(location.split()[2:])
         elif location.startswith('TR Schouwburg'):
@@ -518,14 +518,11 @@ class ScreeningParser(HtmlPageParser):
         return city_name, theater_parse_name, screen_abbreviation
 
     def handle_screening_starttag(self, tag, attrs, state_stack, state_awaiting, state_done):
-        if state_stack.state_is(state_awaiting) and tag == 'h3':
-            if len(attrs) > 0:
-                if attrs[0][1].endswith('bookingtable__title'):
-                    self.state_stack.push(self.ScreeningParseState.IN_SCREENINGS)
-                elif attrs[0][1] == 'sc-dlMDgC krsMKg':
+        if state_stack.state_is(state_awaiting):
+            if tag == 'h3' and len(attrs) > 0:
+                if attrs[0][1] == 'sc-dlMDgC krsMKg':
                     state_stack.change(state_done)
-        elif self.state_stack.state_is(self.ScreeningParseState.IN_SCREENINGS) and tag == 'li':
-            if len(attrs) > 1 and attrs[1][0] == 'style':
+            elif len(attrs) > 1 and attrs[1][0] == 'style':
                 self.init_screening_data()
                 self.state_stack.push(self.ScreeningParseState.IN_SCREENING)
         elif self.state_stack.state_is(self.ScreeningParseState.IN_SCREENING) and tag == 'strong':
@@ -576,7 +573,10 @@ class FilmInfoPageParser(ScreeningParser):
         IN_PARAGRAPH = auto()
         IN_EMPHASIS = auto()
         IN_SCREENED_FILM_LIST = auto()
-        AWAITING_SCREENINGS = auto()
+        ARTICLE_DONE = auto()
+        IN_METADATA = auto()
+        IN_METADATA_KEY = auto()
+        IN_METADATA_VALUE = auto()
         AWAITING_SCREENED_FILM_LINK = auto()
         IN_SCREENED_FILM_LINK = auto()
         DONE = auto()
@@ -593,6 +593,8 @@ class FilmInfoPageParser(ScreeningParser):
         self.article_paragraph = ''
         self.article = None
         self.screened_film_slugs = []
+        self.film_property_by_label = {}
+        self.metadata_key = None
 
         # Print a bar in the debug file when debugging.
         self.print_debug(self.bar, f'Analysing FILM {self.film} {self.film.url}')
@@ -602,10 +604,6 @@ class FilmInfoPageParser(ScreeningParser):
 
         # Get the film info of the current film. Its unique existence is guaranteed in AzPageParser.
         self.film_info = self.film.film_info(self.festival_data)
-
-    def set_article(self):
-        HtmlPageParser.set_article(self)
-        self.film_info.article = self.article
 
     def set_combination(self):
         self.print_debug('Updating combination program', f'{self.film}')
@@ -624,6 +622,13 @@ class FilmInfoPageParser(ScreeningParser):
         if self.event_is_combi:
             counter.increase('combination events')
 
+    def finish_film_info(self):
+        self.set_article()
+        self.film_info.article = self.article
+        self.film_info.metadata = self.film_property_by_label
+        if has_category(self.film, Film.category_combinations) or self.event_is_combi:
+            self.set_combination()
+
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
 
@@ -641,28 +646,38 @@ class FilmInfoPageParser(ScreeningParser):
                 self.state_stack.push(self.FilmInfoParseState.IN_SCREENED_FILM_LIST)
         elif self.state_stack.state_is(self.FilmInfoParseState.IN_PARAGRAPH) and tag == 'em':
             self.state_stack.push(self.FilmInfoParseState.IN_EMPHASIS)
+        elif self.state_stack.state_is(self.FilmInfoParseState.ARTICLE_DONE):
+            if tag == 'h3' and len(attrs) > 0 and attrs[0][1].endswith('bookingtable__title'):
+                self.state_stack.push(self.ScreeningParseState.IN_SCREENINGS)
+            elif tag == 'dl':
+                self.state_stack.push(self.FilmInfoParseState.IN_METADATA)
+
+        # Metadata part.
+        elif self.state_stack.state_is(self.FilmInfoParseState.IN_METADATA) and tag == 'dt':
+            self.state_stack.push(self.FilmInfoParseState.IN_METADATA_KEY)
+        elif self.state_stack.state_is(self.FilmInfoParseState.IN_METADATA_KEY) and tag == 'dd':
+            self.state_stack.change(self.FilmInfoParseState.IN_METADATA_VALUE)
 
         # Combination part.
         elif self.state_stack.state_is(self.FilmInfoParseState.AWAITING_SCREENED_FILM_LINK):
-            if tag == 'a':
-                if len(attrs) > 1 and attrs[0][1] == 'favourite-link':
-                    screened_film_slug = attrs[1][1]
-                    self.screened_film_slugs.append(screened_film_slug)
-                    self.state_stack.change(self.FilmInfoParseState.IN_SCREENED_FILM_LINK)
+            if tag == 'a' and len(attrs) > 1 and attrs[0][1] == 'favourite-link':
+                screened_film_slug = attrs[1][1]
+                self.screened_film_slugs.append(screened_film_slug)
+                self.state_stack.change(self.FilmInfoParseState.IN_SCREENED_FILM_LINK)
             elif tag == 'section':
-                if has_category(self.film, Film.category_combinations) or self.event_is_combi:
-                    self.set_combination()
+                self.finish_film_info()
                 self.state_stack.change(self.FilmInfoParseState.DONE)
 
         # Screening part.
         else:
             self.handle_screening_starttag(tag, attrs, self.state_stack,
-                                           self.FilmInfoParseState.AWAITING_SCREENINGS,
+                                           self.ScreeningParseState.IN_SCREENINGS,
                                            self.FilmInfoParseState.AWAITING_SCREENED_FILM_LINK)
 
     def handle_endtag(self, tag):
         HtmlPageParser.handle_endtag(self, tag)
 
+        # Article part.
         if self.state_stack.state_is(self.FilmInfoParseState.IN_EMPHASIS) and tag == 'em':
             self.state_stack.pop()
         elif self.state_stack.state_is(self.FilmInfoParseState.IN_PARAGRAPH) and tag == 'p':
@@ -670,22 +685,39 @@ class FilmInfoPageParser(ScreeningParser):
             self.add_paragraph()
         elif self.state_stack.state_is(self.FilmInfoParseState.IN_ARTICLE) and tag == 'div':
             self.state_stack.pop()
-            self.set_article()
-            self.state_stack.change(self.FilmInfoParseState.AWAITING_SCREENINGS)
+            self.state_stack.change(self.FilmInfoParseState.ARTICLE_DONE)
+
+        # Metadata part.
+        elif self.state_stack.state_is(self.FilmInfoParseState.IN_METADATA) and tag == 'dl':
+            self.state_stack.pop()
+
+        # Combination part.
         elif self.state_stack.state_is(self.FilmInfoParseState.IN_SCREENED_FILM_LIST) and tag == 'a':
             self.state_stack.pop()
         elif self.state_stack.state_is(self.FilmInfoParseState.IN_SCREENED_FILM_LINK) and tag == 'a':
             self.state_stack.change(self.FilmInfoParseState.AWAITING_SCREENED_FILM_LINK)
+
+        # Screening part.
         else:
             self.handle_screening_endtag(tag, self.state_stack, self.FilmInfoParseState.AWAITING_SCREENED_FILM_LINK)
 
     def handle_data(self, data):
         HtmlPageParser.handle_data(self, data)
 
+        # Article part.
         if self.state_stack.state_in([self.FilmInfoParseState.IN_PARAGRAPH,
                                       self.FilmInfoParseState.IN_EMPHASIS,
                                       self.FilmInfoParseState.IN_ARTICLE]):
-            self.article_paragraph += data.replace('\n', ' ')
+            self.add_article_text(data)
+
+        # Metadata part.
+        elif self.state_stack.state_is(self.FilmInfoParseState.IN_METADATA_KEY):
+            self.metadata_key = data.strip()
+        elif self.state_stack.state_is(self.FilmInfoParseState.IN_METADATA_VALUE):
+            self.film_property_by_label[self.metadata_key] = data.strip()
+            self.state_stack.pop()
+
+        # Screening part.
         else:
             self.handle_screening_data(data)
 
