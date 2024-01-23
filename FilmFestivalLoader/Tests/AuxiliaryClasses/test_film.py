@@ -12,6 +12,3 @@ class TestFilm(Film):
         self.url = url
         self.duration = datetime.timedelta(minutes=minutes)
         self.description = description
-
-    def film_info(self, festival_data):
-        return self.film_info(festival_data)

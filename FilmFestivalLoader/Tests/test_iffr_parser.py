@@ -7,79 +7,97 @@ Created on Thu Dec 24 12:27:14 2020
 
 @author: maartenroos
 """
-
+import shutil
 import unittest
 
-from IFFR.parse_iffr_html import AzPageParser, IffrData
-from Shared.application_tools import Counter
+from IFFR.parse_iffr_html import IffrData
 from Shared.parse_tools import FileKeeper
-from Shared.planner_interface import Film, ScreenedFilmType, ScreenedFilm, Screen
+from Shared.planner_interface import Film, ScreenedFilmType, ScreenedFilm, Screen, FilmInfo
 from Shared.web_tools import fix_json
 from Tests.AuxiliaryClasses.test_film import TestFilm
 
-festival = 'IFFR'
+festival = 'Cannes'
 festival_year = 2023
 
 
-class IffrTestFilm(TestFilm):
-    def __init__(self, film_id, title, url, minutes, description):
-        festival_data = arrange_festival_data()
-        TestFilm.__init__(self, film_id, title, url, minutes, description, festival_data)
+def arrange_festival_data(file_keeper):
+    return IffrData(file_keeper.plandata_dir)
+
+
+def tear_down_festival_data(file_keeper):
+    base_dir = file_keeper.festival_dir
+    shutil.rmtree(base_dir)
 
 
 def arrange_test_films(festival_data):
     # Create a list of bare-bones film-like objects.
+    # noinspection PyListCreation
     test_films = []
     test_films.append(IffrTestFilm(
         500, 'Zappa',
         'https://iffr.com/nl/iffr/2021/films/4c62c61a-5d03-43f1-b3fd-1acc5fe74b2c/zappa',
         129,
-        'A fabulous documentary on the greatest musical artist ever.'))
+        'A fabulous documentary on the greatest musical artist ever.',
+        festival_data))
     test_films.append(IffrTestFilm(
         501, '100UP',
         'https://iffr.com/nl/iffr/2021/films/904e10e4-2b45-49ab-809a-bdac8e8950d1/100up',
         93,
-        'this is test film, specially created for this unit test'))
+        'this is test film, specially created for this unit test',
+        festival_data))
     test_films.append(IffrTestFilm(
         502, '’Til Kingdom Come',
         'https://iffr.com/nl/iffr/2021/films/c0e65192-b1a9-4fbe-b380-c74002cee909/til-kingdom-come',
         76,
-        'As the tile already indicates, the makers of the film disrespect the English language.'))
+        'As the tile already indicates, the makers of the film disrespect the English language.',
+        festival_data))
     test_films.append(IffrTestFilm(
         503, '80 000 ans',
         'https://iffr.com/nl/iffr/2021/films/80-000-ans',
         28,
-        'This is some French movie. I would not bother to see it.'))
-
-    # Set up an az parser that will fill the films list.
-    az_parser = AzPageParser(festival_data)
-
-    # Set up counters.
-    counter = Counter()
-    counter.start('combinations')
-    counter.start('feature films')
-    counter.start('shorts')
+        'This is some French movie. I would not bother to see it.',
+        festival_data))
 
     # Fill the IFFR films list.
     for test_film in test_films:
-        az_parser.title = test_film.title
-        az_parser.url = test_film.url
-        az_parser.duration = test_film.duration
-        az_parser.sorted_title = test_film.title
-        az_parser.description = test_film.description
-        az_parser.add_film()
-        az_parser.add_film_info()
+        festival_data.film_seqnr += 1
+        festival_data.curr_film_id += 1
+        film = Film(festival_data.film_seqnr,
+                    festival_data.curr_film_id,
+                    test_film.title,
+                    test_film.url)
+        film.duration = test_film.duration
+        film.sortstring = test_film.title
+        film.medium_category = Film.category_films
+        festival_data.films.append(film)
+        film_info = FilmInfo(film.filmid, test_film.description, '')
+        festival_data.filminfos.append(film_info)
 
 
-def arrange_festival_data():
-    file_keeper = FileKeeper(festival, festival_year)
-    return IffrData(file_keeper.plandata_dir)
+class IffrTestFilm(TestFilm):
+
+    def __init__(self, film_id, title, url, minutes, description, festival_data):
+        TestFilm.__init__(self, film_id, title, url, minutes, description, festival_data)
 
 
-class CompareIffrFilmsTestCase(unittest.TestCase):
+class IffrBaseTestCase(unittest.TestCase):
     def setUp(self):
-        self.festival_data = arrange_festival_data()
+        super().setUp()
+        self.file_keeper = FileKeeper(festival, festival_year)
+        self.festival_data = arrange_festival_data(self.file_keeper)
+
+    def tearDown(self):
+        super().tearDown()
+        tear_down_festival_data(self.file_keeper)
+
+
+class CompareIffrFilmsTestCase(IffrBaseTestCase):
+    def setUp(self):
+        super().setUp()
         arrange_test_films(self.festival_data)
+
+    def tearDown(self):
+        super().tearDown()
 
     def test_compare_a0(self):
         # Arrange.
@@ -122,10 +140,13 @@ class CompareIffrFilmsTestCase(unittest.TestCase):
         self.assertTrue(less)
 
 
-class IffrCombinationProgramsTestCase(unittest.TestCase):
+class IffrCombinationProgramsTestCase(IffrBaseTestCase):
     def setUp(self):
-        self.festival_data = arrange_festival_data()
+        super().setUp()
         arrange_test_films(self.festival_data)
+
+    def tearDown(self):
+        super().tearDown()
 
     def test_combinations_correct_initialized(self):
         # Arrange.
@@ -185,42 +206,43 @@ class IffrCombinationProgramsTestCase(unittest.TestCase):
         self.assertEqual(screened_film.screened_film_type.name, 'SCREENED_AFTER')
 
 
-class CreateScreenTestCase(unittest.TestCase):
+class CreateScreenTestCase(IffrBaseTestCase):
     def setUp(self):
-        self.festival_data = arrange_festival_data()
+        super().setUp()
+        self.city = 'The Hague'
+
+    def tearDown(self):
+        super().tearDown()
 
     def test_new_screen_online(self):
         # Arrange.
-        city = 'The Hague'
         name = 'Online Program 42'
         screen_type = Screen.screen_types[1]  # OnLine
 
         # Act.
-        screen = self.festival_data.get_screen(city, name)
+        screen = self.festival_data.get_screen(self.city, name)
 
         # Assert.
         return screen.type, screen_type
 
     def test_new_screen_ondemand(self):
         # Arrange.
-        city = 'The Hague'
         name = 'On Demand Theater'
         screen_type = Screen.screen_types[2]  # OnDemand
 
         # Act.
-        screen = self.festival_data.get_screen(city, name)
+        screen = self.festival_data.get_screen(self.city, name)
 
         # Assert.
         return screen.type, screen_type
 
     def test_new_screen_physical(self):
         # Arrange.
-        city = 'The Hague'
         name = 'The Horse 666'
         screen_type = Screen.screen_types[0]  # Physical
 
         # Act.
-        screen = self.festival_data.get_screen(city, name)
+        screen = self.festival_data.get_screen(self.city, name)
 
         # Assert.
         return screen.type, screen_type

@@ -315,12 +315,15 @@ class ResultsView(DetailView):
     @staticmethod
     def get_description(film):
         film_info_file = film.festival.filminfo_file
-        # with open(film_info_file, 'r') as stream:
-        #     info = yaml.safe_load(stream)
-        # description = info['description']
-        with open(film_info_file, 'r', newline='') as csvfile:
-            object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
-            descriptions = [row[1] for row in object_reader if film.film_id == int(row[0])]
+        try:
+            # with open(film_info_file, 'r') as stream:
+            #     info = yaml.safe_load(stream)
+            # description = info['description']
+            with open(film_info_file, 'r', newline='') as csvfile:
+                object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                descriptions = [row[1] for row in object_reader if film.film_id == int(row[0])]
+        except FileNotFoundError as e:
+            descriptions = []
         description = descriptions[0] if descriptions else '-'
         return description
 
