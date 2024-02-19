@@ -3,7 +3,7 @@ import datetime
 
 from festival_planner.debug_tools import pr_debug
 from festivals.models import current_festival
-from films.models import FilmFan
+from authentication.models import FilmFan
 
 EXPIRY_HOURS = 24 * 7
 MAX_CACHES = 10

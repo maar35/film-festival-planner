@@ -1,0 +1,25 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>More to follow</h3>
+    <br>
+    <table>
+        <thead>
+            <tr>
+                <th class="sticky-t-head" style="vertical-align: text-top;">Film</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in vote_rows %}
+        <tr>
+            <td>
+                {{ row }}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

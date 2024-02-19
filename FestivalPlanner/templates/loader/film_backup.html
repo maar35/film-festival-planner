@@ -1,0 +1,35 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+<h3>Backup fans, films and ratings</h3>
+    {% if user_is_admin %}
+        <table>
+            <thead>
+                <tr>
+                    <th class="sticky-t-head"></th>
+                    <th class="sticky-t-head">#Rows</th>
+                    <th class="sticky-t-head">File</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><th>Ratings</th><td>{{ rating_count }}</td><td>{{ ratings_file }}</td></tr>
+                <tr><th>Fans</th><td>{{ fan_count }}</td><td>{{ fans_file }}</td></tr>
+                <tr><th>Films</th><td>{{ film_count }}</td><td>{{ films_file }}</td></tr>
+                <tr><th>Festivals</th><td>{{ festival_count }}</td><td>{{ festivals_file }}</td></tr>
+                <tr><th>Festival bases</th><td>{{ festival_base_count }}</td><td>{{ festival_bases_file }}</td></tr>
+                <tr><th>Cities</th><td>{{ city_count }}</td><td>{{ cities_file }}</td></tr>
+            </tbody>
+        </table>
+        <br>
+        <form method="post">
+            {% csrf_token %}
+            <input type="submit"; value="Save rating data">
+        </form>
+    {% else %}
+        <h2 class="error">Not allowed</h2>
+        <p>Only an admin fan can save ratings.</p>
+    {% endif %}
+{% endblock %}

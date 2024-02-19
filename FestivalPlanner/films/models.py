@@ -1,5 +1,6 @@
 from django.db import models
 
+from authentication.models import FilmFan
 from festivals.models import Festival
 
 FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
@@ -36,11 +37,6 @@ class Film(models.Model):
         return ':'.join(f'{self.duration}'.split(':')[:2])
 
 
-def me():
-    fans = FilmFan.film_fans.all()
-    return fans[0] if len(fans) > 0 else None
-
-
 def set_current_fan(request):
     user_fan = get_user_fan(request.user)
     if user_fan is not None:
@@ -74,52 +70,6 @@ def get_present_fans():
     return FilmFan.film_fans.filter(name__in=FANS_IN_RATINGS_TABLE)
 
 
-class FilmFan(models.Model):
-
-    # Define the fields.
-    name = models.CharField(max_length=16, unique=True)
-    seq_nr = models.IntegerField(unique=True)
-    is_admin = models.BooleanField(default=False)
-
-    # Define a manager.
-    film_fans = models.Manager()
-
-    class Meta:
-        db_table = "film_fan"
-
-    def __str__(self):
-        return f'{self.name}'
-
-    def initial(self):
-        return self.name[:1] if self != me() else ""
-
-    def switch_current(self, session):
-        session['fan_name'] = self.name
-
-    def fan_rating(self, film):
-        try:
-            fan_rating = FilmFanFilmRating.film_ratings.get(film=film, film_fan=self)
-        except (KeyError, FilmFanFilmRating.DoesNotExist):
-            fan_rating = None
-        return fan_rating
-
-    def fan_rating_str(self, film):
-        fan_rating = self.fan_rating(film)
-        return f'{fan_rating.rating}' if fan_rating is not None else '-'
-        # return self.rating_str(fan_rating.rating)
-
-    @staticmethod
-    def rating_str(rating):
-        return '-' if rating == '0' else rating
-
-    def fan_rating_name(self, film):
-        fan_rating = self.fan_rating(film)
-        if fan_rating is None:
-            fan_rating = FilmFanFilmRating(film=film, film_fan=self, rating=0)
-        name_by_rating = dict(FilmFanFilmRating.Rating.choices)
-        return name_by_rating[fan_rating.rating]
-
-
 def get_rating_name(rating_value):
     choices = FilmFanFilmRating.Rating.choices
     try:
@@ -132,6 +82,7 @@ def get_rating_name(rating_value):
 class FilmFanFilmRating(models.Model):
     """
     Film Fan Film Rating table.
+    This rating is an estimate in advance, used to chose which films to see in a festival.
     """
 
     class Rating(models.IntegerChoices):
@@ -161,3 +112,56 @@ class FilmFanFilmRating(models.Model):
 
     def __str__(self):
         return f"{self.film} - {self.film_fan.initial()}{self.rating}"
+
+
+class FilmFanFilmVote(models.Model):
+    """
+    Film Fan Film Vote table.
+    This vote is a retrospective judgement of a film that a fan saw on a festival.
+    """
+
+    # Define the possible values of a vote.
+    class Vote(models.IntegerChoices):
+        @classmethod
+        def __members__(cls):
+            return [member for member in FilmFanFilmRating.Rating if member.name not in ['ALREADY_SEEN', 'WILL_SEE']]
+
+    # Define the fields.
+    film = models.ForeignKey(Film, on_delete=models.CASCADE)
+    film_fan = models.ForeignKey(FilmFan, on_delete=models.CASCADE)
+    vote = models.IntegerField(choices=Vote.choices)
+
+    # Define a manager.
+    film_votes = models.Manager()
+
+    class Meta:
+        db_table = 'film_vote'
+        unique_together = ('film', 'film_fan')
+
+    def __str__(self):
+        return f"{self.film} - {self.film_fan.initial()}{self.vote}"
+
+
+def fan_rating(fan, film):
+    try:
+        rating = FilmFanFilmRating.film_ratings.get(film=film, film_fan=fan)
+    except (KeyError, FilmFanFilmRating.DoesNotExist):
+        rating = None
+    return rating
+
+
+def fan_rating_str(fan, film):
+    rating = fan_rating(fan, film)
+    return f'{rating.rating}' if rating is not None else '-'
+
+
+def rating_str(rating):
+    return '-' if rating == '0' else rating
+
+
+def fan_rating_name(fan, film):
+    rating = fan.fan_rating(film)
+    if rating is None:
+        rating = FilmFanFilmRating(film=film, film_fan=fan, rating=0)
+    name_by_rating = dict(FilmFanFilmRating.Rating.choices)
+    return name_by_rating[rating.rating]

@@ -4,7 +4,8 @@ from datetime import datetime
 from django import forms
 
 from festivals.models import rating_action_key
-from films.models import FilmFanFilmRating, FilmFan, get_rating_name, current_fan
+from films.models import FilmFanFilmRating, get_rating_name, current_fan, fan_rating_str
+from authentication.models import FilmFan
 
 
 class UserForm(forms.Form):
@@ -20,7 +21,7 @@ class PickRating(forms.Form):
 
     @staticmethod
     def update_rating(session, film, fan, rating_value):
-        old_rating_str = fan.fan_rating_str(film)
+        old_rating_str = fan_rating_str(fan, film)
         new_rating, created = FilmFanFilmRating.film_ratings.update_or_create(
             film=film,
             film_fan=fan,

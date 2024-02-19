@@ -1,17 +1,30 @@
 import csv
 import datetime
+import os
 
 from django.db import IntegrityError, transaction
 from django.forms import Form, BooleanField, SlugField
 
 from festival_planner.cache import FilmRatingCache
 from festival_planner.tools import initialize_log, add_log
+from festivals.config import Config
+from festivals.models import Festival, FestivalBase
 from films.forms.film_forms import PickRating
-from films.models import Film, FilmFanFilmRating, FilmFan
+from films.models import Film, FilmFanFilmRating
+from authentication.models import FilmFan
 from films.views import FilmsView
 from sections.models import Section, Subsection
 from theaters.models import Theater, theaters_path, City, cities_path, Screen, screens_path, cities_cache_path, \
     theaters_cache_path, screens_cache_path
+
+COMMON_DATA_DIR = os.path.expanduser(f'~/{Config().config["Paths"]["CommonDataDirectory"]}')
+BACKUP_DATA_DIR = os.path.join(COMMON_DATA_DIR, 'Backups')
+CITIES_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'cities.csv')
+FESTIVAL_BASES_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'festival_bases.csv')
+FESTIVALS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'festivals.csv')
+FILMS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'films.csv')
+FILM_FANS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'film_fans.csv')
+RATINGS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'ratings.csv')
 
 
 class RatingLoaderForm(Form):
@@ -105,6 +118,21 @@ class TheaterDataDumperForm(Form):
         CityDumper(session).dump_objects(cities_path())
         TheaterDumper(session).dump_objects(theaters_path())
         ScreenDumper(session).dump_objects(screens_path())
+
+
+class RatingDataBackupForm(Form):
+    dummy_field = SlugField(required=False)
+
+    @staticmethod
+    def backup_film_data(session):
+        initialize_log(session, 'Backup')
+        add_log(session, 'Backing up film database data.')
+        _ = RatingBackupDumper(session).dump_objects(RATINGS_BACKUP_PATH)
+        _ = FanBackupDumper(session).dump_objects(FILM_FANS_BACKUP_PATH)
+        _ = FilmBackupDumper(session).dump_objects(FILMS_BACKUP_PATH)
+        _ = FestivalBackupDumper(session).dump_objects(FESTIVALS_BACKUP_PATH)
+        _ = FestivalBaseBackupDumper(session).dump_objects(FESTIVAL_BASES_BACKUP_PATH)
+        _ = CityBackupDumper(session).dump_objects(CITIES_BACKUP_PATH)
 
 
 class BaseLoader:
@@ -697,21 +725,6 @@ class BaseDumper:
         add_log(self.session, text)
 
 
-class RatingDumper(BaseDumper):
-    manager = FilmFanFilmRating.film_ratings
-    header = RatingLoader.expected_header
-
-    def __init__(self, session):
-        super().__init__(session, 'rating', self.manager, self.header)
-
-    def object_row(self, rating):
-        return [rating.film.film_id, rating.film_fan.name, rating.rating]
-
-    def save_ratings(self, festival, file):
-        festival_ratings = self.manager.filter(film__festival_id=festival.id)
-        return self.dump_objects(file, festival_ratings)
-
-
 class CityDumper(BaseDumper):
     manager = City.cities
 
@@ -752,3 +765,126 @@ class ScreenDumper(BaseDumper):
             screen.abbreviation,
             screen.address_type,
         ]
+
+
+class CityBackupDumper(CityDumper):
+
+    def __init__(self, session):
+        super().__init__(session)
+        self.header = ['city_id', 'name', 'country']
+
+
+class FestivalBaseBackupDumper(BaseDumper):
+    manager = FestivalBase.festival_bases
+    header = ['mnemonic', 'name', 'image', 'city_id']
+
+    def __init__(self, session):
+        super().__init__(session, 'festival base', self.manager, self.header)
+
+    def object_row(self, base):
+        return [
+            base.mnemonic,
+            base.name,
+            base.image,
+            base.home_city.city_id,
+        ]
+
+
+class FestivalBackupDumper(BaseDumper):
+    manager = Festival.festivals
+    header = ['mnemonic', 'year', 'edition', 'start_date', 'end_date', 'color']
+
+    def __init__(self, session):
+        super().__init__(session, 'festival', self.manager, self.header)
+
+    def object_row(self, festival):
+        return [
+            festival.base.mnemonic,
+            festival.year,
+            festival.edition,
+            festival.start_date,
+            festival.end_date,
+            festival.festival_color,
+        ]
+
+
+class FilmBackupDumper(BaseDumper):
+    manager = Film.films
+    header = [
+        'festival_mnemonic',
+        'festival_year',
+        'festival_edition',
+        'film_id',
+        'seq_nr',
+        'sort_title',
+        'title',
+        'title_language',
+        'subsection',
+        'duration',
+        'medium_category',
+        'url',
+    ]
+
+    def __init__(self, session):
+        super().__init__(session, 'film', self.manager, self.header)
+
+    def object_row(self, film):
+        return [
+            film.festival.base.mnemonic,
+            film.festival.year,
+            film.festival.edition,
+            film.film_id,
+            film.seq_nr,
+            film.sort_title,
+            film.title,
+            film.title_language,
+            film.subsection,
+            film.duration,
+            film.medium_category,
+            film.url,
+        ]
+
+
+class FanBackupDumper(BaseDumper):
+    manager = FilmFan.film_fans
+    header = ['id', 'name', 'seq_nr', 'is_admin']
+
+    def __init__(self, session):
+        super().__init__(session, 'filmfan', self.manager, self.header)
+
+    def object_row(self, fan):
+        return [fan.id, fan.name, fan.seq_nr, fan.is_admin]
+
+
+class RatingBackupDumper(BaseDumper):
+    manager = FilmFanFilmRating.film_ratings
+    header = ['id', 'festival_mnemonic', 'festival_year', 'festival_edition', 'film_id', 'fan', 'rating']
+
+    def __init__(self, session):
+        super().__init__(session, 'rating', self.manager, self.header)
+
+    def object_row(self, rating):
+        return [
+            rating.id,
+            rating.film.festival.base.mnemonic,
+            rating.film.festival.year,
+            rating.film.festival.edition,
+            rating.film.film_id,
+            rating.film_fan.name,
+            rating.rating,
+        ]
+
+
+class RatingDumper(BaseDumper):
+    manager = FilmFanFilmRating.film_ratings
+    header = RatingLoader.expected_header
+
+    def __init__(self, session):
+        super().__init__(session, 'rating', self.manager, self.header)
+
+    def object_row(self, rating):
+        return [rating.film.film_id, rating.film_fan.name, rating.rating]
+
+    def save_ratings(self, festival, file):
+        festival_ratings = self.manager.filter(film__festival_id=festival.id)
+        return self.dump_objects(file, festival_ratings)

@@ -18,7 +18,8 @@ from festival_planner.tools import add_base_context, unset_log, wrap_up_form_err
 from festivals.config import Config
 from festivals.models import current_festival
 from films.forms.film_forms import RatingForm, PickRating, UserForm
-from films.models import FilmFanFilmRating, Film, FilmFan, current_fan, get_present_fans
+from films.models import FilmFanFilmRating, Film, current_fan, get_present_fans, fan_rating_str, fan_rating_name
+from authentication.models import FilmFan
 from sections.models import Subsection
 
 STICKY_HEIGHT = 3
@@ -261,6 +262,41 @@ class FilmsFormView(LoginRequiredMixin, FormView):
         return reverse('films:films') + fragment
 
 
+class VotesView(LoginRequiredMixin, View):
+    template_name = 'films/votes.html'
+
+    @staticmethod
+    def get(request, *args, **kwargs):
+        view = VotesListView.as_view()
+        return view(request, *args, **kwargs)
+
+
+class VotesListView(LoginRequiredMixin, ListView):
+    template_name = VotesView.template_name
+    context_object_name = 'vote_rows'
+    http_method_names = ['get']
+    title = 'Film Votes List'
+    logged_in_fan = None
+    festival = None
+
+    def get_queryset(self):
+        session = self.request.session
+        self.logged_in_fan = current_fan(session)
+        self.festival = current_festival(session)
+
+        # Fill the vote rows.
+        selected_films = Film.films.filter(festival=self.festival).order_by('seq_nr')[0:20]
+        return selected_films
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        super_context = super().get_context_data(**kwargs)
+        new_context = {
+            'title': self.title,
+        }
+        context = add_base_context(self.request, {**super_context, **new_context})
+        return context
+
+
 class ResultsView(DetailView):
     """
     Define generic view classes.
@@ -300,8 +336,8 @@ class ResultsView(DetailView):
             choices = get_fan_choices(self.submit_name_prefix, film, fan, logged_in_fan, self.submit_names)
             fan_rows.append({
                 'fan': fan,
-                'rating_str': fan.fan_rating_str(film),
-                'rating_name': fan.fan_rating_name(film),
+                'rating_str': fan_rating_str(fan, film),
+                'rating_name': fan_rating_name(fan, film),
                 'choices': choices,
             })
         context = add_base_context(self.request, super().get_context_data(**kwargs))
@@ -431,7 +467,7 @@ def get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix):
     film_ratings = []
     for fan in fan_list:
         # Set a rating string to display.
-        rating_str = fan.fan_rating_str(film)
+        rating_str = fan_rating_str(fan, film)
 
         # Get choices for this fan.
         choices = [{
