@@ -264,6 +264,7 @@ class FilmsFormView(LoginRequiredMixin, FormView):
 
 class VotesView(LoginRequiredMixin, View):
     template_name = 'films/votes.html'
+    unexpected_errors = []
 
     @staticmethod
     def get(request, *args, **kwargs):
@@ -276,25 +277,64 @@ class VotesListView(LoginRequiredMixin, ListView):
     context_object_name = 'vote_rows'
     http_method_names = ['get']
     title = 'Film Votes List'
+    fan_list = get_present_fans()
+    reviewer_by_film_id = {}
     logged_in_fan = None
     festival = None
 
-    def get_queryset(self):
+    def dispatch(self, request, *args, **kwargs):
         session = self.request.session
-        self.logged_in_fan = current_fan(session)
         self.festival = current_festival(session)
+        self.logged_in_fan = current_fan(session)
+        VotesView.unexpected_errors = []
+
+        # Read the descriptions.
+        film_info_file = self.festival.filminfo_file
+        try:
+            with open(film_info_file, 'r', newline='') as csvfile:
+                object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                self.reviewer_by_film_id = {int(row[0]): row[2] for row in object_reader}
+        except FileNotFoundError as e:
+            self.reviewer_by_film_id = {}
+            VotesView.unexpected_errors.append(e)
+
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_queryset(self):
 
         # Fill the vote rows.
         selected_films = Film.films.filter(festival=self.festival).order_by('seq_nr')[0:20]
-        return selected_films
+
+        # Fill the film rows.
+        vote_rows = [self.get_vote_row(film) for film in selected_films]
+
+        return vote_rows
 
     def get_context_data(self, *, object_list=None, **kwargs):
         super_context = super().get_context_data(**kwargs)
         new_context = {
             'title': self.title,
+            'fans': self.fan_list,
+            'unexpected_errors': VotesView.unexpected_errors,
         }
         context = add_base_context(self.request, {**super_context, **new_context})
         return context
+
+    def get_reviewer(self, film):
+        try:
+            reviewer = self.reviewer_by_film_id[film.film_id]
+        except KeyError:
+            reviewer = ''
+        return reviewer
+
+    def get_vote_row(self, film):
+        vote_row = {
+            'film': film.title,
+            'duration_str': film.duration_str(),
+            'reviewer': self.get_reviewer(film),
+            'fan_votes': get_fan_ratings(film, self.fan_list, self.logged_in_fan, FilmsView.submit_name_prefix),
+        }
+        return vote_row
 
 
 class ResultsView(DetailView):

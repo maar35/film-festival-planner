@@ -172,7 +172,7 @@ class AzPageParser(HtmlPageParser):
         IN_FILM_SCRIPT = auto()
         DONE = auto()
 
-    props_re = re.compile(
+    re_props = re.compile(
         r"""
             "(?P<medium>Film|CombinedProgram|OtherProgram)","id":"[^"]*?"       # Medium category
             ,"title":"(?P<title>.+?)",.*?                                       # Title
@@ -227,7 +227,7 @@ class AzPageParser(HtmlPageParser):
         self.sorted_title = None
 
     def parse_props(self, data):
-        i = self.props_re.finditer(data)
+        i = self.re_props.finditer(data)
         matches = [match for match in i]
         groups = [m.groupdict() for m in matches]
         for g in groups:
@@ -582,6 +582,7 @@ class FilmInfoPageParser(ScreeningParser):
         DONE = auto()
 
     debugging = DEBUGGING
+    re_reviewer = re.compile(r'^– (?P<reviewer>.+?)$', re.MULTILINE)
 
     def __init__(self, festival_data, film, charset):
         ScreeningParser.__init__(self, festival_data, 'FI', self.debugging)
@@ -622,10 +623,18 @@ class FilmInfoPageParser(ScreeningParser):
         if self.event_is_combi:
             counter.increase('combination events')
 
+    def get_reviewer(self):
+        match = self.re_reviewer.search(self.article)
+        reviewer = ''
+        if match:
+            reviewer = match.group('reviewer')
+        return reviewer
+
     def finish_film_info(self):
         self.set_article()
         self.film_info.article = self.article
         self.film_info.metadata = self.film_property_by_label
+        self.film_info.metadata['Reviewer'] = self.get_reviewer()
         if has_category(self.film, Film.category_combinations) or self.event_is_combi:
             self.set_combination()
 

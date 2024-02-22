@@ -10,7 +10,6 @@ MAX_CACHES = 10
 
 
 class FilmRatingCache:
-    pr_debug('create class', with_time=True)
     caches_count = 0
     cache_by_key = {}
     FESTIVAL_FILTER_INDEX = 0
