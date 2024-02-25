@@ -1,6 +1,7 @@
 import copy
 import csv
 from datetime import timedelta
+from operator import attrgetter
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -278,6 +279,7 @@ class VotesListView(LoginRequiredMixin, ListView):
     http_method_names = ['get']
     title = 'Film Votes List'
     fan_list = get_present_fans()
+    attended_films = []
     reviewer_by_film_id = {}
     logged_in_fan = None
     festival = None
@@ -288,12 +290,29 @@ class VotesListView(LoginRequiredMixin, ListView):
         self.logged_in_fan = current_fan(session)
         VotesView.unexpected_errors = []
 
-        # Read the descriptions.
+        # Read the films that were viewed.
+        screening_info_file = self.festival.screening_info_file
+        self.attended_films = []
+        try:
+            with open(screening_info_file, 'r', newline='') as csvfile:
+                _ = csvfile.__next__()  # skip header
+                screening_info_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                film_id_index = 5
+                attended_index = 8
+                tickets_bought_index = 9
+                for row in screening_info_reader:
+                    film = self.get_film(row[film_id_index])
+                    if film and row[attended_index].split(',')[0] == 'WAAR' and row[tickets_bought_index] == 'WAAR':
+                        self.attended_films.append(film)
+        except FileNotFoundError as e:
+            VotesView.unexpected_errors.append(e)
+
+        # Read the reviewers.
         film_info_file = self.festival.filminfo_file
         try:
             with open(film_info_file, 'r', newline='') as csvfile:
-                object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
-                self.reviewer_by_film_id = {int(row[0]): row[2] for row in object_reader}
+                film_info_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                self.reviewer_by_film_id = {int(row[0]): row[2] for row in film_info_reader}
         except FileNotFoundError as e:
             self.reviewer_by_film_id = {}
             VotesView.unexpected_errors.append(e)
@@ -303,10 +322,8 @@ class VotesListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
 
         # Fill the vote rows.
-        selected_films = Film.films.filter(festival=self.festival).order_by('seq_nr')[0:20]
-
-        # Fill the film rows.
-        vote_rows = [self.get_vote_row(film) for film in selected_films]
+        selected_films = sorted(self.attended_films, key=attrgetter('seq_nr'))
+        vote_rows = [self.get_vote_row(film) for film in selected_films if film]
 
         return vote_rows
 
@@ -320,6 +337,13 @@ class VotesListView(LoginRequiredMixin, ListView):
         context = add_base_context(self.request, {**super_context, **new_context})
         return context
 
+    def get_film(self, film_id):
+        try:
+            film = Film.films.get(festival=self.festival, film_id=film_id)
+        except Film.DoesNotExist as e:
+            film = None
+        return film
+
     def get_reviewer(self, film):
         try:
             reviewer = self.reviewer_by_film_id[film.film_id]
@@ -329,7 +353,7 @@ class VotesListView(LoginRequiredMixin, ListView):
 
     def get_vote_row(self, film):
         vote_row = {
-            'film': film.title,
+            'film': film,
             'duration_str': film.duration_str(),
             'reviewer': self.get_reviewer(film),
             'fan_votes': get_fan_ratings(film, self.fan_list, self.logged_in_fan, FilmsView.submit_name_prefix),

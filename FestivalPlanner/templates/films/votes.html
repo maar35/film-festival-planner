@@ -26,9 +26,7 @@
         <tbody>
         {% for row in vote_rows %}
         <tr>
-            <td>
-                {{ row.film }}
-            </td>
+            <td><a href="{{ row.film.url }}">{{ row.film.title }}</a></td>
             <td>{{ row.duration_str }}</td>
             <td>{{ row.reviewer }}</td>
             {% for fan_vote in row.fan_votes %}

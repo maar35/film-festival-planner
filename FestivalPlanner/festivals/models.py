@@ -165,3 +165,7 @@ class Festival(models.Model):
     @property
     def subsections_file(self):
         return os.path.join(self.planner_data_dir, 'subsections.csv')
+
+    @property
+    def screening_info_file(self):
+        return os.path.join(self.festival_data_dir, 'screeninginfo.csv')

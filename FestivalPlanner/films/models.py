@@ -160,7 +160,7 @@ def rating_str(rating):
 
 
 def fan_rating_name(fan, film):
-    rating = fan.fan_rating(film)
+    rating = fan_rating(fan, film)
     if rating is None:
         rating = FilmFanFilmRating(film=film, film_fan=fan, rating=0)
     name_by_rating = dict(FilmFanFilmRating.Rating.choices)

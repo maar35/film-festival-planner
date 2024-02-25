@@ -14,7 +14,7 @@ from Shared.web_tools import UrlFile, iri_slug_to_url, fix_json
 
 ALWAYS_DOWNLOAD = False
 DEBUGGING = True
-DISPLAY_ADDED_SCREENING = True
+DISPLAY_ADDED_SCREENING = False
 COMBINATION_TITLE_BY_ABBREVIATION = {
     'The Battle Of Chile': 'The Battle Of Chile (Part 1): The Insurrection of the Bourgeoisie',
     'Extranjeros': 'Extranjeros (Främlingar)',
@@ -582,7 +582,7 @@ class FilmInfoPageParser(ScreeningParser):
         DONE = auto()
 
     debugging = DEBUGGING
-    re_reviewer = re.compile(r'^– (?P<reviewer>.+?)$', re.MULTILINE)
+    re_reviewer = re.compile(r'[–]\s(?P<reviewer>[^–0-9]+?)$', re.MULTILINE)
 
     def __init__(self, festival_data, film, charset):
         ScreeningParser.__init__(self, festival_data, 'FI', self.debugging)
@@ -624,10 +624,10 @@ class FilmInfoPageParser(ScreeningParser):
             counter.increase('combination events')
 
     def get_reviewer(self):
-        match = self.re_reviewer.search(self.article)
+        matches = self.re_reviewer.findall(self.article)
         reviewer = ''
-        if match:
-            reviewer = match.group('reviewer')
+        if matches:
+            reviewer = matches[-1]
         return reviewer
 
     def finish_film_info(self):
@@ -649,6 +649,8 @@ class FilmInfoPageParser(ScreeningParser):
         elif self.state_stack.state_is(self.FilmInfoParseState.IN_ARTICLE):
             if tag == 'p':
                 self.state_stack.push(self.FilmInfoParseState.IN_PARAGRAPH)
+            if tag == 'br':
+                self.add_paragraph()
             elif self.event_is_combi and tag == 'a' and len(attrs):
                 screened_film_slug = attrs[0][1]
                 self.screened_film_slugs.append(screened_film_slug)
