@@ -64,8 +64,8 @@ def switch_festival(session, festival, film_rating_cache=None):
     session['festival'] = festival.id
 
 
-def rating_action_key(session):
-    return f'rating_action_{current_festival(session).id}'
+def rating_action_key(session, field_name):
+    return f'rating_action_{current_festival(session).id}_{field_name}'
 
 
 def base_dir():

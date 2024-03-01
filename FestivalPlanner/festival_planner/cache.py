@@ -3,7 +3,7 @@ import datetime
 
 from festival_planner.debug_tools import pr_debug
 from festivals.models import current_festival
-from authentication.models import FilmFan
+from films.models import rating_str
 
 EXPIRY_HOURS = 24 * 7
 MAX_CACHES = 10
@@ -68,7 +68,7 @@ class FilmRatingCache:
                 pr_debug(f'ERROR getting rating for {fan=}')
                 self.errors.append(f'{e} getting rating for {fan=}')
             else:
-                fan_data['rating'] = FilmFan.rating_str(rating_value)
+                fan_data['rating'] = rating_str(rating_value)
 
         pr_debug('done', with_time=True)
 

@@ -119,12 +119,15 @@ class FilmFanFilmVote(models.Model):
     Film Fan Film Vote table.
     This vote is a retrospective judgement of a film that a fan saw on a festival.
     """
+    @classmethod
+    def vote_members(cls):
+        return [(member.value, member.label) for member in FilmFanFilmRating.Rating if member.name not in ['ALREADY_SEEN', 'WILL_SEE']]
 
     # Define the possible values of a vote.
     class Vote(models.IntegerChoices):
         @classmethod
         def __members__(cls):
-            return [member for member in FilmFanFilmRating.Rating if member.name not in ['ALREADY_SEEN', 'WILL_SEE']]
+            return FilmFanFilmVote.vote_members()
 
     # Define the fields.
     film = models.ForeignKey(Film, on_delete=models.CASCADE)
@@ -142,17 +145,18 @@ class FilmFanFilmVote(models.Model):
         return f"{self.film} - {self.film_fan.initial()}{self.vote}"
 
 
-def fan_rating(fan, film):
+def fan_rating(fan, film, manager=None):
+    manager = manager or FilmFanFilmRating.film_ratings
     try:
-        rating = FilmFanFilmRating.film_ratings.get(film=film, film_fan=fan)
-    except (KeyError, FilmFanFilmRating.DoesNotExist):
+        rating = manager.get(film=film, film_fan=fan)
+    except (KeyError, FilmFanFilmRating.DoesNotExist, FilmFanFilmVote.DoesNotExist):
         rating = None
     return rating
 
 
-def fan_rating_str(fan, film):
-    rating = fan_rating(fan, film)
-    return f'{rating.rating}' if rating is not None else '-'
+def fan_rating_str(fan, film, manager=FilmFanFilmRating.film_ratings, field='rating'):
+    rating = fan_rating(fan, film, manager)
+    return f'{getattr(rating, field)}' if rating is not None else '-'
 
 
 def rating_str(rating):
