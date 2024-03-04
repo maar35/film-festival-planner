@@ -247,10 +247,12 @@ class HtmlPageParser(BaseHtmlPageParser):
         self.article_paragraph += data.replace('\n', ' ')
 
     def add_paragraph(self):
-        self.article_paragraphs.append(self.article_paragraph)
+        if self.article_paragraph:
+            self.article_paragraphs.append(self.article_paragraph)
         self.article_paragraph = ''
 
     def set_article(self):
+        self.add_paragraph()
         self.article = '\n\n'.join(self.article_paragraphs)
 
     def set_description_from_article(self, title):

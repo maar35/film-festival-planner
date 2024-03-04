@@ -14,7 +14,7 @@ from Shared.web_tools import UrlFile, iri_slug_to_url, fix_json
 
 ALWAYS_DOWNLOAD = False
 DEBUGGING = True
-DISPLAY_ADDED_SCREENING = True
+DISPLAY_ADDED_SCREENING = False
 COMBINATION_TITLE_BY_ABBREVIATION = {
     'The Battle Of Chile': 'The Battle Of Chile (Part 1): The Insurrection of the Bourgeoisie',
     'Extranjeros': 'Extranjeros (Främlingar)',
@@ -172,7 +172,7 @@ class AzPageParser(HtmlPageParser):
         IN_FILM_SCRIPT = auto()
         DONE = auto()
 
-    props_re = re.compile(
+    re_props = re.compile(
         r"""
             "(?P<medium>Film|CombinedProgram|OtherProgram)","id":"[^"]*?"       # Medium category
             ,"title":"(?P<title>.+?)",.*?                                       # Title
@@ -227,7 +227,7 @@ class AzPageParser(HtmlPageParser):
         self.sorted_title = None
 
     def parse_props(self, data):
-        i = self.props_re.finditer(data)
+        i = self.re_props.finditer(data)
         matches = [match for match in i]
         groups = [m.groupdict() for m in matches]
         for g in groups:
@@ -582,6 +582,7 @@ class FilmInfoPageParser(ScreeningParser):
         DONE = auto()
 
     debugging = DEBUGGING
+    re_reviewer = re.compile(r'[–]\s(?P<reviewer>[^–0-9]+?)$', re.MULTILINE)
 
     def __init__(self, festival_data, film, charset):
         ScreeningParser.__init__(self, festival_data, 'FI', self.debugging)
@@ -622,10 +623,18 @@ class FilmInfoPageParser(ScreeningParser):
         if self.event_is_combi:
             counter.increase('combination events')
 
+    def get_reviewer(self):
+        matches = self.re_reviewer.findall(self.article)
+        reviewer = ''
+        if matches:
+            reviewer = matches[-1]
+        return reviewer
+
     def finish_film_info(self):
         self.set_article()
         self.film_info.article = self.article
         self.film_info.metadata = self.film_property_by_label
+        self.film_info.metadata['Reviewer'] = self.get_reviewer()
         if has_category(self.film, Film.category_combinations) or self.event_is_combi:
             self.set_combination()
 
@@ -640,6 +649,8 @@ class FilmInfoPageParser(ScreeningParser):
         elif self.state_stack.state_is(self.FilmInfoParseState.IN_ARTICLE):
             if tag == 'p':
                 self.state_stack.push(self.FilmInfoParseState.IN_PARAGRAPH)
+            if tag == 'br':
+                self.add_paragraph()
             elif self.event_is_combi and tag == 'a' and len(attrs):
                 screened_film_slug = attrs[0][1]
                 self.screened_film_slugs.append(screened_film_slug)

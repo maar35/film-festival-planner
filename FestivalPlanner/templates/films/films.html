@@ -5,7 +5,7 @@
 
 {% block content %}
     <span class="left-half">
-        <h3>Film list with ratings</h3>
+        <h3>Film list with pre-attendance ratings</h3>
     </span>
     <span class="right-half">
         <a href="{% url 'loader:save_ratings' festival.id %}">Dump ratings</a>
@@ -48,11 +48,11 @@
         <p>
         {{ action.fan }}
         {% if action.old_rating == '-' %}
-            gave <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a> a rating of <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
+            gave <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a> a pre-attendance {{ action.rating_type }} of <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% elif action.new_rating == '0' %}
-            removed rating {{ action.old_rating }} of <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a>
+            removed {{ action.rating_type }} {{ action.old_rating }} of <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a>
         {% else %}
-            changed rating {{ action.old_rating }} of <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a> into <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
+            changed {{ action.rating_type }} {{ action.old_rating }} of <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a> into <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% endif %}
         {% if action.action_time|timesince == "0 minutes" %}
             less than a minute ago
@@ -107,7 +107,7 @@
                 <td>{{ row.duration_str }}</td>
             {% endif %}
             <td style="color:{{ row.subsection.section.color }}">{{ row.subsection.name }}</td>
-            {% for fan_rating in row.film_ratings %}
+            {% for fan_rating in row.fan_ratings %}
                 {% if fan_rating.fan == current_fan %}
                     <td class="cell-dropdown">
                         <span class="drop-button">

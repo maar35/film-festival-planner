@@ -21,4 +21,7 @@ urlpatterns = [
     # Allow the current user to rate a specific film.
     # Example: /films/5/rating/
     path('<int:film_pk>/rating/', views.rating, name='rating'),
+
+    # Allow a logged in fan to enter votes.
+    path('votes/', views.VotesView.as_view(), name='votes')
 ]

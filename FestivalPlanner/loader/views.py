@@ -1,3 +1,4 @@
+import os
 from operator import attrgetter
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -8,10 +9,13 @@ from django.views import View
 from django.views.generic import FormView, ListView
 
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log
-from festivals.models import Festival, switch_festival, current_festival
+from festivals.models import Festival, switch_festival, current_festival, FestivalBase
 from films.models import Film, FilmFanFilmRating
+from authentication.models import FilmFan
 from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoaderForm, TheaterDataLoaderForm, \
-    TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm, SaveRatingsForm
+    TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm, SaveRatingsForm, \
+    RatingDataBackupForm, FILM_FANS_BACKUP_PATH, RATINGS_BACKUP_PATH, FILMS_BACKUP_PATH, \
+    FESTIVALS_BACKUP_PATH, FESTIVAL_BASES_BACKUP_PATH, BACKUP_DATA_DIR, CITIES_BACKUP_PATH
 from sections.models import Section, Subsection
 from theaters.models import Theater, City, cities_path, theaters_path, screens_path, Screen, new_screens_path, \
     new_cities_path, new_theaters_path
@@ -268,6 +272,51 @@ class SectionsLoaderView(LoginRequiredMixin, ListView):
                 self.unexpected_error = f'Submit name not found in POST ({request.POST}'
 
         return render(request, 'loader/sections.html', self.get_context_data())
+
+
+class FilmDataBackupView(LoginRequiredMixin, FormView):
+    """
+    Class-based view to back up the data associated with the film models.
+    """
+    template_name = 'loader/film_backup.html'
+    form_class = RatingDataBackupForm
+    http_method_names = ['get', 'post']
+    success_url = '/films/films'
+    unexpected_error = ''
+
+    def get_context_data(self, *args, **kwargs):
+        super_context = super().get_context_data(**kwargs)
+        new_context = {
+            'title': 'Back Up Rating Data',
+            'log': get_log(self.request.session),
+            'fan_count': FilmFan.film_fans.count(),
+            'fans_file': FILM_FANS_BACKUP_PATH,
+            'rating_count': FilmFanFilmRating.film_ratings.count(),
+            'ratings_file': RATINGS_BACKUP_PATH,
+            'film_count': Film.films.count(),
+            'films_file': FILMS_BACKUP_PATH,
+            'festival_count': Festival.festivals.count(),
+            'festivals_file': FESTIVALS_BACKUP_PATH,
+            'festival_base_count': FestivalBase.festival_bases.count(),
+            'festival_bases_file': FESTIVAL_BASES_BACKUP_PATH,
+            'city_count': City.cities.count(),
+            'cities_file': CITIES_BACKUP_PATH,
+        }
+        context = add_base_context(self.request, {**super_context, **new_context})
+        return context
+
+    def form_valid(self, form):
+        session = self.request.session
+
+        # Make sure that the backup directory exists.
+        backup_dir = BACKUP_DATA_DIR
+        if not os.path.isdir(backup_dir):
+            os.mkdir(backup_dir)
+
+        # Make backups of all relevant tables.
+        form.backup_film_data(session)
+
+        return super().form_valid(form)
 
 
 class RatingsLoaderView(LoginRequiredMixin, ListView):

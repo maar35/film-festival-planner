@@ -3,14 +3,13 @@ import datetime
 
 from festival_planner.debug_tools import pr_debug
 from festivals.models import current_festival
-from films.models import FilmFan
+from films.models import rating_str
 
 EXPIRY_HOURS = 24 * 7
 MAX_CACHES = 10
 
 
 class FilmRatingCache:
-    pr_debug('create class', with_time=True)
     caches_count = 0
     cache_by_key = {}
     FESTIVAL_FILTER_INDEX = 0
@@ -64,12 +63,12 @@ class FilmRatingCache:
         else:
             # Filter out fan data.
             try:
-                fan_data = [r for r in film_row['film_ratings'] if r['fan'] == fan][0]
+                fan_data = [r for r in film_row['fan_ratings'] if r['fan'] == fan][0]
             except IndexError as e:
                 pr_debug(f'ERROR getting rating for {fan=}')
                 self.errors.append(f'{e} getting rating for {fan=}')
             else:
-                fan_data['rating'] = FilmFan.rating_str(rating_value)
+                fan_data['rating'] = rating_str(rating_value)
 
         pr_debug('done', with_time=True)
 
