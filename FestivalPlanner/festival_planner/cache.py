@@ -63,7 +63,7 @@ class FilmRatingCache:
         else:
             # Filter out fan data.
             try:
-                fan_data = [r for r in film_row['film_ratings'] if r['fan'] == fan][0]
+                fan_data = [r for r in film_row['fan_ratings'] if r['fan'] == fan][0]
             except IndexError as e:
                 pr_debug(f'ERROR getting rating for {fan=}')
                 self.errors.append(f'{e} getting rating for {fan=}')

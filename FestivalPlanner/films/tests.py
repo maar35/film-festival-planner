@@ -10,12 +10,13 @@ from django.http import HttpRequest
 from django.test import TestCase
 from django.urls import reverse
 
+from authentication.models import me
 from authentication.tests import set_up_user_with_fan
 from festivals.tests import create_festival
 from films import views
 from loader.views import SaveRatingsView
 from theaters.models import City
-from .models import Film, FilmFan, me, FilmFanFilmRating, current_fan, get_rating_name
+from .models import Film, FilmFan, FilmFanFilmRating, current_fan, get_rating_name
 
 
 def arrange_films_fans():
@@ -131,7 +132,7 @@ class RatingModelTests(TestCase):
         rating.save()
 
         # Act.
-        rating_name = fan.fan_rating_name(film)
+        rating_name = rating.name
 
         # Assert.
         self.assertEqual(rating_meaning, rating_name)

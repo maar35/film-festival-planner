@@ -82,7 +82,7 @@ def get_rating_name(rating_value):
 class FilmFanFilmRating(models.Model):
     """
     Film Fan Film Rating table.
-    This rating is an estimate in advance, used to chose which films to see in a festival.
+    This rating is an estimate in advance, used to choose which films to see in a festival.
     """
 
     class Rating(models.IntegerChoices):
@@ -119,20 +119,12 @@ class FilmFanFilmVote(models.Model):
     Film Fan Film Vote table.
     This vote is a retrospective judgement of a film that a fan saw on a festival.
     """
-    @classmethod
-    def vote_members(cls):
-        return [(member.value, member.label) for member in FilmFanFilmRating.Rating if member.name not in ['ALREADY_SEEN', 'WILL_SEE']]
-
-    # Define the possible values of a vote.
-    class Vote(models.IntegerChoices):
-        @classmethod
-        def __members__(cls):
-            return FilmFanFilmVote.vote_members()
+    choices = [(member.value, member.label) for member in FilmFanFilmRating.Rating if member.name not in ['ALREADY_SEEN', 'WILL_SEE']]
 
     # Define the fields.
     film = models.ForeignKey(Film, on_delete=models.CASCADE)
     film_fan = models.ForeignKey(FilmFan, on_delete=models.CASCADE)
-    vote = models.IntegerField(choices=Vote.choices)
+    vote = models.IntegerField(choices=choices)
 
     # Define a manager.
     film_votes = models.Manager()
@@ -145,6 +137,10 @@ class FilmFanFilmVote(models.Model):
         return f"{self.film} - {self.film_fan.initial()}{self.vote}"
 
 
+field_by_post_attendance = {False: 'rating', True: 'vote'}
+manager_by_post_attendance = {False: FilmFanFilmRating.film_ratings, True: FilmFanFilmVote.film_votes}
+
+
 def fan_rating(fan, film, manager=None):
     manager = manager or FilmFanFilmRating.film_ratings
     try:
@@ -154,18 +150,12 @@ def fan_rating(fan, film, manager=None):
     return rating
 
 
-def fan_rating_str(fan, film, manager=FilmFanFilmRating.film_ratings, field='rating'):
+def fan_rating_str(fan, film, post_attendance=False):
+    manager = manager_by_post_attendance[post_attendance]
+    field = field_by_post_attendance[post_attendance]
     rating = fan_rating(fan, film, manager)
     return f'{getattr(rating, field)}' if rating is not None else '-'
 
 
 def rating_str(rating):
     return '-' if rating == '0' else rating
-
-
-def fan_rating_name(fan, film):
-    rating = fan_rating(fan, film)
-    if rating is None:
-        rating = FilmFanFilmRating(film=film, film_fan=fan, rating=0)
-    name_by_rating = dict(FilmFanFilmRating.Rating.choices)
-    return name_by_rating[rating.rating]

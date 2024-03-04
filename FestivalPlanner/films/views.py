@@ -12,16 +12,16 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import FormView, DetailView, ListView
 
+from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
 from festival_planner.debug_tools import pr_debug
 from festival_planner.tools import add_base_context, unset_log, wrap_up_form_errors, application_name, get_log, \
     set_cookie, get_cookie
 from festivals.config import Config
 from festivals.models import current_festival
-from films.forms.film_forms import RatingForm, PickRating, UserForm
-from films.models import FilmFanFilmRating, Film, current_fan, get_present_fans, fan_rating_str, fan_rating_name, \
+from films.forms.film_forms import RatingForm, PickRating, UserForm, refreshed_rating_action
+from films.models import FilmFanFilmRating, Film, current_fan, get_present_fans, fan_rating_str, \
     FilmFanFilmVote
-from authentication.models import FilmFan
 from sections.models import Subsection
 
 STICKY_HEIGHT = 3
@@ -36,9 +36,13 @@ class FragmentKeeper:
     def fragment_name(film_id):
         return f'film{film_id}'
 
-    @staticmethod
-    def fragment_code(film_id):
-        return f'#{FragmentKeeper.fragment_name(film_id)}'
+    @classmethod
+    def fragment_code(cls, film_id):
+        return f'#{cls.fragment_name(film_id)}'
+
+    def add_fragments(self, films):
+        for row_nr, film in enumerate(films):
+            self.add_fragment(row_nr, film)
 
     def add_fragment(self, row_nr, film):
         fragment_row = row_nr - STICKY_HEIGHT if row_nr > STICKY_HEIGHT else 0
@@ -70,7 +74,6 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
             pr_debug('start update', with_time=True)
             film_pk, rating_value = submitted_name.strip(self.submit_name_prefix).split('_')
             self.film = Film.films.get(id=film_pk)
-            pr_debug(f'{self.film.film_id}', with_time=True)
             session = self.request.session
             fan = current_fan(session)
             form.update_rating(session, self.film, fan, rating_value, post_attendance=self.post_attendance)
@@ -85,7 +88,6 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
 
     def get_success_url(self):
         fragment = '#top' if self.view.unexpected_errors else FragmentKeeper.fragment_code(self.film.film_id)
-        pr_debug(f'{fragment=}', with_time=True)
         return reverse(self.success_view_name) + fragment
 
 
@@ -114,6 +116,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
     context_object_name = 'film_rows'
     http_method_names = ['get']
     title = 'Film Rating List'
+    class_tag = 'rating'
     highest_rating = FilmFanFilmRating.Rating.values[-1]
     config = Config().config
     max_short_minutes = config['Constants']['MaxShortMinutes']
@@ -200,8 +203,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
             FilmsView.unexpected_errors.append(e)
 
         # Set the fragment names.
-        for row_nr, film in enumerate(self.selected_films):
-            self.fragment_keeper.add_fragment(row_nr, film)
+        self.fragment_keeper.add_fragments(self.selected_films)
 
         # Fill the film rows.
         film_rows = [self.get_film_row(row_nr, film) for row_nr, film in enumerate(self.selected_films)]
@@ -228,12 +230,12 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'short_threshold': self.short_threshold.total_seconds(),
             'display_shorts_query': self.query_by_include[not display_shorts],
             'display_shorts_action': self.action_by_display_shorts[display_shorts],
+            'action': refreshed_rating_action(session, self.class_tag),
             'unexpected_errors': FilmsView.unexpected_errors,
             'log': get_log(session)
         }
         unset_log(session)
         context = add_base_context(self.request, {**super_context, **new_context})
-        PickRating.refresh_rating_action(session, context, rating_field(FilmsView.post_attendance))
         pr_debug('done', with_time=True)
         return context
 
@@ -253,6 +255,8 @@ class FilmsListView(LoginRequiredMixin, ListView):
     def get_film_row(self, row_nr, film):
         prefix = FilmsView.submit_name_prefix
         choices = FilmFanFilmRating.Rating.choices
+        fan_ratings = get_fan_ratings(film, self.fan_list, self.logged_in_fan, prefix, choices,
+                                      FilmsView.post_attendance)
         film_rating_row = {
             'film': film,
             'fragment_name': self.fragment_keeper.get_fragment_name(row_nr),
@@ -261,7 +265,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'subsection': self.get_subsection(film),
             'section': None,
             'description': self.get_description(film),
-            'film_ratings': get_fan_ratings(film, self.fan_list, self.logged_in_fan, prefix, choices),
+            'fan_ratings': fan_ratings,
         }
         return film_rating_row
 
@@ -323,6 +327,7 @@ class VotesListView(LoginRequiredMixin, ListView):
     context_object_name = 'vote_rows'
     http_method_names = ['get']
     title = 'Film Votes List'
+    class_tag = 'vote'
     fan_list = get_present_fans()
     fragment_keeper = None
     attended_films = []
@@ -331,7 +336,6 @@ class VotesListView(LoginRequiredMixin, ListView):
     festival = None
 
     def dispatch(self, request, *args, **kwargs):
-        pr_debug('start', with_time=True)
         session = self.request.session
         self.festival = current_festival(session)
         self.logged_in_fan = current_fan(session)
@@ -344,34 +348,28 @@ class VotesListView(LoginRequiredMixin, ListView):
         # Read the reviewers.
         self.set_reviewer_by_film_id()
 
-        pr_debug('done', with_time=True)
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        pr_debug('start', with_time=True)
         selected_films = sorted(self.attended_films, key=attrgetter('seq_nr'))
 
         # Set the fragment names.
-        for row_nr, film in enumerate(selected_films):
-            self.fragment_keeper.add_fragment(row_nr, film)
+        self.fragment_keeper.add_fragments(selected_films)
 
         # Fill the vote rows.
         vote_rows = [self.get_vote_row(row_nr, film) for row_nr, film in enumerate(selected_films)]
 
-        pr_debug('done', with_time=True)
         return vote_rows
 
     def get_context_data(self, *, object_list=None, **kwargs):
-        pr_debug('start', with_time=True)
         super_context = super().get_context_data(**kwargs)
         new_context = {
             'title': self.title,
             'fans': self.fan_list,
+            'action': refreshed_rating_action(self.request.session, self.class_tag),
             'unexpected_errors': VotesView.unexpected_errors,
         }
         context = add_base_context(self.request, {**super_context, **new_context})
-        PickRating.refresh_rating_action(self.request.session, context, rating_field(VotesView.post_attendance))
-        pr_debug('done', with_time=True)
         return context
 
     def set_attended_films(self):
@@ -397,7 +395,9 @@ class VotesListView(LoginRequiredMixin, ListView):
         try:
             with open(film_info_file, 'r', newline='') as csvfile:
                 film_info_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
-                self.reviewer_by_film_id = {int(row[0]): row[2] for row in film_info_reader}
+                id_index = 0
+                reviewer_index = 2
+                self.reviewer_by_film_id = {int(row[id_index]): row[reviewer_index] for row in film_info_reader}
         except FileNotFoundError as e:
             self.reviewer_by_film_id = {}
             VotesView.unexpected_errors.append(e)
@@ -418,13 +418,14 @@ class VotesListView(LoginRequiredMixin, ListView):
 
     def get_vote_row(self, row_nr, film):
         prefix = VotesView.submit_name_prefix
-        choices = FilmFanFilmVote.vote_members()
-        post_attendance = True
+        choices = FilmFanFilmVote.choices
+        post_attendance = VotesView.post_attendance
+        fan_votes = get_fan_ratings(film, self.fan_list, self.logged_in_fan, prefix, choices, post_attendance)
         vote_row = {
             'film': film,
             'duration_str': film.duration_str(),
             'reviewer': self.get_reviewer(film),
-            'fan_votes': get_fan_ratings(film, self.fan_list, self.logged_in_fan, prefix, choices, post_attendance=post_attendance),
+            'fan_votes': fan_votes,
             'fragment_name': self.fragment_keeper.get_fragment_name(row_nr),
         }
         return vote_row
@@ -478,7 +479,6 @@ class ResultsView(DetailView):
             fan_rows.append({
                 'fan': fan,
                 'rating_str': fan_rating_str(fan, film),
-                'rating_name': fan_rating_name(fan, film),
                 'choices': choices,
             })
         context = add_base_context(self.request, super().get_context_data(**kwargs))
@@ -558,10 +558,6 @@ def rated_key(fan):
     return f'rated_{fan}'
 
 
-def rating_field(post_attendance):
-    return PickRating.field_by_postview[post_attendance]
-
-
 def get_rating_statistics(session):
     def get_stats_for_rating(base_rating):
         counts = [count for r, count in count_by_eligible_rating.items() if r >= base_rating]
@@ -608,13 +604,11 @@ def get_rating_statistics(session):
     return film_count, rated_films_count, count_dicts
 
 
-def get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix, choices, post_attendance=False):
-    manager = PickRating.manager_by_post_view[post_attendance]
-    field = PickRating.field_by_postview[post_attendance]
+def get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix, choices, post_attendance):
     film_ratings = []
     for fan in fan_list:
         # Set a rating string to display.
-        rating_str = fan_rating_str(fan, film, manager=manager, field=field)
+        rating_str = fan_rating_str(fan, film, post_attendance)
 
         # Get choices for this fan.
         choice_dict = [{

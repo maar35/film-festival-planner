@@ -107,7 +107,7 @@
                 <td>{{ row.duration_str }}</td>
             {% endif %}
             <td style="color:{{ row.subsection.section.color }}">{{ row.subsection.name }}</td>
-            {% for fan_rating in row.film_ratings %}
+            {% for fan_rating in row.fan_ratings %}
                 {% if fan_rating.fan == current_fan %}
                     <td class="cell-dropdown">
                         <span class="drop-button">
