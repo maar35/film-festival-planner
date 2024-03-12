@@ -72,7 +72,7 @@ namespace PresentScreenings.TableView
             Config = GetConfiguration();
 
             // Preferences.
-            Festival = "IFFR";
+            Festival = "MTMF";
             FestivalYear = "2024";
             VisitPhysical = true;
 

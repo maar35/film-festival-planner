@@ -214,9 +214,9 @@ class HtmlPageParser(BaseHtmlPageParser):
         self.article = None
 
     def add_screening_from_fields(self, film, screen, start_dt, end_dt, qa='', subtitles='', extra='',
-                                  audience='', program=None, display=True):
+                                  audience='', sold_out=None, program=None, display=True):
 
-        screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience, program, subtitles)
+        screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience, program, subtitles, sold_out)
         self.add_screening(screening, display=display)
 
     def add_screening(self, screening, display=True):
