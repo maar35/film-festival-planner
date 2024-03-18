@@ -446,6 +446,7 @@ class FestivalData:
     common_data_dir = os.path.expanduser(f'~/{config()["Paths"]["CommonDataDirectory"]}')
     default_city_name = 'Bullshit City'
     dialect = None
+    write_verbose = True
 
     def __init__(self, plandata_dir, default_city_name=None):
         self.default_city_name = default_city_name or self.default_city_name
@@ -484,7 +485,7 @@ class FestivalData:
         self.read_cities()
         self.read_theaters()
         self.read_screens()
-        self.read_filmids()
+        self.read_film_ids()
 
     def set_csv_dialect(self):
         self.dialect = csv.unix_dialect
@@ -597,7 +598,8 @@ class FestivalData:
             self.theater_by_location[theater_key] = theater
         return theater
 
-    def get_screen(self, city_name, screen_parse_name, theater_parse_name=None, screen_abbreviation=None):
+    def get_screen(self, city_name, screen_parse_name,
+                   theater_parse_name=None, screen_abbreviation=None, verbose=True):
         theater = self.get_theater(city_name, theater_parse_name)
         screen_key = (theater.theater_id, screen_parse_name)
         try:
@@ -609,7 +611,8 @@ class FestivalData:
             screen_type = 'OnDemand' if abbr.startswith('ondemand')\
                 else 'OnLine' if abbr.startswith('online')\
                 else 'Physical'
-            print(f"NEW SCREEN:  '{theater.city}' '{theater.name}' '{screen_parse_name}' => {abbr}")
+            if verbose:
+                print(f"NEW SCREEN:  '{theater.city}' '{theater.name}' '{screen_parse_name}' => {abbr}")
             screen = Screen(screen_id, theater, screen_parse_name, abbr, screen_type)
             self.screen_by_location[screen_key] = screen
         return screen
@@ -628,7 +631,7 @@ class FestivalData:
             articles = [Article(self.split_rec(line, ":")) for line in f]
         Film.articles_by_language = dict([(a.key(), a) for a in articles])
 
-    def read_filmids(self):
+    def read_film_ids(self):
         try:
             with open(self.filmids_file, 'r') as f:
                 records = [self.split_rec(line, ';') for line in f]
@@ -646,7 +649,6 @@ class FestivalData:
             self.curr_film_id = max(self.film_id_by_key.values())
         except ValueError:
             self.curr_film_id = 0
-        print(f"Done reading {len(self.film_id_by_url)} records from {self.filmids_file}.")
 
     def read_sections(self):
         try:
@@ -859,7 +861,8 @@ class FestivalData:
         with open(self.sections_file, 'w') as f:
             for section in self.section_by_id.values():
                 f.write((repr(section)))
-        print(f'Done writing {len(self.section_by_id)} records to {self.sections_file}.')
+        if self.write_verbose:
+            print(f'Done writing {len(self.section_by_id)} records to {self.sections_file}.')
 
     def write_subsections(self):
         with open(self.subsections_file, 'w') as f:

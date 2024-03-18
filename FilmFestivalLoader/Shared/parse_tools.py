@@ -52,12 +52,13 @@ def try_parse_festival_sites(parser, festival_data, error_collector, debug_recor
 
 
 class FileKeeper:
-    base_dir = os.path.expanduser(f'~/{config()["Paths"]["FestivalRootDirectory"]}')
+    basedir = os.path.expanduser(f'~/{config()["Paths"]["FestivalRootDirectory"]}')
     common_data_dir = os.path.expanduser(f'~/{config()["Paths"]["CommonDataDirectory"]}')
 
-    def __init__(self, festival, year):
+    def __init__(self, festival, year, basedir=None):
         # Define directories.
-        self.festival_dir = os.path.join(self.base_dir, f'{festival}')
+        self.basedir = basedir or self.basedir
+        self.festival_dir = os.path.join(self.basedir, f'{festival}')
         self.documents_dir = os.path.join(self.festival_dir, f'{festival}{year}')
         self.webdata_dir = os.path.join(self.documents_dir, '_website_data')
         self.plandata_dir = os.path.join(self.documents_dir, '_planner_data')
