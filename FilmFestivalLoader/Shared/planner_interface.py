@@ -10,7 +10,7 @@ Created on Sat Oct 10 18:13:42 2020
 import csv
 import os
 import re
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as Tree
 from enum import Enum, auto
 
 from Shared.application_tools import config
@@ -428,7 +428,7 @@ class Screening:
             self.subtitles,
             self.q_and_a,
             self.extra,
-            str(self.sold_out) if self.sold_out is not None else ''
+            str(self.sold_out) if self.sold_out else ''
         ])
         return f'{text}\n'
 
@@ -446,6 +446,7 @@ class FestivalData:
     common_data_dir = os.path.expanduser(f'~/{config()["Paths"]["CommonDataDirectory"]}')
     default_city_name = 'Bullshit City'
     dialect = None
+    write_verbose = True
 
     def __init__(self, plandata_dir, default_city_name=None):
         self.default_city_name = default_city_name or self.default_city_name
@@ -484,7 +485,7 @@ class FestivalData:
         self.read_cities()
         self.read_theaters()
         self.read_screens()
-        self.read_filmids()
+        self.read_film_ids()
 
     def set_csv_dialect(self):
         self.dialect = csv.unix_dialect
@@ -523,7 +524,7 @@ class FestivalData:
         else:
             films = [film for film in self.films if film.filmid == film_id]
             if len(films) == 0:
-                raise ValueError(f'Key ({key}) found, but no film found with film ID ({film_id}).')
+                raise ValueError(f'Key ({key}) found, but no film found with film ID ({film_id})')
         return films[0]
 
     def get_filmid(self, url):
@@ -597,7 +598,8 @@ class FestivalData:
             self.theater_by_location[theater_key] = theater
         return theater
 
-    def get_screen(self, city_name, screen_parse_name, theater_parse_name=None, screen_abbreviation=None):
+    def get_screen(self, city_name, screen_parse_name,
+                   theater_parse_name=None, screen_abbreviation=None, verbose=True):
         theater = self.get_theater(city_name, theater_parse_name)
         screen_key = (theater.theater_id, screen_parse_name)
         try:
@@ -609,10 +611,15 @@ class FestivalData:
             screen_type = 'OnDemand' if abbr.startswith('ondemand')\
                 else 'OnLine' if abbr.startswith('online')\
                 else 'Physical'
-            print(f"NEW SCREEN:  '{theater.city}' '{theater.name}' '{screen_parse_name}' => {abbr}")
+            if verbose:
+                print(f"NEW SCREEN:  '{theater.city}' '{theater.name}' '{screen_parse_name}' => {abbr}")
             screen = Screen(screen_id, theater, screen_parse_name, abbr, screen_type)
             self.screen_by_location[screen_key] = screen
         return screen
+
+    def get_screen_by_id(self, screen_id):
+        screens = [screen for screen in self.screen_by_location.values() if screen.screen_id == screen_id]
+        return screens[0] if screens else None
 
     @staticmethod
     def split_rec(line, sep):
@@ -624,7 +631,7 @@ class FestivalData:
             articles = [Article(self.split_rec(line, ":")) for line in f]
         Film.articles_by_language = dict([(a.key(), a) for a in articles])
 
-    def read_filmids(self):
+    def read_film_ids(self):
         try:
             with open(self.filmids_file, 'r') as f:
                 records = [self.split_rec(line, ';') for line in f]
@@ -642,7 +649,6 @@ class FestivalData:
             self.curr_film_id = max(self.film_id_by_key.values())
         except ValueError:
             self.curr_film_id = 0
-        print(f"Done reading {len(self.film_id_by_url)} records from {self.filmids_file}.")
 
     def read_sections(self):
         try:
@@ -823,7 +829,7 @@ class FestivalData:
 
     def write_filminfo(self):
         info_count = 0
-        filminfos = ET.Element('FilmInfos')
+        filminfos = Tree.Element('FilmInfos')
         for filminfo in [i for i in self.filminfos if self.film_can_go_to_planner(i.filmid)]:
             info_count += 1
             id = str(filminfo.filmid)
@@ -831,23 +837,23 @@ class FestivalData:
             if filminfo.metadata:
                 article += f'\n\n{filminfo.format_metadata()}'
             descr = filminfo.description
-            info = ET.SubElement(filminfos, 'FilmInfo',
-                                 FilmId=id,
-                                 FilmArticle=article,
-                                 FilmDescription=descr,
-                                 InfoStatus='Complete')
-            combination_programs = ET.SubElement(info, 'CombinationPrograms')
+            info = Tree.SubElement(filminfos, 'FilmInfo',
+                                   FilmId=id,
+                                   FilmArticle=article,
+                                   FilmDescription=descr,
+                                   InfoStatus='Complete')
+            combination_programs = Tree.SubElement(info, 'CombinationPrograms')
             for combination_film in filminfo.combination_films:
-                _ = ET.SubElement(combination_programs, 'CombinationProgram',
-                                  CombinationProgramId=str(combination_film.filmid))
-            screened_films = ET.SubElement(info, 'ScreenedFilms')
+                _ = Tree.SubElement(combination_programs, 'CombinationProgram',
+                                    CombinationProgramId=str(combination_film.filmid))
+            screened_films = Tree.SubElement(info, 'ScreenedFilms')
             for screened_film in filminfo.screened_films:
-                _ = ET.SubElement(screened_films, 'ScreenedFilm',
-                                  ScreenedFilmId=str(screened_film.filmid),
-                                  Title=screened_film.title,
-                                  Description=screened_film.description,
-                                  ScreenedFilmType=screened_film.screened_film_type.name)
-        tree = ET.ElementTree(filminfos)
+                _ = Tree.SubElement(screened_films, 'ScreenedFilm',
+                                    ScreenedFilmId=str(screened_film.filmid),
+                                    Title=screened_film.title,
+                                    Description=screened_film.description,
+                                    ScreenedFilmType=screened_film.screened_film_type.name)
+        tree = Tree.ElementTree(filminfos)
         tree.write(self.filminfo_file, encoding='utf-8', xml_declaration=True)
         print(f"Done writing {info_count} records to {self.filminfo_file}.")
 
@@ -855,7 +861,8 @@ class FestivalData:
         with open(self.sections_file, 'w') as f:
             for section in self.section_by_id.values():
                 f.write((repr(section)))
-        print(f'Done writing {len(self.section_by_id)} records to {self.sections_file}.')
+        if self.write_verbose:
+            print(f'Done writing {len(self.section_by_id)} records to {self.sections_file}.')
 
     def write_subsections(self):
         with open(self.subsections_file, 'w') as f:

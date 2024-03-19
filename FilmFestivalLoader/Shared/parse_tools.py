@@ -52,12 +52,19 @@ def try_parse_festival_sites(parser, festival_data, error_collector, debug_recor
 
 
 class FileKeeper:
-    base_dir = os.path.expanduser(f'~/{config()["Paths"]["FestivalRootDirectory"]}')
+    basedir = os.path.expanduser(f'~/{config()["Paths"]["FestivalRootDirectory"]}')
     common_data_dir = os.path.expanduser(f'~/{config()["Paths"]["CommonDataDirectory"]}')
 
-    def __init__(self, festival, year):
+    def __init__(self, festival, year, basedir=None):
+        """
+        Exposes a standard structure to keep the data belonging to a film festival.
+        :param festival: The basename of the festival the file structure belongs to
+        :param year: The edition year of the festival
+        :param basedir: Force the root directory to differ from the standard, esp. for testing.
+        """
         # Define directories.
-        self.festival_dir = os.path.join(self.base_dir, f'{festival}')
+        self.basedir = basedir or self.basedir
+        self.festival_dir = os.path.join(self.basedir, f'{festival}')
         self.documents_dir = os.path.join(self.festival_dir, f'{festival}{year}')
         self.webdata_dir = os.path.join(self.documents_dir, '_website_data')
         self.plandata_dir = os.path.join(self.documents_dir, '_planner_data')
@@ -214,9 +221,9 @@ class HtmlPageParser(BaseHtmlPageParser):
         self.article = None
 
     def add_screening_from_fields(self, film, screen, start_dt, end_dt, qa='', subtitles='', extra='',
-                                  audience='', program=None, display=True):
+                                  audience='', sold_out=None, program=None, display=True):
 
-        screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience, program, subtitles)
+        screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience, program, subtitles, sold_out)
         self.add_screening(screening, display=display)
 
     def add_screening(self, screening, display=True):

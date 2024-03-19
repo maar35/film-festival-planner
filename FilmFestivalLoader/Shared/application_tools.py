@@ -38,14 +38,14 @@ class Counter:
     def start(self, label):
         self.count_by_label[label] = 0
 
-    def increase(self, label, do_raise=True):
+    def increase(self, label, do_raise=True, increment=1):
         try:
-            self.count_by_label[label] += 1
+            self.count_by_label[label] += increment
         except KeyError as e:
             if do_raise:
                 raise e
             else:
-                self.count_by_label[label] = 1
+                self.count_by_label[label] = increment
 
     def get(self, label, description=None):
         count = self.count_by_label[label]
