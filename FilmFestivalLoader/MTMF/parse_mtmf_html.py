@@ -560,7 +560,7 @@ class ScreeningsPageParser(HtmlPageParser):
                 error_collector.add('Screen not recovered', f'{city=}, {theater=}, {self.start_dt.isoformat(sep=" ")}')
                 counter.increase('screen not recovered')
         else:
-            screen_name = self.screen_name if self.screen_name is not None else theater
+            screen_name = self.screen_name if self.screen_name else theater
             if screen_name is not None:
                 self.screen = self.festival_data.get_screen(city, screen_name, theater)
             else:
@@ -678,7 +678,6 @@ class ShoppingCartPageParser(HtmlPageParser):
         HtmlPageParser.__init__(self, festival_data, debug_recorder, 'SC', debugging=DEBUGGING)
         self.film = film
         self.sequence_nr = sequence_nr
-        self.print_debug(self.bar, f'Analysing shopping cart #{sequence_nr} of FILM {film}, {url}')
         self.state_stack = self.StateStack(self.print_debug, self.ShoppingCartState.IDLE)
         self.current_screen = None
 

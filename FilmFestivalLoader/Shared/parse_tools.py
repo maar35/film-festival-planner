@@ -56,6 +56,12 @@ class FileKeeper:
     common_data_dir = os.path.expanduser(f'~/{config()["Paths"]["CommonDataDirectory"]}')
 
     def __init__(self, festival, year, basedir=None):
+        """
+        Exposes a standard structure to keep the data belonging to a film festival.
+        :param festival: The basename of the festival the file structure belongs to
+        :param year: The edition year of the festival
+        :param basedir: Force the root directory to differ from the standard, esp. for testing.
+        """
         # Define directories.
         self.basedir = basedir or self.basedir
         self.festival_dir = os.path.join(self.basedir, f'{festival}')
