@@ -1,7 +1,8 @@
 import copy
 import csv
+import re
 from datetime import timedelta
-from operator import attrgetter
+from operator import attrgetter, itemgetter
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -16,7 +17,7 @@ from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
 from festival_planner.debug_tools import pr_debug
 from festival_planner.tools import add_base_context, unset_log, wrap_up_form_errors, application_name, get_log, \
-    set_cookie, get_cookie
+    set_cookie, get_cookie, initialize_log, add_log
 from festivals.config import Config
 from festivals.models import current_festival
 from films.forms.film_forms import RatingForm, PickRating, UserForm, refreshed_rating_action
@@ -59,6 +60,7 @@ class FragmentKeeper:
 
 
 class BaseFilmsFormView(LoginRequiredMixin, FormView):
+    SEARCH_KEY = 'search_text'
     template_name = None
     form_class = PickRating
     http_method_names = ['post']
@@ -67,9 +69,60 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
     success_view_name = None
     post_attendance = None
     film = None
+    found_films = None
 
     def form_valid(self, form):
+        search_text = form.cleaned_data[self.SEARCH_KEY]
+        if search_text:
+            self.search_title(search_text)
+        else:
+            self.update_rating(form)
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        self.view.unexpected_errors.extend(wrap_up_form_errors(form.errors))
+        super().form_invalid(form)
+        return self.clean_response()
+
+    def get_success_url(self):
+        errors = self.view.unexpected_errors
+        fragment = '#top' if not self.film or errors else FragmentKeeper.fragment_code(self.film.film_id)
+        return reverse(self.success_view_name) + fragment
+
+    @staticmethod
+    def clean_response():
+        return HttpResponseRedirect(reverse('films:films'))
+
+    def search_title(self, text):
+        session = self.request.session
+        initialize_log(session, action=f'Search "{text}"')
+        festival = current_festival(session)
+        found_films = []
+        start_by_film = {}
+        for film in Film.films.order_by('seq_nr').filter(festival=festival):
+            start_pos = self.film_matches_search_text(film, text)
+            if start_pos is not None:
+                found_films.append(film)
+                start_by_film[film] = start_pos
+                add_log(session, film.sort_title)
+        if found_films:
+            sorted_tuples = sorted([(f, s) for f, s in start_by_film.items()], key=itemgetter(1))
+            BaseFilmsFormView.found_films = [f for f, s in sorted_tuples]
+        else:
+            add_log(session, f'No title found starting with "{text}"')
+
+    @staticmethod
+    def film_matches_search_text(film, text):
+        re_search_text = re.compile(f'{text}')
+        m = re_search_text.search(film.sort_title)
+        if m:
+            pr_debug(f'{film.sort_title=}, {text=}, {m.start()=}')
+        return m.start() if m else None
+
+    def update_rating(self, form):
         submitted_name = list(self.request.POST.keys())[-1]
+        if submitted_name == self.SEARCH_KEY:
+            return  # Search field committed while empty.
         if submitted_name is not None:
             pr_debug('start update', with_time=True)
             film_pk, rating_value = submitted_name.strip(self.submit_name_prefix).split('_')
@@ -80,15 +133,6 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
             pr_debug('done update', with_time=True)
         else:
             self.view.unexpected_errors.append("Can't identify submit widget.")
-        return super().form_valid(form)
-
-    def form_invalid(self, form):
-        self.view.unexpected_errors.append(f'Form {form} invalid:\n{wrap_up_form_errors(form.errors)}')
-        return super().form_invalid(form)
-
-    def get_success_url(self):
-        fragment = '#top' if self.view.unexpected_errors else FragmentKeeper.fragment_code(self.film.film_id)
-        return reverse(self.success_view_name) + fragment
 
 
 class FilmsView(LoginRequiredMixin, View):
@@ -222,6 +266,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
         display_shorts = get_cookie(session, 'shorts')
         new_context = {
             'title': self.title,
+            'search_form': PickRating(),
             'fan_headers': self.get_fan_headers(),
             'feature_count': film_count,
             'rated_features_count': rated_films_count,
@@ -230,6 +275,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'short_threshold': self.short_threshold.total_seconds(),
             'display_shorts_query': self.query_by_include[not display_shorts],
             'display_shorts_action': self.action_by_display_shorts[display_shorts],
+            'found_films': BaseFilmsFormView.found_films,
             'action': refreshed_rating_action(session, self.class_tag),
             'unexpected_errors': FilmsView.unexpected_errors,
             'log': get_log(session)
@@ -242,6 +288,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
     def render_to_response(self, context, **response_kwargs):
         response = super().render_to_response(context, **response_kwargs)
         FilmsView.unexpected_errors = []
+        BaseFilmsFormView.found_films = None
         return response
 
     def set_cookie_filter(self, request_key, cookie_key=None):

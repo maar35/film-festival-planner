@@ -2,11 +2,15 @@ import copy
 from datetime import datetime
 
 from django import forms
+from django.core.validators import RegexValidator
+from django.forms import CharField
 
 from authentication.models import FilmFan
 from festivals.models import rating_action_key
 from films.models import FilmFanFilmRating, get_rating_name, current_fan, fan_rating_str, field_by_post_attendance, \
     manager_by_post_attendance
+
+search_test_validator = RegexValidator(r'^[a-z]+$', 'Type only lower case letters')
 
 
 class UserForm(forms.Form):
@@ -17,7 +21,12 @@ class UserForm(forms.Form):
 
 
 class PickRating(forms.Form):
-    dummy_field = forms.SlugField(required=False)
+    search_text = CharField(
+        label='Find a title by entering a snippet of it',
+        required=False,
+        validators=[search_test_validator],
+        min_length=2,
+    )
     film_rating_cache = None
 
     @classmethod

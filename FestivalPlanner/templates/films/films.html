@@ -14,9 +14,16 @@
     </span>
     {% if log %}
         <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
-        {% for result in log.results %}
-            <p class="log">{{ result }}</p>
-        {% endfor %}
+        {% if found_films %}
+            {% for film in found_films %}
+                <a href="{% url 'films:results' film.id %}" style="padding-left: 40px;" >{{ film.title }}</a>
+                <br>
+            {% endfor %}
+        {% else %}
+            {% for result in log.results %}
+                <p class="log">{{ result }}</p>
+            {% endfor %}
+        {% endif %}
     {% endif %}
     {% if unexpected_errors %}
         <h3 class="error">Unexpected error</h3>
@@ -63,73 +70,76 @@
     {% endif %}
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
-    <div class="no-select">
-    <table>
-        <thead>
-            <tr>
-                <th class="sticky-t-head" style="vertical-align: text-top;">Film</th>
-                <th class="sticky-t-head">
-                    Duration
-                    <br>
-                    <a href="/films/films?shorts={{ display_shorts_query }}">{{ display_shorts_action }}</a>
-                </th>
-                <th class="sticky-t-head" style="vertical-align: text-top;">Subsection<br></th>
-                {% for fan_header in fan_headers %}
+        {{ search_form.as_p }}
+    </form>
+    <form method="post">
+        {% csrf_token %}
+        <div class="no-select">
+        <table>
+            <thead>
+                <tr>
+                    <th class="sticky-t-head" style="vertical-align: text-top;">Film</th>
                     <th class="sticky-t-head">
-                        {{ fan_header.fan }}
+                        Duration
                         <br>
-                        <a href="/films/films?rated_{{ fan_header.fan }}={{ fan_header.query }}">{{ fan_header.action }}</a>
+                        <a href="/films/films?shorts={{ display_shorts_query }}">{{ display_shorts_action }}</a>
                     </th>
+                    <th class="sticky-t-head" style="vertical-align: text-top;">Subsection<br></th>
+                    {% for fan_header in fan_headers %}
+                        <th class="sticky-t-head">
+                            {{ fan_header.fan }}
+                            <br>
+                            <a href="/films/films?rated_{{ fan_header.fan }}={{ fan_header.query }}">{{ fan_header.action }}</a>
+                        </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in film_rows %}
+            <tr>
+                <td style="max-width: 720px;">
+                    <a name="{{ row.fragment_name }}"></a>
+                    {% if row.description %}
+                        <a href="{% url 'films:results' row.film.id %}">
+                            {{ row.film.title }}
+                        </a>
+                        <br>
+                        {{ row.description }}
+                    {% else %}
+                        <a href="{% url 'films:results' row.film.id %}" style="color: darkgreen;">
+                            {{ row.film.title }}
+                        </a>
+                    {% endif %}
+                </td>
+                {% if row.duration_seconds <= short_threshold %}
+                    <td style="color:SlateGray">{{ row.duration_str }}</td>
+                {% else %}
+                    <td>{{ row.duration_str }}</td>
+                {% endif %}
+                <td style="color:{{ row.subsection.section.color }}">{{ row.subsection.name }}</td>
+                {% for fan_rating in row.fan_ratings %}
+                    {% if fan_rating.fan == current_fan %}
+                        <td class="cell-dropdown">
+                            <span class="drop-button">
+                                {{ fan_rating.rating }}
+                            </span>
+                            <div class="cell-dropdown-content">
+                                {% for choice in fan_rating.choices %}
+                                    <input type="submit" value="{{ choice.value | stringformat:'2d' }}  {{ choice.rating_name }}" name="{{ choice.submit_name }}">
+                                {% endfor %}
+                            </div>
+                        </td>
+                    {% else %}
+                        <td style="text-align: center">
+                            {{ fan_rating.rating }}
+                        </td>
+                    {% endif %}
                 {% endfor %}
             </tr>
-        </thead>
-        <tbody>
-        {% for row in film_rows %}
-        <tr>
-            <td style="max-width: 720px;">
-                <a name="{{ row.fragment_name }}"></a>
-                {% if row.description %}
-                    <a href="{% url 'films:results' row.film.id %}">
-                        {{ row.film.title }}
-                    </a>
-                    <br>
-                    {{ row.description }}
-                {% else %}
-                    <a href="{% url 'films:results' row.film.id %}" style="color: darkgreen;">
-                        {{ row.film.title }}
-                    </a>
-                {% endif %}
-            </td>
-            {% if row.duration_seconds <= short_threshold %}
-                <td style="color:SlateGray">{{ row.duration_str }}</td>
-            {% else %}
-                <td>{{ row.duration_str }}</td>
-            {% endif %}
-            <td style="color:{{ row.subsection.section.color }}">{{ row.subsection.name }}</td>
-            {% for fan_rating in row.fan_ratings %}
-                {% if fan_rating.fan == current_fan %}
-                    <td class="cell-dropdown">
-                        <span class="drop-button">
-                            {{ fan_rating.rating }}
-                        </span>
-                        <div class="cell-dropdown-content">
-                            {% for choice in fan_rating.choices %}
-                                <input type="submit" value="{{ choice.value | stringformat:'2d' }}  {{ choice.rating_name }}" name="{{ choice.submit_name }}">
-                            {% endfor %}
-                        </div>
-                    </td>
-                {% else %}
-                    <td style="text-align: center">
-                        {{ fan_rating.rating }}
-                    </td>
-                {% endif %}
             {% endfor %}
-        </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    </div>
+            </tbody>
+        </table>
+        </div>
     </form>
     <br>
 {% endblock %}
