@@ -41,8 +41,7 @@ def screens_cache_path():
     return os.path.join(common_data_dir(), 'screens_cache.csv')
 
 
-
-  def new_screens_path():
+def new_screens_path():
     return os.path.join(common_data_dir(), 'new_screens.csv')
 
   

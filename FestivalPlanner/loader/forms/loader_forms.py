@@ -119,7 +119,7 @@ class TheaterDataDumperForm(Form):
         ScreenDumper(session).dump_objects(screens_path())
 
 
-lass RatingDataBackupForm(Form):
+class RatingDataBackupForm(Form):
     dummy_field = SlugField(required=False)
 
     @staticmethod
