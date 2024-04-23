@@ -53,6 +53,7 @@ namespace PresentScreenings.TableView
         public MediumCategory Category { get; private set; }
         public FilmInfoStatus InfoStatus => ViewController.GetFilmInfoStatus(FilmId);
         public FilmRating MaxRating => ViewController.GetMaxRating(this);
+        public FilmRating SecondRating => ViewController.GetSecondRating(this);
         #endregion
 
         #region Cached Properties

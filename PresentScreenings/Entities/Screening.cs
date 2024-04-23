@@ -48,6 +48,7 @@ namespace PresentScreenings.TableView
         public DateTime StartDate => StartTime.Date;
         public TimeSpan Duration => EndTime - StartTime;
         public FilmRating Rating => Film.Rating;
+        public FilmRating SecondRating => Film.SecondRating;
         public bool HasQAndA => QAndA != string.Empty;
         public List<string> AttendingFilmFans { get => _screeningInfo.Attendees; set => _screeningInfo.Attendees = value; }
         public bool IAttend => _screeningInfo.IAttend;
@@ -77,7 +78,8 @@ namespace PresentScreenings.TableView
 
         #region Static Properties
         public static Action<Screening> GoToScreening { get; set; }
-        public static TimeSpan TravelTime { get; set; }
+        public static TimeSpan WalkTimeSameTheater { get; set; }
+        public static TimeSpan TravelTimeOtherTheater { get; set; }
         public static bool InOutliningOverlaps { get; set; } = false;
         public static Dictionary<string, int> IndexByName { get; }
         #endregion
@@ -96,6 +98,7 @@ namespace PresentScreenings.TableView
             IndexByName.Add("Subtitles", ++n);
             IndexByName.Add("QAndA", ++n);
             IndexByName.Add("Extra", ++n);
+            IndexByName.Add("SoldOut", ++n);
         }
 
         public Screening() { }
@@ -112,6 +115,7 @@ namespace PresentScreenings.TableView
             string subtitles = fields[IndexByName["Subtitles"]];
             string qAndA = fields[IndexByName["QAndA"]];
             string extra = fields[IndexByName["Extra"]];
+            string soldOut = fields[IndexByName["SoldOut"]];
 
             // Assign key properties.
             OriginalFilmId = filmId;
@@ -157,6 +161,10 @@ namespace PresentScreenings.TableView
             Subtitles = subtitles;
             QAndA = qAndA;
             Extra = extra;
+            if (soldOut.Length > 0)
+            {
+                SoldOut = bool.Parse(soldOut);
+            }
         }
         #endregion
 
@@ -289,9 +297,16 @@ namespace PresentScreenings.TableView
 
         public bool Overlaps(Screening otherScreening, bool useTravelTime = false)
         {
-            var travelTime = useTravelTime ? TravelTime : TimeSpan.Zero;
+            var travelTime = useTravelTime ? GetTravelTime(otherScreening) : TimeSpan.Zero;
             return otherScreening.StartTime <= EndTime + travelTime
                 && otherScreening.EndTime >= StartTime - travelTime;
+        }
+
+        public TimeSpan GetTravelTime(Screening otherScreening)
+        {
+            var sameTheater = Screen.Theater.TheaterId == otherScreening.Screen.Theater.TheaterId;
+            var travelTime = sameTheater ? WalkTimeSameTheater : TravelTimeOtherTheater;
+            return travelTime;
         }
         #endregion
 

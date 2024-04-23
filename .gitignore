@@ -9,6 +9,7 @@
 __init__.py
 .vs/
 mono_crash.*
+FilmRatings/
 PresentScreenings/bin/
 PresentScreenings/obj/
 packages/

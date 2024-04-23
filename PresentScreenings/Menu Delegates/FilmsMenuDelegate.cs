@@ -32,6 +32,13 @@ namespace PresentScreenings.TableView
         public static int ToggleOnlyFilmsWithScreeningsMenuItemTag => _toggleOnlyFilmsWithScreeningsMenuItemTag;
         public static int ToggleTypeMatchMethodMenuItemTag => _toggleTypeMatchMethodMenuItemTag;
         public static int ReloadRatingsMenuItemTag => _reloadRatingsMenuItemTag;
+        private ViewController ViewController => _app.Controller;
+        private FilmRatingDialogController RatingController => _app.FilmsDialogController;
+        private ScreeningDialogController ScreeningInfoController => ViewController.ScreeningInfoDialog;
+        private FilmInfoDialogController FilmInfoController => _app.FilmInfoController;
+        private AnalyserDialogController AnalyserController => _app.AnalyserDialogController;
+        private CombineTitlesSheetController CombineTitlesController => _app.CombineTitleController;
+        private UncombineTitlesSheetController UncombineTitlesController => _app.UncombineTitleController;
         #endregion
 
         #region Constructors
@@ -50,13 +57,6 @@ namespace PresentScreenings.TableView
 
         public override void NeedsUpdate(NSMenu menu)
         {
-            // Define some aliases for improved readability.
-            ViewController viewController = _app.Controller;
-            FilmRatingDialogController ratingController = _app.FilmsDialogController;
-            ScreeningDialogController screeningInfoController = viewController.ScreeningInfoDialog;
-            FilmInfoDialogController filmInfoController = _app.FilmInfoController;
-            AnalyserDialogController analyserController = _app.AnalyserDialogController;
-
             // Create extra menu items for screened films and combinations.
             PopulateExtraMenuItems(menu);
 
@@ -65,7 +65,7 @@ namespace PresentScreenings.TableView
             {
                 // If the Combine or Uncombine film dialog is active, all menu
                 // items must be inactive.
-                if (_app.CombineTitleController != null || _app.UncombineTitleController != null)
+                if (CombineTitlesController != null || UncombineTitlesController != null)
                 {
                     item.Enabled = false;
                     continue;
@@ -82,44 +82,44 @@ namespace PresentScreenings.TableView
                 switch (item.Tag)
                 {
                     case _showFilmsMenuItemTag:
-                        item.Enabled = ratingController == null && viewController.ViewIsActive();
+                        item.Enabled = RatingController == null && ViewController.ViewIsActive();
                         break;
                     case _toggleOnlyFilmsWithScreeningsMenuItemTag:
                     case _toggleTypeMatchMethodMenuItemTag:
-                        item.Enabled = ratingController != null
-                                        && filmInfoController == null;
+                        item.Enabled = RatingController != null
+                                        && FilmInfoController == null;
                         break;
                     case _reloadRatingsMenuItemTag:
-                        item.Enabled = ratingController != null
-                                        || screeningInfoController != null
-                                        || viewController.RunningPopupsCount == 0;
+                        item.Enabled = RatingController != null
+                                        || ScreeningInfoController != null
+                                        || ViewController.RunningPopupsCount == 0;
                         break;
                     case _showFilmInfoMenuItemTag:
-                        item.Enabled = screeningInfoController != null
-                                        || viewController.RunningPopupsCount == 0
-                                        || (ratingController != null
-                                            && ratingController.OneFilmSelected()
-                                            && filmInfoController == null);
+                        item.Enabled = ScreeningInfoController != null
+                                        || ViewController.RunningPopupsCount == 0
+                                        || (RatingController != null
+                                            && RatingController.OneFilmSelected()
+                                            && FilmInfoController == null);
                         break;
                     case _visitFilmWebsiteMenuItemTag:
-                        item.Enabled = screeningInfoController != null
-                                        || viewController.RunningPopupsCount == 0
-                                        || (ratingController != null
-                                            && ratingController.OneFilmSelected())
-                                        || filmInfoController != null
-                                        || (analyserController != null
-                                            && analyserController.GetSelectedFilm() != null);
+                        item.Enabled = ScreeningInfoController != null
+                                        || ViewController.RunningPopupsCount == 0
+                                        || (RatingController != null
+                                            && RatingController.OneFilmSelected())
+                                        || FilmInfoController != null
+                                        || (AnalyserController != null
+                                            && AnalyserController.GetSelectedFilm() != null);
                         break;
                     case _combineTitlesMenuItemTag:
-                        item.Enabled = ratingController != null
-                                        && ratingController.MultipleFilmsSelected()
-                                        && filmInfoController == null;
+                        item.Enabled = RatingController != null
+                                        && RatingController.MultipleFilmsSelected()
+                                        && FilmInfoController == null;
                         ;
                         break;
                     case _uncombineTitleMenuItemTag:
-                        item.Enabled = ratingController != null
-                                        && ratingController.OneFilmSelected()
-                                        && filmInfoController == null;
+                        item.Enabled = RatingController != null
+                                        && RatingController.OneFilmSelected()
+                                        && FilmInfoController == null;
                         ;
                         break;
                     default:
@@ -133,12 +133,6 @@ namespace PresentScreenings.TableView
         #region Private Methods
         private void PopulateExtraMenuItems(NSMenu menu)
         {
-            // FOR THE TIME BEING, bail out when the screening info dialog is active.
-            if (_app.Controller.ScreeningInfoDialog != null)
-            {
-                return;
-            }
-
             // Remove current extra menu items.
             foreach (nint tag in _enabledByTag.Keys)
             {
@@ -146,20 +140,25 @@ namespace PresentScreenings.TableView
             }
             _enabledByTag = new Dictionary<nint, bool> { };
 
-            // Get the controller.
-            FilmRatingDialogController controller = _app.FilmsDialogController;
+
+            // Get the current film.
+            Film film = null;
+            if (RatingController != null)
+            {
+                film = RatingController.CurrentFilm;
+            }
+            else
+            {
+                film = ViewController.CurrentFilm;
+            }
 
             // Create extra menu items if applicable.
-            if (controller != null)
+            if (film != null)
             {
-                Film film = controller.CurrentFilm;
-                if (film != null)
+                FilmInfo filmInfo = ViewController.GetFilmInfo(film.FilmId);
+                if (filmInfo != null)
                 {
-                    FilmInfo filmInfo = ViewController.GetFilmInfo(film.FilmId);
-                    if (filmInfo != null)
-                    {
-                        CreateAllExtraMenuItems(menu, filmInfo);
-                    }
+                    CreateAllExtraMenuItems(menu, filmInfo);
                 }
             }
         }
@@ -231,7 +230,11 @@ namespace PresentScreenings.TableView
                     KeyEquivalent = _extraFilmNumber.ToString(),
                     KeyEquivalentModifierMask = mask,
                 };
-                _enabledByTag.Add(_currentTag, true);
+                var enabled = RatingController != null
+                    && RatingController.OneFilmSelected()
+                    && CombineTitlesController == null
+                    && UncombineTitlesController == null;
+                _enabledByTag.Add(_currentTag, enabled);
                 menu.AddItem(item);
             }
         }

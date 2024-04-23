@@ -12,13 +12,13 @@ from enum import Enum, auto
 
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment
 from Shared.parse_tools import FileKeeper, HtmlPageParser, try_parse_festival_sites
-from Shared.planner_interface import FilmInfo, FestivalData, Film
+from Shared.planner_interface import FilmInfo, FestivalData, Film, get_screen_from_parse_name
 from Shared.web_tools import UrlFile
 
 # Parameters.
 festival = 'Imagine'
-year = 2022
-city = 'Amsterdam'
+year = 2023
+festival_city = 'Amsterdam'
 ondemand_available_hours = None
 
 # Files.
@@ -51,7 +51,7 @@ def parse_imagine_sites(festival_data):
 
 def get_films(festival_data):
     az_url = imagine_hostname + az_url_path
-    url_file = UrlFile(az_url, az_file, error_collector, byte_count=100)
+    url_file = UrlFile(az_url, az_file, error_collector, debug_recorder, byte_count=100)
     az_html = url_file.get_text()
     if az_html is not None:
         AzPageParser(festival_data).feed(az_html)
@@ -64,7 +64,7 @@ def get_details_of_all_films(festival_data):
 
 def get_details_of_one_film(festival_data, film):
     film_file = fileKeeper.film_webdata_file(film.filmid)
-    url_file = UrlFile(film.url, film_file, error_collector, byte_count=30000)
+    url_file = UrlFile(film.url, film_file, error_collector, debug_recorder, byte_count=256)
     film_html = url_file.get_text(f'Downloading site of {film.title}: {film.url}')
 
     if film_html is not None:
@@ -85,21 +85,25 @@ class AzPageParser(HtmlPageParser):
         IN_LANGUAGE = auto()
         IN_DURATION = auto()
 
+    num_screen_re = re.compile(r'^(?P<theater>.*?) (?P<number>\d+)$')
+
     def __init__(self, festival_data):
-        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'AZ')
-        self.debugging = True
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, 'AZ', debugging=True)
+        self.sorting_from_site = False
         self.film = None
         self.url = None
         self.title = None
         self.sort_title = None
         self.duration = None
-        self.section = None
+        self.section_name = None
+        self.section_color = None
         self.screen_name = None
         self.screen = None
         self.start_dt = None
         self.end_dt = None
         self.medium_type = None
         self.audience = None
+        self.qa = None
         self.subtitles = None
         self.stateStack = self.StateStack(self.print_debug, self.AzParseState.IDLE)
         self.init_categories()
@@ -111,6 +115,7 @@ class AzPageParser(HtmlPageParser):
         Film.category_by_string['Feature'] = Film.category_films
         Film.category_by_string['Shorts'] = Film.category_combinations
         Film.category_by_string['Special'] = Film.category_events
+        Film.category_by_string['Talk'] = Film.category_events
         Film.category_by_string['Workshop'] = Film.category_events
 
     def init_screening_data(self):
@@ -119,13 +124,15 @@ class AzPageParser(HtmlPageParser):
         self.title = None
         self.sort_title = None
         self.duration = None
-        self.section = None
+        self.section_name = None
+        self.section_color = None
         self.screen_name = None
         self.screen = None
         self.start_dt = None
         self.end_dt = None
         self.medium_type = None
         self.audience = 'publiek'
+        self.qa = ''
         self.subtitles = ''
 
     @staticmethod
@@ -134,10 +141,39 @@ class AzPageParser(HtmlPageParser):
         duration = datetime.timedelta(minutes=int(minutes))
         return duration
 
-    def get_screen(self, data):
-        screen_name = data.strip()
-        screen = self.festival_data.get_screen(city, screen_name)
-        return screen
+    def get_imagine_screen(self, data):
+        screen_parse_name = data.strip()
+        return get_screen_from_parse_name(self.festival_data, screen_parse_name, self.split_location)
+
+    def split_location(self, location):
+        city_name = festival_city
+        theater_parse_name = location
+        default_screen_abbreviation = 'zaal'
+        num_match = self.num_screen_re.match(location)
+        if location.startswith('KINO'):
+            city_name = 'Rotterdam'
+        if location == 'SPUI 25':
+            theater_parse_name = location
+            screen_abbreviation = default_screen_abbreviation
+        elif location == 'OBA Oosterdok OBA Theater':
+            location_words = location.split()
+            theater_parse_name = ' '.join(location_words[:2])
+            screen_abbreviation = ' '.join(location_words[2:])
+        elif num_match:
+            theater_parse_name = num_match.group(1)
+            screen_abbreviation = num_match.group(2)
+        elif location.startswith('LAB111 '):
+            theater_parse_name = 'LAB111'
+            screen_abbreviation = location.split()[1]
+        else:
+            screen_abbreviation = default_screen_abbreviation
+        return city_name, theater_parse_name, screen_abbreviation
+
+    def get_title(self, data):
+        qa_string = ' + Q&A'
+        self.qa = 'Q&A' if data.endswith(qa_string) else ''
+        title = data[:-len(qa_string)] if self.qa else data
+        return title
 
     @staticmethod
     def get_subtitles(data):
@@ -153,20 +189,25 @@ class AzPageParser(HtmlPageParser):
             error_collector.add(f'Could not create film:', '{self.title} ({self.url})')
         else:
             # Fill details.
-            if self.section is None:
-                self.section = 'Imagine General'
-            self.film.subsection = self.festival_data.subsection_by_name[self.section]
-            if self.section == 'Industry':
-                self.audience = 'industry'
-            self.film.medium_category = self.medium_type
-            self.film.sortstring = self.sort_title
             self.film.duration = self.duration
+            self.film.subsection = self.get_subsection()
+            self.film.medium_category = self.medium_type
+            if self.sorting_from_site:
+                self.film.sortstring = self.sort_title
 
             # Add the film to the list.
             self.festival_data.films.append(self.film)
 
             # Get the film info.
             get_details_of_one_film(self.festival_data, self.film)
+
+    def get_subsection(self):
+        if self.section_name:
+            section = self.festival_data.get_section(self.section_name, self.section_color)
+            dummy_url = 'https://www.imaginefilmfestival.nl/en/blockschedule'
+            subsection = self.festival_data.get_subsection(section.name, dummy_url, section)
+            return subsection
+        return None
 
     def add_imagine_screening(self):
         # Get the film.
@@ -182,8 +223,13 @@ class AzPageParser(HtmlPageParser):
         self.end_dt = self.start_dt + duration
 
         # Add screening to the list.
-        HtmlPageParser.add_screening_from_fields(self, self.film, self.screen, self.start_dt, self.end_dt,
-                                                 audience=self.audience, subtitles=self.subtitles, display=True)
+        HtmlPageParser.add_screening_from_fields(
+            self,
+            self.film,
+            self.screen,
+            self.start_dt,
+            self.end_dt,
+            qa=self.qa, audience=self.audience, subtitles=self.subtitles, display=True)
 
         # Initialize the next round of parsing.
         self.init_screening_data()
@@ -204,6 +250,9 @@ class AzPageParser(HtmlPageParser):
                 self.start_dt = datetime.datetime.fromisoformat(attrs[0][1])
         elif self.stateStack.state_is(self.AzParseState.IN_SCREENING) and tag == 'section':
             self.stateStack.push(self.AzParseState.IN_SECTION)
+        elif self.stateStack.state_is(self.AzParseState.IN_SECTION) and tag == 'div' and len(attrs):
+            if attrs[0][1].startswith('background-color'):
+                self.section_color = attrs[0][1].split(':')[1]
         elif self.stateStack.state_is(self.AzParseState.IN_SCREENING) and tag == 'div' and len(attrs) > 0:
             if attrs[0][1] == 'type':
                 self.stateStack.push(self.AzParseState.IN_TYPE)
@@ -228,16 +277,16 @@ class AzPageParser(HtmlPageParser):
         HtmlPageParser.handle_data(self, data)
 
         if self.stateStack.state_is(self.AzParseState.IN_SECTION):
-            self.section = data
+            self.section_name = data
             self.stateStack.pop()
         if self.stateStack.state_is(self.AzParseState.IN_TYPE):
             self.medium_type = data
             self.stateStack.pop()
         elif self.stateStack.state_is(self.AzParseState.IN_TITLE):
-            self.title = data
+            self.title = self.get_title(data)
             self.stateStack.pop()
         elif self.stateStack.state_is(self.AzParseState.IN_SCREEN):
-            self.screen = self.get_screen(data)
+            self.screen = self.get_imagine_screen(data)
             self.stateStack.pop()
         elif self.stateStack.state_is(self.AzParseState.IN_DURATION):
             self.duration = self.get_duration(data)
@@ -264,8 +313,7 @@ class FilmPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, film):
-        HtmlPageParser.__init__(self, festival_data, debug_recorder, "F")
-        self.debugging = False
+        HtmlPageParser.__init__(self, festival_data, debug_recorder, "F", debugging=True)
         self.film = film
         self.description = None
         self.alt_description = None
@@ -402,7 +450,7 @@ class ImagineData(FestivalData):
 
     def film_can_go_to_planner(self, film_id):
         film = self.get_film_by_id(film_id)
-        return film.subsection.name != 'Industry'
+        return not film.subsection or film.subsection.name != 'Industry'
 
 
 if __name__ == "__main__":

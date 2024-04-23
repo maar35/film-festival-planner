@@ -1,13 +1,14 @@
 import tempfile
 import unittest
 
-from Shared.planner_interface import FestivalData, Section, Screen
+from Shared.planner_interface import FestivalData, Section
 
 
 class SectionsTestCase(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.festival_data = FestivalData(self.temp_dir.name)
+        self.festival_data.write_verbose = False
 
     def tearDown(self):
         self.temp_dir.cleanup()

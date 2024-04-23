@@ -7,10 +7,10 @@ Created on Sat Oct 10 18:13:42 2020
 
 @author: maarten
 """
-
+import csv
 import os
 import re
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as Tree
 from enum import Enum, auto
 
 from Shared.application_tools import config
@@ -18,6 +18,25 @@ from Shared.application_tools import config
 interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 articles_file = os.path.join(interface_dir, "articles.txt")
 unicode_file = os.path.join(interface_dir, "unicodemap.txt")
+
+
+def get_screen_from_parse_name(festival_data, screen_parse_name, split_location):
+    city_name, theater_parse_name, screen_abbreviation = split_location(screen_parse_name)
+    screen = festival_data.get_screen(
+        city_name,
+        screen_parse_name,
+        theater_parse_name=theater_parse_name,
+        screen_abbreviation=screen_abbreviation
+    )
+    return screen
+
+
+def link_screened_film(festival_data, sub_film, main_film, main_film_info=None, screened_film_type=None):
+    sub_film_info = sub_film.film_info(festival_data)
+    sub_film_info.combination_films.append(main_film)
+    screened_film = ScreenedFilm(sub_film.filmid, sub_film.title, sub_film_info.description, screened_film_type)
+    main_film_info = main_film_info or main_film.film_info(festival_data)
+    main_film_info.screened_films.append(screened_film)
 
 
 def write_lists(festival_data, write_film_list, write_other_lists):
@@ -33,6 +52,7 @@ def write_lists(festival_data, write_film_list, write_other_lists):
 
     if write_other_lists:
         festival_data.write_film_ids()
+        festival_data.write_yaml_filminfo()
         festival_data.write_filminfo()
         festival_data.write_new_cities()
         festival_data.write_new_theaters()
@@ -73,16 +93,13 @@ class Article:
 
 class Film:
 
-    category_string_films = 'films'
-    category_string_combinations = 'verzamelprogrammas'
-    category_string_events = 'events'
     category_films = "Films"
     category_combinations = "CombinedProgrammes"
     category_events = "Events"
     category_by_string = {
-        category_string_films: category_films,
-        category_string_combinations: category_combinations,
-        category_string_events: category_events,
+        'films': category_films,
+        'combinations': category_combinations,
+        'events': category_events,
     }
     mapper = UnicodeMapper()
     articles_by_language = {}
@@ -108,7 +125,7 @@ class Film:
 
     @staticmethod
     def film_repr_csv_head():
-        text = ';'.join([
+        row = [
             'seqnr',
             'filmid',
             'sort',
@@ -118,22 +135,22 @@ class Film:
             'duration',
             'mediumcategory',
             'url'
-        ])
-        return f'{text}\n'
+        ]
+        return row
 
-    def __repr__(self):
-        text = ';'.join([
+    def row_repr(self):
+        row = [
             str(self.seqnr),
             str(self.filmid),
-            self.sortstring.replace(';', '.,'),
-            self.title.replace(';', '.,'),
+            self.sortstring,
+            self.title,
             self.title_language,
             str(self.subsection.subsection_id) if self.subsection is not None else '',
             self.duration_str(),
             self.category_by_string[self.medium_category],
             self.url
-        ])
-        return f'{text}\n'
+        ]
+        return row
 
     def short_str(self):
         return f'{self.title} ({self.duration_str()})'
@@ -198,7 +215,7 @@ class ScreenedFilmType(Enum):
 
 class ScreenedFilm:
 
-    def __init__(self, film_id, title, description, sf_type: ScreenedFilmType = ScreenedFilmType.PART_OF_COMBINATION_PROGRAM):
+    def __init__(self, film_id, title, description, screened_film_type=None):
         """
         Screened Film: representation of a film that
         is displayed as part of combination program.
@@ -207,12 +224,13 @@ class ScreenedFilm:
         @type title: str
         @type description: str
         """
+        screened_film_type = screened_film_type or ScreenedFilmType.PART_OF_COMBINATION_PROGRAM
         self.filmid = film_id
         if title is None or len(title) == 0:
             raise FilmTitleError(description)
         self.title = title
         self.description = description.strip() if description is not None else ''
-        self.screened_film_type = sf_type
+        self.screened_film_type = screened_film_type
 
     def __str__(self):
         return ' - '.join([str(self.filmid), self.title])
@@ -220,17 +238,22 @@ class ScreenedFilm:
 
 class FilmInfo:
 
-    def __init__(self, film_id, description, article, combination_films=None, screened_films=None):
+    def __init__(self, film_id, description, article, metadata=None, combination_films=None, screened_films=None):
         self.filmid = film_id
         self.description = description.strip()
+        self.metadata = metadata or {}
         self.article = article.strip()
-        self.combination_films = [] if combination_films is None else combination_films
-        self.screened_films = [] if screened_films is None else screened_films
+        self.combination_films = combination_films or []
+        self.screened_films = screened_films or []
 
     def __str__(self):
         combinations_str = '\nCombinations:\n' + '\n'.join([str(cf) for cf in self.combination_films])
         screened_str = '\nScreened:\n' + '\n'.join([str(sf) for sf in self.screened_films])
         return '\n'.join([str(self.filmid), self.description, self.article, combinations_str, screened_str]) + '\n'
+
+    def format_metadata(self):
+        properties = [f'{key}: {value}' for (key, value) in self.metadata.items()]
+        return '\n'.join(properties)
 
 
 class Section:
@@ -313,9 +336,9 @@ class Theater:
 
 
 class Screen:
-    screen_types = ['Location', 'OnLine', 'OnDemand']
+    screen_types = ['OnLine', 'OnDemand', 'Physical']
 
-    def __init__(self, screen_id, theater, name, abbr, screen_type='Location', new=True):
+    def __init__(self, screen_id, theater, name, abbr, screen_type='Physical', new=True):
         self.screen_id = screen_id
         self.theater = theater
         self.name = name
@@ -324,7 +347,7 @@ class Screen:
         self.new = new
 
     def __str__(self):
-        return self.abbr
+        return f'{self.theater.abbr}{self.abbr}'
 
     def __repr__(self):
         text = ';'.join([
@@ -352,7 +375,7 @@ class Screening:
     audience_type_public = 'publiek'
 
     def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience,
-                 combination_program=None, subtitles=''):
+                 combination_program=None, subtitles='', sold_out=None):
         self.film = film
         self.screen = screen
         self.start_datetime = start_datetime
@@ -363,11 +386,22 @@ class Screening:
         self.combination_program = combination_program
         self.q_and_a = qa
         self.audience = audience
+        self.sold_out = sold_out
 
     def __str__(self):
         start_time = self.start_datetime.isoformat(sep=" ", timespec="minutes")
         end_time = self.end_datetime.time().isoformat()
         return f'{start_time} - {end_time}, {self.screen.abbr}, {self.film.title}'
+
+    def __eq__(self, other):
+        lhs = (self.film.filmid, self.screen.screen_id, self.start_datetime, self.end_datetime)
+        rhs = (other.film.filmid, other.screen.screen_id, other.start_datetime, other.end_datetime)
+        return lhs == rhs
+
+    def __hash__(self):
+        return hash((
+            self.film.filmid, self.screen.screen_id, self.start_datetime, self.end_datetime
+        ))
 
     @staticmethod
     def screening_repr_csv_head():
@@ -380,6 +414,7 @@ class Screening:
             "subtitles",
             "qanda",
             "extra",
+            "sold_out",
         ])
         return "{}\n".format(text)
 
@@ -392,7 +427,8 @@ class Screening:
             str(self.combination_program.filmid if self.combination_program is not None else ''),
             self.subtitles,
             self.q_and_a,
-            self.extra
+            self.extra,
+            str(self.sold_out) if self.sold_out else ''
         ])
         return f'{text}\n'
 
@@ -409,6 +445,8 @@ class FestivalData:
     curr_subsection_id = None
     common_data_dir = os.path.expanduser(f'~/{config()["Paths"]["CommonDataDirectory"]}')
     default_city_name = 'Bullshit City'
+    dialect = None
+    write_verbose = True
 
     def __init__(self, plandata_dir, default_city_name=None):
         self.default_city_name = default_city_name or self.default_city_name
@@ -425,8 +463,10 @@ class FestivalData:
         self.theater_by_location = {}
         self.city_by_location = {}
         self.city_by_id = {}
+        self.set_csv_dialect()
         self.films_file = os.path.join(plandata_dir, 'films.csv')
         self.filmids_file = os.path.join(plandata_dir, 'filmids.txt')
+        self.filminfo_yaml_file = os.path.join(plandata_dir, 'filminfo.yml')
         self.filminfo_file = os.path.join(plandata_dir, 'filminfo.xml')
         self.sections_file = os.path.join(plandata_dir, 'sections.csv')
         self.subsections_file = os.path.join(plandata_dir, 'subsections.csv')
@@ -445,7 +485,14 @@ class FestivalData:
         self.read_cities()
         self.read_theaters()
         self.read_screens()
-        self.read_filmids()
+        self.read_film_ids()
+
+    def set_csv_dialect(self):
+        self.dialect = csv.unix_dialect
+        self.dialect.delimiter = ';'
+        self.dialect.quotechar = '"'
+        self.dialect.doublequote = True
+        self.dialect.quoting = csv.QUOTE_MINIMAL
 
     def film_key(self, title, url):
         return title
@@ -457,8 +504,7 @@ class FestivalData:
             self.title_by_film_id[film_id] = title
             self.film_id_by_url[url] = film_id
             return Film(self.film_seqnr, film_id, title, url)
-        else:
-            return None
+        return None
 
     def new_film_id(self, key):
         try:
@@ -478,7 +524,7 @@ class FestivalData:
         else:
             films = [film for film in self.films if film.filmid == film_id]
             if len(films) == 0:
-                raise ValueError(f'Key ({key}) found, but no film found with film ID ({film_id}).')
+                raise ValueError(f'Key ({key}) found, but no film found with film ID ({film_id})')
         return films[0]
 
     def get_filmid(self, url):
@@ -490,14 +536,19 @@ class FestivalData:
             return films[0]
         return None
 
-    def get_section(self, name):
+    def get_section(self, name, color=None, color_by_id=None):
         if name is None:
             return None
         try:
             section = self.section_by_name[name]
         except KeyError:
             self.curr_section_id += 1
-            section = Section(self.curr_section_id, name)
+            if color_by_id and not color:
+                try:
+                    color = color_by_id[self.curr_section_id]
+                except KeyError:
+                    color = None
+            section = Section(self.curr_section_id, name, color=color)
             self.section_by_name[name] = section
             self.section_by_id[section.section_id] = section
         return section
@@ -547,7 +598,8 @@ class FestivalData:
             self.theater_by_location[theater_key] = theater
         return theater
 
-    def get_screen(self, city_name, screen_parse_name, theater_parse_name=None, screen_abbreviation=None):
+    def get_screen(self, city_name, screen_parse_name,
+                   theater_parse_name=None, screen_abbreviation=None, verbose=True):
         theater = self.get_theater(city_name, theater_parse_name)
         screen_key = (theater.theater_id, screen_parse_name)
         try:
@@ -555,14 +607,19 @@ class FestivalData:
         except KeyError:
             self.curr_screen_id += 1
             screen_id = self.curr_screen_id
-            abbr = screen_abbreviation or screen_parse_name.replace(' ', '').lower()
+            abbr = (screen_abbreviation or screen_parse_name).replace(' ', '').lower()
             screen_type = 'OnDemand' if abbr.startswith('ondemand')\
                 else 'OnLine' if abbr.startswith('online')\
-                else 'Location'
-            print(f"NEW SCREEN:  '{theater.city}' '{theater.name}' '{screen_parse_name}' => {abbr}")
+                else 'Physical'
+            if verbose:
+                print(f"NEW SCREEN:  '{theater.city}' '{theater.name}' '{screen_parse_name}' => {abbr}")
             screen = Screen(screen_id, theater, screen_parse_name, abbr, screen_type)
             self.screen_by_location[screen_key] = screen
         return screen
+
+    def get_screen_by_id(self, screen_id):
+        screens = [screen for screen in self.screen_by_location.values() if screen.screen_id == screen_id]
+        return screens[0] if screens else None
 
     @staticmethod
     def split_rec(line, sep):
@@ -574,7 +631,7 @@ class FestivalData:
             articles = [Article(self.split_rec(line, ":")) for line in f]
         Film.articles_by_language = dict([(a.key(), a) for a in articles])
 
-    def read_filmids(self):
+    def read_film_ids(self):
         try:
             with open(self.filmids_file, 'r') as f:
                 records = [self.split_rec(line, ';') for line in f]
@@ -592,7 +649,6 @@ class FestivalData:
             self.curr_film_id = max(self.film_id_by_key.values())
         except ValueError:
             self.curr_film_id = 0
-        print(f"Done reading {len(self.film_id_by_url)} records from {self.filmids_file}.")
 
     def read_sections(self):
         try:
@@ -738,10 +794,11 @@ class FestivalData:
     def write_films(self):
         public_films = [f for f in self.films if self.film_can_go_to_planner(f.filmid)]
         if len(self.films):
-            with open(self.films_file, 'w') as f:
-                f.write(Film.film_repr_csv_head())
+            with open(self.films_file, 'w', newline='') as csvfile:
+                csv_writer = csv.writer(csvfile, self.dialect)
+                csv_writer.writerow(Film.film_repr_csv_head())
                 for film in public_films:
-                    f.write(repr(film))
+                    csv_writer.writerow(film.row_repr())
             print(f'Done writing {len(public_films)} of {len(self.films)} records to {self.films_file}.')
         else:
             print('No films to be written.')
@@ -756,31 +813,47 @@ class FestivalData:
                     f.write(f'{text}\n')
             print(f'Done writing {film_id_count} records to {self.filmids_file}.')
 
+    def write_yaml_filminfo(self):
+        data = [i for i in self.filminfos if self.film_can_go_to_planner(i.filmid)]
+        # with open(self.filminfo_yaml_file, 'w') as stream:
+        #     yaml.dump(data, stream, indent=4)
+        rows = sorted([[
+            i.filmid,
+            i.description,
+            i.metadata['Reviewer'] if 'Reviewer' in i.metadata else ''
+        ] for i in data], key=lambda row: row[0])
+        with open(self.filminfo_yaml_file, 'w') as csvfile:
+            csv_writer = csv.writer(csvfile, self.dialect)
+            csv_writer.writerows(rows)
+        print(f'Done writing {len(data)} objects to {self.filminfo_yaml_file}')
+
     def write_filminfo(self):
         info_count = 0
-        filminfos = ET.Element('FilmInfos')
+        filminfos = Tree.Element('FilmInfos')
         for filminfo in [i for i in self.filminfos if self.film_can_go_to_planner(i.filmid)]:
             info_count += 1
             id = str(filminfo.filmid)
             article = filminfo.article
+            if filminfo.metadata:
+                article += f'\n\n{filminfo.format_metadata()}'
             descr = filminfo.description
-            info = ET.SubElement(filminfos, 'FilmInfo',
-                                 FilmId=id,
-                                 FilmArticle=article,
-                                 FilmDescription=descr,
-                                 InfoStatus='Complete')
-            combination_programs = ET.SubElement(info, 'CombinationPrograms')
+            info = Tree.SubElement(filminfos, 'FilmInfo',
+                                   FilmId=id,
+                                   FilmArticle=article,
+                                   FilmDescription=descr,
+                                   InfoStatus='Complete')
+            combination_programs = Tree.SubElement(info, 'CombinationPrograms')
             for combination_film in filminfo.combination_films:
-                _ = ET.SubElement(combination_programs, 'CombinationProgram',
-                                  CombinationProgramId=str(combination_film.filmid))
-            screened_films = ET.SubElement(info, 'ScreenedFilms')
+                _ = Tree.SubElement(combination_programs, 'CombinationProgram',
+                                    CombinationProgramId=str(combination_film.filmid))
+            screened_films = Tree.SubElement(info, 'ScreenedFilms')
             for screened_film in filminfo.screened_films:
-                _ = ET.SubElement(screened_films, 'ScreenedFilm',
-                                  ScreenedFilmId=str(screened_film.filmid),
-                                  Title=screened_film.title,
-                                  Description=screened_film.description,
-                                  ScreenedFilmType=screened_film.screened_film_type.name)
-        tree = ET.ElementTree(filminfos)
+                _ = Tree.SubElement(screened_films, 'ScreenedFilm',
+                                    ScreenedFilmId=str(screened_film.filmid),
+                                    Title=screened_film.title,
+                                    Description=screened_film.description,
+                                    ScreenedFilmType=screened_film.screened_film_type.name)
+        tree = Tree.ElementTree(filminfos)
         tree.write(self.filminfo_file, encoding='utf-8', xml_declaration=True)
         print(f"Done writing {info_count} records to {self.filminfo_file}.")
 
@@ -788,7 +861,8 @@ class FestivalData:
         with open(self.sections_file, 'w') as f:
             for section in self.section_by_id.values():
                 f.write((repr(section)))
-        print(f'Done writing {len(self.section_by_id)} records to {self.sections_file}.')
+        if self.write_verbose:
+            print(f'Done writing {len(self.section_by_id)} records to {self.sections_file}.')
 
     def write_subsections(self):
         with open(self.subsections_file, 'w') as f:

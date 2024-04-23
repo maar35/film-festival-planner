@@ -5,10 +5,12 @@
 
 {% block content %}
     <span class="left-half">
-        <h3>Film list with ratings</h3>
+        <h3>Film list with pre-attendance ratings</h3>
     </span>
     <span class="right-half">
-        <a href="{% url 'films:save' festival.id %}">Dump ratings</a>
+        <a href="{% url 'loader:save_ratings' festival.id %}">Dump ratings</a>
+        <br>
+        <a href="{% url 'loader:ratings' %}">Load films and ratings</a>
     </span>
     {% if log %}
         <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
@@ -46,14 +48,13 @@
         <p>
         {{ action.fan }}
         {% if action.old_rating == '-' %}
-            gave <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a> a rating of <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
+            gave <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a> a pre-attendance {{ action.rating_type }} of <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% elif action.new_rating == '0' %}
-            removed rating {{ action.old_rating }} of <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a>
+            removed {{ action.rating_type }} {{ action.old_rating }} of <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a>
         {% else %}
-            changed rating {{ action.old_rating }} of <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a> into <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
+            changed {{ action.rating_type }} {{ action.old_rating }} of <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a> into <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% endif %}
-        {% now "Y-m-d H:i:s" as the_time %}
-        {% if the_time <= action.action_time|date:"Y-m-d H:i:s" %}
+        {% if action.action_time|timesince == "0 minutes" %}
             less than a minute ago
         {% else %}
             {{ action.action_time|timesince }} ago
@@ -67,21 +68,38 @@
     <table>
         <thead>
             <tr>
-                <th class="sticky-t-head">Film</th>
-                <th class="sticky-t-head">Duration</th>
-                <th class="sticky-t-head">Subsection</th>
-                {% for fan in fans %}
-                    <th class="sticky-t-head">{{ fan }}</th>
+                <th class="sticky-t-head" style="vertical-align: text-top;">Film</th>
+                <th class="sticky-t-head">
+                    Duration
+                    <br>
+                    <a href="/films/films?shorts={{ display_shorts_query }}">{{ display_shorts_action }}</a>
+                </th>
+                <th class="sticky-t-head" style="vertical-align: text-top;">Subsection<br></th>
+                {% for fan_header in fan_headers %}
+                    <th class="sticky-t-head">
+                        {{ fan_header.fan }}
+                        <br>
+                        <a href="/films/films?rated_{{ fan_header.fan }}={{ fan_header.query }}">{{ fan_header.action }}</a>
+                    </th>
                 {% endfor %}
             </tr>
         </thead>
         <tbody>
-        {% for row in film_list_rows %}
+        {% for row in film_rows %}
         <tr>
-            <td style="max-width: 720px">
-                <a href="{% url 'films:results' row.film.id %}">
-                    {{ row.film.title }}
-                </a>
+            <td style="max-width: 720px;">
+                <a name="{{ row.fragment_name }}"></a>
+                {% if row.description %}
+                    <a href="{% url 'films:results' row.film.id %}">
+                        {{ row.film.title }}
+                    </a>
+                    <br>
+                    {{ row.description }}
+                {% else %}
+                    <a href="{% url 'films:results' row.film.id %}" style="color: darkgreen;">
+                        {{ row.film.title }}
+                    </a>
+                {% endif %}
             </td>
             {% if row.duration_seconds <= short_threshold %}
                 <td style="color:SlateGray">{{ row.duration_str }}</td>
@@ -89,13 +107,13 @@
                 <td>{{ row.duration_str }}</td>
             {% endif %}
             <td style="color:{{ row.subsection.section.color }}">{{ row.subsection.name }}</td>
-            {% for fan_rating in row.film_ratings %}
+            {% for fan_rating in row.fan_ratings %}
                 {% if fan_rating.fan == current_fan %}
-                    <td class="dropdown">
+                    <td class="cell-dropdown">
                         <span class="drop-button">
                             {{ fan_rating.rating }}
                         </span>
-                        <div class="dropdown-content">
+                        <div class="cell-dropdown-content">
                             {% for choice in fan_rating.choices %}
                                 <input type="submit" value="{{ choice.value | stringformat:'2d' }}  {{ choice.rating_name }}" name="{{ choice.submit_name }}">
                             {% endfor %}

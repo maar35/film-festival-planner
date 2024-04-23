@@ -12,8 +12,7 @@ urlpatterns = [
     path('film_fan/', views.film_fan, name='film_fan'),
 
     # Display ratings of all films by all fans.
-    # Allows to access a detail page for a specific film.
-    path('films/', views.films, name='films'),
+    path('films/', views.FilmsView.as_view(), name='films'),
 
     # Display ratings by fans of a specific film.
     # Example: /films/5/results/
@@ -23,7 +22,6 @@ urlpatterns = [
     # Example: /films/5/rating/
     path('<int:film_pk>/rating/', views.rating, name='rating'),
 
-    # Allow an admin user to save the ratings.
-    # Example: /films/5/save/
-    path('<int:pk>/save/', views.SaveView.as_view(), name='save'),
+    # Allow a logged in fan to enter votes.
+    path('votes/', views.VotesView.as_view(), name='votes')
 ]

@@ -1,6 +1,7 @@
 from django.contrib import admin
 
-from films.models import Film, FilmFan, FilmFanFilmRating
+from films.models import Film, FilmFanFilmRating
+from authentication.models import FilmFan
 
 # Register the models.
 admin.site.register(Film)

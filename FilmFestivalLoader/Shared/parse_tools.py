@@ -52,12 +52,19 @@ def try_parse_festival_sites(parser, festival_data, error_collector, debug_recor
 
 
 class FileKeeper:
-    base_dir = os.path.expanduser(f'~/{config()["Paths"]["FestivalRootDirectory"]}')
+    basedir = os.path.expanduser(f'~/{config()["Paths"]["FestivalRootDirectory"]}')
     common_data_dir = os.path.expanduser(f'~/{config()["Paths"]["CommonDataDirectory"]}')
 
-    def __init__(self, festival, year):
+    def __init__(self, festival, year, basedir=None):
+        """
+        Exposes a standard structure to keep the data belonging to a film festival.
+        :param festival: The basename of the festival the file structure belongs to
+        :param year: The edition year of the festival
+        :param basedir: Force the root directory to differ from the standard, esp. for testing.
+        """
         # Define directories.
-        self.festival_dir = os.path.join(self.base_dir, f'{festival}')
+        self.basedir = basedir or self.basedir
+        self.festival_dir = os.path.join(self.basedir, f'{festival}')
         self.documents_dir = os.path.join(self.festival_dir, f'{festival}{year}')
         self.webdata_dir = os.path.join(self.documents_dir, '_website_data')
         self.plandata_dir = os.path.join(self.documents_dir, '_planner_data')
@@ -167,7 +174,11 @@ class BaseHtmlPageParser(HTMLParser):
     def bar(self):
         return f'{40 * "-"} '
 
-    def print_debug(self, str1, str2):
+    @staticmethod
+    def headed_bar(header=''):
+        return f'{header:-^72}'
+
+    def print_debug(self, str1, str2=''):
         if self.debugging:
             self.debug_recorder.add(f'{self.debug_prefix}  {str1} {str2}')
 
@@ -210,9 +221,9 @@ class HtmlPageParser(BaseHtmlPageParser):
         self.article = None
 
     def add_screening_from_fields(self, film, screen, start_dt, end_dt, qa='', subtitles='', extra='',
-                                  audience='', program=None, display=True):
+                                  audience='', sold_out=None, program=None, display=True):
 
-        screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience, program, subtitles)
+        screening = Screening(film, screen, start_dt, end_dt, qa, extra, audience, program, subtitles, sold_out)
         self.add_screening(screening, display=display)
 
     def add_screening(self, screening, display=True):
@@ -239,11 +250,16 @@ class HtmlPageParser(BaseHtmlPageParser):
         # Add the screening to the list.
         self.festival_data.screenings.append(screening)
 
+    def add_article_text(self, data):
+        self.article_paragraph += data.replace('\n', ' ')
+
     def add_paragraph(self):
-        self.article_paragraphs.append(self.article_paragraph)
+        if self.article_paragraph:
+            self.article_paragraphs.append(self.article_paragraph)
         self.article_paragraph = ''
 
     def set_article(self):
+        self.add_paragraph()
         self.article = '\n\n'.join(self.article_paragraphs)
 
     def set_description_from_article(self, title):
@@ -254,7 +270,7 @@ class HtmlPageParser(BaseHtmlPageParser):
             if len(self.description) > descr_threshold:
                 self.description = self.description[:descr_threshold] + '…'
         else:
-            self.description = title
+            self.description = self.description or title
             self.article = ''
 
 

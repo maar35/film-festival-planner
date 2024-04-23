@@ -21,14 +21,20 @@
     <a href="{% url 'theaters:theaters' %}">Theaters</a>
     <br>
     <a href="{% url 'films:films' %}">Film ratings</a>
-    <br><br>
-    <a href="/loader/theaters?action=load">Load theater data</a>
     <br>
+    <a href="{% url 'films:votes' %}">Film votes</a>
+    <br><br>
     <a href="/loader/theaters?action=dump">Dump theater data</a>
+    <br>
+    <a href="{% url 'loader:new_screens' %}">Insert new theater data</a>
+    <br>
+    <a href="/loader/theaters?action=load">Load theater data</a>
     <br>
     <a href="{% url 'loader:sections' %}">Load sections</a>
     <br>
-    <a href="{% url 'loader:ratings' %}">Load ratings</a>
+    <a href="{% url 'loader:ratings' %}">Load films and ratings</a>
+    <br><br>
+    <a href="{% url 'loader:film_backup' %}">Back up rating data</a>
     <br><br>
     <a href="{% url 'authentication:set_test_cookie' %}">Test cookies</a>
     <br>

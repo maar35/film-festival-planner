@@ -4,7 +4,14 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3>Section Overview</h3>
+    <span class="left-half">
+        <h3>Section Overview</h3>
+    </span>
+    <span class="right-half">
+        <a href="{% url 'loader:sections' %}">Load sections</a>
+        <br>
+        <a href="{% url 'loader:ratings' %}">Load ratings</a>
+    </span>
     {% if log %}
         <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
         {% for result in log.results %}
@@ -16,20 +23,20 @@
         <table>
             <thead>
                 <tr>
-                    <th>Festival</th>
                     <th>Subsection</th>
                     <th>Description</th>
                     <th>Section</th>
+                    <th>ID</th>
                     <th>Color</th>
                 </tr>
             </thead>
             <tbody>
             {% for subsection in subsection_list %}
                 <tr>
-                    <td style="color:{{ festival.festival_color }}">{{ subsection.section.festival }}</td>
-                    <td style="color:{{ subsection.section.color }}">{{ subsection.name }}</td>
+                    <td><a href="{{ subsection.url }}">{{ subsection.name }}</a></td>
                     <td>{{ subsection.description }}</td>
                     <td style="color:{{ subsection.section.color }}">{{ subsection.section.name }}</td>
+                    <td style="color:{{ subsection.section.color }}">{{ subsection.section.section_id }}</td>
                     <td style="color:{{ subsection.section.color }}">{{ subsection.section.color }}</td>
                 </tr>
             {% endfor %}

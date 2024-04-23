@@ -1,23 +1,24 @@
-from unittest import skip
-
-from django.test import TestCase
-
 import csv
 import os
 import re
 import shutil
+import tempfile
+from datetime import timedelta
 from http import HTTPStatus
+from unittest import skip
 
+# from FilmFestivalPlanner.FilmFestivalLoader.Shared import planner_interface as planner
 from django.test import RequestFactory
 from django.urls import reverse
 
-from festivals.models import Festival
+from festival_planner.debug_tools import pr_debug
 from festivals.tests import create_festival, mock_base_festival_mnemonic
-from films.models import FilmFanFilmRating
+from films.models import FilmFanFilmRating, Film
 from films.tests import create_film, ViewsTestCase, get_request_with_session
-from films.views import SaveView, films
+from films.views import FilmsView
 from loader.forms.loader_forms import FilmLoader, RatingLoader
-from loader.views import SectionsLoaderView, get_festival_row, RatingsLoaderView
+from loader.views import SectionsLoaderView, get_festival_row, RatingsLoaderView, NewTheaterDataView, \
+    NewTheaterDataListView, SaveRatingsView
 from sections.models import Section
 from theaters.models import City
 
@@ -55,7 +56,7 @@ def serialize_rating(rating):
 class LoaderViewsTests(ViewsTestCase):
 
     def setUp(self):
-        super(LoaderViewsTests, self).setUp()
+        super().setUp()
 
         # Set up a festival. Needed to render any page in the app.
         self.city = City.cities.create(city_id=1, name='Berlin', country='de')
@@ -65,10 +66,15 @@ class LoaderViewsTests(ViewsTestCase):
         self.create_planner_data_dir()
         self.create_festival_data_dir()
 
+        # Define a placeholder for a view for derived  classes.
+        self.loader_view = None
+
     def tearDown(self):
-        super(LoaderViewsTests, self).tearDown()
+        super().tearDown()
         self.city.delete()
         self.remove_festival_data()
+        if self.loader_view:
+            del self.loader_view
 
     @staticmethod
     def create_festival(city, start_data_str, end_date_str):
@@ -84,11 +90,18 @@ class LoaderViewsTests(ViewsTestCase):
         base_dir = self.festival.festival_base_dir
         shutil.rmtree(base_dir)
 
+    def get_get_response(self, get_request, view=None):
+        view = view or self.loader_view
+        view.setup(get_request)
+        view.queryset = view.get_queryset() if hasattr(view, 'get_queryset') else view.queryset
+        context = view.get_context_data()
+        return view.render_to_response(context)
+
 
 class RatingLoaderViewsTests(LoaderViewsTests):
 
     def setUp(self):
-        super(RatingLoaderViewsTests, self).setUp()
+        super().setUp()
         self.ratings_loader_view = RatingsLoaderView()
 
         # Set up POST data for the ratings.html template.
@@ -101,6 +114,32 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         self.ratings_loader_view.setup(get_request)
         context = self.ratings_loader_view.get_context_data()
         return self.ratings_loader_view.render_to_response(context)
+
+    def arrange_new_and_existing_films(self):
+
+        common_film_id = 1
+        other_film_id = 2
+        _ = create_film(common_film_id, 'Der schlaue Fuchs', 92, festival=self.festival, seq_nr=10)
+        film_2 = Film(
+            festival=self.festival,
+            film_id=common_film_id,
+            seq_nr=12,
+            title='Der schlaue Fuchs',
+            duration=timedelta(minutes=88),
+            subsection='')
+        film_1 = Film(
+            festival=self.festival,
+            film_id=other_film_id,
+            seq_nr=11,
+            title='Die dumme Gans',
+            duration=timedelta(minutes=188),
+            subsection='')
+
+        with open(self.festival.films_file, 'w', newline='') as csv_films_file:
+            film_writer = csv.writer(csv_films_file, delimiter=';', quotechar='"')
+            film_writer.writerow(FilmLoader.expected_header)
+            film_writer.writerow(serialize_film(film_1))
+            film_writer.writerow(serialize_film(film_2))
 
     def assert_reading_from_file(self, get_response, post_response, redirect_response):
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
@@ -213,6 +252,60 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         self.assertNotContains(redirect_response, 'incompatible header')
         self.assertContains(redirect_response, '2 existing rating objects saved')
         self.assertContains(redirect_response, '1 rating records updated')
+
+    def test_integrity_error_rolls_back_all_updates(self):
+        """
+        When loading new films, all updates and inserts are rolled back at an integrity error.
+        """
+        # Set up.
+        FilmLoader.key_fields = ['festival', 'seq_nr', 'film_id']   # Not unique together.
+
+        # Arrange.
+        request = self.get_admin_request()
+        get_response = self.arrange_get_get_response(request)
+        self.arrange_new_and_existing_films()
+
+        post_response = self.client.post(reverse('loader:ratings'), self.post_data)
+
+        # Act.
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        self.assert_reading_from_file(get_response, post_response, redirect_response)
+        self.assertContains(redirect_response, 'No ratings will be effected.')
+        self.assertContains(redirect_response, '2 film records read')
+        self.assertContains(redirect_response, 'database rolled back')
+        self.assertNotContains(redirect_response, 'Die dumme Gans')
+        self.assertContains(redirect_response, 'Der schlaue Fuchs')
+        self.assertContains(redirect_response, '1:32')    # Original duration.
+        self.assertEqual(Film.films.count(), 1)
+
+        # Tear down.
+        FilmLoader.key_fields = ['festival', 'film_id']   # Original, unique together.
+
+    def test_no_integrity_error_when_keys_conform_unique_together(self):
+        """
+        When loading a new film with existing unique key combination, film is updated and nothing is rolled back.
+        """
+        # Arrange.
+        request = self.get_admin_request()
+        get_response = self.arrange_get_get_response(request)
+        self.arrange_new_and_existing_films()
+
+        post_response = self.client.post(reverse('loader:ratings'), self.post_data)
+
+        # Act.
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        self.assert_reading_from_file(get_response, post_response, redirect_response)
+        self.assertContains(redirect_response, 'No ratings will be effected.')
+        self.assertContains(redirect_response, '2 film records read')
+        self.assertNotContains(redirect_response, 'database rolled back')
+        self.assertContains(redirect_response, 'Die dumme Gans')
+        self.assertContains(redirect_response, 'Der schlaue Fuchs')
+        self.assertContains(redirect_response, '1:28')    # New duration.
+        self.assertEqual(Film.films.count(), 2)
 
     def test_regular_user_cannot_load_rating_data(self):
         """
@@ -327,7 +420,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         _ = create_rating(film_2, self.regular_fan, 8)
 
         request = self.get_admin_request()
-        save_view = SaveView()
+        save_view = SaveRatingsView()
         save_view.object = self.festival
         save_view.setup(request)
         context = save_view.get_context_data()
@@ -343,11 +436,11 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         post_request.session = request.session
 
         # Act.
-        post_response = SaveView.as_view()(post_request)
+        post_response = SaveRatingsView.as_view()(post_request)
 
         # Assert.
         redirect_request = get_request_with_session(request)
-        redirect_response = films(redirect_request)
+        redirect_response = FilmsView.as_view()(redirect_request)
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
         self.assertNotContains(get_response, 'Not allowed')
         self.assertNotContains(get_response, 'existing rating objects saved ')
@@ -364,7 +457,7 @@ class SectionLoaderViewsTests(LoaderViewsTests):
     max_section_id = 0
 
     def setUp(self):
-        super(SectionLoaderViewsTests, self).setUp()
+        super().setUp()
 
         # Get a good feeling about writing on festival files.
         self.assertEqual(mock_base_festival_mnemonic(), 'Berlinale')
@@ -372,20 +465,16 @@ class SectionLoaderViewsTests(LoaderViewsTests):
 
         # Set up a loader view including the mock festival.
         self.loader_view = SectionsLoaderView()
-        self.festival.id = max([row['id'] for row in self.loader_view.object_list]) + 1
+        self.loader_view.queryset = self.loader_view.get_queryset()
+        self.festival.id = max([row['id'] for row in self.loader_view.queryset]) + 1
         self.festival.save()
-        self.loader_view.object_list.append(get_festival_row(self.festival))
+        self.loader_view.queryset.append(get_festival_row(self.festival))
 
         # Set up POST data for the sections.html template.
         self.post_data = {f'{self.festival.id}': ['Load']}
 
     def tearDown(self):
-        super(SectionLoaderViewsTests, self).tearDown()
-
-    def get_get_response(self, get_request):
-        self.loader_view.setup(get_request)
-        context = self.loader_view.get_context_data()
-        return self.loader_view.render_to_response(context)
+        super().tearDown()
 
     def arrange_create_section(self, name, color):
         self.max_section_id += 1
@@ -448,3 +537,83 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
         self.assertContains(get_response, 'Not allowed')
         self.assertNotContains(get_response, 'Pick a festival to load section data from')
+
+
+class TheaterDataLoaderViewsTests(LoaderViewsTests):
+    def setUp(self):
+        super().setUp()
+        self.temp_dir = tempfile.TemporaryDirectory()
+        # self.festival_data = planner.FestivalData(self.temp_dir.name)
+        self.loader_view = NewTheaterDataView()
+
+    def tearDown(self):
+        super().tearDown()
+        self.temp_dir.cleanup()
+
+    # def arrange_new_screens(self):
+    #     data = self.festival_data
+    #     city_name = 'Groningen'
+    #     theater_name = 'Kriterion'
+    #     screen_1 = data.get_screen(city_name, 'Kriterion Grote Zaal', theater_parse_name=theater_name)
+    #     screen_2 = data.get_screen(city_name, 'Kriterion Kleine Zaal', theater_parse_name=theater_name)
+    #     screen_1.abbr = 'krgr'
+    #     screen_2.abbr = 'krkl'
+    #     data.write_new_cities()
+    #     data.write_new_theaters()
+    #     data.write_new_screens()
+
+    def assert_load_results(self, response, by_admin=True):
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertContains(response, 'Load results')
+        self.assertContains(response, '1 city records read')
+        self.assertContains(response, '1 theater records read')
+        self.assertContains(response, '2 screen records read')
+        content_keywords = ['Groningen', 'Kriterion', 'Kleine Zaal']
+        for word in content_keywords:
+            if by_admin:
+                self.assertContains(response, word)
+            else:
+                self.assertNotContains(response, word)
+
+    @skip("Importing planner interface doesn't work anymore")
+    def test_regular_user_cannot_load_new_screens(self):
+        # # Arrange.
+        # self.arrange_new_screens()
+
+        # Act.
+        get_response = self.get_get_response(self.get_regular_fan_request(), view=NewTheaterDataListView())
+
+        # Assert.
+        self.assert_load_results(get_response, by_admin=False)
+
+    @skip("Importing planner interface doesn't work anymore")
+    def test_admin_can_load_new_screens(self):
+        # Arrange.
+        # self.arrange_new_screens()
+
+        # Act.
+        get_response = self.get_get_response(self.get_admin_request(), view=NewTheaterDataListView())
+
+        # Assert.
+        self.assert_load_results(get_response)
+
+    @skip("No time to get it working for the time being")
+    def test_admin_can_insert_new_theater_data(self):
+        # Arrange.
+        # self.arrange_new_screens()
+        get_request = self.get_admin_request()
+        get_response = self.get_get_response(get_request, view=NewTheaterDataListView())
+        self.assert_load_results(get_response)
+
+        # Act.
+        post_cities_response = self.client.post(reverse('loader:new_screens'))
+        post_cities_response.user = self.admin_user
+        post_cities_response.session = get_request.session
+        get_theaters_response = self.get_get_response(get_request, view=NewTheaterDataListView())
+        response = get_response.render()
+
+        # Assert.
+        self.assertEqual(post_cities_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(get_theaters_response.status_code, HTTPStatus.OK)
+        pr_debug(f'\n\n{response=}\n')
+        self.assertContains(get_theaters_response, 'Cities insert results')

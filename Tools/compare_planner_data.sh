@@ -5,11 +5,10 @@ declare -r files="
     filmids.txt
     films.csv
     screenings.csv
-    screens.csv
     sections.csv
     subsections.csv
-    theaters.csv
     filminfo.xml
+    filminfo.yml
 "
 declare -r film_file=films.csv
 declare -r tools_dir=~/Projects/FilmFestivalPlanner/Tools/

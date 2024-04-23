@@ -9,6 +9,7 @@
         <li>Film#: {{ film.film_id }}</li>
         <li>Duration: {{ film.duration }}</li>
         <li>Subsection: {{ subsection.name }}</li>
+        <li>Description: {{ description }}</li>
         <li>Medium category: {{ film.medium_category }}</li>
         <li>Rating count: {{ film.filmfanfilmrating_set.count }}</li>
     </ul>
@@ -56,5 +57,7 @@
     </table>
     </form>
     <br><br>
+    <a href="{% url 'films:films' %}#film{{ film.film_id }}">Back to ratings of {{ film.title }}</a>
+    <br>
     <a href="{% url 'films:films' %}">Back to ratings</a>
 {% endblock %}
