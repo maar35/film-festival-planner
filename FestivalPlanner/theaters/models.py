@@ -44,6 +44,7 @@ def screens_cache_path():
 def new_screens_path():
     return os.path.join(common_data_dir(), 'new_screens.csv')
 
+  
 
 class City(models.Model):
     """

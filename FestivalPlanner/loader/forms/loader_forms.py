@@ -26,7 +26,6 @@ FILMS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'films.csv')
 FILM_FANS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'film_fans.csv')
 RATINGS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'ratings.csv')
 
-
 class RatingLoaderForm(Form):
     import_mode = BooleanField(
         label='Use import mode, all ratings are replaced',
