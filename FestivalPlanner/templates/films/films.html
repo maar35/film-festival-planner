@@ -106,7 +106,7 @@
                         <br>
                         {{ row.description }}
                     {% else %}
-                        <a href="{% url 'films:results' row.film.id %}" style="color: darkgreen;">
+                        <a href="{% url 'films:results' row.film.id %}">
                             {{ row.film.title }}
                         </a>
                     {% endif %}

@@ -99,8 +99,8 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
         festival = current_festival(session)
         found_films = []
         start_by_film = {}
-        for film in Film.films.order_by('seq_nr').filter(festival=festival):
-            start_pos = self.film_matches_search_text(film, text)
+        for film in Film.films.filter(festival=festival):
+            start_pos = self.start_position_of_text(film, text)
             if start_pos is not None:
                 found_films.append(film)
                 start_by_film[film] = start_pos
@@ -112,11 +112,9 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
             add_log(session, f'No title found starting with "{text}"')
 
     @staticmethod
-    def film_matches_search_text(film, text):
+    def start_position_of_text(film, text):
         re_search_text = re.compile(f'{text}')
         m = re_search_text.search(film.sort_title)
-        if m:
-            pr_debug(f'{film.sort_title=}, {text=}, {m.start()=}')
         return m.start() if m else None
 
     def update_rating(self, form):
@@ -237,6 +235,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
                 )
 
         # Read the descriptions.
+        initialize_log(session, action='Read descriptions')
         film_info_file = self.festival.filminfo_file
         try:
             with open(film_info_file, 'r', newline='') as csvfile:
@@ -244,7 +243,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
                 self.description_by_film_id = {int(row[0]): row[1] for row in object_reader}
         except FileNotFoundError as e:
             self.description_by_film_id = {}
-            FilmsView.unexpected_errors.append(e)
+            add_log(session, 'No descriptions  file found')
 
         # Set the fragment names.
         self.fragment_keeper.add_fragments(self.selected_films)
@@ -542,9 +541,12 @@ class ResultsView(DetailView):
         # with open(film_info_file, 'r') as stream:
         #     info = yaml.safe_load(stream)
         # description = info['description']
-        with open(film_info_file, 'r', newline='') as csvfile:
-            object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
-            descriptions = [row[1] for row in object_reader if film.film_id == int(row[0])]
+        try:
+            with open(film_info_file, 'r', newline='') as csvfile:
+                object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                descriptions = [row[1] for row in object_reader if film.film_id == int(row[0])]
+        except FileNotFoundError:
+            descriptions = []
         description = descriptions[0] if descriptions else '-'
         return description
 
