@@ -25,4 +25,4 @@ class FilmFan(models.Model):
 
 
 def me():
-    return FilmFan.film_fans.filter(seq_nr=1) or None
+    return FilmFan.film_fans.get(seq_nr=1) or None

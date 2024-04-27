@@ -108,7 +108,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         self.post_data = {f'ratings_{self.festival.id}': ['Load'], 'import_mode': []}
 
     def tearDown(self):
-        super(RatingLoaderViewsTests, self).tearDown()
+        super().tearDown()
 
     def arrange_get_get_response(self, get_request):
         self.ratings_loader_view.setup(get_request)

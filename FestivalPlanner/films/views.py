@@ -235,7 +235,8 @@ class FilmsListView(LoginRequiredMixin, ListView):
                 )
 
         # Read the descriptions.
-        initialize_log(session, action='Read descriptions')
+        if not get_log(session):
+            initialize_log(session, action='Read descriptions')
         film_info_file = self.festival.filminfo_file
         try:
             with open(film_info_file, 'r', newline='') as csvfile:
@@ -243,7 +244,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
                 self.description_by_film_id = {int(row[0]): row[1] for row in object_reader}
         except FileNotFoundError as e:
             self.description_by_film_id = {}
-            add_log(session, 'No descriptions  file found')
+            add_log(session, 'No descriptions file found.')
 
         # Set the fragment names.
         self.fragment_keeper.add_fragments(self.selected_films)
