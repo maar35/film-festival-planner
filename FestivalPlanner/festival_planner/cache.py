@@ -108,7 +108,7 @@ class FilmRatingCache:
 
     @staticmethod
     def get_filters_key(session):
-        filter_dict = session.get('filters')
+        filter_dict = session.get('filters') or {}
         filter_keys = [f'{k}_{v}' for k, v in filter_dict.items()]
         return ':'.join(filter_keys) if filter_keys else ''
 

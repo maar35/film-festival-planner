@@ -13,10 +13,14 @@ from films.models import FilmFanFilmRating, get_rating_name, current_fan, fan_ra
 search_test_validator = RegexValidator(r'^[a-z]+$', 'Type only lower case letters')
 
 
+def eligible_fans():
+    return [(fan.name, fan) for fan in FilmFan.film_fans.order_by('seq_nr')]
+
+
 class UserForm(forms.Form):
     selected_fan = forms.ChoiceField(
         label='Select a film fan',
-        choices=[(fan.name, fan) for fan in FilmFan.film_fans.order_by('seq_nr')],
+        choices=eligible_fans,
     )
 
 
@@ -52,7 +56,7 @@ class PickRating(forms.Form):
         init_rating_action(session, old_rating_str, new_rating, field)
 
         # Update cache if applicable.
-        if not post_attendance:
+        if not post_attendance and cls.film_rating_cache:
             cls.film_rating_cache.update(session, film, fan, rating_value)
 
 

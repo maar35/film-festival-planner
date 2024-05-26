@@ -126,46 +126,35 @@ class Festival(models.Model):
         edition_str = '' if self.edition is None else f' - {self.edition} edition'
         return f'{self.base} {self.year}{edition_str}'
 
-    @property
     def festival_base_dir(self):
         return os.path.join(base_dir(), self.base.mnemonic)
 
-    @property
     def festival_dir(self):
-        return os.path.join(self.festival_base_dir, f'{self.base.mnemonic}{self.year}')
+        return os.path.join(self.festival_base_dir(), f'{self.base.mnemonic}{self.year}')
 
-    @property
     def planner_data_dir(self):
-        return os.path.join(self.festival_dir, '_planner_data')
+        return os.path.join(self.festival_dir(), '_planner_data')
 
-    @property
     def festival_data_dir(self):
-        return os.path.join(self.festival_dir, 'FestivalPlan')
+        return os.path.join(self.festival_dir(), 'FestivalPlan')
 
-    @property
     def films_file(self):
-        return os.path.join(self.planner_data_dir, 'films.csv')
+        return os.path.join(self.planner_data_dir(), 'films.csv')
 
-    @property
     def filminfo_file(self):
-        return os.path.join(self.planner_data_dir, 'filminfo.yml')
+        return os.path.join(self.planner_data_dir(), 'filminfo.yml')
 
-    @property
     def ratings_file(self):
-        return os.path.join(self.festival_data_dir, 'ratings.csv')
+        return os.path.join(self.festival_data_dir(), 'ratings.csv')
 
-    @property
     def ratings_cache(self):
-        return os.path.join(self.festival_data_dir, 'ratings_cache.csv')
+        return os.path.join(self.festival_data_dir(), 'ratings_cache.csv')
 
-    @property
     def sections_file(self):
-        return os.path.join(self.planner_data_dir, 'sections.csv')
+        return os.path.join(self.planner_data_dir(), 'sections.csv')
 
-    @property
     def subsections_file(self):
-        return os.path.join(self.planner_data_dir, 'subsections.csv')
+        return os.path.join(self.planner_data_dir(), 'subsections.csv')
 
-    @property
     def screening_info_file(self):
-        return os.path.join(self.festival_data_dir, 'screeninginfo.csv')
+        return os.path.join(self.festival_data_dir(), 'screeninginfo.csv')
