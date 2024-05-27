@@ -11,7 +11,6 @@ from django.test import RequestFactory
 from django.urls import reverse
 
 from festival_planner import debug_tools
-from festival_planner.debug_tools import pr_debug
 from festivals.tests import create_festival, mock_base_festival_mnemonic
 from films.models import FilmFanFilmRating, Film
 from films.tests import create_film, ViewsTestCase, get_request_with_session
@@ -615,5 +614,5 @@ class TheaterDataLoaderViewsTests(LoaderViewsTests):
         # Assert.
         self.assertEqual(post_cities_response.status_code, HTTPStatus.FOUND)
         self.assertEqual(get_theaters_response.status_code, HTTPStatus.OK)
-        pr_debug(f'\n\n{response=}\n')
+        debug_tools.pr_debug(f'\n\n{response=}\n')
         self.assertContains(get_theaters_response, 'Cities insert results')

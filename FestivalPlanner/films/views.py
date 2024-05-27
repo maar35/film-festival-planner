@@ -108,10 +108,10 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
                 start_by_film[film] = start_pos
                 add_log(session, film.sort_title)
         if found_films:
-            sorted_tuples = sorted([(f, s) for f, s in start_by_film.items()], key=itemgetter(1))
-            BaseFilmsFormView.found_films = [f for f, s in sorted_tuples]
+            sorted_tuples = sorted([(f, s, f.sort_title) for f, s in start_by_film.items()], key=itemgetter(1, 2))
+            BaseFilmsFormView.found_films = [f for f, s, t in sorted_tuples]
         else:
-            add_log(session, f'No title found starting with "{text}"')
+            add_log(session, f'No title found containing "{text}"')
 
     @staticmethod
     def start_position_of_text(film, text):
