@@ -20,11 +20,11 @@ from django.urls import path
 urlpatterns = [
     path('admin/', admin.site.urls, name='admin'),
     path('authentication/', include('authentication.urls')),
-    path('films/', include('films.urls')),
     path('festivals/', include('festivals.urls')),
-    path('loader/', include('loader.urls')),
+    path('films/', include('films.urls')),
     path('sections/', include('sections.urls')),
     path('theaters/', include('theaters.urls')),
+    path('loader/', include('loader.urls')),
 ]
 
 admin.autodiscover()

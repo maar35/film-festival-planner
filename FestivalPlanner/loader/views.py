@@ -36,9 +36,9 @@ def get_festival_row(festival):
     festival_row = {
         'festival': festival,
         'id': festival.id,
-        'section_count_on_file': file_record_count(festival.sections_file),
+        'section_count_on_file': file_record_count(festival.sections_file()),
         'section_count': Section.sections.filter(festival=festival).count,
-        'subsection_count_on_file': file_record_count(festival.subsections_file),
+        'subsection_count_on_file': file_record_count(festival.subsections_file()),
         'subsection_count': Subsection.subsections.filter(festival=festival).count,
     }
     return festival_row
@@ -374,9 +374,9 @@ class RatingsLoaderView(LoginRequiredMixin, ListView):
             'str': festival,
             'submit_name': f'{self.submit_name_prefix}{festival.id}',
             'color': festival.festival_color,
-            'film_count_on_file': file_record_count(festival.films_file, has_header=True),
+            'film_count_on_file': file_record_count(festival.films_file(), has_header=True),
             'film_count': Film.films.filter(festival=festival).count,
-            'rating_count_on_file': file_record_count(festival.ratings_file, has_header=True),
+            'rating_count_on_file': file_record_count(festival.ratings_file(), has_header=True),
             'rating_count': FilmFanFilmRating.film_ratings.filter(film__festival=festival).count,
         }
         return festival_row
@@ -395,10 +395,10 @@ class SaveRatingsView(LoginRequiredMixin, FormView):
         festival_items = {
             'festival': festival,
             'film_count': len(Film.films.filter(festival=festival)),
-            'film_count_on_file': file_record_count(festival.films_file, has_header=True),
+            'film_count_on_file': file_record_count(festival.films_file(), has_header=True),
             'rating_count': len(FilmFanFilmRating.film_ratings.filter(film__festival=festival)),
-            'rating_count_on_file': file_record_count(festival.ratings_file, has_header=True),
-            'ratings_file': festival.ratings_file,
+            'rating_count_on_file': file_record_count(festival.ratings_file(), has_header=True),
+            'ratings_file': festival.ratings_file(),
         }
         context = add_base_context(self.request, super().get_context_data(**kwargs))
         context['title'] = 'Save Ratings'

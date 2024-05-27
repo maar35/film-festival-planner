@@ -4,11 +4,10 @@ import re
 from datetime import timedelta
 from operator import attrgetter, itemgetter
 
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Exists, OuterRef
 from django.http import HttpResponseRedirect
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render
 from django.urls import reverse
 from django.views import View
 from django.views.generic import FormView, DetailView, ListView
@@ -20,12 +19,15 @@ from festival_planner.tools import add_base_context, unset_log, wrap_up_form_err
     set_cookie, get_cookie, initialize_log, add_log
 from festivals.config import Config
 from festivals.models import current_festival
-from films.forms.film_forms import RatingForm, PickRating, UserForm, refreshed_rating_action
+from films.forms.film_forms import PickRating, UserForm, refreshed_rating_action
 from films.models import FilmFanFilmRating, Film, current_fan, get_present_fans, fan_rating_str, \
     FilmFanFilmVote
 from sections.models import Subsection
 
 STICKY_HEIGHT = 3
+CONSTANTS_CONFIG = Config().config['Constants']
+MAX_SHORT_MINUTES = CONSTANTS_CONFIG['MaxShortMinutes']
+LOWEST_PLANNABLE_RATING = CONSTANTS_CONFIG['LowestPlannableRating']
 
 
 class FragmentKeeper:
@@ -106,10 +108,10 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
                 start_by_film[film] = start_pos
                 add_log(session, film.sort_title)
         if found_films:
-            sorted_tuples = sorted([(f, s) for f, s in start_by_film.items()], key=itemgetter(1))
-            BaseFilmsFormView.found_films = [f for f, s in sorted_tuples]
+            sorted_tuples = sorted([(f, s, f.sort_title) for f, s in start_by_film.items()], key=itemgetter(1, 2))
+            BaseFilmsFormView.found_films = [f for f, s, t in sorted_tuples]
         else:
-            add_log(session, f'No title found starting with "{text}"')
+            add_log(session, f'No title found containing "{text}"')
 
     @staticmethod
     def start_position_of_text(film, text):
@@ -160,9 +162,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
     title = 'Film Rating List'
     class_tag = 'rating'
     highest_rating = FilmFanFilmRating.Rating.values[-1]
-    config = Config().config
-    max_short_minutes = config['Constants']['MaxShortMinutes']
-    short_threshold = timedelta(minutes=max_short_minutes)
+    short_threshold = timedelta(minutes=MAX_SHORT_MINUTES)
     include_by_query = {'hide': False, 'include': True}
     query_by_include = {include: query for query, include in include_by_query.items()}
     action_by_display_shorts = {True: 'Hide shorts', False: 'Include shorts'}
@@ -235,15 +235,16 @@ class FilmsListView(LoginRequiredMixin, ListView):
                 )
 
         # Read the descriptions.
-        initialize_log(session, action='Read descriptions')
-        film_info_file = self.festival.filminfo_file
+        if not get_log(session):
+            initialize_log(session, action='Read descriptions')
+        film_info_file = self.festival.filminfo_file()
         try:
             with open(film_info_file, 'r', newline='') as csvfile:
                 object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
                 self.description_by_film_id = {int(row[0]): row[1] for row in object_reader}
         except FileNotFoundError as e:
             self.description_by_film_id = {}
-            add_log(session, 'No descriptions  file found')
+            add_log(session, 'No descriptions file found.')
 
         # Set the fragment names.
         self.fragment_keeper.add_fragments(self.selected_films)
@@ -419,7 +420,7 @@ class VotesListView(LoginRequiredMixin, ListView):
         return context
 
     def set_attended_films(self):
-        screening_info_file = self.festival.screening_info_file
+        screening_info_file = self.festival.screening_info_file()
         self.attended_films = []
         try:
             with open(screening_info_file, 'r', newline='') as csvfile:
@@ -437,7 +438,7 @@ class VotesListView(LoginRequiredMixin, ListView):
             VotesView.unexpected_errors.append(e)
 
     def set_reviewer_by_film_id(self):
-        film_info_file = self.festival.filminfo_file
+        film_info_file = self.festival.filminfo_file()
         try:
             with open(film_info_file, 'r', newline='') as csvfile:
                 film_info_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
@@ -485,7 +486,7 @@ class VotesFormView(BaseFilmsFormView):
     success_view_name = 'films:votes'
 
 
-class ResultsView(DetailView):
+class ResultsView(LoginRequiredMixin, DetailView):
     """
     Define generic view classes.
     """
@@ -537,7 +538,7 @@ class ResultsView(DetailView):
 
     @staticmethod
     def get_description(film):
-        film_info_file = film.festival.filminfo_file
+        film_info_file = film.festival.filminfo_file()
         # with open(film_info_file, 'r') as stream:
         #     info = yaml.safe_load(stream)
         # description = info['description']
@@ -623,12 +624,9 @@ def get_rating_statistics(session):
 
     # Initialize.
     films = [film_row['film'] for film_row in PickRating.film_rating_cache.get_film_rows(session)]
-    config = Config().config
-    max_short_minutes = config['Constants']['MaxShortMinutes']
-    max_short_duration = timedelta(minutes=max_short_minutes)
-    lowest_plannable_rating = config['Constants']['LowestPlannableRating']
+    max_short_duration = timedelta(minutes=MAX_SHORT_MINUTES)
     feature_films = [film for film in films if film.duration > max_short_duration]
-    eligible_ratings = FilmFanFilmRating.Rating.values[lowest_plannable_rating:]
+    eligible_ratings = FilmFanFilmRating.Rating.values[LOWEST_PLANNABLE_RATING:]
     film_count = len(feature_films)
 
     # Filter out the data with eligible ratings.
@@ -705,39 +703,3 @@ def get_submitted_name(request, submit_names):
             submitted_name = submit_name
             break
     return submitted_name
-
-
-@login_required
-def rating(request, film_pk):
-    """
-    rating picker view.
-    """
-
-    # Preset some parameters.
-    title = "Rating Picker"
-    film = get_object_or_404(Film, id=film_pk)
-    fan = current_fan(request.session)
-
-    # Check the request.
-    if request.method == 'POST':
-        form = RatingForm(request.POST)
-        if form.is_valid():
-            selected_rating = form.cleaned_data['fan_rating']
-            PickRating.update_rating(request.session, film, fan, selected_rating)
-            return HttpResponseRedirect(reverse('films:results', args=[film_pk]))
-    else:
-        try:
-            current_rating = FilmFanFilmRating.film_ratings.get(film=film, film_fan=fan)
-        except FilmFanFilmRating.DoesNotExist:
-            form = RatingForm()
-        else:
-            form = RatingForm(initial={'fan_rating': current_rating.rating}, auto_id=False)
-
-    # Construct the context.
-    context = add_base_context(request, {
-        'title': title,
-        'film': film,
-        'form': form,
-    })
-
-    return render(request, 'films/rating.html', context)

@@ -10,13 +10,21 @@ from festivals.models import rating_action_key
 from films.models import FilmFanFilmRating, get_rating_name, current_fan, fan_rating_str, field_by_post_attendance, \
     manager_by_post_attendance
 
-search_test_validator = RegexValidator(r'^[a-z]+$', 'Type only lower case letters')
+SEARCH_TEST_VALIDATOR = RegexValidator(r'^[a-z0-9]+$', 'Type only lower case letters and digits')
+"""
+No spaces allowed (yet) to discourage entering articles while searching and
+sorting is based on sort_title.
+"""
+
+
+def eligible_fans():
+    return [(fan.name, fan) for fan in FilmFan.film_fans.order_by('seq_nr')]
 
 
 class UserForm(forms.Form):
     selected_fan = forms.ChoiceField(
         label='Select a film fan',
-        choices=[(fan.name, fan) for fan in FilmFan.film_fans.order_by('seq_nr')],
+        choices=eligible_fans,
     )
 
 
@@ -24,7 +32,7 @@ class PickRating(forms.Form):
     search_text = CharField(
         label='Find a title by entering a snippet of it',
         required=False,
-        validators=[search_test_validator],
+        validators=[SEARCH_TEST_VALIDATOR],
         min_length=2,
     )
     film_rating_cache = None
@@ -52,7 +60,7 @@ class PickRating(forms.Form):
         init_rating_action(session, old_rating_str, new_rating, field)
 
         # Update cache if applicable.
-        if not post_attendance:
+        if not post_attendance and cls.film_rating_cache:
             cls.film_rating_cache.update(session, film, fan, rating_value)
 
 

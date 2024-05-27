@@ -4,6 +4,7 @@ from authentication.models import FilmFan
 from festivals.models import Festival
 
 FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
+UNRATED_STR = '-'
 
 
 class Film(models.Model):
@@ -154,7 +155,7 @@ def fan_rating_str(fan, film, post_attendance=False):
     manager = manager_by_post_attendance[post_attendance]
     field = field_by_post_attendance[post_attendance]
     rating = fan_rating(fan, film, manager)
-    return f'{getattr(rating, field)}' if rating is not None else '-'
+    return f'{getattr(rating, field)}' if rating is not None else UNRATED_STR
 
 
 def rating_str(rating):

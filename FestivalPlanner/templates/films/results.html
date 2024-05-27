@@ -28,11 +28,7 @@
         {% for fan_row in fan_rows %}
             <tr>
                 <td>
-                    {% if fan_row.fan == current_fan %}
-                        <a href="{% url 'films:rating' film.id %}">{{ fan_row.fan.name }}</a>
-                    {% else %}
-                        {{ fan_row.fan.name }}
-                    {% endif %}
+                    {{ fan_row.fan.name }}
                 </td>
                 {% if fan_row.fan == current_fan %}
                     <td class="dropdown">

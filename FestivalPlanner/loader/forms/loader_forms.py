@@ -46,7 +46,7 @@ class RatingLoaderForm(Form):
         # Save ratings if the import mode flag is set and all ratings
         # are replaced.
         if import_mode:
-            _ = RatingDumper(session).save_ratings(festival, festival.ratings_cache)
+            _ = RatingDumper(session).save_ratings(festival, festival.ratings_cache())
 
         # Load films and, if applicable, ratings.
         if FilmLoader(session, festival).load_objects():
@@ -62,7 +62,7 @@ class SaveRatingsForm(Form):
     def save_ratings(session, festival):
         initialize_log(session, 'Save')
         add_log(session, f'Saving the {festival} ratings.')
-        if not RatingDumper(session).save_ratings(festival, festival.ratings_file):
+        if not RatingDumper(session).save_ratings(festival, festival.ratings_file()):
             add_log(session, f'Failed to save the {festival} ratings.')
 
 
@@ -416,7 +416,7 @@ class FilmLoader(SimpleLoader):
     manager = Film.films
 
     def __init__(self, session, festival):
-        super().__init__(session, 'film', self.manager, festival.films_file, festival=festival)
+        super().__init__(session, 'film', self.manager, festival.films_file(), festival=festival)
         self.festival = festival
         self.delete_disappeared_objects = True
 
@@ -452,7 +452,7 @@ class RatingLoader(SimpleLoader):
     manager = FilmFanFilmRating.film_ratings
 
     def __init__(self, session, festival):
-        file = festival.ratings_file
+        file = festival.ratings_file()
         super().__init__(session, 'rating', self.manager, file, file_required=False,
                          festival=festival, festival_pk='film__festival__pk')
         self.festival = festival
@@ -484,7 +484,7 @@ class SectionLoader(SimpleLoader):
     manager = Section.sections
 
     def __init__(self, session, festival):
-        file = festival.sections_file
+        file = festival.sections_file()
         super().__init__(session, 'section', self.manager, file, festival)
 
     def read_row(self, row):
@@ -506,7 +506,7 @@ class SubsectionLoader(SimpleLoader):
     manager = Subsection.subsections
 
     def __init__(self, session, festival):
-        file = festival.subsections_file
+        file = festival.subsections_file()
         super().__init__(session, 'subsection', self.manager, file, festival)
 
     def read_row(self, row):

@@ -7,11 +7,10 @@ from datetime import timedelta
 from http import HTTPStatus
 from unittest import skip
 
-# from FilmFestivalPlanner.FilmFestivalLoader.Shared import planner_interface as planner
 from django.test import RequestFactory
 from django.urls import reverse
 
-from festival_planner.debug_tools import pr_debug
+from festival_planner import debug_tools
 from festivals.tests import create_festival, mock_base_festival_mnemonic
 from films.models import FilmFanFilmRating, Film
 from films.tests import create_film, ViewsTestCase, get_request_with_session
@@ -66,7 +65,7 @@ class LoaderViewsTests(ViewsTestCase):
         self.create_planner_data_dir()
         self.create_festival_data_dir()
 
-        # Define a placeholder for a view for derived  classes.
+        # Define a placeholder for a view for derived classes.
         self.loader_view = None
 
     def tearDown(self):
@@ -81,13 +80,13 @@ class LoaderViewsTests(ViewsTestCase):
         return create_festival(mock_base_festival_mnemonic(), city, start_data_str, end_date_str)
 
     def create_planner_data_dir(self):
-        os.makedirs(self.festival.planner_data_dir)
+        os.makedirs(self.festival.planner_data_dir())
 
     def create_festival_data_dir(self):
-        os.makedirs(self.festival.festival_data_dir)
+        os.makedirs(self.festival.festival_data_dir())
 
     def remove_festival_data(self):
-        base_dir = self.festival.festival_base_dir
+        base_dir = self.festival.festival_base_dir()
         shutil.rmtree(base_dir)
 
     def get_get_response(self, get_request, view=None):
@@ -103,12 +102,13 @@ class RatingLoaderViewsTests(LoaderViewsTests):
     def setUp(self):
         super().setUp()
         self.ratings_loader_view = RatingsLoaderView()
+        debug_tools.SUPPRESS_DEBUG_PRINT = True
 
         # Set up POST data for the ratings.html template.
         self.post_data = {f'ratings_{self.festival.id}': ['Load'], 'import_mode': []}
 
     def tearDown(self):
-        super(RatingLoaderViewsTests, self).tearDown()
+        super().tearDown()
 
     def arrange_get_get_response(self, get_request):
         self.ratings_loader_view.setup(get_request)
@@ -116,7 +116,6 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         return self.ratings_loader_view.render_to_response(context)
 
     def arrange_new_and_existing_films(self):
-
         common_film_id = 1
         other_film_id = 2
         _ = create_film(common_film_id, 'Der schlaue Fuchs', 92, festival=self.festival, seq_nr=10)
@@ -135,7 +134,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
             duration=timedelta(minutes=188),
             subsection='')
 
-        with open(self.festival.films_file, 'w', newline='') as csv_films_file:
+        with open(self.festival.films_file(), 'w', newline='') as csv_films_file:
             film_writer = csv.writer(csv_films_file, delimiter=';', quotechar='"')
             film_writer.writerow(FilmLoader.expected_header)
             film_writer.writerow(serialize_film(film_1))
@@ -160,7 +159,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         film_1 = create_film(1, 'Der Berliner', 103, festival=self.festival)
         film_2 = create_film(2, 'Angst und Freude', 15, festival=self.festival)
-        films_file = self.festival.films_file
+        films_file = self.festival.films_file()
         with open(films_file, 'w', newline='') as csvfile:
             film_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
             film_writer.writerow(FilmLoader.expected_header)
@@ -189,14 +188,14 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         get_response = self.arrange_get_get_response(request)
 
         film = create_film(1, 'Leben und Sterben in Tirol', 182, festival=self.festival)
-        with open(self.festival.films_file, 'w', newline='') as csv_films_file:
+        with open(self.festival.films_file(), 'w', newline='') as csv_films_file:
             film_writer = csv.writer(csv_films_file, delimiter=';', quotechar='"')
             film_writer.writerow(FilmLoader.expected_header)
             film_writer.writerow(serialize_film(film))
 
         rating_1 = create_rating(film, self.admin_fan, 10)
         rating_2 = create_rating(film, self.regular_fan, 8)
-        with open(self.festival.ratings_file, 'w', newline='') as csv_ratings_file:
+        with open(self.festival.ratings_file(), 'w', newline='') as csv_ratings_file:
             rating_writer = csv.writer(csv_ratings_file, delimiter=';', quotechar='"')
             rating_writer.writerow(RatingLoader.expected_header)
             rating_writer.writerow(serialize_rating(rating_1))
@@ -226,14 +225,14 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         get_response = self.arrange_get_get_response(request)
 
         film = create_film(1, 'Leben und Sterben in Tirol', 182, festival=self.festival)
-        with open(self.festival.films_file, 'w', newline='') as csv_films_file:
+        with open(self.festival.films_file(), 'w', newline='') as csv_films_file:
             film_writer = csv.writer(csv_films_file, delimiter=';', quotechar='"')
             film_writer.writerow(FilmLoader.expected_header)
             film_writer.writerow(serialize_film(film))
 
         rating_1 = create_rating(film, self.admin_fan, 10)
         _ = create_rating(film, self.regular_fan, 8)
-        with open(self.festival.ratings_file, 'w', newline='') as csv_ratings_file:
+        with open(self.festival.ratings_file(), 'w', newline='') as csv_ratings_file:
             rating_writer = csv.writer(csv_ratings_file, delimiter=';', quotechar='"')
             rating_writer.writerow(RatingLoader.expected_header)
             rating_writer.writerow(serialize_rating(rating_1))
@@ -330,7 +329,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         request = self.get_admin_request()
         get_response = self.arrange_get_get_response(request)
 
-        films_file = self.festival.films_file
+        films_file = self.festival.films_file()
         with open(films_file, 'w', newline='') as csvfile:
             film_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
             film_writer.writerow(FilmLoader.expected_header[1:])
@@ -355,7 +354,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         get_response = self.arrange_get_get_response(request)
 
         film = create_film(1, 'Der Faust', 303, festival=self.festival)
-        films_file = self.festival.films_file
+        films_file = self.festival.films_file()
         with open(films_file, 'w', newline='') as csvfile:
             film_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
             film_writer.writerow(FilmLoader.expected_header)
@@ -383,14 +382,14 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         get_response = self.arrange_get_get_response(request)
 
         film = create_film(1, 'Schwestern und Töchter', 95, festival=self.festival)
-        with open(self.festival.films_file, 'w', newline='') as csv_films_file:
+        with open(self.festival.films_file(), 'w', newline='') as csv_films_file:
             film_writer = csv.writer(csv_films_file, delimiter=';', quotechar='"')
             film_writer.writerow(FilmLoader.expected_header)
             film_writer.writerow(serialize_film(film))
 
         rating_1 = create_rating(film, self.admin_fan, 6)
         rating_2 = create_rating(film, self.regular_fan, 9)
-        with open(self.festival.ratings_file, 'w', newline='') as csv_ratings_file:
+        with open(self.festival.ratings_file(), 'w', newline='') as csv_ratings_file:
             rating_writer = csv.writer(csv_ratings_file, delimiter=';', quotechar='"')
             rating_writer.writerow(RatingLoader.expected_header)
             rating_writer.writerow(serialize_rating(rating_1))
@@ -497,7 +496,7 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         get_response = self.get_get_response(self.get_admin_request())
         section_1 = self.arrange_create_section('Hot items', 'HotPink')
         section_2 = self.arrange_create_section('Longs', 'Blue')
-        sections_file = self.festival.sections_file
+        sections_file = self.festival.sections_file()
         with open(sections_file, 'w', newline='') as csvfile:
             section_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
             section_writer.writerow(self.arrange_serialize_section(section_1))
@@ -525,7 +524,7 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         """
         # Arrange.
         section = self.arrange_create_section('Japanese Pink Movies', 'Pink')
-        sections_file = self.festival.sections_file
+        sections_file = self.festival.sections_file()
         with open(sections_file, 'w', newline='') as csvfile:
             section_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
             section_writer.writerow(self.arrange_serialize_section(section))
@@ -615,5 +614,5 @@ class TheaterDataLoaderViewsTests(LoaderViewsTests):
         # Assert.
         self.assertEqual(post_cities_response.status_code, HTTPStatus.FOUND)
         self.assertEqual(get_theaters_response.status_code, HTTPStatus.OK)
-        pr_debug(f'\n\n{response=}\n')
+        debug_tools.pr_debug(f'\n\n{response=}\n')
         self.assertContains(get_theaters_response, 'Cities insert results')
