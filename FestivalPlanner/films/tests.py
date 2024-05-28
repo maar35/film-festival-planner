@@ -235,7 +235,7 @@ class ViewsTestCase(TestCase):
 
     def tearDown(self):
         super().tearDown()
-        _ = self.client.get(reverse('authentication:logout'))
+        _ = self.client.post(reverse('authentication:logout'))
 
     @staticmethod
     def invalidate_cache(session):
