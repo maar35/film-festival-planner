@@ -448,7 +448,8 @@ class FestivalData:
     dialect = None
     write_verbose = True
 
-    def __init__(self, plandata_dir, default_city_name=None):
+    def __init__(self, plandata_dir, common_data_dir=None, default_city_name=None):
+        self.common_data_dir = common_data_dir or self.common_data_dir
         self.default_city_name = default_city_name or self.default_city_name
         self.films = []
         self.filminfos = []
