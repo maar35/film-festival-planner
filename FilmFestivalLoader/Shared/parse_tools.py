@@ -146,6 +146,9 @@ class BaseHtmlPageParser(HTMLParser):
             caller = frame.f_code.co_name if frame.f_code is not None else 'code'
             self.print_debug(f'Parsing state after {caller:6} is {new_state}', '')
 
+        def state(self):
+            return self.stack[-1]
+
         def push(self, state):
             self.stack.append(state)
             self._print_debug(state)

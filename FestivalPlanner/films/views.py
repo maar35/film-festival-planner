@@ -281,7 +281,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'log': get_log(session)
         }
         unset_log(session)
-        context = add_base_context(self.request, {**super_context, **new_context})
+        context = add_base_context(self.request, super_context | new_context)
         pr_debug('done', with_time=True)
         return context
 
@@ -416,7 +416,7 @@ class VotesListView(LoginRequiredMixin, ListView):
             'action': refreshed_rating_action(self.request.session, self.class_tag),
             'unexpected_errors': VotesView.unexpected_errors,
         }
-        context = add_base_context(self.request, {**super_context, **new_context})
+        context = add_base_context(self.request, super_context | new_context)
         return context
 
     def set_attended_films(self):

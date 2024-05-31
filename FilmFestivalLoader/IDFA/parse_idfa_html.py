@@ -728,7 +728,7 @@ class IdfaData(FestivalData):
     duplicates_by_screening = {}
 
     def __init__(self, directory):
-        super().__init__(directory, festival_city)
+        super().__init__(festival_city, directory)
         self.compilation_by_url = {}
 
     def film_key(self, title, url):

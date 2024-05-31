@@ -443,7 +443,7 @@ class FilmPageParser(HtmlPageParser):
 class ImagineData(FestivalData):
 
     def _init__(self, plandata_dir):
-        FestivalData.__init__(self, plandata_dir)
+        super().__init__(festival_city, plandata_dir)
 
     def film_key(self, film, url):
         return url

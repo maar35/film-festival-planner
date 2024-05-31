@@ -320,78 +320,76 @@ class FilmPageParser(HtmlPageParser):
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
 
-        if tag == 'title':
-            self.state_stack.change(self.FilmsParseState.IN_TITLE)
-        elif self.state_stack.state_is(self.FilmsParseState.IDLE):
-            if tag == 'div' and len(attrs) > 0:
-                if attrs[0][1] == 'film-detail__the-content the-content':
-                    self.state_stack.push(self.FilmsParseState.IN_ARTICLE)
-            elif tag == 'dl' and len(attrs) > 0 and attrs[0][1] == 'data-list data-list--details':
+        match [self.state_stack.state(), tag, attrs]:
+            case [_, 'title', _]:
+                self.state_stack.change(self.FilmsParseState.IN_TITLE)
+            case [self.FilmsParseState.IDLE, 'div', a] if a and a[0][1] == 'film-detail__the-content the-content':
+                self.state_stack.push(self.FilmsParseState.IN_ARTICLE)
+            case [self.FilmsParseState.IDLE, 'dl', a] if a and a[0][1] == 'data-list data-list--details':
                 self.state_stack.change(self.FilmsParseState.IN_PROPERTIES)
-            elif tag == 'footer':
+            case [self.FilmsParseState.IDLE, 'footer', _]:
                 self.state_stack.change(self.FilmsParseState.DONE)
                 self.finish_parsing()
-        elif self.state_stack.state_is(self.FilmsParseState.IN_ARTICLE) and tag == 'p':
-            self.state_stack.push(self.FilmsParseState.IN_PARAGRAPH)
-        elif self.state_stack.state_is(self.FilmsParseState.IN_PARAGRAPH):
-            if tag == 'em':
+            case [self.FilmsParseState.IN_ARTICLE, 'p', _]:
+                self.state_stack.push(self.FilmsParseState.IN_PARAGRAPH)
+            case [self.FilmsParseState.IN_PARAGRAPH, 'em', _]:
                 self.state_stack.push(self.FilmsParseState.IN_EMPHASIS)
-            elif tag == 'br':
+            case [self.FilmsParseState.IN_PARAGRAPH, 'br', _]:
                 self.add_paragraph()
-        elif self.state_stack.state_is(self.FilmsParseState.IN_COMBINATION) and tag == 'a' and len(attrs) > 0:
-            if attrs[0][0] == 'href':
-                self.add_combination_url(attrs[0][1])
+            case [self.FilmsParseState.IN_COMBINATION, 'a', a] if a and a[0][0] == 'href':
+                self.add_combination_url(a[0][1])
                 self.state_stack.pop()
-        elif self.state_stack.state_is(self.FilmsParseState.IN_ARTICLE) and tag == 'ul':
-            self.state_stack.push(self.FilmsParseState.IN_SCREENED_FILMS)
-        elif self.state_stack.state_is(self.FilmsParseState.IN_SCREENED_FILMS) and tag == 'a' and len(attrs) > 0:
-            if attrs[0][0] == 'href':
-                self.add_screened_film_url(attrs[0][1])
-        elif self.state_stack.state_is(self.FilmsParseState.IN_PROPERTIES) and tag == 'dt':
-            self.state_stack.push(self.FilmsParseState.IN_LABEL)
-        elif self.state_stack.state_is(self.FilmsParseState.AWAITING_VALUE) and tag == 'dd':
-            self.state_stack.change(self.FilmsParseState.IN_VALUE)
+            case [self.FilmsParseState.IN_ARTICLE, 'ul', _]:
+                self.state_stack.push(self.FilmsParseState.IN_SCREENED_FILMS)
+            case [self.FilmsParseState.IN_SCREENED_FILMS, 'a', a] if a and a[0][0] == 'href':
+                self.add_screened_film_url(a[0][1])
+            case [self.FilmsParseState.IN_PROPERTIES, 'dt', _]:
+                self.state_stack.push(self.FilmsParseState.IN_LABEL)
+            case [self.FilmsParseState.AWAITING_VALUE, 'dd', _]:
+                self.state_stack.change(self.FilmsParseState.IN_VALUE)
 
     def handle_endtag(self, tag):
         HtmlPageParser.handle_endtag(self, tag)
 
-        if self.state_stack.state_is(self.FilmsParseState.IN_PARAGRAPH) and tag == 'p':
-            self.state_stack.pop()
-            self.add_paragraph()
-        elif self.state_stack.state_is(self.FilmsParseState.IN_EMPHASIS) and tag == 'em':
-            self.state_stack.pop()
-        elif self.state_stack.state_is(self.FilmsParseState.IN_COMBINATION) and tag == 'em':
-            self.state_stack.pop()
-            self.state_stack.pop()
-            self.state_stack.push(self.FilmsParseState.IN_COMBINATION)
-        elif self.state_stack.state_is(self.FilmsParseState.IN_SCREENED_FILMS) and tag == 'ul':
-            self.state_stack.pop()
-        elif self.state_stack.state_is(self.FilmsParseState.IN_ARTICLE) and tag == 'div':
-            self.state_stack.pop()
-            self.set_article()
-        elif self.state_stack.state_is(self.FilmsParseState.IN_PROPERTIES) and tag == 'dl':
-            self.state_stack.change(self.FilmsParseState.DONE)
-            self.finish_parsing()
+        match [self.state_stack.state(), tag]:
+            case [self.FilmsParseState.IN_PARAGRAPH, 'p']:
+                self.state_stack.pop()
+                self.add_paragraph()
+            case [self.FilmsParseState.IN_EMPHASIS, 'em']:
+                self.state_stack.pop()
+            case [self.FilmsParseState.IN_COMBINATION, 'em']:
+                self.state_stack.pop()
+                self.state_stack.pop()
+                self.state_stack.push(self.FilmsParseState.IN_COMBINATION)
+            case [self.FilmsParseState.IN_SCREENED_FILMS, 'ul']:
+                self.state_stack.pop()
+            case [self.FilmsParseState.IN_ARTICLE, 'div']:
+                self.state_stack.pop()
+                self.set_article()
+            case [self.FilmsParseState.IN_PROPERTIES, 'dl']:
+                self.state_stack.change(self.FilmsParseState.DONE)
+                self.finish_parsing()
 
     def handle_data(self, data):
         HtmlPageParser.handle_data(self, data)
 
-        if self.state_stack.state_is(self.FilmsParseState.IN_TITLE):
-            self.title = data.strip()
-            unwanted_end = ' – Movies that Matter'
-            if self.title.endswith(unwanted_end):
-                self.title = self.title[:-len(unwanted_end)]
-            self.state_stack.change(self.FilmsParseState.IDLE)
-        elif self.state_stack.state_in([self.FilmsParseState.IN_PARAGRAPH, self.FilmsParseState.IN_EMPHASIS]):
-            self.article_paragraph += data.replace('\n', ' ')
-            if data.strip() == 'Deze korte film maakt deel uit van het programma':
-                self.state_stack.push(self.FilmsParseState.IN_COMBINATION)
-        elif self.state_stack.state_is(self.FilmsParseState.IN_LABEL):
-            self.label = data
-            self.state_stack.change(self.FilmsParseState.AWAITING_VALUE)
-        elif self.state_stack.state_is(self.FilmsParseState.IN_VALUE):
-            self.film_property_by_label[self.label] = data
-            self.state_stack.pop()
+        match self.state_stack.state():
+            case self.FilmsParseState.IN_TITLE:
+                self.title = data.strip()
+                unwanted_end = ' – Movies that Matter'
+                if self.title.endswith(unwanted_end):
+                    self.title = self.title[:-len(unwanted_end)]
+                self.state_stack.change(self.FilmsParseState.IDLE)
+            case self.FilmsParseState.IN_PARAGRAPH | self.FilmsParseState.IN_EMPHASIS:
+                self.article_paragraph += data.replace('\n', ' ')
+                if data.strip() == 'Deze korte film maakt deel uit van het programma':
+                    self.state_stack.push(self.FilmsParseState.IN_COMBINATION)
+            case self.FilmsParseState.IN_LABEL:
+                self.label = data
+                self.state_stack.change(self.FilmsParseState.AWAITING_VALUE)
+            case self.FilmsParseState.IN_VALUE:
+                self.film_property_by_label[self.label] = data
+                self.state_stack.pop()
 
     @staticmethod
     def apply_combinations(festival_data):
@@ -605,7 +603,7 @@ class ScreeningsPageParser(HtmlPageParser):
             pass
         else:
             if locations_html is not None:
-                shopping_cart_parser = ShoppingCartPageParser(self.festival_data, self.film, self.screening_nr, url)
+                shopping_cart_parser = ShoppingCartPageParser(self.festival_data, self.film, self.screening_nr)
                 shopping_cart_parser.feed(locations_html)
                 self.screen_name = shopping_cart_parser.current_screen
 
@@ -618,30 +616,25 @@ class ScreeningsPageParser(HtmlPageParser):
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
 
-        if self.stateStack.state_is(self.ScreeningsParseState.IDLE) and tag == 'div' and len(attrs) > 0:
-            if attrs[0][1] == 'film-detail__viewings tile-side':
+        match [self.stateStack.state(), tag, attrs]:
+            case [self.ScreeningsParseState.IDLE, 'div', a] if a and a[0][1] == 'film-detail__viewings tile-side':
                 self.stateStack.change(self.ScreeningsParseState.IN_SCREENINGS)
-        elif self.stateStack.state_is(self.ScreeningsParseState.IN_SCREENINGS) and tag == 'div' and len(attrs) > 0:
-            if attrs[0][1] == 'tile-date':
+            case [self.ScreeningsParseState.IN_SCREENINGS, 'div', a] if a and a[0][1] == 'tile-date':
                 self.stateStack.push(self.ScreeningsParseState.IN_DATE)
-            elif attrs[0][1].startswith('tile-time  '):
+            case [self.ScreeningsParseState.IN_SCREENINGS, 'div', a] if a and a[0][1].startswith('tile-time  '):
                 self.stateStack.push(self.ScreeningsParseState.AFTER_DATE)
-        elif self.stateStack.state_is(self.ScreeningsParseState.AFTER_DATE) and tag == 'a' and len(attrs) > 1:
-            if attrs[0][1] == 'time':
+            case [self.ScreeningsParseState.AFTER_DATE, 'a', a] if a and a[0][1] == 'time':
                 self.read_screen_if_needed(attrs[1][1])
                 self.stateStack.change(self.ScreeningsParseState.IN_TIMES)
-        elif self.stateStack.state_is(self.ScreeningsParseState.AFTER_TIMES):
-            if tag == 'p' and len(attrs) > 0 and attrs[0][1] == 'location':
+            case [self.ScreeningsParseState.AFTER_TIMES, 'p', a] if a and a[0][1] == 'location':
                 self.stateStack.change(self.ScreeningsParseState.IN_LOCATION)
-            elif tag == 'span' and len(attrs) and attrs[0][1] == 'label uitverkocht':
+            case [self.ScreeningsParseState.AFTER_TIMES, 'span', a] if a and a[0][1] == 'label uitverkocht':
                 self.sold_out = True
-        elif self.stateStack.state_is(self.ScreeningsParseState.AFTER_LOCATION) and tag == 'span' and len(attrs) > 0:
-            if attrs[0][1] == 'label label__verdieping':
+            case [self.ScreeningsParseState.AFTER_LOCATION, 'span', a] if a and a[0][1] == 'label label__verdieping':
                 self.qa = 'met verdieping'
-            elif attrs[0][1] == 'label':
+            case [self.ScreeningsParseState.AFTER_LOCATION, 'span', a] if a and a[0][1] == 'label':
                 self.stateStack.push(self.ScreeningsParseState.IN_LABEL)
-        elif self.stateStack.state_is(self.ScreeningsParseState.IN_SCREENINGS) and tag == 'script' and len(attrs) > 0:
-            if attrs[0][1] == 'application/json':
+            case [self.ScreeningsParseState.IN_SCREENINGS, 'script', a] if a and attrs[0][1] == 'application/json':
                 self.stateStack.change(self.ScreeningsParseState.DONE)
 
     def handle_endtag(self, tag):
@@ -654,18 +647,19 @@ class ScreeningsPageParser(HtmlPageParser):
     def handle_data(self, data):
         HtmlPageParser.handle_data(self, data)
 
-        if self.stateStack.state_is(self.ScreeningsParseState.IN_DATE):
-            self.start_date = self.parse_date(data)
-            self.stateStack.change(self.ScreeningsParseState.AFTER_DATE)
-        elif self.stateStack.state_is(self.ScreeningsParseState.IN_TIMES):
-            self.set_screening_times(data)
-            self.stateStack.change(self.ScreeningsParseState.AFTER_TIMES)
-        elif self.stateStack.state_is(self.ScreeningsParseState.IN_LOCATION):
-            self.set_screen(data)
-            self.stateStack.change(self.ScreeningsParseState.AFTER_LOCATION)
-        elif self.stateStack.state_is(self.ScreeningsParseState.IN_LABEL):
-            self.parse_label(data)
-            self.stateStack.pop()
+        match self.stateStack.state():
+            case self.ScreeningsParseState.IN_DATE:
+                self.start_date = self.parse_date(data)
+                self.stateStack.change(self.ScreeningsParseState.AFTER_DATE)
+            case self.ScreeningsParseState.IN_TIMES:
+                self.set_screening_times(data)
+                self.stateStack.change(self.ScreeningsParseState.AFTER_TIMES)
+            case self.ScreeningsParseState.IN_LOCATION:
+                self.set_screen(data)
+                self.stateStack.change(self.ScreeningsParseState.AFTER_LOCATION)
+            case self.ScreeningsParseState.IN_LABEL:
+                self.parse_label(data)
+                self.stateStack.pop()
 
 
 class ShoppingCartPageParser(HtmlPageParser):
@@ -674,7 +668,7 @@ class ShoppingCartPageParser(HtmlPageParser):
         IN_SCREEN = auto()
         DONE = auto()
 
-    def __init__(self, festival_data, film, sequence_nr, url):
+    def __init__(self, festival_data, film, sequence_nr):
         HtmlPageParser.__init__(self, festival_data, debug_recorder, 'SC', debugging=DEBUGGING)
         self.film = film
         self.sequence_nr = sequence_nr
@@ -701,12 +695,13 @@ class ShoppingCartPageParser(HtmlPageParser):
         HtmlPageParser.handle_starttag(self, tag, attrs)
 
         if self.state_stack.state_is(self.ShoppingCartState.IDLE):
-            if tag == 'div' and len(attrs) > 0 and attrs[0][1] == 'at-show-property at-show-location':
-                self.state_stack.change(self.ShoppingCartState.IN_SCREEN)
-            elif tag == 'iframe' and len(attrs) > 4 and attrs[0][1] == 'order__iframe order__iframe--crossmarx':
-                details_url = attrs[4][1]
-                self.get_theater_screen(details_url)
-                self.state_stack.change(self.ShoppingCartState.DONE)
+            match [tag, attrs]:
+                case ['div', a] if a and a[0][1] == 'at-show-property at-show-location':
+                    self.state_stack.change(self.ShoppingCartState.IN_SCREEN)
+                case ['iframe', a] if len(a) > 4 and a[0][1] == 'order__iframe order__iframe--crossmarx':
+                    details_url = attrs[4][1]
+                    self.get_theater_screen(details_url)
+                    self.state_stack.change(self.ShoppingCartState.DONE)
 
     def handle_data(self, data):
         if self.state_stack.state_is(self.ShoppingCartState.IN_SCREEN):
@@ -744,7 +739,7 @@ class TheaterScreenPageParser(HtmlPageParser):
 class MtmfData(FestivalData):
 
     def __init__(self, planner_data_dir):
-        FestivalData.__init__(self, planner_data_dir, FESTIVAL_CITY)
+        super().__init__(FESTIVAL_CITY, planner_data_dir)
 
     def film_key(self, film, url):
         return url

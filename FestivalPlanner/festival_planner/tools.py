@@ -97,8 +97,8 @@ def user_represents_fan(request, fan):
 
 def add_base_context(request, param_dict):
     festival = current_festival(request.session)
-    festival_color = festival.festival_color if festival is not None else None
-    background_image = festival.base.image if festival is not None else None
+    festival_color = festival.festival_color if festival else None
+    background_image = festival.base.image if festival else None
     fan = current_fan(request.session)
 
     base_param_dict = {
@@ -110,4 +110,4 @@ def add_base_context(request, param_dict):
         'user_is_admin': user_is_admin(request),
         'user_represents_fan': user_represents_fan(request, fan),
     }
-    return {**base_param_dict, **param_dict}
+    return base_param_dict | param_dict
