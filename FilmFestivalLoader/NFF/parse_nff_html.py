@@ -852,7 +852,7 @@ class NffData(FestivalData):
     url_by_title['The Undercurrent'] = 'https://www.filmfestival.nl/en/films/-1'
 
     def __init__(self, plan_dir):
-        FestivalData.__init__(self, plan_dir)
+        super().__init__(festival_city, plan_dir)
         self.nff_films = []
 
     def __repr__(self):

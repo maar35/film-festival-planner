@@ -302,7 +302,7 @@ class FilmDataBackupView(LoginRequiredMixin, FormView):
             'city_count': City.cities.count(),
             'cities_file': CITIES_BACKUP_PATH,
         }
-        context = add_base_context(self.request, {**super_context, **new_context})
+        context = add_base_context(self.request, super_context | new_context)
         return context
 
     def form_valid(self, form):
