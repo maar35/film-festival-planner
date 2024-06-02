@@ -10,6 +10,8 @@ from datetime import datetime
 import inspect
 import yaml
 
+SUPPRESS_INFO_PRINTS = False
+
 
 def config():
     return Config().config
@@ -17,6 +19,11 @@ def config():
 
 def comment(text):
     print(f"\n{datetime.now()}  - {text}")
+
+
+def pr_info(*args):
+    if not SUPPRESS_INFO_PRINTS:
+        print(*args)
 
 
 class Config:

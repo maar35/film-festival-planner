@@ -13,7 +13,7 @@ import re
 import xml.etree.ElementTree as Tree
 from enum import Enum, auto
 
-from Shared.application_tools import config
+from Shared.application_tools import config, pr_info
 
 interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
 articles_file = os.path.join(interface_dir, "articles.txt")
@@ -42,13 +42,13 @@ def link_screened_film(festival_data, sub_film, main_film, main_film_info=None, 
 def write_lists(festival_data, write_film_list, write_other_lists):
 
     if write_film_list or write_other_lists:
-        print("\n\nWRITING LISTS")
+        pr_info("\n\nWRITING LISTS")
 
     if write_film_list:
         festival_data.sort_films()
         festival_data.write_films()
     else:
-        print("Films NOT WRITTEN")
+        pr_info("Films NOT WRITTEN")
 
     if write_other_lists:
         festival_data.write_film_ids()
@@ -61,7 +61,7 @@ def write_lists(festival_data, write_film_list, write_other_lists):
         festival_data.write_sections()
         festival_data.write_subsections()
     else:
-        print("Film info, screens and screenings NOT WRITTEN")
+        pr_info("Film info, screens and screenings NOT WRITTEN")
 
 
 class UnicodeMapper:
@@ -444,12 +444,12 @@ class FestivalData:
     curr_section_id = None
     curr_subsection_id = None
     common_data_dir = os.path.expanduser(f'~/{config()["Paths"]["CommonDataDirectory"]}')
-    default_city_name = 'Bullshit City'
     dialect = None
     write_verbose = True
 
-    def __init__(self, plandata_dir, default_city_name=None):
-        self.default_city_name = default_city_name or self.default_city_name
+    def __init__(self, default_city_name, plandata_dir, common_data_dir=None):
+        self.default_city_name = default_city_name
+        self.common_data_dir = common_data_dir or self.common_data_dir
         self.films = []
         self.filminfos = []
         self.screenings = []
@@ -612,7 +612,7 @@ class FestivalData:
                 else 'OnLine' if abbr.startswith('online')\
                 else 'Physical'
             if verbose:
-                print(f"NEW SCREEN:  '{theater.city}' '{theater.name}' '{screen_parse_name}' => {abbr}")
+                pr_info(f"NEW SCREEN:  '{theater.city}' '{theater.name}' '{screen_parse_name}' => {abbr}")
             screen = Screen(screen_id, theater, screen_parse_name, abbr, screen_type)
             self.screen_by_location[screen_key] = screen
         return screen
@@ -799,9 +799,9 @@ class FestivalData:
                 csv_writer.writerow(Film.film_repr_csv_head())
                 for film in public_films:
                     csv_writer.writerow(film.row_repr())
-            print(f'Done writing {len(public_films)} of {len(self.films)} records to {self.films_file}.')
+            pr_info(f'Done writing {len(public_films)} of {len(self.films)} records to {self.films_file}.')
         else:
-            print('No films to be written.')
+            pr_info('No films to be written.')
 
     def write_film_ids(self):
         film_id_count = len(self.film_id_by_url)
@@ -811,7 +811,7 @@ class FestivalData:
                     title = self.title_by_film_id[film_id]
                     text = ";".join([str(film_id), title.replace(";", ".,"), url])
                     f.write(f'{text}\n')
-            print(f'Done writing {film_id_count} records to {self.filmids_file}.')
+            pr_info(f'Done writing {film_id_count} records to {self.filmids_file}.')
 
     def write_yaml_filminfo(self):
         data = [i for i in self.filminfos if self.film_can_go_to_planner(i.filmid)]
@@ -825,7 +825,7 @@ class FestivalData:
         with open(self.filminfo_yaml_file, 'w') as csvfile:
             csv_writer = csv.writer(csvfile, self.dialect)
             csv_writer.writerows(rows)
-        print(f'Done writing {len(data)} objects to {self.filminfo_yaml_file}')
+        pr_info(f'Done writing {len(data)} objects to {self.filminfo_yaml_file}')
 
     def write_filminfo(self):
         info_count = 0
@@ -855,41 +855,41 @@ class FestivalData:
                                     ScreenedFilmType=screened_film.screened_film_type.name)
         tree = Tree.ElementTree(filminfos)
         tree.write(self.filminfo_file, encoding='utf-8', xml_declaration=True)
-        print(f"Done writing {info_count} records to {self.filminfo_file}.")
+        pr_info(f"Done writing {info_count} records to {self.filminfo_file}.")
 
     def write_sections(self):
         with open(self.sections_file, 'w') as f:
             for section in self.section_by_id.values():
                 f.write((repr(section)))
         if self.write_verbose:
-            print(f'Done writing {len(self.section_by_id)} records to {self.sections_file}.')
+            pr_info(f'Done writing {len(self.section_by_id)} records to {self.sections_file}.')
 
     def write_subsections(self):
         with open(self.subsections_file, 'w') as f:
             for subsection in self.subsection_by_name.values():
                 f.write(repr(subsection))
-        print(f'Done writing {len(self.subsection_by_name)} records to {self.subsections_file}.')
+        pr_info(f'Done writing {len(self.subsection_by_name)} records to {self.subsections_file}.')
 
     def write_new_cities(self):
         new_cities = [city for city in self.city_by_location.values() if city.new]
         with open(self.new_cities_file, 'w') as f:
             for city in new_cities:
                 f.write(repr(city))
-        print(f'Done writing {len(new_cities)} records to {self.new_cities_file}')
+        pr_info(f'Done writing {len(new_cities)} records to {self.new_cities_file}')
 
     def write_new_theaters(self):
         new_theaters = [theater for theater in self.theater_by_location.values() if theater.new]
         with open(self.new_theaters_file, 'w') as f:
             for theater in new_theaters:
                 f.write(repr(theater))
-        print(f'Done writing {len(new_theaters)} records to {self.new_theaters_file}')
+        pr_info(f'Done writing {len(new_theaters)} records to {self.new_theaters_file}')
 
     def write_new_screens(self):
         new_screens = [screen for screen in self.screen_by_location.values() if screen.new]
         with open(self.new_screens_file, 'w') as f:
             for screen in new_screens:
                 f.write(repr(screen))
-        print(f'Done writing {len(new_screens)} records to {self.new_screens_file}.')
+        pr_info(f'Done writing {len(new_screens)} records to {self.new_screens_file}.')
 
     def write_screenings(self):
         public_screenings = []
@@ -899,7 +899,7 @@ class FestivalData:
                 f.write(self.screenings[0].screening_repr_csv_head())
                 for screening in public_screenings:
                     f.write(repr(screening))
-        print(f"Done writing {len(public_screenings)} of {len(self.screenings)} records to {self.screenings_file}.")
+        pr_info(f"Done writing {len(public_screenings)} of {len(self.screenings)} records to {self.screenings_file}.")
 
 
 class Error(Exception):

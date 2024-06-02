@@ -58,7 +58,7 @@ class FestivalModelTests(TestCase):
         festival_2 = self.create_festival('IDFA', '2025-07-17', '2022-07-27')
         festival_3 = self.create_festival('MTMF', '2020-04-12', '2022-07-27')
         response = self.client.get(reverse('festivals:index'))
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             response.context['festival_rows'],
             [festival_2, festival_1, festival_3],
         )
