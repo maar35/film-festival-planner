@@ -153,8 +153,8 @@ class BaseHtmlPageParser(HTMLParser):
             self.stack.append(state)
             self._print_debug(state)
 
-        def pop(self):
-            self.stack[-1:] = []
+        def pop(self, depth=1):
+            self.stack[-depth:] = []
             self._print_debug(self.stack[-1])
 
         def change(self, state):

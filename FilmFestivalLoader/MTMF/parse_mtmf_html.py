@@ -263,6 +263,14 @@ class FilmPageParser(HtmlPageParser):
             minutes = 0
         return datetime.timedelta(minutes=minutes)
 
+    @staticmethod
+    def set_title(data):
+        title = data.strip()
+        unwanted_end = ' – Movies that Matter'
+        if title.endswith(unwanted_end):
+            title = title[:-len(unwanted_end)]
+        return title
+
     def add_film(self):
         if self.title is None:
             error_collector.add('Cannot create a film without a title', self.url)
@@ -358,8 +366,7 @@ class FilmPageParser(HtmlPageParser):
             case [self.FilmsParseState.IN_EMPHASIS, 'em']:
                 self.state_stack.pop()
             case [self.FilmsParseState.IN_COMBINATION, 'em']:
-                self.state_stack.pop()
-                self.state_stack.pop()
+                self.state_stack.pop(depth=2)
                 self.state_stack.push(self.FilmsParseState.IN_COMBINATION)
             case [self.FilmsParseState.IN_SCREENED_FILMS, 'ul']:
                 self.state_stack.pop()
@@ -375,10 +382,7 @@ class FilmPageParser(HtmlPageParser):
 
         match self.state_stack.state():
             case self.FilmsParseState.IN_TITLE:
-                self.title = data.strip()
-                unwanted_end = ' – Movies that Matter'
-                if self.title.endswith(unwanted_end):
-                    self.title = self.title[:-len(unwanted_end)]
+                self.title = self.set_title(data)
                 self.state_stack.change(self.FilmsParseState.IDLE)
             case self.FilmsParseState.IN_PARAGRAPH | self.FilmsParseState.IN_EMPHASIS:
                 self.article_paragraph += data.replace('\n', ' ')
