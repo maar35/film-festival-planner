@@ -101,24 +101,28 @@ class Film:
         'combinations': category_combinations,
         'events': category_events,
     }
+    minutes_mark = "′"
     mapper = UnicodeMapper()
     articles_by_language = {}
     language_by_title = {}
     re_alpha = re.compile(r'^[a-zA-Z]')
 
-    def __init__(self, seqnr, filmid, title, url):
+    def __init__(self, seqnr, filmid, title, url, duration=None, medium_category=None):
         self.seqnr = seqnr
         self.filmid = filmid
         self.title = title
         self.url = url
         self.title_language = self.language()
         self.subsection = None
-        self.duration = None
-        self.medium_category = None
+        self.duration = duration
+        self.medium_category = medium_category
         self.sortstring = self.lower(self.strip_article())
 
     def __str__(self):
-        return ", ".join([str(self.filmid), self.title, self.duration_str(), self.medium_category])
+        return ", ".join([str(self.filmid),
+                          self.title,
+                          self.duration_str() if self.duration else '',
+                          self.medium_category])
 
     def __lt__(self, other):
         return self.sortstring < other.sortstring
@@ -145,8 +149,8 @@ class Film:
             self.sortstring,
             self.title,
             self.title_language,
-            str(self.subsection.subsection_id) if self.subsection is not None else '',
-            self.duration_str(),
+            str(self.subsection.subsection_id) if self.subsection else '',
+            self.duration_str() if self.duration else '0' + self.minutes_mark,
             self.category_by_string[self.medium_category],
             self.url
         ]
@@ -164,7 +168,7 @@ class Film:
 
     def duration_str(self):
         minutes = Film.duration_to_minutes(self.duration)
-        return str(minutes) + "′"
+        return str(minutes) + self.minutes_mark
 
     def language(self):
         try:
@@ -497,15 +501,6 @@ class FestivalData:
     def film_key(self, title, url):
         return title
 
-    def create_film(self, title, url):
-        film_id = self.new_film_id(self.film_key(title, url))
-        if film_id not in [f.filmid for f in self.films]:
-            self.film_seqnr += 1
-            self.title_by_film_id[film_id] = title
-            self.film_id_by_url[url] = film_id
-            return Film(self.film_seqnr, film_id, title, url)
-        return None
-
     def new_film_id(self, key):
         try:
             film_id = self.film_id_by_key[key]
@@ -514,6 +509,21 @@ class FestivalData:
             film_id = self.curr_film_id
             self.film_id_by_key[key] = film_id
         return film_id
+
+    def create_film(self, title, url, duration=None, medium_category=None):
+        film_id = self.new_film_id(self.film_key(title, url))
+        if film_id not in [f.filmid for f in self.films]:
+            self.film_seqnr += 1
+            self.title_by_film_id[film_id] = title
+            self.film_id_by_url[url] = film_id
+            return Film(self.film_seqnr, film_id, title, url, duration=duration, medium_category=medium_category)
+        return None
+
+    def add_film(self, title, url, duration=None, medium_category=None):
+        film = self.create_film(title, url, duration=duration, medium_category=medium_category)
+        if film:
+            self.films.append(film)
+        return film
 
     def get_film_by_key(self, title, url):
         key = self.film_key(title, url)
@@ -649,6 +659,7 @@ class FestivalData:
             self.curr_film_id = max(self.film_id_by_key.values())
         except ValueError:
             self.curr_film_id = 0
+        pr_info(f"Done reading {len(self.film_id_by_url)} records from {self.filmids_file}.")
 
     def read_sections(self):
         try:
