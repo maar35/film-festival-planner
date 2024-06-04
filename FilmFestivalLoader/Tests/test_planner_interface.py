@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from datetime import timedelta
 
-import Shared.application_tools as application_tools
+import Shared.application_tools as app_tools
 from Shared.planner_interface import FestivalData, Section, Film
 from Tests.AuxiliaryClasses.test_film import BaseFilmTestCase
 
@@ -56,7 +56,7 @@ class SectionsTestCase(unittest.TestCase):
 
 class ScreensTestCase(unittest.TestCase):
     def setUp(self):
-        application_tools.SUPPRESS_INFO_PRINTS = True
+        app_tools.SUPPRESS_INFO_PRINTS = True
         self.city = 'Amsterdam'
         self.temp_dir = tempfile.TemporaryDirectory()
         self.festival_data = FestivalData(self.city, self.temp_dir.name, self.temp_dir.name)
