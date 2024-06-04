@@ -520,9 +520,21 @@ class FestivalData:
         return None
 
     def add_film(self, title, url, duration=None, medium_category=None):
-        film = self.create_film(title, url, duration=duration, medium_category=medium_category)
-        if film:
-            self.films.append(film)
+        title_exists = title in self.title_by_film_id.values()
+        url_exists = url in self.film_id_by_url.keys()
+        match [title_exists, url_exists]:
+            case [False, False]:
+                # Create new film.
+                film = self.create_film(title, url, duration=duration, medium_category=medium_category)
+                if film:
+                    self.films.append(film)
+            case [True, True]:
+                # Update existing film.
+                film = self.get_film_by_key(title, url)
+                film.duration = duration or film.duration
+                film.medium_category = medium_category or film.medium_category
+            case _:
+                film = None
         return film
 
     def get_film_by_key(self, title, url):

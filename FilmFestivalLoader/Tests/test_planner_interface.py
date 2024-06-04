@@ -1,8 +1,10 @@
 import tempfile
 import unittest
+from datetime import timedelta
 
 import Shared.application_tools as application_tools
-from Shared.planner_interface import FestivalData, Section
+from Shared.planner_interface import FestivalData, Section, Film
+from Tests.AuxiliaryClasses.test_film import BaseFilmTestCase
 
 
 class SectionsTestCase(unittest.TestCase):
@@ -78,6 +80,104 @@ class ScreensTestCase(unittest.TestCase):
         # Assert.
         self.assertEqual(len(data.screen_by_location), 2)
         self.assertEqual(len(data.theater_by_location), 1)
+
+
+class PlannerInterfaceBaseTestCase(BaseFilmTestCase):
+    def setUp(self):
+        super().setUp()
+        self.festival_data = FestivalData('Riga', self.file_keeper.plandata_dir)
+
+    def tearDown(self):
+        super().tearDown()
+        del self.festival_data
+
+
+class AddFilmTestCase(PlannerInterfaceBaseTestCase):
+    def test_add_new_film(self):
+        # Arrange.
+        film_args = [
+            'Amphetamine',
+            'https://iffr.com/nl/iffr/2024/films/amphetamine',
+        ]
+        film_kwargs = {
+            'duration': timedelta(minutes=97),
+        }
+
+        # Act.
+        self.festival_data.add_film(*film_args, **film_kwargs)
+
+        # Assert.
+        films = self.festival_data.films
+        self.assertEqual(len(films), 1)
+        self.assertIsInstance(films[0], Film)
+
+    def test_add_existing_title_film(self):
+        # Arrange.
+        film_args = [
+            'Amphetamine',
+            'https://iffr.com/nl/iffr/2024/films/amphetamine',
+        ]
+        film_kwargs_1 = {
+            'duration': timedelta(minutes=11),
+        }
+        film_kwargs_2 = {
+            'duration': timedelta(minutes=204),
+        }
+
+        # Act.
+        film_1 = self.festival_data.add_film(*film_args, **film_kwargs_1)
+        film_2 = self.festival_data.add_film(*film_args, **film_kwargs_2)
+
+        # Assert.
+        films = self.festival_data.films
+        self.assertEqual(len(films), 1, 'Second film, with same title and url, should update the first')
+        self.assertIsNotNone(film_1)
+        self.assertEqual(films[0].duration, film_2.duration)
+        self.assertEqual(films[0], film_2)
+
+    def test_add_existing_url_film(self):
+        # Arrange.
+        url = 'https://iffr.com/nl/iffr/2024/films/ammore-e-malavita'
+        film_args_1 = [
+            'Love and Underworld',
+            url,
+        ]
+        film_args_2 = [
+            'Ammore e malavita',
+            url,
+        ]
+
+        # Act.
+        film_1 = self.festival_data.add_film(*film_args_1)
+        film_2 = self.festival_data.add_film(*film_args_2)
+
+        # Assert.
+        films = self.festival_data.films
+        self.assertEqual(len(films), 1, 'Second film, with same URL, should be refused')
+        self.assertEqual(films[0], film_1)
+        self.assertIsNone(film_2)
+
+    def test_add_new_url_existing_title(self):
+        # Arrange.
+        title = 'The One Title'
+        film_args_1 = [
+            title,
+            'https://iffr.com/nl/iffr/2024/films/the-one-title'
+        ]
+        film_args_2 = [
+            title,
+            'https://iffr.com/nl/iffr/2024/films/die-ene-titel'
+        ]
+
+        # Act.
+        film_1 = self.festival_data.add_film(*film_args_1)
+        film_2 = self.festival_data.add_film(*film_args_2)
+
+        # Assert.
+        films = self.festival_data.films
+        self.assertEqual(len(films), 1, 'Second film, with same title, should be refused')
+        self.assertEqual(films[0], film_1)
+        self.assertIsNone(film_2)
 
 
 if __name__ == '__main__':
