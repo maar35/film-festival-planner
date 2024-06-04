@@ -55,6 +55,13 @@ def main():
     Film.category_by_string['OtherProgram'] = Film.category_events
 
     # Set-up counters.
+    setup_counters()
+
+    # Try parsing the websites.
+    try_parse_festival_sites(parse_iffr_sites, festival_data, error_collector, debug_recorder, festival, counter)
+
+
+def setup_counters():
     counter.start('no description')
     counter.start('Film')
     counter.start('CombinedProgram')
@@ -69,9 +76,6 @@ def main():
     for screened_film_type in ScreenedFilmType:
         counter.start(screened_film_type.name)
     counter.start('wrong_title')
-
-    # Try parsing the websites.
-    try_parse_festival_sites(parse_iffr_sites, festival_data, error_collector, debug_recorder, festival, counter)
 
 
 def parse_iffr_sites(festival_data):

@@ -4,6 +4,7 @@ import unittest
 
 from Shared.parse_tools import FileKeeper
 from Shared.planner_interface import Film, FilmInfo
+import Shared.application_tools as app_tools
 
 
 class BaseTestCase(unittest.TestCase):
@@ -13,10 +14,12 @@ class BaseTestCase(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
+        app_tools.SUPPRESS_INFO_PRINTS = True
         self.temp_dir = tempfile.TemporaryDirectory()
         self.file_keeper = FileKeeper(self.festival, self.year, basedir=self.temp_dir.name)
 
     def tearDown(self):
+        super().tearDown()
         self.temp_dir.cleanup()
 
 

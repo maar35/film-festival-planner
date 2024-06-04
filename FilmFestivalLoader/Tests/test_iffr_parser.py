@@ -202,7 +202,7 @@ class CreateScreenTestCase(BaseFilmTestCase):
         self.assertEqual(screen.type, screen_type)
 
 
-class HandleUtfCodePointTestCas(unittest.TestCase):
+class HandleUtfCodePointTestCase(unittest.TestCase):
     def test_fix_html_code_point(self):
         # Arrange.
         code_point_str = '\u003c'
