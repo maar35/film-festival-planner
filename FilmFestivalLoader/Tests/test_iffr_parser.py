@@ -132,7 +132,7 @@ class IffrCombinationProgramsTestCase(BaseIffrFilmTestCase):
     def test_new_screened_film_screened_before(self):
         # Arrange.
         film = self.festival_data.films[0]
-        film_id = film.filmid
+        film_id = film.film_id
         title = film.title
         film_info = film.film_info(self.festival_data)
         description = film_info.description
@@ -147,7 +147,7 @@ class IffrCombinationProgramsTestCase(BaseIffrFilmTestCase):
     def test_new_screened_film_screened_after(self):
         # Arrange.
         film = self.festival_data.films[0]
-        film_id = film.filmid
+        film_id = film.film_id
         title = film.title
         film_info = film.film_info(self.festival_data)
         description = film_info.description

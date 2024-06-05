@@ -130,12 +130,12 @@ def has_category(film, category):
 def get_film_details(festival_data, category, category_name, always_download=ALWAYS_DOWNLOAD):
     films = [film for film in festival_data.films if has_category(film, category)]
     for film in films:
-        film_file = file_keeper.film_webdata_file(film.filmid)
+        film_file = file_keeper.film_webdata_file(film.film_id)
         url_file = UrlFile(film.url, film_file, error_collector, debug_recorder, byte_count=300)
         comment_at_download = f'Downloading site of {film.title}: {film.url}, encoding: {url_file.encoding}'
         film_html = url_file.get_text(always_download=always_download, comment_at_download=comment_at_download)
         if film_html is not None:
-            print(f'Analysing html file {film.filmid} of {category_name} {film.title}')
+            print(f'Analysing html file {film.film_id} of {category_name} {film.title}')
             FilmInfoPageParser(festival_data, film, url_file.encoding).feed(film_html)
 
 
@@ -153,7 +153,7 @@ def get_subsection_details(festival_data):
 
 def set_combinations_from_screening_data(festival_data):
     def coinciding(screening, key, other_film):
-        return ScreeningKey(screening) == key and screening.film.filmid != other_film.filmid
+        return ScreeningKey(screening) == key and screening.film.film_id != other_film.film_id
 
     for main_film, screening_key in ScreeningParser.screening_key_by_main_film.items():
         main_film_info = main_film.film_info(festival_data)
@@ -297,7 +297,7 @@ class AzPageParser(HtmlPageParser):
             self.film.sortstring = self.sorted_title
             self.increase_per_duration_class_counter(self.film)
             self.increase_per_film_category_counter()
-            self.film_id_by_title[self.film.title] = self.film.filmid
+            self.film_id_by_title[self.film.title] = self.film.film_id
             print(f'Adding FILM: {self.title} ({self.film.duration_str()}) {self.film.medium_category}')
             self.festival_data.films.append(self.film)
             self.film.subsection = self.get_subsection()
@@ -305,7 +305,7 @@ class AzPageParser(HtmlPageParser):
 
     def add_film_info(self):
         if len(self.description) > 0:
-            film_info = FilmInfo(self.film.filmid, self.description, self.article)
+            film_info = FilmInfo(self.film.film_id, self.description, self.article)
             self.festival_data.filminfos.append(film_info)
 
     def increase_per_duration_class_counter(self, film):
@@ -638,7 +638,9 @@ class FilmInfoPageParser(ScreeningParser):
         self.set_article()
         self.film_info.article = self.article
         self.film_info.metadata = self.film_property_by_label
-        self.film_info.metadata['Reviewer'] = self.get_reviewer()
+        reviewer = self.get_reviewer()
+        self.film_info.metadata['Reviewer'] = reviewer
+        self.film.reviewer = reviewer
         if has_category(self.film, Film.category_combinations) or self.event_is_combi:
             self.set_combination()
 

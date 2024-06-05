@@ -106,7 +106,7 @@ class FilmDetailsReader:
         always_download = ALWAYS_DOWNLOAD
         for film, sections in FilmsFromSectionPageParser.sections_by_film.items():
             comment(f'Parsing film details of {film.title}')
-            film_file = fileKeeper.film_webdata_file(film.filmid)
+            film_file = fileKeeper.film_webdata_file(film.film_id)
             url = film.url
             url_file = UrlFile(url, film_file, error_collector, debug_recorder, byte_count=200)
             film_html = url_file.get_text(always_download=always_download,
@@ -484,7 +484,7 @@ class FilmPageParser(HtmlPageParser):
         counter.increase('articles')
 
     def add_film_info(self):
-        self.film_info = FilmInfo(self.film.filmid, self.description, self.article)
+        self.film_info = FilmInfo(self.film.film_id, self.description, self.article)
         self.festival_data.filminfos.append(self.film_info)
 
     def update_film_info(self):
@@ -598,16 +598,16 @@ class FilmPageParser(HtmlPageParser):
         # Update the combination film info.
         combi_film_info = combi_film.film_info(self.festival_data)
         screened_film_info = self.film.film_info(self.festival_data)
-        if not combi_film_info.filmid:
-            combi_film_info.filmid = combi_film.filmid
+        if not combi_film_info.film_id:
+            combi_film_info.film_id = combi_film.film_id
             combi_film_info.description = self.combi_title
             self.festival_data.filminfos.append(combi_film_info)
-        if self.film.filmid not in [sf.filmid for sf in combi_film_info.screened_films]:
-            screened_film = ScreenedFilm(self.film.filmid, self.film.title, screened_film_info.description)
+        if self.film.film_id not in [sf.film_id for sf in combi_film_info.screened_films]:
+            screened_film = ScreenedFilm(self.film.film_id, self.film.title, screened_film_info.description)
             combi_film_info.screened_films.append(screened_film)
 
         # Update the screened film info.
-        if combi_film.filmid not in [cf.filmid for cf in screened_film_info.combination_films]:
+        if combi_film.film_id not in [cf.film_id for cf in screened_film_info.combination_films]:
             screened_film_info.combination_films.append(combi_film)
 
     def handle_starttag(self, tag, attrs):

@@ -290,7 +290,7 @@ class FilmPageParser(HtmlPageParser):
     def add_film_info(self):
         self.set_description_from_article(self.film.title)
         print(f'Description:\n{self.description}')
-        self.film_info = FilmInfo(self.film.filmid, self.description, self.article)
+        self.film_info = FilmInfo(self.film.film_id, self.description, self.article)
         self.festival_data.filminfos.append(self.film_info)
 
     def set_global_film_properties(self):
@@ -298,13 +298,13 @@ class FilmPageParser(HtmlPageParser):
         combinations_count = len(self.combination_urls)
         if combinations_count > 0:
             if ONLY_PARSE_SCREENED_FILMS:
-                self.combination_urls_by_film_id[self.film.filmid] = self.combination_urls
+                self.combination_urls_by_film_id[self.film.film_id] = self.combination_urls
             counter.increase('combination films', increment=combinations_count)
 
         # Link the screened film urls to the current film.
         screened_films_count = len(self.screened_film_urls)
         if screened_films_count > 0:
-            self.screened_film_urls_by_film_id[self.film.filmid] = self.screened_film_urls
+            self.screened_film_urls_by_film_id[self.film.film_id] = self.screened_film_urls
             for url in self.screened_film_urls:
                 subsection_name = SHORTS if self.film.subsection.name == SHORT_COMBOS else self.film.subsection.name
                 subsection = self.festival_data.subsection_by_name[subsection_name]
@@ -413,7 +413,7 @@ class FilmPageParser(HtmlPageParser):
                     combination_films.append(combination_film)
 
                     # Add the current screened film to the combination.
-                    screened_film = ScreenedFilm(film.filmid, film.title, screened_film_info.description)
+                    screened_film = ScreenedFilm(film.film_id, film.title, screened_film_info.description)
                     combination_film_info = combination_film.film_info(festival_data)
                     combination_film_info.screened_films.append(screened_film)
 
@@ -444,7 +444,7 @@ class FilmPageParser(HtmlPageParser):
                 else:
                     # Add screened film to the list.
                     film_info = film.film_info(festival_data)
-                    screened_film = ScreenedFilm(film.filmid, film.title, film_info.description)
+                    screened_film = ScreenedFilm(film.film_id, film.title, film_info.description)
                     screened_films.append(screened_film)
 
                     # Add the current combination to screened film.
@@ -584,7 +584,7 @@ class ScreeningsPageParser(HtmlPageParser):
             for row in screenings_reader:
                 film_id = int(row[film_id_field])
                 start_date_str = row[start_time_field]
-                if film_id == self.film.filmid and start_date_str == self.start_dt.isoformat(sep=' '):
+                if film_id == self.film.film_id and start_date_str == self.start_dt.isoformat(sep=' '):
                     screen_id = int(row[screen_id_field])
                     break
         screen = self.festival_data.get_screen_by_id(screen_id)
@@ -598,7 +598,7 @@ class ScreeningsPageParser(HtmlPageParser):
 
     def read_screen(self, url):
         locations_file_format = os.path.join(file_keeper.webdata_dir, "screenings_{:03d}_{:02d}.html")
-        locations_file = locations_file_format.format(self.film.filmid, self.screening_nr)
+        locations_file = locations_file_format.format(self.film.film_id, self.screening_nr)
         url_file = UrlFile(url, locations_file, error_collector, debug_recorder)
         comment_at_download = f'Downloading shopping cart site {url}'
         try:
@@ -681,7 +681,7 @@ class ShoppingCartPageParser(HtmlPageParser):
 
     def get_theater_screen(self, url):
         details_file_format = os.path.join(file_keeper.webdata_dir, "details_{:03d}_{:02d}.html")
-        details_file = details_file_format.format(self.film.filmid, self.sequence_nr)
+        details_file = details_file_format.format(self.film.film_id, self.sequence_nr)
         url_file = UrlFile(url, details_file, error_collector, debug_recorder)
         comment_at_download = f'Downloading site {url}'
         try:

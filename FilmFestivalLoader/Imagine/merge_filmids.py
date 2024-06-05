@@ -48,9 +48,9 @@ def read_csv(file):
 
 
 def merge_ids(old_infos, new_infos):
-    curr_id = max([info.filmid for info in old_infos])
+    curr_id = max([info.film_id for info in old_infos])
     correct_infos = []
-    old_id_by_title = {info.title: info.filmid for info in old_infos}
+    old_id_by_title = {info.title: info.film_id for info in old_infos}
     new_url_by_title = {info.title: info.url for info in new_infos}
     for title in new_url_by_title.keys():
         if title in old_id_by_title.keys():

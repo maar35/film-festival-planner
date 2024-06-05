@@ -411,7 +411,7 @@ class SimpleLoader(BaseLoader):
 
 class FilmLoader(SimpleLoader):
     expected_header = ['seqnr', 'filmid', 'sort', 'title', 'titlelanguage',
-                       'section', 'duration', 'mediumcategory', 'url']
+                       'section', 'duration', 'mediumcategory', 'reviewer', 'url']
     key_fields = ['festival', 'film_id']
     manager = Film.films
 
@@ -429,7 +429,8 @@ class FilmLoader(SimpleLoader):
         subsection = row[5]
         duration = datetime.timedelta(minutes=int(row[6].rstrip("′")))
         medium_category = row[7]
-        url = row[8]
+        reviewer = row[8]
+        url = row[9]
 
         value_by_field = {
             'festival': self.festival,
@@ -441,6 +442,7 @@ class FilmLoader(SimpleLoader):
             'subsection': subsection,
             'duration': duration,
             'medium_category': medium_category,
+            'reviewer': reviewer,
             'url': url,
         }
         return value_by_field
@@ -821,6 +823,7 @@ class FilmBackupDumper(BaseDumper):
         'subsection',
         'duration',
         'medium_category',
+        'reviewer',
         'url',
     ]
 
@@ -840,6 +843,7 @@ class FilmBackupDumper(BaseDumper):
             film.subsection,
             film.duration,
             film.medium_category,
+            film.reviewer,
             film.url,
         ]
 

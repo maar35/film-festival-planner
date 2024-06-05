@@ -35,9 +35,10 @@ def serialize_film(film):
         film.sort_title,
         film.title,
         film.title_language,
-        film.subsection if film.subsection is not None else '',
+        film.subsection or '',
         duration_str,
         film.medium_category,
+        film.reviewer or '',
         film.url
     ]
     return fields

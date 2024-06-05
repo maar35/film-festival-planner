@@ -378,7 +378,6 @@ class VotesListView(LoginRequiredMixin, ListView):
     fan_list = get_present_fans()
     fragment_keeper = None
     attended_films = []
-    reviewer_by_film_id = {}
     logged_in_fan = None
     festival = None
 
@@ -391,9 +390,6 @@ class VotesListView(LoginRequiredMixin, ListView):
 
         # Read the films that were attended.
         self.set_attended_films()
-
-        # Read the reviewers.
-        self.set_reviewer_by_film_id()
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -434,19 +430,7 @@ class VotesListView(LoginRequiredMixin, ListView):
                         film = self.get_film(row[film_id_index])
                         if film:
                             self.attended_films.append(film)
-        except FileNotFoundError as e:
-            VotesView.unexpected_errors.append(e)
-
-    def set_reviewer_by_film_id(self):
-        film_info_file = self.festival.filminfo_file()
-        try:
-            with open(film_info_file, 'r', newline='') as csvfile:
-                film_info_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
-                id_index = 0
-                reviewer_index = 2
-                self.reviewer_by_film_id = {int(row[id_index]): row[reviewer_index] for row in film_info_reader}
-        except FileNotFoundError as e:
-            self.reviewer_by_film_id = {}
+        except (FileNotFoundError, IndexError) as e:
             VotesView.unexpected_errors.append(e)
 
     def get_film(self, film_id):
@@ -456,13 +440,6 @@ class VotesListView(LoginRequiredMixin, ListView):
             film = None
         return film
 
-    def get_reviewer(self, film):
-        try:
-            reviewer = self.reviewer_by_film_id[film.film_id]
-        except KeyError:
-            reviewer = ''
-        return reviewer
-
     def get_vote_row(self, row_nr, film):
         prefix = VotesView.submit_name_prefix
         choices = FilmFanFilmVote.choices
@@ -471,7 +448,7 @@ class VotesListView(LoginRequiredMixin, ListView):
         vote_row = {
             'film': film,
             'duration_str': film.duration_str(),
-            'reviewer': self.get_reviewer(film),
+            'reviewer': film.reviewer or '',
             'fan_votes': fan_votes,
             'fragment_name': self.fragment_keeper.get_fragment_name(row_nr),
         }
