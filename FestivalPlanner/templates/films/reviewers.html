@@ -1,0 +1,40 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h3>Film reviewers against judgements</h3>
+    {% if unexpected_errors %}
+        <h3 class="error">Unexpected error</h3>
+        {% for error in unexpected_errors %}
+            <p class="log">{{ error }}</p>
+        {% endfor %}
+    {% endif %}
+    <br>
+    <table>
+        <thead>
+            <tr>
+                <th class="sticky-t-head" style="vertical-align: text-top;">Reviewer</th>
+                <th class="sticky-t-head" style="vertical-align: text-top;">#Films</th>
+                <th class="sticky-t-head" style="vertical-align: text-top;">Discrepancy</th>
+                {% for fan in fans %}
+                    <th class="sticky-t-head" style="vertical-align: text-top;">{{ fan }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in reviewer_rows %}
+        <tr>
+            <td>{{ row }}</td>
+            <td>{{ row.duration_str }}</td>
+            <td>{{ row.reviewer }}</td>
+            {% for fan_vote in row.fan_votes %}
+                <td style="text-align: center">{{ fan_vote.rating }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <br>
+{% endblock %}

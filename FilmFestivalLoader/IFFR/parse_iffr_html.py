@@ -27,6 +27,12 @@ DUPLICATE_EVENTS_TITLES_BY_MAIN = {
     'How to Have Sex': ['IFFR x EUR: How to Have Sex'],
     'Blackbird Blackbird Blackberry': ['IFFR Young Selectors: Blackbird Blackbird Blackberry'],
 }
+REVIEWER_BY_ALIAS = {
+    'Cristina Kolozsváry-Kiss': 'Cristina Kolozsváry-Kiss',
+    '­Callum McLean': 'Callum McLean',
+    'Cristina Álvarez López': 'Cristina Álvarez-López',
+}
+REVIEWER_MAX_LENGTH = 44
 
 festival = 'IFFR'
 festival_year = 2024
@@ -586,7 +592,7 @@ class FilmInfoPageParser(ScreeningParser):
         DONE = auto()
 
     debugging = DEBUGGING
-    re_reviewer = re.compile(r'[–]\s(?P<reviewer>[^–0-9]+?)$', re.MULTILINE)
+    re_reviewer = re.compile(r'–\s(?P<reviewer>[^–0-9]+?)$', re.MULTILINE)
 
     def __init__(self, festival_data, film, charset):
         ScreeningParser.__init__(self, festival_data, 'FI', self.debugging)
@@ -628,10 +634,15 @@ class FilmInfoPageParser(ScreeningParser):
             counter.increase('combination events')
 
     def get_reviewer(self):
-        matches = self.re_reviewer.findall(self.article)
-        reviewer = ''
-        if matches:
-            reviewer = matches[-1]
+        reviewer = None
+        if has_category(self.film, Film.category_films):
+            matches = self.re_reviewer.findall(self.article)
+            if matches:
+                reviewer = matches[-1].strip()
+                if len(reviewer) > REVIEWER_MAX_LENGTH:
+                    reviewer = None
+                elif reviewer in REVIEWER_BY_ALIAS.keys():
+                    reviewer = REVIEWER_BY_ALIAS[reviewer]
         return reviewer
 
     def finish_film_info(self):

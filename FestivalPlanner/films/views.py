@@ -529,6 +529,28 @@ class ResultsView(LoginRequiredMixin, DetailView):
         return description
 
 
+class ReviewersView(ListView):
+    template_name = 'films/reviewers.html'
+    context_object_name = 'reviewer_rows'
+    http_method_names = ['get']
+    title = 'Reviewers Statistics'
+    unexpected_errors = []
+
+    def get_queryset(self):
+        reviewed_films = Film.films.exclude(reviewer=None)
+        reviewers = set([film.reviewer for film in reviewed_films if film.reviewer])
+        return sorted(list(reviewers))
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        super_context = super().get_context_data(**kwargs)
+        new_context = {
+            'title': self.title,
+            'unexpected_errors': self.unexpected_errors
+        }
+        context = add_base_context(self.request, super_context | new_context)
+        return context
+
+
 def index(request):
     """
     General index page.

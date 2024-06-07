@@ -20,4 +20,7 @@ urlpatterns = [
 
     # Allow a logged in fan to enter votes.
     path('votes/', views.VotesView.as_view(), name='votes'),
+
+    # Display statistics of reviewers.
+    path('reviewers/', views.ReviewersView.as_view(), name='reviewers')
 ]

@@ -429,7 +429,7 @@ class FilmLoader(SimpleLoader):
         subsection = row[5]
         duration = datetime.timedelta(minutes=int(row[6].rstrip("′")))
         medium_category = row[7]
-        reviewer = row[8]
+        reviewer = row[8] or None
         url = row[9]
 
         value_by_field = {
