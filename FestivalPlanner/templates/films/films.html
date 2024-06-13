@@ -11,6 +11,8 @@
         <a href="{% url 'loader:save_ratings' festival.id %}">Dump ratings</a>
         <br>
         <a href="{% url 'loader:ratings' %}">Load films and ratings</a>
+        <br>
+        <a href="{% url 'films:reviewers' %}">Reviewers</a>
     </span>
     {% if log %}
         <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>

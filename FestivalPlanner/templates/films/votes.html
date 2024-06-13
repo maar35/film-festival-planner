@@ -4,7 +4,12 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3>Fill out your post-attendance votes</h3>
+    <span class="left-half">
+        <h3>Fill out your post-attendance votes</h3>
+    </span>
+    <span class="right-half">
+        <a href="{% url 'films:reviewers' %}">Reviewers</a>
+    </span>
     {% if unexpected_errors %}
         <h3 class="error">Unexpected error</h3>
         {% for error in unexpected_errors %}

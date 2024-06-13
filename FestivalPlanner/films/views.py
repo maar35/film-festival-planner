@@ -21,13 +21,14 @@ from festivals.config import Config
 from festivals.models import current_festival
 from films.forms.film_forms import PickRating, UserForm, refreshed_rating_action
 from films.models import FilmFanFilmRating, Film, current_fan, get_present_fans, fan_rating_str, \
-    FilmFanFilmVote
+    FilmFanFilmVote, fan_rating
 from sections.models import Subsection
 
 STICKY_HEIGHT = 3
 CONSTANTS_CONFIG = Config().config['Constants']
 MAX_SHORT_MINUTES = CONSTANTS_CONFIG['MaxShortMinutes']
 LOWEST_PLANNABLE_RATING = CONSTANTS_CONFIG['LowestPlannableRating']
+COOKIE_KEY_DISPLAY_ALL = 'judged'
 
 
 class FragmentKeeper:
@@ -534,21 +535,133 @@ class ReviewersView(ListView):
     context_object_name = 'reviewer_rows'
     http_method_names = ['get']
     title = 'Reviewers Statistics'
+    fan_list = get_present_fans()
+    display_all_by_query = {'hide': False, 'all': True}
+    query_by_display_all = {display_all: query for query, display_all in display_all_by_query.items()}
+    action_by_display_all = {True: 'Hide not judged', False: 'Display all'}
+    reviewed_films = None
+    total_film_count = None
+    reviewers_of_not_judged = None
     unexpected_errors = []
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.display_all = True
+
+    def dispatch(self, request, *args, **kwargs):
+        self.total_film_count = 0
+        self.reviewers_of_not_judged = []
+
+        # Initialize the filter cookies when necessary.
+        session = self.request.session
+        set_cookie(session, COOKIE_KEY_DISPLAY_ALL, get_cookie(session, COOKIE_KEY_DISPLAY_ALL, self.display_all))
+
+        # Apply filters from url query part.
+        cookie_key = COOKIE_KEY_DISPLAY_ALL
+        if cookie_key in self.request.GET:
+            query_key = request.GET[cookie_key]
+            self.display_all = self.display_all_by_query[query_key]
+            set_cookie(request.session, cookie_key, self.display_all)
+
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
-        reviewed_films = Film.films.exclude(reviewer=None)
-        reviewers = set([film.reviewer for film in reviewed_films if film.reviewer])
-        return sorted(list(reviewers))
+        self.reviewed_films = Film.films.exclude(reviewer=None)
+        session = self.request.session
+        reviewers = set([film.reviewer for film in self.reviewed_films])
+        reviewer_rows = []
+        for reviewer in reviewers:
+            reviewer_row = self.get_reviewer_row(reviewer)
+            if reviewer_row['display_reviewer']:
+                reviewer_rows.append(reviewer_row)
+        sort_key = 'reviewer' if get_cookie(session, COOKIE_KEY_DISPLAY_ALL) else 'avg_discrepancy'
+        return sorted(reviewer_rows, key=lambda r: r[sort_key])
 
     def get_context_data(self, *, object_list=None, **kwargs):
         super_context = super().get_context_data(**kwargs)
+        display_all = get_cookie(self.request.session, COOKIE_KEY_DISPLAY_ALL)
         new_context = {
             'title': self.title,
-            'unexpected_errors': self.unexpected_errors
+            'fans': self.fan_list,
+            'total_film_count': self.total_film_count,
+            'display_all_query': self.query_by_display_all[not display_all],
+            'display_all_action': self.action_by_display_all[display_all],
+            'unexpected_errors': self.unexpected_errors,
         }
         context = add_base_context(self.request, super_context | new_context)
         return context
+
+    def get_reviewer_row(self, reviewer):
+        reviewed_films = [film for film in self.reviewed_films if film.reviewer == reviewer]
+        film_count = len(reviewed_films)
+        self.total_film_count += film_count
+        fan_judgements, dropdown_rows = self.get_fan_judgements(reviewer)
+        judged_count, avg_discrepancy = self.get_discrepancy_stats(fan_judgements)
+        display_reviewer = judged_count or get_cookie(self.request.session, COOKIE_KEY_DISPLAY_ALL)
+
+        # Create a reviewer row dictionary.
+        row = {
+            'reviewer': reviewer,
+            'display_reviewer': display_reviewer,
+            'film_count': film_count,
+            'judged_count': judged_count,
+            'avg_discrepancy': avg_discrepancy,
+            'fan_judgements': fan_judgements,
+            'dropdown_rows': dropdown_rows,
+        }
+        return row
+
+    def get_fan_judgements(self, reviewer):
+        fan_judgements = []
+        dropdown_rows = []
+        for fan in self.fan_list:
+            ratings = (FilmFanFilmRating.film_ratings
+                       .filter(film__reviewer=reviewer, film_fan=fan)
+                       .select_related('film'))
+            rating_set = set([rating.film for rating in ratings])
+            votes = (FilmFanFilmVote.film_votes
+                     .filter(film__reviewer=reviewer, film_fan=fan)
+                     .select_related('film'))
+            vote_set = set([vote.film for vote in votes])
+            judge_set = rating_set & vote_set
+
+            discrepancies = []
+            for film in sorted(judge_set, key=attrgetter('sort_title')):
+                rating = fan_rating(fan, film)
+                vote = fan_rating(fan, film, manager=FilmFanFilmVote.film_votes)
+                discrepancy = rating.rating - vote.vote
+                discrepancies.append(discrepancy)
+                dropdown_row = {
+                    'film': film.title,
+                    'fan': fan,
+                    'rating': rating.rating,
+                    'vote': vote.vote,
+                    'discrepancy': discrepancy,
+                }
+                dropdown_rows.append(dropdown_row)
+
+            fan_judgement = {
+                'fan': fan,
+                'judged_count': len(judge_set),
+                'judged_films': judge_set,
+                'discrepancies': discrepancies,
+                'min_discrepancy': min(discrepancies) if discrepancies else None,
+                'max_discrepancy': max(discrepancies) if discrepancies else None,
+                'avg_discrepancy': sum(discrepancies) / len(discrepancies) if discrepancies else None,
+            }
+            fan_judgements.append(fan_judgement)
+
+        return fan_judgements, dropdown_rows
+
+    @staticmethod
+    def get_discrepancy_stats(fan_judgements):
+        discrepancies = [j['discrepancies'] for j in fan_judgements]
+        discr_list = []
+        for discrepancy in discrepancies:
+            discr_list += discrepancy
+        discrepancy_count = len(discr_list)
+        avg_discrepancy = sum(discr_list) / len(discr_list) if discr_list else 0
+        return discrepancy_count, avg_discrepancy
 
 
 def index(request):
