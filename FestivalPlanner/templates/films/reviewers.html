@@ -28,7 +28,7 @@
                 <th class="sticky-t-head" style="vertical-align: text-top; text-align: center;">
                     #Judged
                     <br>
-                    <a href="/films/reviewers?judged={{ display_all_query }}">{{ display_all_action }}</a>
+                    <a href="/films/reviewers?{{ judged_filter_key }}={{ judged_filter_query }}">{{ judged_filter_action }}</a>
                 </th>
                 <th class="sticky-t-head" style="vertical-align: text-top; text-align: right">Discrepancy avg</th>
                 {% for fan in fans %}
