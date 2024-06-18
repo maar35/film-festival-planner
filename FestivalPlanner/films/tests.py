@@ -1,5 +1,5 @@
 import re
-from datetime import timedelta
+from datetime import timedelta, date
 from http import HTTPStatus
 from importlib import import_module
 from unittest import skip
@@ -14,17 +14,17 @@ from authentication.models import me, FilmFan
 from authentication.tests import set_up_user_with_fan
 from festival_planner import debug_tools
 from festival_planner.cache import FilmRatingCache
-from festivals.models import current_festival
+from festivals.models import current_festival, FestivalBase, Festival
 from festivals.tests import create_festival
 from films import views
 from loader.views import SaveRatingsView
 from theaters.models import City
-from .forms.film_forms import PickRating
-from .models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR
-from .views import FilmsView, ResultsView, MAX_SHORT_MINUTES, BaseFilmsFormView
+from films.forms.film_forms import PickRating
+from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR
+from films.views import FilmsView, ResultsView, MAX_SHORT_MINUTES, BaseFilmsFormView, Filter
 
 
-def arrange_films_fans():
+def arrange_film_fans():
     _ = FilmFan.film_fans.create(name='john', seq_nr=1, is_admin=True)
     _ = FilmFan.film_fans.create(name='paul', seq_nr=4)
     _ = FilmFan.film_fans.create(name='jimi', seq_nr=3)
@@ -50,12 +50,23 @@ def create_film(film_id, title, minutes, seq_nr=-1, festival=None, sort_title=No
                              sort_title=sort_title.lower())
 
 
-def new_film(film_id, title, minutes, seq_nr=-1):
+def new_film(film_id, title, minutes, seq_nr=-1, festival=None):
     """
     Create a film instance with the given arguments.
     """
+    if not festival:
+        city = City.cities.create(city_id=14795, name='Patience', country='us')
+        festival_base = FestivalBase.festival_bases.create(mnemonic='PFF', name='Patience Film Festival',
+                                                           home_city=city)
+        start_date = date.fromisoformat('2021-04-02')
+        end_date = date.fromisoformat('2024-04-03')
+        festival = Festival.festivals.create(base=festival_base, year=2021, start_date=start_date,
+                                             end_date=end_date)
     duration = timedelta(minutes=minutes)
-    return Film(film_id=film_id, seq_nr=seq_nr, title=title, duration=duration, subsection='')
+    film = Film(festival=festival, film_id=film_id, seq_nr=seq_nr, title=title, duration=duration,
+                sort_title=title, title_language='en', subsection=None, medium_category='films',
+                reviewer=None, url='https://pff.us/film/title-from-parameters/')
+    return film
 
 
 def get_session_with_fan(fan):
@@ -80,13 +91,42 @@ def get_decoded_content(response):
 
 
 class FilmModelTests(TestCase):
-    pass
+    def setUp(self):
+        super().setUp()
+        self.city = City(city_id=14795, name='Patience', country='us')
+        self.festival_base = FestivalBase(mnemonic='PFF', name='Patience Film Festival',
+                                          home_city=self.city)
+        start_date = date.fromisoformat('2021-04-02')
+        end_date = date.fromisoformat('2024-04-03')
+        self.festival = Festival(base=self.festival_base, year=2021,
+                                 start_date=start_date, end_date=end_date)
+
+    def tearDown(self):
+        super().tearDown()
+
+    def test_reviewer_can_be_created_blank(self):
+        """
+        The reviewer of a film shouldn't be a blank string,
+        but unfortunately this is accepted.
+        Fortunately reviewers are only fed into the database with the loader.
+        See test loader.RatingLoaderViewsTests.test_reviewer_cannot_be_loaded_blank.
+        """
+        # Arrange.
+        film = new_film(3319, 'The Renewables', 110)
+        film.reviewer = ' '
+
+        # Act.
+        film.save()
+
+        # Assert.
+        film_count = Film.films.count()
+        self.assertEqual(film_count, 1, 'There should be 1 film in the database')
 
 
 class FilmFanModelTests(TestCase):
     def setUp(self):
         super(FilmFanModelTests, self).setUp()
-        arrange_films_fans()
+        arrange_film_fans()
 
     def tearDown(self):
         super(FilmFanModelTests, self).tearDown()
@@ -122,7 +162,7 @@ class FilmFanModelTests(TestCase):
 class BaseJudgementModelTests(TestCase):
     def setUp(self) -> None:
         super().setUp()
-        arrange_films_fans()
+        arrange_film_fans()
         self.city = City.cities.create(city_id=1, name='Gent', country='be')
 
     def tearDown(self) -> None:
@@ -466,9 +506,11 @@ class FilmListViewsTests(ViewsTestCase):
         The film ratings view doesn't display a hacked film.
         """
         # Arrange.
-        hacked_film = new_film(film_id=4242, title='The Negative Answer', minutes=84)
-        saved_film = create_film(film_id=1122, title='The Good Answer', minutes=42)
-        saved_film2 = create_film(film_id=4200, title='A Short Answer', minutes=10, festival=saved_film.festival)
+        city = City.cities.create(city_id=3, name='Gent', country='be')
+        festival = create_festival('FFG', city, '2024-10-09', '2024-10-20')
+        hacked_film = new_film(film_id=4242, title='The Negative Answer', minutes=84, festival=festival)
+        saved_film = create_film(film_id=1122, title='The Good Answer', minutes=42, festival=festival)
+        saved_film2 = create_film(film_id=4200, title='A Short Answer', minutes=10, festival=festival)
         _ = self.get_regular_fan_request()
 
         # Act.
@@ -693,11 +735,11 @@ class FilmListViewsTests(ViewsTestCase):
         short_film = create_film(film_id=27, title='Flashing Away', minutes=12, festival=festival)
         edge_film = create_film(film_id=270, title='Flashing Edgeward', minutes=MAX_SHORT_MINUTES, festival=festival)
         _ = self.get_regular_fan_request()
-        hide_shorts_query = '?shorts=hide'
-        include_shorts_query = '?shorts=include'
+        shorts_filter = Filter('shorts')
+        hide_shorts_query = f'?{shorts_filter.get_cookie_key()}={Filter.query_by_filtered[True]}'
+        include_shorts_query = f'?{shorts_filter.get_cookie_key()}={Filter.query_by_filtered[False]}'
 
         # Act.
-
         include_shorts_response = self.client.get(reverse('films:films') + include_shorts_query)
         hide_shorts_response = self.client.get(reverse('films:films') + hide_shorts_query)
 

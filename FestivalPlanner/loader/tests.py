@@ -1,25 +1,26 @@
 import csv
 import os
 import re
-import shutil
 import tempfile
 from datetime import timedelta
 from http import HTTPStatus
-from unittest import skip
 
 from django.test import RequestFactory
 from django.urls import reverse
 
+import festivals.models
+import theaters
 from festival_planner import debug_tools
+from festival_planner.tools import initialize_log, unset_log
 from festivals.tests import create_festival, mock_base_festival_mnemonic
 from films.models import FilmFanFilmRating, Film
-from films.tests import create_film, ViewsTestCase, get_request_with_session
+from films.tests import create_film, ViewsTestCase, get_request_with_session, new_film
 from films.views import FilmsView
-from loader.forms.loader_forms import FilmLoader, RatingLoader
+from loader.forms.loader_forms import FilmLoader, RatingLoader, CityDumper, TheaterDumper, ScreenDumper
 from loader.views import SectionsLoaderView, get_festival_row, RatingsLoaderView, NewTheaterDataView, \
-    NewTheaterDataListView, SaveRatingsView
+    SaveRatingsView
 from sections.models import Section
-from theaters.models import City
+from theaters.models import City, new_cities_path, new_theaters_path, new_screens_path, Theater, Screen
 
 
 def create_rating(film, fan, rating):
@@ -63,6 +64,7 @@ class LoaderViewsTests(ViewsTestCase):
         self.festival = self.create_festival(self.city, '2023-02-16', '2023-02-26')
 
         # Create working directories for films and ratings.
+        festivals.models.TEST_BASE_DIR = tempfile.TemporaryDirectory()
         self.create_planner_data_dir()
         self.create_festival_data_dir()
 
@@ -72,6 +74,7 @@ class LoaderViewsTests(ViewsTestCase):
     def tearDown(self):
         super().tearDown()
         self.city.delete()
+        self.festival.delete()
         self.remove_festival_data()
         if self.loader_view:
             del self.loader_view
@@ -86,9 +89,9 @@ class LoaderViewsTests(ViewsTestCase):
     def create_festival_data_dir(self):
         os.makedirs(self.festival.festival_data_dir())
 
-    def remove_festival_data(self):
-        base_dir = self.festival.festival_base_dir()
-        shutil.rmtree(base_dir)
+    @staticmethod
+    def remove_festival_data():
+        festivals.models.clean_base_dir()
 
     def get_get_response(self, get_request, view=None):
         view = view or self.loader_view
@@ -107,9 +110,6 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         # Set up POST data for the ratings.html template.
         self.post_data = {f'ratings_{self.festival.id}': ['Load'], 'import_mode': []}
-
-    def tearDown(self):
-        super().tearDown()
 
     def arrange_get_get_response(self, get_request):
         self.ratings_loader_view.setup(get_request)
@@ -149,6 +149,29 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         self.assertTemplateUsed(redirect_response, 'films/films.html')
         self.assertContains(redirect_response, 'Load results')
         self.assertContains(redirect_response, 'Reading from file')
+
+    def pre_execute_loading_reviewer(self, reviewer=None):
+        # Arrange.
+        request = self.get_admin_request()
+        get_response = self.arrange_get_get_response(request)
+
+        film = new_film(3320, 'The Space Cowboys', 109)
+        film.reviewer = reviewer or ' '
+
+        with open(self.festival.films_file(), 'w', newline='') as csv_films_file:
+            film_writer = csv.writer(csv_films_file, delimiter=';', quotechar='"')
+            film_writer.writerow(FilmLoader.expected_header)
+            film_writer.writerow(serialize_film(film))
+
+        self.post_data['import_mode'] = ['on']
+        post_response = self.client.post(reverse('loader:ratings'), self.post_data)
+
+        # Act.
+        redirect_response = self.client.get(post_response.url)
+
+        # assert.
+        self.assert_reading_from_file(get_response, post_response, redirect_response)
+        self.assertContains(redirect_response, 'film records read')
 
     def test_admin_can_load_films(self):
         """
@@ -408,6 +431,50 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         self.assertContains(redirect_response, 'Bad value in file')
         self.assertContains(redirect_response, 'No rating records read')
 
+    def test_reviewer_can_be_loaded_blank(self):
+        """
+        The reviewer of a film can't be a blank string.
+        Unfortunately this would be accepted when creating a film directly,
+        but reviewers are only fed into the database with the loader.
+        Also see test films.FilmModelTests.test_reviewer_can_be_created_blank.
+        """
+        # Arrange and Act,
+        test_reviewer = ' '
+        self.pre_execute_loading_reviewer(reviewer=test_reviewer)
+
+        # Assert,
+        result_film = Film.films.get(film_id=3320, festival=self.festival)
+        self.assertNotEqual(result_film.reviewer, test_reviewer)
+        self.assertIsNone(result_film.reviewer)
+
+    def test_reviewer_can_be_loaded_empty(self):
+        """
+        The reviewer of a film can't be an empty string.
+        The loader should convert such value to None.
+        """
+        # Arrange and Act,
+        test_reviewer = ''
+        self.pre_execute_loading_reviewer(reviewer=test_reviewer)
+
+        # Assert,
+        result_film = Film.films.get(film_id=3320, festival=self.festival)
+        self.assertNotEqual(result_film.reviewer, test_reviewer)
+        self.assertIsNone(result_film.reviewer)
+
+    def test_reviewer_can_be_loaded_unstripped(self):
+        """
+        The loader should strip the reviewer of a film.
+        """
+        # Arrange and Act,
+        test_reviewer = ' Mats Matters'
+        self.pre_execute_loading_reviewer(reviewer=test_reviewer)
+
+        # Assert,
+        result_film = Film.films.get(film_id=3320, festival=self.festival)
+        self.assertNotEqual(result_film.reviewer, test_reviewer)
+        self.assertIsNotNone(result_film.reviewer)
+        self.assertEqual(result_film.reviewer, test_reviewer.strip())
+
     def test_admin_can_save_ratings(self):
         """
         An admin fan can save ratings.
@@ -473,9 +540,6 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         # Set up POST data for the sections.html template.
         self.post_data = {f'{self.festival.id}': ['Load']}
 
-    def tearDown(self):
-        super().tearDown()
-
     def arrange_create_section(self, name, color):
         self.max_section_id += 1
         return Section.sections.create(festival=self.festival, section_id=self.max_section_id, name=name, color=color)
@@ -521,7 +585,7 @@ class SectionLoaderViewsTests(LoaderViewsTests):
 
     def test_regular_user_can_not_load_sections(self):
         """
-        A file with correct section records can't be loaded by an non-admin fan.
+        A file with correct section records can't be loaded by a non-admin fan.
         """
         # Arrange.
         section = self.arrange_create_section('Japanese Pink Movies', 'Pink')
@@ -542,25 +606,37 @@ class SectionLoaderViewsTests(LoaderViewsTests):
 class TheaterDataLoaderViewsTests(LoaderViewsTests):
     def setUp(self):
         super().setUp()
-        self.temp_dir = tempfile.TemporaryDirectory()
-        # self.festival_data = planner.FestivalData(self.temp_dir.name)
-        self.loader_view = NewTheaterDataView()
+        theaters.models.TEST_COMMON_DATA_DIR = tempfile.TemporaryDirectory()
+        NewTheaterDataView.state_nr = 0
+        self.session = None
 
     def tearDown(self):
         super().tearDown()
-        self.temp_dir.cleanup()
+        theaters.models.clean_common_data_dir()
+        unset_log(self.session)
 
-    # def arrange_new_screens(self):
-    #     data = self.festival_data
-    #     city_name = 'Groningen'
-    #     theater_name = 'Kriterion'
-    #     screen_1 = data.get_screen(city_name, 'Kriterion Grote Zaal', theater_parse_name=theater_name)
-    #     screen_2 = data.get_screen(city_name, 'Kriterion Kleine Zaal', theater_parse_name=theater_name)
-    #     screen_1.abbr = 'krgr'
-    #     screen_2.abbr = 'krkl'
-    #     data.write_new_cities()
-    #     data.write_new_theaters()
-    #     data.write_new_screens()
+    def arrange_session(self, by_admin=True):
+        if by_admin:
+            request = self.get_admin_request()
+        else:
+            request = self.get_regular_fan_request()
+        self.session = request.session
+        initialize_log(self.session)
+
+    def arrange_new_screens(self, session):
+        city = City(name='Groningen', country='nl', city_id=50)
+        theater = Theater(city=city, parse_name='Kriterion', abbreviation='kr-', priority=1, theater_id=2001)
+        screen_1 = Screen(theater=theater, abbreviation='gr', parse_name='Kriterion Grote Zaal',
+                          address_type=3, screen_id=1)
+        screen_2 = Screen(theater=theater, abbreviation='kl', parse_name='Kriterion Kleine Zaal',
+                          address_type=3, screen_id=2)
+
+        self.expected_words_new_screens = ['Groningen', 'Kriterion', 'Kleine Zaal', 'Grote Zaal']
+        self.expected_words_theaters = ['Groningen', 'Kriterion', 'kr-', '2']
+
+        _ = CityDumper(session).dump_objects(new_cities_path(), objects=[city])
+        _ = TheaterDumper(session).dump_objects(new_theaters_path(), objects=[theater])
+        _ = ScreenDumper(session).dump_objects(new_screens_path(), objects=[screen_1, screen_2])
 
     def assert_load_results(self, response, by_admin=True):
         self.assertEqual(response.status_code, HTTPStatus.OK)
@@ -568,52 +644,57 @@ class TheaterDataLoaderViewsTests(LoaderViewsTests):
         self.assertContains(response, '1 city records read')
         self.assertContains(response, '1 theater records read')
         self.assertContains(response, '2 screen records read')
-        content_keywords = ['Groningen', 'Kriterion', 'Kleine Zaal']
-        for word in content_keywords:
+        self.assert_words_visible(response, self.expected_words_new_screens, by_admin=by_admin)
+
+    def assert_words_visible(self, response, expected_words, by_admin=True):
+        for word in expected_words:
             if by_admin:
                 self.assertContains(response, word)
             else:
                 self.assertNotContains(response, word)
 
-    @skip("Importing planner interface doesn't work anymore")
     def test_regular_user_cannot_load_new_screens(self):
-        # # Arrange.
-        # self.arrange_new_screens()
+        # Arrange.
+        self.arrange_session(by_admin=False)
+        self.arrange_new_screens(self.session)
 
         # Act.
-        get_response = self.get_get_response(self.get_regular_fan_request(), view=NewTheaterDataListView())
+        response = self.client.get(reverse('loader:new_screens'))
 
         # Assert.
-        self.assert_load_results(get_response, by_admin=False)
+        self.assert_load_results(response, by_admin=False)
 
-    @skip("Importing planner interface doesn't work anymore")
     def test_admin_can_load_new_screens(self):
         # Arrange.
-        # self.arrange_new_screens()
+        self.arrange_session(by_admin=True)
+        self.arrange_new_screens(self.session)
 
         # Act.
-        get_response = self.get_get_response(self.get_admin_request(), view=NewTheaterDataListView())
+        response = self.client.get(reverse('loader:new_screens'))
 
         # Assert.
-        self.assert_load_results(get_response)
+        self.assert_load_results(response)
 
-    @skip("No time to get it working for the time being")
     def test_admin_can_insert_new_theater_data(self):
         # Arrange.
-        # self.arrange_new_screens()
-        get_request = self.get_admin_request()
-        get_response = self.get_get_response(get_request, view=NewTheaterDataListView())
+        self.arrange_session(by_admin=True)
+        self.arrange_new_screens(self.session)
+        get_response = self.client.get(reverse('loader:new_screens'))
         self.assert_load_results(get_response)
 
         # Act.
-        post_cities_response = self.client.post(reverse('loader:new_screens'))
-        post_cities_response.user = self.admin_user
-        post_cities_response.session = get_request.session
-        get_theaters_response = self.get_get_response(get_request, view=NewTheaterDataListView())
-        response = get_response.render()
+        cities_post_response = self.client.post(reverse('loader:new_screens'))
+        cities_redirect_response = self.client.get(cities_post_response.url)
+        theaters_post_response = self.client.post(reverse('loader:new_screens'))
+        theaters_redirect_response = self.client.get(theaters_post_response.url)
+        screens_post_response = self.client.post(reverse('loader:new_screens'))
+        screens_redirect_response = self.client.get(screens_post_response.url)
 
         # Assert.
-        self.assertEqual(post_cities_response.status_code, HTTPStatus.FOUND)
-        self.assertEqual(get_theaters_response.status_code, HTTPStatus.OK)
-        debug_tools.pr_debug(f'\n\n{response=}\n')
-        self.assertContains(get_theaters_response, 'Cities insert results')
+        self.assertEqual(cities_post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(theaters_post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(screens_post_response.status_code, HTTPStatus.FOUND)
+        self.assertContains(cities_redirect_response, 'Cities insert results')
+        self.assertContains(theaters_redirect_response, 'Theaters insert results')
+        self.assertContains(screens_redirect_response, 'Screens insert results')
+        self.assert_words_visible(screens_redirect_response, self.expected_words_theaters)

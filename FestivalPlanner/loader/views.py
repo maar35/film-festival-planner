@@ -8,10 +8,10 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import FormView, ListView
 
+from authentication.models import FilmFan
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log
 from festivals.models import Festival, switch_festival, current_festival, FestivalBase
 from films.models import Film, FilmFanFilmRating
-from authentication.models import FilmFan
 from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoaderForm, TheaterDataLoaderForm, \
     TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm, SaveRatingsForm, \
     RatingDataBackupForm, FILM_FANS_BACKUP_PATH, RATINGS_BACKUP_PATH, FILMS_BACKUP_PATH, \
@@ -133,7 +133,8 @@ class NewTheaterDataListView(ListView):
         return context
 
     def get_new_screen_item(self, screen):
-        theater_kwargs = {'city': screen.theater.city, 'abbreviation': screen.theater.abbreviation}
+        theater_kwargs = {'city_id': screen.theater.city.id, 'abbreviation': screen.theater.abbreviation}
+
         new_screen_item = {
             'city': screen.theater.city.name,
             'city_color': self.color(City, City.cities, **{'country': 'nl', 'name': screen.theater.city.name}),

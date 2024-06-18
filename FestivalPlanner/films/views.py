@@ -321,7 +321,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, *, object_list=None, **kwargs):
         session = self.request.session
-        pr_debug(f'start, {len(PickRating.film_rating_cache.get_film_rows(session))} records in cache', with_time=True)
         super_context = super().get_context_data(**kwargs)
         film_count, rated_films_count, count_dicts = get_rating_statistics(session)
         new_context = {
@@ -343,7 +342,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
         }
         unset_log(session)
         context = add_base_context(self.request, super_context | new_context)
-        pr_debug('done', with_time=True)
         return context
 
     def render_to_response(self, context, **response_kwargs):
@@ -371,7 +369,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
 
     @staticmethod
     def get_subsection(film):
-        if len(film.subsection) == 0:
+        if not film.subsection:
             return ''
         try:
             subsection = Subsection.subsections.get(festival=film.festival, subsection_id=film.subsection)
@@ -831,7 +829,7 @@ def get_fan_choices(submit_name_prefix, film, fan, logged_in_fan, submit_names):
 
 
 def get_subsection(film):
-    if len(film.subsection) == 0:
+    if not film.subsection:
         return ''
     subsection = Subsection.subsections.get(festival=film.festival, subsection_id=film.subsection)
     return subsection
