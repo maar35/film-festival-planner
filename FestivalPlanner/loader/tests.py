@@ -75,7 +75,7 @@ class LoaderViewsTests(ViewsTestCase):
         super().tearDown()
         self.city.delete()
         self.festival.delete()
-        self.remove_festival_data()
+        festivals.models.clean_base_dir()
         if self.loader_view:
             del self.loader_view
 
@@ -88,10 +88,6 @@ class LoaderViewsTests(ViewsTestCase):
 
     def create_festival_data_dir(self):
         os.makedirs(self.festival.festival_data_dir())
-
-    @staticmethod
-    def remove_festival_data():
-        festivals.models.clean_base_dir()
 
     def get_get_response(self, get_request, view=None):
         view = view or self.loader_view
@@ -615,7 +611,7 @@ class TheaterDataLoaderViewsTests(LoaderViewsTests):
         theaters.models.clean_common_data_dir()
         unset_log(self.session)
 
-    def arrange_session(self, by_admin=True):
+    def arrange_session_with_log(self, by_admin=True):
         if by_admin:
             request = self.get_admin_request()
         else:
@@ -655,7 +651,7 @@ class TheaterDataLoaderViewsTests(LoaderViewsTests):
 
     def test_regular_user_cannot_load_new_screens(self):
         # Arrange.
-        self.arrange_session(by_admin=False)
+        self.arrange_session_with_log(by_admin=False)
         self.arrange_new_screens(self.session)
 
         # Act.
@@ -666,7 +662,7 @@ class TheaterDataLoaderViewsTests(LoaderViewsTests):
 
     def test_admin_can_load_new_screens(self):
         # Arrange.
-        self.arrange_session(by_admin=True)
+        self.arrange_session_with_log(by_admin=True)
         self.arrange_new_screens(self.session)
 
         # Act.
@@ -677,7 +673,7 @@ class TheaterDataLoaderViewsTests(LoaderViewsTests):
 
     def test_admin_can_insert_new_theater_data(self):
         # Arrange.
-        self.arrange_session(by_admin=True)
+        self.arrange_session_with_log(by_admin=True)
         self.arrange_new_screens(self.session)
         get_response = self.client.get(reverse('loader:new_screens'))
         self.assert_load_results(get_response)

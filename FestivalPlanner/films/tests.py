@@ -17,11 +17,12 @@ from festival_planner.cache import FilmRatingCache
 from festivals.models import current_festival, FestivalBase, Festival
 from festivals.tests import create_festival
 from films import views
-from loader.views import SaveRatingsView
-from theaters.models import City
 from films.forms.film_forms import PickRating
 from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR
 from films.views import FilmsView, ResultsView, MAX_SHORT_MINUTES, BaseFilmsFormView, Filter
+from loader.views import SaveRatingsView
+from sections.models import Section, Subsection
+from theaters.models import City
 
 
 def arrange_film_fans():
@@ -36,13 +37,42 @@ def tear_down_film_fans():
     fans.delete()
 
 
+def create_std_festival():
+    """
+    Create a new festival in the database.
+    """
+    city = City.cities.create(city_id=2, name='Cannes', country='fr')
+    festival = create_festival('FdC', city, '2021-01-27', '2021-02-06')
+    return festival
+
+
+def new_std_festival():
+    """
+    Create a festival if it isn't already in the database.
+    """
+    # Create a city.
+    city_kwargs = {'city_id': 14795, 'name': 'Patience', 'country': 'us'}
+    (city, _) = City.cities.get_or_create(**city_kwargs)
+
+    # Create a festival base.
+    base_kwargs = {'mnemonic': 'PFF', 'name': 'Patience Film Festival', 'home_city': city}
+    (festival_base, _) = FestivalBase.festival_bases.get_or_create(**base_kwargs)
+
+    # Create a festival.
+    start_date = date.fromisoformat('2021-04-02')
+    end_date = date.fromisoformat('2024-04-03')
+    festival_kwargs = {'base': festival_base, 'year': 2021, 'start_date': start_date,
+                       'end_date': end_date}
+    (festival, _) = Festival.festivals.get_or_create(**festival_kwargs)
+
+    return festival
+
+
 def create_film(film_id, title, minutes, seq_nr=-1, festival=None, sort_title=None):
     """
     Create a film with the given arguments in the database.
     """
-    if festival is None:
-        city = City.cities.create(city_id=2, name='Cannes', country='fr')
-        festival = create_festival('FdC', city, '2021-01-27', '2021-02-06')
+    festival = festival or create_std_festival()
     duration = timedelta(minutes=minutes)
     sort_title = sort_title or title
     return Film.films.create(festival_id=festival.id, film_id=film_id, seq_nr=seq_nr,
@@ -54,18 +84,11 @@ def new_film(film_id, title, minutes, seq_nr=-1, festival=None):
     """
     Create a film instance with the given arguments.
     """
-    if not festival:
-        city = City.cities.create(city_id=14795, name='Patience', country='us')
-        festival_base = FestivalBase.festival_bases.create(mnemonic='PFF', name='Patience Film Festival',
-                                                           home_city=city)
-        start_date = date.fromisoformat('2021-04-02')
-        end_date = date.fromisoformat('2024-04-03')
-        festival = Festival.festivals.create(base=festival_base, year=2021, start_date=start_date,
-                                             end_date=end_date)
+    festival = festival or new_std_festival()
     duration = timedelta(minutes=minutes)
     film = Film(festival=festival, film_id=film_id, seq_nr=seq_nr, title=title, duration=duration,
-                sort_title=title, title_language='en', subsection=None, medium_category='films',
-                reviewer=None, url='https://pff.us/film/title-from-parameters/')
+                sort_title=title, title_language='en', medium_category='films',
+                reviewer='kijA', url='https://pff.us/film/title-from-parameters/')
     return film
 
 
@@ -93,13 +116,7 @@ def get_decoded_content(response):
 class FilmModelTests(TestCase):
     def setUp(self):
         super().setUp()
-        self.city = City(city_id=14795, name='Patience', country='us')
-        self.festival_base = FestivalBase(mnemonic='PFF', name='Patience Film Festival',
-                                          home_city=self.city)
-        start_date = date.fromisoformat('2021-04-02')
-        end_date = date.fromisoformat('2024-04-03')
-        self.festival = Festival(base=self.festival_base, year=2021,
-                                 start_date=start_date, end_date=end_date)
+        self.festival = new_std_festival()
 
     def tearDown(self):
         super().tearDown()
@@ -730,8 +747,8 @@ class FilmListViewsTests(ViewsTestCase):
         can be filtered out.
         """
         # Arrange.
-        feature_film = create_film(film_id=2700, title='The Flashlight Saga', minutes=80)
-        festival = feature_film.festival
+        festival = create_std_festival()
+        feature_film = create_film(film_id=2700, title='The Flashlight Saga', minutes=80, festival=festival)
         short_film = create_film(film_id=27, title='Flashing Away', minutes=12, festival=festival)
         edge_film = create_film(film_id=270, title='Flashing Edgeward', minutes=MAX_SHORT_MINUTES, festival=festival)
         _ = self.get_regular_fan_request()
@@ -758,8 +775,8 @@ class FilmListViewsTests(ViewsTestCase):
         Films starting with or containing a text snipped entered in
         """
         # Arrange.
-        film_1 = create_film(title='Early Masters: Bruno Ganz', minutes=132, film_id=2031)
-        festival = film_1.festival
+        festival = create_std_festival()
+        film_1 = create_film(title='Early Masters: Bruno Ganz', minutes=132, film_id=2031, festival=festival)
         film_2 = create_film(title='La Brunette', sort_title='Brunette, La', minutes=89, film_id=2030, festival=festival)
         film_3 = create_film(title='Bruna Brockovich', minutes=131, film_id=2032, festival=festival)
         film_4 = create_film(title='Four Brothers', minutes=98, film_id=3033, festival=festival)

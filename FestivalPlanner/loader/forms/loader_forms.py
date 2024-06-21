@@ -26,6 +26,7 @@ FESTIVALS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'festivals.csv')
 FILMS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'films.csv')
 FILM_FANS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'film_fans.csv')
 RATINGS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'ratings.csv')
+FILMS_FILE_HEADER = Config().config['Headers']['FilmsFileHeader']
 
 
 class RatingLoaderForm(Form):
@@ -412,8 +413,7 @@ class SimpleLoader(BaseLoader):
 
 
 class FilmLoader(SimpleLoader):
-    expected_header = ['seqnr', 'filmid', 'sort', 'title', 'titlelanguage',
-                       'section', 'duration', 'mediumcategory', 'reviewer', 'url']
+    expected_header = FILMS_FILE_HEADER
     key_fields = ['festival', 'film_id']
     manager = Film.films
     re_blank = re.compile(r'^\s*$')

@@ -15,9 +15,11 @@ from enum import Enum, auto
 
 from Shared.application_tools import config, pr_info
 
-interface_dir = os.path.expanduser("~/Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared")
-articles_file = os.path.join(interface_dir, "articles.txt")
-unicode_file = os.path.join(interface_dir, "unicodemap.txt")
+INTERFACE_DIR = os.path.expanduser(f"~/{config()['Paths']['LoaderSharedDirectory']}")
+COMMON_DATA_DIR = os.path.expanduser(f"~/{config()['Paths']['CommonDataDirectory']}")
+ARTICLES_FILE = os.path.join(INTERFACE_DIR, "articles.txt")
+UNICODE_FILE = os.path.join(INTERFACE_DIR, "unicodemap.txt")
+FILMS_FILE_HEADER = config()['Headers']['FilmsFileHeader']
 
 
 def get_screen_from_parse_name(festival_data, screen_parse_name, split_location):
@@ -67,7 +69,7 @@ def write_lists(festival_data, write_film_list, write_other_lists):
 class UnicodeMapper:
 
     def __init__(self):
-        with open(unicode_file) as f:
+        with open(UNICODE_FILE) as f:
             self.umap_keys = f.readline().rstrip("\n").split(";")
             self.umap_values = f.readline().rstrip("\n").split(";")
 
@@ -130,19 +132,7 @@ class Film:
 
     @staticmethod
     def film_repr_csv_head():
-        row = [
-            'seqnr',
-            'filmid',
-            'sort',
-            'title',
-            'titlelanguage',
-            'section',
-            'duration',
-            'mediumcategory',
-            'reviewer',
-            'url'
-        ]
-        return row
+        return FILMS_FILE_HEADER
 
     def row_repr(self):
         row = [
@@ -450,7 +440,7 @@ class FestivalData:
     curr_film_id = None
     curr_section_id = None
     curr_subsection_id = None
-    common_data_dir = os.path.expanduser(f'~/{config()["Paths"]["CommonDataDirectory"]}')
+    common_data_dir = COMMON_DATA_DIR
     dialect = None
     write_verbose = True
 
@@ -652,7 +642,7 @@ class FestivalData:
         return line.rstrip(end).split(sep)
 
     def read_articles(self):
-        with open(articles_file) as f:
+        with open(ARTICLES_FILE) as f:
             articles = [Article(self.split_rec(line, ":")) for line in f]
         Film.articles_by_language = dict([(a.key(), a) for a in articles])
 

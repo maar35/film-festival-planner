@@ -84,6 +84,9 @@ class Filter:
             filtered = self.filtered_by_query[query_key]
             set_cookie(request.session, self._cookie_key, filtered)
 
+    def get_href_filter(self, session):
+        return f'?{self.get_cookie_key()}={self.next_query(session)}'
+
     def on(self, session, default=None):
         return get_cookie(session, self._cookie_key, default)
 
@@ -250,9 +253,8 @@ class FilmsListView(LoginRequiredMixin, ListView):
         self.fragment_keeper = FragmentKeeper()
 
         # Initialize the filter cookies when necessary.
-        self.shorts_filter.init_cookie(session)
-        for fan in self.fan_list:
-            self.rated_filters[fan].init_cookie(session)
+        for f in self.filters:
+            f.init_cookie(session)
 
         # Ensure the film rating cache is initialized.
         if not PickRating.film_rating_cache:
@@ -332,8 +334,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'highest_rating': self.highest_rating,
             'eligible_counts': count_dicts,
             'short_threshold': self.short_threshold.total_seconds(),
-            'display_shorts_key': self.shorts_filter.get_cookie_key(),
-            'display_shorts_query': self.shorts_filter.next_query(session),
+            'display_shorts_href_filter': self.shorts_filter.get_href_filter(session),
             'display_shorts_action': self.shorts_filter.action(session),
             'found_films': BaseFilmsFormView.found_films,
             'action': refreshed_rating_action(session, self.class_tag),
@@ -392,8 +393,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
             rated_filter = self.rated_filters[fan]
             fan_header = {
                 'fan': fan,
-                'key': rated_filter.get_cookie_key(),
-                'query': rated_filter.next_query(session),
+                'href_filter': rated_filter.get_href_filter(session),
                 'action': rated_filter.action(session),
             }
             fan_headers.append(fan_header)
@@ -630,9 +630,8 @@ class ReviewersView(ListView):
             'title': self.title,
             'fans': self.fan_list,
             'total_film_count': self.total_film_count,
-            'judged_filter_key': self.judged_filter.get_cookie_key(),
+            'judged_href_filter': self.judged_filter.get_href_filter(session),
             'judged_filter_action': self.judged_filter.action(session),
-            'judged_filter_query': self.judged_filter.next_query(session),
             'unexpected_errors': self.unexpected_errors,
         }
         context = add_base_context(self.request, super_context | new_context)
@@ -655,7 +654,7 @@ class ReviewersView(ListView):
         display_reviewer = judged_count or self.judged_filter.off(self.request.session)
 
         # Create a reviewer row dictionary.
-        row = {
+        reviewer_row = {
             'reviewer': reviewer,
             'display_reviewer': display_reviewer,
             'film_count': film_count,
@@ -664,7 +663,7 @@ class ReviewersView(ListView):
             'fan_judgements': fan_judgements,
             'dropdown_rows': dropdown_rows,
         }
-        return row
+        return reviewer_row
 
     def get_fan_judgements(self, reviewer):
         fan_judgements = []
