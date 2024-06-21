@@ -30,8 +30,8 @@ class ApplyCombinationsTestCase(BaseFilmTestCase):
         # Set-up global data that apply_combinations() uses.
         if self.film_page_parser is None:
             self.film_page_parser = FilmPageParser(self.festival_data, url)
-        self.film_page_parser.combination_urls_by_film_id[film.filmid] = combination_urls
-        self.film_page_parser.screened_film_urls_by_film_id[film.filmid] = screened_film_urls
+        self.film_page_parser.combination_urls_by_film_id[film.film_id] = combination_urls
+        self.film_page_parser.screened_film_urls_by_film_id[film.film_id] = screened_film_urls
 
         return film
 

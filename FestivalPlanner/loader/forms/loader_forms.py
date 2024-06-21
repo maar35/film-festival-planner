@@ -1,17 +1,18 @@
 import csv
 import datetime
 import os
+import re
 
 from django.db import IntegrityError, transaction
 from django.forms import Form, BooleanField, SlugField
 
+from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
 from festival_planner.tools import initialize_log, add_log
 from festivals.config import Config
 from festivals.models import Festival, FestivalBase
 from films.forms.film_forms import PickRating
 from films.models import Film, FilmFanFilmRating
-from authentication.models import FilmFan
 from films.views import FilmsView
 from sections.models import Section, Subsection
 from theaters.models import Theater, theaters_path, City, cities_path, Screen, screens_path, cities_cache_path, \
@@ -25,6 +26,8 @@ FESTIVALS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'festivals.csv')
 FILMS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'films.csv')
 FILM_FANS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'film_fans.csv')
 RATINGS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'ratings.csv')
+FILMS_FILE_HEADER = Config().config['Headers']['FilmsFileHeader']
+
 
 class RatingLoaderForm(Form):
     import_mode = BooleanField(
@@ -410,10 +413,10 @@ class SimpleLoader(BaseLoader):
 
 
 class FilmLoader(SimpleLoader):
-    expected_header = ['seqnr', 'filmid', 'sort', 'title', 'titlelanguage',
-                       'section', 'duration', 'mediumcategory', 'url']
+    expected_header = FILMS_FILE_HEADER
     key_fields = ['festival', 'film_id']
     manager = Film.films
+    re_blank = re.compile(r'^\s*$')
 
     def __init__(self, session, festival):
         super().__init__(session, 'film', self.manager, festival.films_file(), festival=festival)
@@ -426,10 +429,11 @@ class FilmLoader(SimpleLoader):
         sort_title = row[2]
         title = row[3]
         title_language = row[4]
-        subsection = row[5]
+        subsection = self.set_blank_to_none(row[5])
         duration = datetime.timedelta(minutes=int(row[6].rstrip("′")))
         medium_category = row[7]
-        url = row[8]
+        reviewer = self.set_blank_to_none(row[8])
+        url = row[9]
 
         value_by_field = {
             'festival': self.festival,
@@ -441,9 +445,15 @@ class FilmLoader(SimpleLoader):
             'subsection': subsection,
             'duration': duration,
             'medium_category': medium_category,
+            'reviewer': reviewer,
             'url': url,
         }
         return value_by_field
+
+    def set_blank_to_none(self, value):
+        if value is not None and self.re_blank.match(value):
+            return None
+        return value.strip() if value else None
 
 
 class RatingLoader(SimpleLoader):
@@ -821,6 +831,7 @@ class FilmBackupDumper(BaseDumper):
         'subsection',
         'duration',
         'medium_category',
+        'reviewer',
         'url',
     ]
 
@@ -840,6 +851,7 @@ class FilmBackupDumper(BaseDumper):
             film.subsection,
             film.duration,
             film.medium_category,
+            film.reviewer,
             film.url,
         ]
 

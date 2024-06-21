@@ -1,0 +1,97 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <span class="left-half">
+        <h3>Film reviewers against pre- and post-attendance judgements</h3>
+    </span>
+    <span class="right-half">
+        <a href="{% url 'films:films' %}">Ratings</a>
+        <br>
+        <a href="{% url 'films:votes' %}">Votes</a>
+    </span>
+    {% if unexpected_errors %}
+        <h3 class="error">Unexpected error</h3>
+        {% for error in unexpected_errors %}
+            <p class="log">{{ error }}</p>
+        {% endfor %}
+    {% endif %}
+    <p>{{ total_film_count }} films reviewed</p>
+    <br>
+    <table>
+        <thead>
+            <tr>
+                <th class="sticky-t-head" style="vertical-align: text-top;">Reviewer</th>
+                <th class="sticky-t-head" style="vertical-align: text-top;">#Films</th>
+                <th class="sticky-t-head" style="vertical-align: text-top; text-align: center;">
+                    #Judged
+                    <br>
+                    <a href="{% url 'films:reviewers' %}{{ judged_href_filter }}">{{ judged_filter_action }}</a>
+                </th>
+                <th class="sticky-t-head" style="vertical-align: text-top; text-align: right">Discrepancy avg</th>
+                {% for fan in fans %}
+                    <th class="sticky-t-head" style="vertical-align: text-top;text-align: right;">{{ fan }}<br>#judged</th>
+                    <th class="sticky-t-head" style="vertical-align: text-top;text-align: right;">{{ fan }}<br>discrepancy avg</th>
+                    <th class="sticky-t-head" style="vertical-align: text-top;text-align: center">{{ fan }}<br>discrepancy min/max</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in reviewer_rows %}
+        <tr>
+            {% if row.judged_count %}
+                <td class="dropdown">
+                    <span>
+                        {{ row.reviewer }}
+                    </span>
+                    <div class="dropdown-content" style="background-color: black; cursor: default;">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>Fan</th><th>Film</th><th>Rated</th><th>Voted</th><th>Discrepancy</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for line in row.dropdown_rows %}
+                            <tr>
+                                <td>{{ line.fan }}</td>
+                                <td>{{ line.film }}</td>
+                                <td>{{ line.rating }}</td>
+                                <td>{{ line.vote }}</td>
+                                <td>{{ line.discrepancy }}</td>
+                            </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </td>
+            {% else %}
+                <td>{{ row.reviewer }}</td>
+            {% endif %}
+            <td style="text-align: right">{{ row.film_count }}</td>
+            {% if row.judged_count %}
+                <td style="text-align: right">{{ row.judged_count }}</td>
+                <td style="text-align: right">{{ row.avg_discrepancy | stringformat:"5.2f"}}</td>
+            {% else %}
+                <td></td>
+                <td></td>
+            {% endif %}
+            {% for judgement in row.fan_judgements %}
+                {% if judgement.judged_count %}
+                    <td style="text-align: right">{{ judgement.judged_count }}</td>
+                    <td style="text-align: right">{{ judgement.avg_discrepancy | stringformat:"5.2f" }}</td>
+                    <td style="text-align: center">{{ judgement.min_discrepancy }}/{{ judgement.max_discrepancy }}</td>
+                {% else %}
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                {% endif %}
+            {% endfor %}
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <br>
+{% endblock %}

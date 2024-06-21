@@ -4,9 +4,20 @@ from django.db import models
 
 from festivals.config import Config
 
+TEST_COMMON_DATA_DIR = None
+
 
 def common_data_dir():
-    return os.path.expanduser(f'~/{Config().config["Paths"]["CommonDataDirectory"]}')
+    if TEST_COMMON_DATA_DIR:
+        _dir = TEST_COMMON_DATA_DIR.name
+    else:
+        _dir = os.path.expanduser(f'~/{Config().config["Paths"]["CommonDataDirectory"]}')
+    return _dir
+
+
+def clean_common_data_dir():
+    if TEST_COMMON_DATA_DIR:
+        TEST_COMMON_DATA_DIR.cleanup()
 
 
 def cities_path():
@@ -44,7 +55,6 @@ def screens_cache_path():
 def new_screens_path():
     return os.path.join(common_data_dir(), 'new_screens.csv')
 
-  
 
 class City(models.Model):
     """

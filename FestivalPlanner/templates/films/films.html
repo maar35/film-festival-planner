@@ -11,6 +11,8 @@
         <a href="{% url 'loader:save_ratings' festival.id %}">Dump ratings</a>
         <br>
         <a href="{% url 'loader:ratings' %}">Load films and ratings</a>
+        <br>
+        <a href="{% url 'films:reviewers' %}">Reviewers</a>
     </span>
     {% if log %}
         <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
@@ -82,14 +84,14 @@
                     <th class="sticky-t-head">
                         Duration
                         <br>
-                        <a href="/films/films?shorts={{ display_shorts_query }}">{{ display_shorts_action }}</a>
+                        <a href="{% url 'films:films' %}{{ display_shorts_href_filter }}">{{ display_shorts_action }}</a>
                     </th>
                     <th class="sticky-t-head" style="vertical-align: text-top;">Subsection<br></th>
                     {% for fan_header in fan_headers %}
                         <th class="sticky-t-head">
                             {{ fan_header.fan }}
                             <br>
-                            <a href="/films/films?rated_{{ fan_header.fan }}={{ fan_header.query }}">{{ fan_header.action }}</a>
+                            <a href="{% url 'films:films' %}{{ fan_header.href_filter }}">{{ fan_header.action }}</a>
                         </th>
                     {% endfor %}
                 </tr>

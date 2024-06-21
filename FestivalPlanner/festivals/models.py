@@ -5,6 +5,8 @@ from django.db import models
 
 from festivals.config import Config
 
+TEST_BASE_DIR = None
+
 
 class FestivalBase(models.Model):
     """
@@ -69,7 +71,16 @@ def rating_action_key(session, tag):
 
 
 def base_dir():
-    return os.path.expanduser(f'~/{Config().config["Paths"]["FestivalRootDirectory"]}')
+    if TEST_BASE_DIR:
+        _dir = TEST_BASE_DIR.name
+    else:
+        _dir = os.path.expanduser(f'~/{Config().config["Paths"]["FestivalRootDirectory"]}')
+    return _dir
+
+
+def clean_base_dir():
+    if TEST_BASE_DIR:
+        TEST_BASE_DIR.cleanup()
 
 
 class Festival(models.Model):

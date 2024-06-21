@@ -6,7 +6,7 @@ app_name = 'films'
 urlpatterns = [
 
     # Give access to the active pages.
-    path('', views.index, name='index'),
+    path('', views.IndexView.as_view(), name='index'),
 
     # Set current film fan.
     path('film_fan/', views.film_fan, name='film_fan'),
@@ -20,4 +20,7 @@ urlpatterns = [
 
     # Allow a logged in fan to enter votes.
     path('votes/', views.VotesView.as_view(), name='votes'),
+
+    # Display statistics of reviewers.
+    path('reviewers/', views.ReviewersView.as_view(), name='reviewers')
 ]

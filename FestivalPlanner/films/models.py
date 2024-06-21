@@ -22,6 +22,7 @@ class Film(models.Model):
     subsection = models.CharField(max_length=32, null=True)
     duration = models.DurationField(null=False)
     medium_category = models.CharField(max_length=32)
+    reviewer = models.CharField(max_length=32, null=True)
     url = models.URLField(max_length=200)
 
     # Define a manager.

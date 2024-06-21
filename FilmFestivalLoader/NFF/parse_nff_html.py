@@ -326,7 +326,7 @@ class ScreeningsLoader:
         
     def parse_film_pages(self, nff_data):
         for film in nff_data.films:
-            film_file = film_file_format.format(film.filmid)
+            film_file = film_file_format.format(film.film_id)
             print(f"Now reading {film_file} - {film.title} ({film.duration_str()})")
             try:
                 charset = get_encoding_from_file(film_file, debug_recorder)

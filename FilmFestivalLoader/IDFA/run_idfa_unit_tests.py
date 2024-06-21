@@ -116,7 +116,7 @@ class ScreenedFilmTestCase(unittest.TestCase):
 
         # Act/Assert.
         with self.assertRaises(FilmTitleError):
-            _ = ScreenedFilm(combination_film.filmid, screened_title, screened_description)
+            _ = ScreenedFilm(combination_film.film_id, screened_title, screened_description)
 
 
 class IdfaFilmPageParserTestCase(unittest.TestCase):

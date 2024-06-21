@@ -5,4 +5,17 @@ Constants:
 Paths:
     FestivalRootDirectory: Documents/Film
     CommonDataDirectory: Documents/Film/CommonFestivalData
+    LoaderSharedDirectory: Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared
 
+Headers:
+    FilmsFileHeader:
+        - seq-nr
+        - film-id
+        - sort
+        - title
+        - title-language
+        - section
+        - duration
+        - medium-category
+        - reviewer
+        - url
