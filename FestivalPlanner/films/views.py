@@ -214,17 +214,13 @@ class FilmsListView(LoginRequiredMixin, ListView):
         session = self.request.session
         self.fragment_keeper = FragmentKeeper()
 
-        # Initialize the filter cookies when necessary.
-        for f in self.filters:
-            f.init_cookie(session)
-
         # Ensure the film rating cache is initialized.
         if not PickRating.film_rating_cache:
             PickRating.film_rating_cache = FilmRatingCache(request.session, FilmsView.unexpected_errors)
 
         # Apply filters from url query part.
         for f in self.filters:
-            f.handle_request(request)
+            f.handle_get_request(request)
 
         # Add the filters to the cache key.
         filter_dict = {}
@@ -557,23 +553,16 @@ class ReviewersView(ListView):
     http_method_names = ['get']
     title = 'Reviewers Statistics'
     fan_list = get_present_fans()
+    judged_filter = Filter('not judged', filtered=True, action_true='Display all')
     reviewed_films = None
     total_film_count = None
     unexpected_errors = []
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.judged_filter = Filter('not judged', filtered=True, action_true='Display all')
-
     def dispatch(self, request, *args, **kwargs):
         self.total_film_count = 0
-        session = request.session
-
-        # Initialize the filter cookie when necessary.
-        self.judged_filter.init_cookie(session)
 
         # Apply the filter from url query part.
-        self.judged_filter.handle_request(request)
+        self.judged_filter.handle_get_request(request)
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -690,12 +679,11 @@ def film_fan(request):
     form = UserForm(initial={'current_fan': current_fan(request.session)}, auto_id=False)
     session = request.session
     next_cookie = Cookie('next')
-    next_cookie.init_cookie(session)
 
     # Check the request.
     match request.method:
         case 'GET':
-            next_cookie.handle_request(request)
+            next_cookie.handle_get_request(request)
             pr_debug(f'{next_cookie.get(request.session)=}')
         case 'POST':
             form = UserForm(request.POST)
@@ -708,7 +696,7 @@ def film_fan(request):
                 # Redirect to calling page.
                 redirect_path = next_cookie.get(session)
                 pr_debug(f'{redirect_path=}')
-                next_cookie.remove_cookie(session)
+                next_cookie.remove(session)
                 return HttpResponseRedirect(redirect_path or reverse('films:index'))
 
     # Construct the context.

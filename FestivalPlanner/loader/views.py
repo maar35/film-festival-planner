@@ -71,12 +71,10 @@ class TheaterDataInterfaceView(LoginRequiredMixin, FormView):
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
-        session = request.session
-        self.action_cookie.init_cookie(session)
-        self.action = self.action_cookie.get(session)
+        self.action = self.action_cookie.get(request.session)
 
     def dispatch(self, request, *args, **kwargs):
-        self.action_cookie.handle_request(request, self.action)
+        self.action_cookie.handle_get_request(request, self.action)
         self.action = self.action_cookie.get(request.session)
         self.form_class = self.form_class_by_action[self.action]
         return super().dispatch(request, *args, **kwargs)
@@ -94,7 +92,7 @@ class TheaterDataInterfaceView(LoginRequiredMixin, FormView):
     def form_valid(self, form):
         session = self.request.session
         action = self.action_cookie.get(session)
-        self.action_cookie.remove_cookie(session)
+        self.action_cookie.remove(session)
         if action == 'dump':
             form.dump_theater_data(session)
         elif action == 'load':

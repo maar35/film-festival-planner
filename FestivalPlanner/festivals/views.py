@@ -17,20 +17,13 @@ class IndexView(generic.ListView):
     http_method_names = ['get', 'post']
     context_object_name = 'festival_rows'
     object_list = Festival.festivals.order_by('-start_date')
+    next_cookie = Cookie('next')
     unexpected_error = ''
-
-    def __init__(self):
-        super().__init__()
-        self.next_cookie = Cookie('next')
-
-    def setup(self, request, *args, **kwargs):
-        super().setup(request, *args, **kwargs)
-        self.next_cookie.init_cookie(request.session)
 
     def dispatch(self, request, *args, **kwargs):
         match request.method:
             case 'GET':
-                self.next_cookie.handle_request(request)
+                self.next_cookie.handle_get_request(request)
             case 'POST':
                 session = request.session
                 picked_festival = None
@@ -42,7 +35,7 @@ class IndexView(generic.ListView):
                 if picked_festival is not None:
                     switch_festival(session, picked_festival)
                     redirect_path = self.next_cookie.get(session)
-                    self.next_cookie.remove_cookie(session)
+                    self.next_cookie.remove(session)
                     return HttpResponseRedirect(redirect_path or reverse('films:index'))
                 else:
                     self.unexpected_error = f'Submit name not found in POST ({request.POST}'
