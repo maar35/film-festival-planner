@@ -63,27 +63,20 @@ class TheaterDataInterfaceView(LoginRequiredMixin, FormView):
     form_class = None
     http_method_names = ['get', 'post']
     form_class_by_action = {'load': TheaterDataLoaderForm, 'dump': TheaterDataDumperForm}
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.action = None
-        self.action_cookie = Cookie('action')
-
-    def setup(self, request, *args, **kwargs):
-        super().setup(request, *args, **kwargs)
-        self.action = self.action_cookie.get(request.session)
+    action_cookie = Cookie('action')
 
     def dispatch(self, request, *args, **kwargs):
-        self.action_cookie.handle_get_request(request, self.action)
-        self.action = self.action_cookie.get(request.session)
-        self.form_class = self.form_class_by_action[self.action]
+        self.action_cookie.handle_get_request(request)
+        action = self.action_cookie.get(request.session)
+        self.form_class = self.form_class_by_action[action]
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         session = self.request.session
         context = add_base_context(self.request, super().get_context_data(**kwargs))
-        context['title'] = f'{self.action} Theater Data'
-        context['action'] = self.action
+        action = self.action_cookie.get(session)
+        context['title'] = f'{action} Theater Data'
+        context['action'] = action
         context['theater_items'] = get_theater_items()
         context['log'] = get_log(session)
         unset_log(session)
