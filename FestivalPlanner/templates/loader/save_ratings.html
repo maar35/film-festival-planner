@@ -4,14 +4,14 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <span class="left-half">
-        <h3>Save ratings of {{ festival }}</h3>
-    </span>
-    <span class="right-half">
-        <a href="{% url 'films:films' %}">Back to ratings list</a>
-    </span>
+    <h2 class="row col-left-h2">Save ratings of {{ festival }}</h2>
+    <div class="row">
+        <span class="col-right">
+            <a href="{% url 'films:films' %}">Back to ratings list</a>
+        </span>
+    </div>
     {% if form.errors %}
-        <h3 class="error">Unexpected error</h3>
+        <h2 class="error">Unexpected error</h2>
         {% for error in form.errors %}
             <p class="log">{{ error }}</p>
         {% endfor %}

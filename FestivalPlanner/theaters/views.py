@@ -8,7 +8,8 @@ from django.views import View
 from django.views.generic import ListView, DetailView, FormView
 from django.views.generic.detail import SingleObjectMixin
 
-from festival_planner.tools import add_base_context, get_log, set_cookie, get_cookie, remove_cookie, unset_log
+from festival_planner.Cookie import Cookie
+from festival_planner.tools import add_base_context, get_log, unset_log
 from festivals.models import current_festival
 from theaters.forms.theater_forms import TheaterDetailsForm, TheaterScreenDetailsForm
 from theaters.models import Theater, Screen
@@ -31,6 +32,11 @@ class IndexView(ListView):
         self.color_by_priority[Theater.Priority.NO_GO] = 'SlateGray'
         self.color_by_priority[Theater.Priority.LOW] = 'PowderBlue'
         self.color_by_priority[Theater.Priority.HIGH] = 'Coral'
+        self.errors_cookie = Cookie('form_errors', [])
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.errors_cookie.init_cookie(request.session)
 
     def get_queryset(self):
         theater_list = sorted(Theater.theaters.all(), key=attrgetter('city.name', 'abbreviation'))
@@ -40,7 +46,7 @@ class IndexView(ListView):
     def get_context_data(self, *, object_list=None, **kwargs):
         context = add_base_context(self.request, super().get_context_data(**kwargs))
         session = self.request.session
-        remove_cookie(session, 'form_errors')
+        self.errors_cookie.remove_cookie(session)
         context['title'] = 'Theaters Index'
         context['log'] = get_log(session)
         return context
@@ -66,13 +72,21 @@ class TheaterDetailView(DetailView):
     template_name = 'theaters/details.html'
     http_method_names = ['get']
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.errors_cookie = Cookie('form_errors', [])
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.errors_cookie.init_cookie(request.session)
+
     def get_context_data(self, **kwargs):
         session = self.request.session
         unset_log(session)
         context = add_base_context(self.request, super().get_context_data(**kwargs))
         theater = self.object
         screens = Screen.screens.filter(theater=theater)
-        form_errors = get_cookie(session, 'form_errors', [])
+        form_errors = self.errors_cookie.get(session)
         priority_label = IndexView.label_by_priority[theater.priority]
         theater_form = TheaterDetailsForm(initial={
             'abbreviation': theater.abbreviation,
@@ -120,6 +134,7 @@ class TheaterScreenListFormView(SingleObjectMixin, FormView):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.errors_cookie = Cookie('form_errors', [])
         self.theater = None
         self.abbreviation = None
         self.session = None
@@ -128,7 +143,7 @@ class TheaterScreenListFormView(SingleObjectMixin, FormView):
         self.object = self.get_object()
         self.theater = self.object
         self.session = request.session
-        remove_cookie(self.session, 'form_errors')
+        self.errors_cookie.remove_cookie(self.session)
         unset_log(self.session)
 
         # Save new theater abbreviation.
@@ -148,7 +163,7 @@ class TheaterScreenListFormView(SingleObjectMixin, FormView):
         return self.clean_response()
 
     def form_valid(self, form):
-        remove_cookie(self.session, 'form_errors')
+        self.errors_cookie.remove_cookie(self.session)
         theater = self.object
         if theater.abbreviation != self.abbreviation:
             theater.abbreviation = self.abbreviation
@@ -204,10 +219,10 @@ class TheaterScreenListFormView(SingleObjectMixin, FormView):
         if not form_errors:
             return
         form_errors.extend(list(validator_set))
-        old_errors = get_cookie(self.session, 'form_errors')
+        old_errors = self.errors_cookie.get(self.session)
         if old_errors:
             form_errors = old_errors + [''] + form_errors
-        set_cookie(self.session, 'form_errors', form_errors)
+        self.errors_cookie.set(self.session, form_errors)
         return self.clean_response()
 
 

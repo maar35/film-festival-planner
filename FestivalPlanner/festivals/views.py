@@ -6,6 +6,7 @@ from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
 
+from festival_planner.Cookie import Cookie
 from festival_planner.tools import add_base_context
 from festivals.forms.set_festival import FestivalEdition, TestNearestFestival
 from festivals.models import Festival, default_festival, switch_festival
@@ -14,32 +15,45 @@ from festivals.models import Festival, default_festival, switch_festival
 class IndexView(generic.ListView):
     template_name = 'festivals/index.html'
     http_method_names = ['get', 'post']
-    object_list = Festival.festivals.order_by('-start_date')
     context_object_name = 'festival_rows'
+    object_list = Festival.festivals.order_by('-start_date')
     unexpected_error = ''
+
+    def __init__(self):
+        super().__init__()
+        self.next_cookie = Cookie('next')
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.next_cookie.init_cookie(request.session)
+
+    def dispatch(self, request, *args, **kwargs):
+        match request.method:
+            case 'GET':
+                self.next_cookie.handle_request(request)
+            case 'POST':
+                session = request.session
+                picked_festival = None
+                names = [(f'{festival.id}', festival) for festival in self.object_list]
+                for name, festival in names:
+                    if name in request.POST:
+                        picked_festival = festival
+                        break
+                if picked_festival is not None:
+                    switch_festival(session, picked_festival)
+                    redirect_path = self.next_cookie.get(session)
+                    self.next_cookie.remove_cookie(session)
+                    return HttpResponseRedirect(redirect_path or reverse('films:index'))
+                else:
+                    self.unexpected_error = f'Submit name not found in POST ({request.POST}'
+
+        return render(request, 'festivals/index.html', self.get_context_data())
 
     def get_context_data(self, **kwargs):
         context = add_base_context(self.request, super().get_context_data(**kwargs))
         context['title'] = 'Festival Index'
         context['unexpected_error'] = self.unexpected_error
         return context
-
-    def dispatch(self, request, *args, **kwargs):
-        if request.method == 'POST':
-
-            picked_festival = None
-            names = [(f'{festival.id}', festival) for festival in self.object_list]
-            for name, festival in names:
-                if name in request.POST:
-                    picked_festival = festival
-                    break
-            if picked_festival is not None:
-                switch_festival(request.session, picked_festival)
-                return HttpResponseRedirect(reverse('films:index'))
-            else:
-                self.unexpected_error = f'Submit name not found in POST ({request.POST}'
-
-        return render(request, 'festivals/index.html', self.get_context_data())
 
 
 @login_required

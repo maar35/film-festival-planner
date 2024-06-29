@@ -5,21 +5,20 @@
 
 {% block content %}
     {% load static %}
-    {% if log %}
-        <span class="left-half">
-            <h3 style="color:{{ festival_color }}; margin-bottom: 2px">{{ log.action }} results</h3>
-        </span>
-        <span class="right-half">
-            <a href="{% url 'theaters:theaters' %}">Theater index</a>
-        </span>
-        {% for result in log.results %}
-            <p class="log">{{ result }}</p>
-        {% endfor %}
-        <br>
-    {% endif %}
     {% if user_is_admin %}
-        <h3>New theater data</h3>
-        <br>
+        <h2 class="row col-left-h2">New theater data</h2>
+        <div class="row">
+            <span class="col-right">
+                <a href="{% url 'theaters:theaters' %}">Theater index</a>
+            </span>
+        </div>
+        {% if log %}
+            <h3 class="log-header">{{ log.action }} results</h3>
+            {% for result in log.results %}
+                <p class="log">{{ result }}</p>
+            {% endfor %}
+            <br>
+        {% endif %}
         <table>
           <thead>
             <tr>

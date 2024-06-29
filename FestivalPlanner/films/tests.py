@@ -13,15 +13,15 @@ from django.urls import reverse
 from authentication.models import me, FilmFan
 from authentication.tests import set_up_user_with_fan
 from festival_planner import debug_tools
+from festival_planner.Cookie import Filter
 from festival_planner.cache import FilmRatingCache
 from festivals.models import current_festival, FestivalBase, Festival
 from festivals.tests import create_festival
 from films import views
 from films.forms.film_forms import PickRating
 from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR
-from films.views import FilmsView, ResultsView, MAX_SHORT_MINUTES, BaseFilmsFormView, Filter
+from films.views import FilmsView, ResultsView, MAX_SHORT_MINUTES, BaseFilmsFormView
 from loader.views import SaveRatingsView
-from sections.models import Section, Subsection
 from theaters.models import City
 
 

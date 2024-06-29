@@ -6,8 +6,12 @@
 {% block content %}
     {% load static %}
     {% if user_is_admin %}
-        <h3>Hit the button to {{ action }} theater data</h3>
-        <br>
+        <h2 class="row col-left-h2">Hit the button to {{ action }} theater data</h2>
+        <div class="row">
+            <span class="col-right">
+                <a href="{% url 'theaters:theaters' %}">Theaters</a>
+            </span>
+        </div>
         <table>
             <tbody>
                 <tr><th>#Cities on file</th><td style="text-align: right">{{ theater_items.city_count_on_file }}</td></tr>

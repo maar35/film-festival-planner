@@ -636,10 +636,13 @@ class TheaterDataLoaderViewsTests(LoaderViewsTests):
 
     def assert_load_results(self, response, by_admin=True):
         self.assertEqual(response.status_code, HTTPStatus.OK)
-        self.assertContains(response, 'Load results')
-        self.assertContains(response, '1 city records read')
-        self.assertContains(response, '1 theater records read')
-        self.assertContains(response, '2 screen records read')
+        if by_admin:
+            self.assertContains(response, 'Load results')
+            self.assertContains(response, '1 city records read')
+            self.assertContains(response, '1 theater records read')
+            self.assertContains(response, '2 screen records read')
+        else:
+            self.assertNotContains(response, 'Load results')
         self.assert_words_visible(response, self.expected_words_new_screens, by_admin=by_admin)
 
     def assert_words_visible(self, response, expected_words, by_admin=True):

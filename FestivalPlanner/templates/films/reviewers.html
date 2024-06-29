@@ -4,23 +4,22 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <span class="left-half">
-        <h3>Film reviewers against pre- and post-attendance judgements</h3>
-    </span>
-    <span class="right-half">
-        <a href="{% url 'films:films' %}">Ratings</a>
-        <br>
-        <a href="{% url 'films:votes' %}">Votes</a>
-    </span>
+    <h2 class="row col-left-h2">Film reviewers against pre- and post-attendance judgements</h2>
+    <div class="row">
+        <span class="col-right">
+            <a href="{% url 'films:films' %}">Ratings</a>
+            <br>
+            <a href="{% url 'films:votes' %}">Votes</a>
+        </span>
+    </div>
     {% if unexpected_errors %}
-        <h3 class="error">Unexpected error</h3>
+        <h2 class="error">Unexpected error</h2>
         {% for error in unexpected_errors %}
             <p class="log">{{ error }}</p>
         {% endfor %}
     {% endif %}
     <p>{{ total_film_count }} films reviewed</p>
-    <br>
-    <table>
+    <table class="no-select">
         <thead>
             <tr>
                 <th class="sticky-t-head" style="vertical-align: text-top;">Reviewer</th>

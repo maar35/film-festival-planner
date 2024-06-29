@@ -6,7 +6,7 @@
 {% block content %}
     {% load static %}
     {% if user_is_admin %}
-        <h3>Pick a festival to load section data from</h3>
+        <h2>Pick a festival to load section data from</h2>
         {% if unexpected_error %}
             <h2 class="error">Unexpected error</h2>
             <p>{{ unexpected_error }}</p>
