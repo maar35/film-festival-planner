@@ -16,15 +16,13 @@ class Cookie:
     def get_cookie_key(self):
         return self._cookie_key
 
-    def handle_get_request(self, request, default=None):
+    def handle_get_request(self, request):
         """
         Find cookie in a GET request and update its value accordingly.
         """
         if self._cookie_key in request.GET:
             query_value = request.GET[self._cookie_key]
             self.set(request.session, query_value)
-        elif default:
-            self.set(request.session, default)
 
     def set(self, session, value):
         session[self._cookie_key] = value
@@ -55,7 +53,7 @@ class Filter(Cookie):
         action_false = action_false or f'Hide {action_subject}'
         self._action_by_filtered = {True: action_true, False: action_false}
 
-    def handle_get_request(self, request, default=None):
+    def handle_get_request(self, request):
         """
         Find cookie in a GET request and update its filter on/off value accordingly.
         """
@@ -63,8 +61,6 @@ class Filter(Cookie):
             query_key = request.GET[self._cookie_key]
             filtered = self.filtered_by_query[query_key]
             self.set(request.session, filtered)
-        elif default:
-            self.set(request.session, default)
 
     def get_href_filter(self, session):
         """
