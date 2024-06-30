@@ -4,7 +4,13 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3>Current festival details</h3>
+    <h2 class="row col-left-h2">Current festival details</h2>
+    <span class="row">
+        <span class="col-right">
+            <a href="{% url 'festivals:index' %}">Back to festivals list</a>
+        </span>
+    </span>
+    <br>
     <table>
         <tbody>
         <tr><td><b>Festival</b></td><td>{{ festival.base.name }}</td></tr>

@@ -5,11 +5,11 @@
 
 {% block content %}
     {% if user_is_admin %}
-        <h3>Film fan</h3>
+        <h2>Film fan</h2>
         <form action="{% url 'films:film_fan' %}" method="post">
-              {% csrf_token %}
-              {{ form.as_p }}
-              <input type="submit" value="Set current fan" />
+            {% csrf_token %}
+            {{ form.as_p }}
+            <input type="submit" value="Set current fan" />
         </form>
     {% else %}
         <h2 class="error">Not allowed</h2>

@@ -5,23 +5,24 @@
 
 {% block content %}
     {% if user_is_admin %}
-        <span class="left-half">
-            <h3>{{ theater.parse_name }}</h3>
+        <h2 class="row col-left-h2">{{ theater.parse_name }}</h2>
+        <span class="row">
+            <span class="col-right">
+                <a href="{% url 'theaters:theaters' %}">Back to theater index</a>
+                <br>
+                <a href="{% url 'loader:new_screens' %}">New theater data</a>
+            </span>
         </span>
-        <span class="right-half">
-            <a href="{% url 'theaters:theaters' %}">Back to theater index</a>
-            <br>
-            <a href="{% url 'loader:new_screens' %}">New theater data</a>
-        </span>
+        <br>
         {% if form_errors %}
             <h2 class="error">Form Error</h2>
-                <p>
-                {% for form_error in form_errors %}
-                    {{ form_error }}<br>
-                {% endfor %}
-                </p>
+            <p>
+            {% for form_error in form_errors %}
+                {{ form_error }}<br>
+            {% endfor %}
+            </p>
+            <br>
         {% endif %}
-        <br>
         <table>
             <tbody>
                 <tr><th>Theater</th><td>{{ theater.parse_name }}</td></tr>

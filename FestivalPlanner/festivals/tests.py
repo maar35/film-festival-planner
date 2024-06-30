@@ -3,6 +3,7 @@ from datetime import date
 from django.test import TestCase
 from django.urls import reverse
 
+from festival_planner import debug_tools
 from festivals.models import Festival, FestivalBase
 from theaters.models import City
 
@@ -33,6 +34,8 @@ class FestivalModelTests(TestCase):
     def setUp(self):
         super(FestivalModelTests, self).setUp()
         self.city = City.cities.create(city_id=1, name='Berlin', country='de')
+        debug_tools.SUPPRESS_DEBUG_PRINT = True
+
 
     def tearDown(self):
         super(FestivalModelTests, self).tearDown()

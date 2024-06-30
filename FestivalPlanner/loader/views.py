@@ -9,6 +9,7 @@ from django.views import View
 from django.views.generic import FormView, ListView
 
 from authentication.models import FilmFan
+from festival_planner.Cookie import Cookie
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log
 from festivals.models import Festival, switch_festival, current_festival, FestivalBase
 from films.models import Film, FilmFanFilmRating
@@ -62,22 +63,20 @@ class TheaterDataInterfaceView(LoginRequiredMixin, FormView):
     form_class = None
     http_method_names = ['get', 'post']
     form_class_by_action = {'load': TheaterDataLoaderForm, 'dump': TheaterDataDumperForm}
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.action = None
+    action_cookie = Cookie('action')
 
     def dispatch(self, request, *args, **kwargs):
-        if 'action' in request.GET:
-            self.action = request.GET['action']
-        self.form_class = self.form_class_by_action[self.action]
+        self.action_cookie.handle_get_request(request)
+        action = self.action_cookie.get(request.session)
+        self.form_class = self.form_class_by_action[action]
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         session = self.request.session
         context = add_base_context(self.request, super().get_context_data(**kwargs))
-        context['title'] = f'{self.action} Theater Data'
-        context['action'] = self.action
+        action = self.action_cookie.get(session)
+        context['title'] = f'{action} Theater Data'
+        context['action'] = action
         context['theater_items'] = get_theater_items()
         context['log'] = get_log(session)
         unset_log(session)
@@ -85,9 +84,11 @@ class TheaterDataInterfaceView(LoginRequiredMixin, FormView):
 
     def form_valid(self, form):
         session = self.request.session
-        if self.action == 'dump':
+        action = self.action_cookie.get(session)
+        self.action_cookie.remove(session)
+        if action == 'dump':
             form.dump_theater_data(session)
-        elif self.action == 'load':
+        elif action == 'load':
             form.load_theater_data(session)
         return HttpResponseRedirect('/theaters/theaters')
 
@@ -127,7 +128,7 @@ class NewTheaterDataListView(ListView):
 
     def get_context_data(self, *args, **kwargs):
         context = add_base_context(self.request, super().get_context_data(**kwargs))
-        context['title'] = 'Merge New Screenings'
+        context['title'] = 'Merge New Screens'
         context['log'] = get_log(self.request.session)
         context['objects_label'] = NewTheaterDataView.current_objects_label()
         return context

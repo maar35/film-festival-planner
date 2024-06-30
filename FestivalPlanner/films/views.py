@@ -13,10 +13,11 @@ from django.views import View
 from django.views.generic import FormView, DetailView, ListView, TemplateView
 
 from authentication.models import FilmFan
+from festival_planner.Cookie import Filter, Cookie
 from festival_planner.cache import FilmRatingCache
 from festival_planner.debug_tools import pr_debug
 from festival_planner.tools import add_base_context, unset_log, wrap_up_form_errors, application_name, get_log, \
-    set_cookie, get_cookie, initialize_log, add_log
+    initialize_log, add_log
 from festivals.config import Config
 from festivals.models import current_festival
 from films.forms.film_forms import PickRating, UserForm, refreshed_rating_action
@@ -59,45 +60,6 @@ class FragmentKeeper:
         else:
             fragment_name = FragmentKeeper.fragment_name(film_id)
         return fragment_name
-
-
-class Filter:
-    filtered_by_query = {'display': False, 'hide': True}
-    query_by_filtered = {filtered: query for query, filtered in filtered_by_query.items()}
-
-    def __init__(self, action_subject, cookie_key=None, filtered=False, action_true=None, action_false=None):
-        self._cookie_key = cookie_key or action_subject.strip().replace(' ', '-')
-        self._filtered = filtered
-        action_true = action_true or f'Display {action_subject}'
-        action_false = action_false or f'Hide {action_subject}'
-        self._action_by_filtered = {True: action_true, False: action_false}
-
-    def init_cookie(self, session):
-        set_cookie(session, self._cookie_key, get_cookie(session, self._cookie_key, self._filtered))
-
-    def get_cookie_key(self):
-        return self._cookie_key
-
-    def handle_request(self, request):
-        if self._cookie_key in request.GET:
-            query_key = request.GET[self._cookie_key]
-            filtered = self.filtered_by_query[query_key]
-            set_cookie(request.session, self._cookie_key, filtered)
-
-    def get_href_filter(self, session):
-        return f'?{self.get_cookie_key()}={self.next_query(session)}'
-
-    def on(self, session, default=None):
-        return get_cookie(session, self._cookie_key, default)
-
-    def off(self, session, default=None):
-        return not self.on(session, default)
-
-    def next_query(self, session):
-        return self.query_by_filtered[self.off(session)]
-
-    def action(self, session):
-        return self._action_by_filtered[self.on(session)]
 
 
 class IndexView(TemplateView):
@@ -252,17 +214,13 @@ class FilmsListView(LoginRequiredMixin, ListView):
         session = self.request.session
         self.fragment_keeper = FragmentKeeper()
 
-        # Initialize the filter cookies when necessary.
-        for f in self.filters:
-            f.init_cookie(session)
-
         # Ensure the film rating cache is initialized.
         if not PickRating.film_rating_cache:
             PickRating.film_rating_cache = FilmRatingCache(request.session, FilmsView.unexpected_errors)
 
         # Apply filters from url query part.
         for f in self.filters:
-            f.handle_request(request)
+            f.handle_get_request(request)
 
         # Add the filters to the cache key.
         filter_dict = {}
@@ -595,23 +553,16 @@ class ReviewersView(ListView):
     http_method_names = ['get']
     title = 'Reviewers Statistics'
     fan_list = get_present_fans()
+    judged_filter = Filter('not judged', filtered=True, action_true='Display all')
     reviewed_films = None
     total_film_count = None
     unexpected_errors = []
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.judged_filter = Filter('not judged', filtered=True, action_true='Display all')
-
     def dispatch(self, request, *args, **kwargs):
         self.total_film_count = 0
-        session = request.session
-
-        # Initialize the filter cookie when necessary.
-        self.judged_filter.init_cookie(session)
 
         # Apply the filter from url query part.
-        self.judged_filter.handle_request(request)
+        self.judged_filter.handle_get_request(request)
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -725,17 +676,28 @@ def film_fan(request):
 
     # Preset some parameters.
     title = 'Film Fans'
+    form = UserForm(initial={'current_fan': current_fan(request.session)}, auto_id=False)
+    session = request.session
+    next_cookie = Cookie('next')
 
     # Check the request.
-    if request.method == 'POST':
-        form = UserForm(request.POST)
-        if form.is_valid():
-            selected_fan = form.cleaned_data['selected_fan']
-            fan = FilmFan.film_fans.get(name=selected_fan)
-            fan.switch_current(request.session)
-            return HttpResponseRedirect(reverse('films:index'))
-    else:
-        form = UserForm(initial={'current_fan': current_fan(request.session)}, auto_id=False)
+    match request.method:
+        case 'GET':
+            next_cookie.handle_get_request(request)
+            pr_debug(f'{next_cookie.get(request.session)=}')
+        case 'POST':
+            form = UserForm(request.POST)
+            if form.is_valid():
+                # Switch fan as indicated.
+                selected_fan = form.cleaned_data['selected_fan']
+                fan = FilmFan.film_fans.get(name=selected_fan)
+                fan.switch_current(session)
+
+                # Redirect to calling page.
+                redirect_path = next_cookie.get(session)
+                pr_debug(f'{redirect_path=}')
+                next_cookie.remove(session)
+                return HttpResponseRedirect(redirect_path or reverse('films:index'))
 
     # Construct the context.
     context = add_base_context(request, {

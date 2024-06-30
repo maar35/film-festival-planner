@@ -17,29 +17,6 @@ def application_name():
     return name
 
 
-def set_cookie(session, cookie_key, value):
-    """
-    Initialize cookie.
-    """
-    session[cookie_key] = value
-
-
-def get_cookie(session, cookie_key, default=None):
-    """
-    Get the cookie from the session or default if it doesn't exist.
-    """
-    value = session.get(cookie_key, default)
-    return value
-
-
-def remove_cookie(session, cookie):
-    """
-    Remove cookie.
-    """
-    if cookie in session:
-        del session[cookie]
-
-
 def initialize_log(session, action='Load'):
     """
     Initialize log cookie.

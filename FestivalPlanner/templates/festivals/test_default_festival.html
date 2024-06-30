@@ -4,11 +4,15 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h3>Test which festival is the nearest for a given date</h3>
-    <br>
+    <h2 class="row  col-left-h2">Test which festival is the nearest for a given date</h2>
+    <div class="row">
+        <span class="col-right">
+            <a href="{% url 'festivals:index' %}">Festivals index</a>
+        </span>
+    </div>
     {% if sample_date %}
-        <h3>Previous results</h3>
-        <p>Sample date {{ sample_date }} resulted in <span style="color:{{ festival_color }}">{{ festival }}</span>.</p>
+        <h3 class="log-header">Previous results</h3>
+        <p class="log">Sample date {{ sample_date }} resulted in <span style="color:{{ festival_color }}">{{ festival }}</span></p>
         <br>
     {% endif %}
     {% if festivals %}
@@ -34,5 +38,4 @@
         <input type="submit" value="Set nearest festival" />
     </form>
     <br>
-    <p><a href="{% url 'festivals:index' %}">Festivals index</a></p>
 {% endblock %}
