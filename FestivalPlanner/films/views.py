@@ -191,17 +191,19 @@ class FilmsListView(LoginRequiredMixin, ListView):
     title = 'Film Rating List'
     class_tag = 'rating'
     highest_rating = FilmFanFilmRating.Rating.values[-1]
+    eligible_ratings = FilmFanFilmRating.Rating.values[LOWEST_PLANNABLE_RATING:]
     short_threshold = timedelta(minutes=MAX_SHORT_MINUTES)
-    description_by_film_id = {}
     fan_list = get_present_fans()
     fragment_keeper = None
     logged_in_fan = None
     festival = None
     selected_films = None
-    festival_feature_films = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.description_by_film_id = {}
+        self.festival_feature_films = None
+
         self.filters = []
         self.shorts_filter = Filter('shorts')
         self.filters.append(self.shorts_filter)
@@ -209,6 +211,16 @@ class FilmsListView(LoginRequiredMixin, ListView):
         for fan in self.fan_list:
             self.rated_filters[fan] = Filter('rated', cookie_key=f'{fan}-rated')
             self.filters.append(self.rated_filters[fan])
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+
+        # Save the festival films.
+        pr_debug('start', with_time=True)
+        self.festival = current_festival(request.session)
+        filter_kwargs = {'festival': self.festival, 'duration__gt': self.short_threshold}
+        self.festival_feature_films = Film.films.filter(**filter_kwargs)
+        pr_debug('done', with_time=True)
 
     def dispatch(self, request, *args, **kwargs):
         session = self.request.session
@@ -234,7 +246,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
         pr_debug('start', with_time=True)
         session = self.request.session
         self.logged_in_fan = current_fan(session)
-        self.festival = current_festival(session)
 
         # Return the cache when valid.
         if PickRating.film_rating_cache.is_valid(session):
@@ -242,30 +253,10 @@ class FilmsListView(LoginRequiredMixin, ListView):
             return PickRating.film_rating_cache.get_film_rows(session)
 
         # Filter the films as requested.
-        pr_debug('start filtered query', with_time=True)
-        filter_kwargs = {'festival': self.festival}
-        if self.shorts_filter.on(session):
-            filter_kwargs['duration__gt'] = self.short_threshold
-        self.selected_films = Film.films.filter(**filter_kwargs).order_by('seq_nr')
-        self.festival_feature_films = copy.deepcopy(self.selected_films)
-        for fan in self.fan_list:
-            if self.rated_filters[fan].on(session):
-                self.selected_films = self.selected_films.filter(
-                    ~Exists(FilmFanFilmRating.film_ratings.filter(film=OuterRef('pk'), film_fan=fan))
-                )
+        self._filter_films(session)
 
         # Read the descriptions.
-        if not get_log(session):
-            initialize_log(session, action='Read descriptions')
-        film_info_file = self.festival.filminfo_file()
-        try:
-            with open(film_info_file, 'r', newline='') as csvfile:
-                object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
-                self.description_by_film_id = {int(row[0]): row[1] for row in object_reader}
-                add_log(session, f'{len(self.description_by_film_id)} descriptions found.')
-        except FileNotFoundError as e:
-            self.description_by_film_id = {}
-            add_log(session, 'No descriptions file found.')
+        self._read_film_descriptions(session)
 
         # Set the fragment names.
         self.fragment_keeper.add_fragments(self.selected_films)
@@ -282,7 +273,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
     def get_context_data(self, *, object_list=None, **kwargs):
         session = self.request.session
         super_context = super().get_context_data(**kwargs)
-        film_count, rated_films_count, count_dicts = get_rating_statistics(session)
+        film_count, rated_films_count, eligible_rating_counts = self._get_stats_for_ratings()
         new_context = {
             'title': self.title,
             'search_form': PickRating(),
@@ -290,7 +281,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'feature_count': film_count,
             'rated_features_count': rated_films_count,
             'highest_rating': self.highest_rating,
-            'eligible_counts': count_dicts,
+            'eligible_counts': eligible_rating_counts,
             'short_threshold': self.short_threshold.total_seconds(),
             'display_shorts_href_filter': self.shorts_filter.get_href_filter(session),
             'display_shorts_action': self.shorts_filter.action(session),
@@ -309,6 +300,31 @@ class FilmsListView(LoginRequiredMixin, ListView):
         BaseFilmsFormView.found_films = None
         return response
 
+    def _filter_films(self, session):
+        pr_debug('start filtered query', with_time=True)
+        filter_kwargs = {'festival': self.festival}
+        if self.shorts_filter.on(session):
+            filter_kwargs['duration__gt'] = self.short_threshold
+        self.selected_films = Film.films.filter(**filter_kwargs).order_by('seq_nr')
+        for fan in self.fan_list:
+            if self.rated_filters[fan].on(session):
+                self.selected_films = self.selected_films.filter(
+                    ~Exists(FilmFanFilmRating.film_ratings.filter(film=OuterRef('pk'), film_fan=fan))
+                )
+
+    def _read_film_descriptions(self, session):
+        if not get_log(session):
+            initialize_log(session, action='Read descriptions')
+        film_info_file = self.festival.filminfo_file()
+        try:
+            with open(film_info_file, 'r', newline='') as csvfile:
+                object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                self.description_by_film_id = {int(row[0]): row[1] for row in object_reader}
+                add_log(session, f'{len(self.description_by_film_id)} descriptions found.')
+        except FileNotFoundError as e:
+            self.description_by_film_id = {}
+            add_log(session, 'No descriptions file found.')
+
     def get_film_row(self, row_nr, film):
         prefix = FilmsView.submit_name_prefix
         choices = FilmFanFilmRating.Rating.choices
@@ -324,7 +340,55 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'description': self.get_description(film),
             'fan_ratings': fan_ratings,
         }
+
         return film_rating_row
+
+    @staticmethod
+    def _get_stats_for_one_rating(base_rating, count_by_rating, film_count, rated_films_count):
+        counts = [count for r, count in count_by_rating.items() if r >= base_rating]
+        plannable_films_count = sum(counts)
+        if rated_films_count > 0:
+            projected_plannable_count = int(film_count * plannable_films_count / rated_films_count)
+        else:
+            projected_plannable_count = None
+        return {
+            'base_rating': base_rating,
+            'plannable_films_count': plannable_films_count,
+            'projected_plannable_count': projected_plannable_count,
+        }
+
+    def _get_count_by_rating(self, film_rating_queryset_tuples):
+        count_by_eligible_rating = {}
+        for film, rating_queryset in film_rating_queryset_tuples:
+            best_rating = max([r.rating for r in rating_queryset])
+            if best_rating in self.eligible_ratings:
+                try:
+                    count_by_eligible_rating[best_rating] += 1
+                except KeyError:
+                    count_by_eligible_rating[best_rating] = 1
+        return count_by_eligible_rating
+
+    def _get_stats_for_ratings(self):
+        # Get the feature films of this festival.
+        feature_films = self.festival_feature_films
+        film_count = len(feature_films)
+
+        # Filter out the data with eligible ratings.
+        manager = FilmFanFilmRating.film_ratings
+        dirty_film_rating_sets = [(f, manager.filter(film=f, rating__gt=0)) for f in feature_films]
+        film_rating_sets = [(f, ratings) for f, ratings in dirty_film_rating_sets if ratings]
+        rated_films_count = len(film_rating_sets)
+        count_by_eligible_rating = self._get_count_by_rating(film_rating_sets)
+
+        # Find the statistics for all eligible ratings.
+        eligible_rating_counts = []
+        for eligible_rating in self.eligible_ratings:
+            eligible_rating_counts.append(self._get_stats_for_one_rating(eligible_rating,
+                                                                         count_by_eligible_rating,
+                                                                         film_count,
+                                                                         rated_films_count))
+
+        return film_count, rated_films_count, eligible_rating_counts
 
     @staticmethod
     def get_subsection(film):
@@ -706,49 +770,6 @@ def film_fan(request):
     })
 
     return render(request, 'films/film_fan.html', context)
-
-
-def get_rating_statistics(session):
-    def get_stats_for_rating(base_rating):
-        counts = [count for r, count in count_by_eligible_rating.items() if r >= base_rating]
-        plannable_films_count = sum(counts)
-        if rated_films_count > 0:
-            projected_plannable_count = int(film_count * plannable_films_count / rated_films_count)
-        else:
-            projected_plannable_count = None
-        return {
-            'base_rating': base_rating,
-            'plannable_films_count': plannable_films_count,
-            'projected_plannable_count': projected_plannable_count,
-        }
-
-    # Initialize.
-    films = [film_row['film'] for film_row in PickRating.film_rating_cache.get_film_rows(session)]
-    max_short_duration = timedelta(minutes=MAX_SHORT_MINUTES)
-    feature_films = [film for film in films if film.duration > max_short_duration]
-    eligible_ratings = FilmFanFilmRating.Rating.values[LOWEST_PLANNABLE_RATING:]
-    film_count = len(feature_films)
-
-    # Filter out the data with eligible ratings.
-    rated_films_count = 0
-    count_by_eligible_rating = {}
-    for feature_film in feature_films:
-        rating_set = FilmFanFilmRating.film_ratings.filter(film=feature_film, rating__gt=0)
-        if len(rating_set):
-            rated_films_count += 1
-            best_rating = max([r.rating for r in rating_set])
-            if best_rating in eligible_ratings:
-                try:
-                    count_by_eligible_rating[best_rating] += 1
-                except KeyError:
-                    count_by_eligible_rating[best_rating] = 1
-
-    # Find the statistics for all eligible ratings.
-    count_dicts = []
-    for eligible_rating in eligible_ratings:
-        count_dicts.append(get_stats_for_rating(eligible_rating))
-
-    return film_count, rated_films_count, count_dicts
 
 
 def get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix, choices, post_attendance):
