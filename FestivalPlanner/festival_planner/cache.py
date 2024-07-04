@@ -47,18 +47,21 @@ class FilmRatingCache:
         self.check_invalidate_caches()
         pr_debug(f'done, {len(self.get_film_rows(session))} records', with_time=True)
 
-    def update(self, session, film, fan, rating_value):
+    def update_festival_caches(self, session, film, fan, rating_value):
+        festival = current_festival(session)
+        invalid_cache_keys = [k for k in self.cache_by_key if k.split(':')[self.FESTIVAL_FILTER_INDEX] == str(festival)]
+        for invalid_cache_key in invalid_cache_keys:
+            self.update(invalid_cache_key, film, fan, rating_value)
+
+    def update(self, cache_key, film, fan, rating_value):
         pr_debug('start', with_time=True)
-        film_rows = self.get_film_rows(session)
+        film_rows = self.cache_by_key[cache_key].get_film_rows()
 
         # Filter out film data.
         try:
             film_row = [row for row in film_rows if row['film'].id == film.id][0]
-        except TypeError as e:
+        except (TypeError, IndexError) as e:
             pr_debug(f'{e} getting film row for {film=}')
-            self.errors.append(f'{e} getting film row for {film=}')
-        except IndexError as e:
-            pr_debug(f'ERROR getting film row for {film=}')
             self.errors.append(f'{e} getting film row for {film=}')
         else:
             # Filter out fan data.
@@ -87,7 +90,7 @@ class FilmRatingCache:
             for cache_key, cache_data in old_cache_items:
                 self.invalidate(cache_key)
 
-        pr_debug('done', with_time=True)
+        pr_debug(f'done, {len(self.cache_by_key)} caches', with_time=True)
 
     def invalidate_festival_caches(self, festival):
         invalid_cache_keys = [k for k in self.cache_by_key if k.split(':')[self.FESTIVAL_FILTER_INDEX] == str(festival)]

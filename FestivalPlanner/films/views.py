@@ -1,4 +1,3 @@
-import copy
 import csv
 import re
 from datetime import timedelta
@@ -323,7 +322,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
                 add_log(session, f'{len(self.description_by_film_id)} descriptions found.')
         except FileNotFoundError as e:
             self.description_by_film_id = {}
-            add_log(session, 'No descriptions file found.')
+            add_log(session, f'{e}: No descriptions file found.')
 
     def get_film_row(self, row_nr, film):
         prefix = FilmsView.submit_name_prefix
@@ -556,10 +555,10 @@ class ResultsView(LoginRequiredMixin, DetailView):
         response = super().dispatch(request, *args, **kwargs)
 
         if request.method == 'POST':
-            submitted_name = get_submitted_name(request, self.submit_names)
+            submitted_name = list(request.POST.keys())[-1]
             session = self.request.session
             if submitted_name is not None:
-                [film_pk, rating_value] = submitted_name.strip(self.submit_name_prefix).split('_')
+                film_pk, rating_value = submitted_name.strip(self.submit_name_prefix).split('_')
                 film = Film.films.get(id=film_pk)
                 PickRating.update_rating(session, film, current_fan(session), rating_value)
 
@@ -594,9 +593,6 @@ class ResultsView(LoginRequiredMixin, DetailView):
     @staticmethod
     def get_description(film):
         film_info_file = film.festival.filminfo_file()
-        # with open(film_info_file, 'r') as stream:
-        #     info = yaml.safe_load(stream)
-        # description = info['description']
         try:
             with open(film_info_file, 'r', newline='') as csvfile:
                 object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
@@ -815,12 +811,3 @@ def get_subsection(film):
         return ''
     subsection = Subsection.subsections.get(festival=film.festival, subsection_id=film.subsection)
     return subsection
-
-
-def get_submitted_name(request, submit_names):
-    submitted_name = None
-    for submit_name in submit_names:
-        if submit_name in request.POST:
-            submitted_name = submit_name
-            break
-    return submitted_name

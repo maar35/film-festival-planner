@@ -61,7 +61,7 @@ class PickRating(forms.Form):
 
         # Update cache if applicable.
         if not post_attendance and cls.film_rating_cache:
-            cls.film_rating_cache.update(session, film, fan, rating_value)
+            cls.film_rating_cache.update_festival_caches(session, film, fan, rating_value)
 
 
 class RatingForm(forms.Form):
