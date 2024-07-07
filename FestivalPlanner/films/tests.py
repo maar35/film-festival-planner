@@ -361,7 +361,7 @@ class ResultsViewsTests(ViewsTestCase):
         get_response = self.client.get(reverse('films:results', args=[fake_pk]))
 
         # Assert.
-        self.assertEqual(get_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(get_response.status_code, HTTPStatus.NOT_FOUND)
 
     def test_results_of_hacked_film_logged_in(self):
         """
@@ -387,6 +387,7 @@ class ResultsViewsTests(ViewsTestCase):
         # Arrange.
         saved_film = create_film(film_id=6000, title='New Adventure', minutes=114)
         url = reverse('films:results', args=[saved_film.pk])
+        PickRating.film_rating_cache = FilmRatingCache(self.client.session, FilmsView.unexpected_errors)
 
         # Act.
         response = self.client.get(url)
@@ -404,16 +405,17 @@ class ResultsViewsTests(ViewsTestCase):
         # Arrange.
         fan = self.regular_fan
         _ = self.get_regular_fan_request()
-
         saved_film = create_film(film_id=6001, title='New Adventures', minutes=115)
+        films_response = self.client.get(reverse('films:films'))    # Initialize cache.
 
         # Act.
-        post_response = self.client.get(reverse('films:results', args=[saved_film.pk]))
+        get_response = self.client.get(reverse('films:results', args=[saved_film.pk]))
 
         # Assert.
-        self.assertEqual(post_response.status_code, HTTPStatus.OK)
-        self.assertContains(post_response, saved_film.title)
-        self.assert_fan_row(fan, UNRATED_STR, post_response)
+        self.assertEqual(films_response.status_code, HTTPStatus.OK)
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertContains(get_response, saved_film.title)
+        self.assert_fan_row(fan, UNRATED_STR, get_response)
 
     def test_rating_of_created_film_logged_in(self):
         """
@@ -428,14 +430,17 @@ class ResultsViewsTests(ViewsTestCase):
         rating_value = 8
         FilmFanFilmRating.film_ratings.create(film=saved_film, film_fan=fan, rating=rating_value)
 
+        films_response = self.client.get(reverse('films:films'))    # Initialize cache.
+
         # Act.
-        post_response = self.client.get(reverse('films:results', args=[saved_film.pk]))
+        get_response = self.client.get(reverse('films:results', args=[saved_film.pk]))
 
         # Assert.
-        self.assertEqual(post_response.status_code, HTTPStatus.OK)
-        self.assertContains(post_response, saved_film.title)
-        self.assert_fan_row(fan, str(rating_value), post_response)
-        self.assert_fan_row(self.admin_fan, UNRATED_STR, post_response, fan_is_current=False)
+        self.assertEqual(films_response.status_code, HTTPStatus.OK)
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertContains(get_response, saved_film.title)
+        self.assert_fan_row(fan, str(rating_value), get_response)
+        self.assert_fan_row(self.admin_fan, UNRATED_STR, get_response, fan_is_current=False)
 
     def test_admin_can_vote_on_behalf_of_a_different_film_fan(self):
         """
@@ -447,11 +452,13 @@ class ResultsViewsTests(ViewsTestCase):
         _ = self.get_admin_request()
         post_data = {'selected_fan': [fan.name]}
         fan_response = self.client.post(reverse('films:film_fan'), data=post_data)
+        films_response = self.client.get(reverse('films:films'))    # Initialize cache.
 
         # Act.
         get_response = self.client.get(reverse('films:results', args=[saved_film.pk]))
 
         # Assert.
+        self.assertEqual(films_response.status_code, HTTPStatus.OK)
         self.assertEqual(fan_response.status_code, HTTPStatus.FOUND)
         self.assertIs(self.regular_fan.is_admin, False)
         self.assertIs(self.admin_fan.is_admin, True)
@@ -565,6 +572,7 @@ class FilmListViewsTests(ViewsTestCase):
         # Arrange.
         created_film = create_film(film_id=4422, title='The Wrong Answer', minutes=66)
         _ = self.get_regular_fan_request()
+        _ = self.client.get(reverse('films:films'))    # Initialize cache.
 
         # Act.
         response = self.client.get(reverse('films:results', args=[created_film.pk]))
