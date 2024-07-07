@@ -8,7 +8,7 @@ from django.views import View
 from django.views.generic import ListView, DetailView, FormView
 from django.views.generic.detail import SingleObjectMixin
 
-from festival_planner.Cookie import Cookie
+from festival_planner.cookie import Cookie
 from festival_planner.tools import add_base_context, get_log, unset_log
 from festivals.models import current_festival
 from theaters.forms.theater_forms import TheaterDetailsForm, TheaterScreenDetailsForm

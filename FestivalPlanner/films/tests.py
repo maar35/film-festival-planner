@@ -13,7 +13,7 @@ from django.urls import reverse
 from authentication.models import me, FilmFan
 from authentication.tests import set_up_user_with_fan
 from festival_planner import debug_tools
-from festival_planner.Cookie import Filter
+from festival_planner.cookie import Filter
 from festival_planner.cache import FilmRatingCache
 from festivals.models import current_festival, FestivalBase, Festival
 from festivals.tests import create_festival

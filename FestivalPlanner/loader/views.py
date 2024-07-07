@@ -9,7 +9,7 @@ from django.views import View
 from django.views.generic import FormView, ListView
 
 from authentication.models import FilmFan
-from festival_planner.Cookie import Cookie
+from festival_planner.cookie import Cookie
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log
 from festivals.models import Festival, switch_festival, current_festival, FestivalBase
 from films.models import Film, FilmFanFilmRating

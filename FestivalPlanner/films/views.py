@@ -12,7 +12,7 @@ from django.views import View
 from django.views.generic import FormView, DetailView, ListView, TemplateView
 
 from authentication.models import FilmFan
-from festival_planner.Cookie import Filter, Cookie
+from festival_planner.cookie import Filter, Cookie
 from festival_planner.cache import FilmRatingCache
 from festival_planner.debug_tools import pr_debug
 from festival_planner.tools import add_base_context, unset_log, wrap_up_form_errors, application_name, get_log, \
@@ -214,7 +214,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
 
-        # Save the festival films.
+        # Save the list of festival films.
         pr_debug('start', with_time=True)
         self.festival = current_festival(request.session)
         filter_kwargs = {'festival': self.festival, 'duration__gt': self.short_threshold}
@@ -549,7 +549,17 @@ class ResultsView(LoginRequiredMixin, DetailView):
     http_method_names = ['get', 'post']
     submit_name_prefix = 'results_'
     submit_names = []
+    film_in_cache = None
     unexpected_error = ''
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        session = request.session
+
+        # Find out if the film is in the current cache.
+        film_rows = PickRating.film_rating_cache.get_film_rows(session)
+        film = self.get_object()
+        self.film_in_cache = film in [row['film'] for row in film_rows]
 
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
@@ -571,10 +581,11 @@ class ResultsView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         film = self.object
+        session = self.request.session
         subsection = get_subsection(film)
         fan_rows = []
         fans = FilmFan.film_fans.all()
-        logged_in_fan = current_fan(self.request.session)
+        logged_in_fan = current_fan(session)
         for fan in fans:
             choices = get_fan_choices(self.submit_name_prefix, film, fan, logged_in_fan, self.submit_names)
             fan_rows.append({
@@ -586,6 +597,8 @@ class ResultsView(LoginRequiredMixin, DetailView):
         context['title'] = 'Film Rating Results'
         context['subsection'] = subsection
         context['description'] = self.get_description(film)
+        context['film_in_cache'] = self.film_in_cache
+        context['display_all_query'] = self.get_query_string_to_display_all(session)
         context['fan_rows'] = fan_rows
         context['unexpected_error'] = self.unexpected_error
         return context
@@ -601,6 +614,16 @@ class ResultsView(LoginRequiredMixin, DetailView):
             descriptions = []
         description = descriptions[0] if descriptions else '-'
         return description
+
+    @staticmethod
+    def get_query_string_to_display_all(session):
+        """
+        Set up an HTML query as to switch of all filters.
+        """
+        filter_keys = FilmRatingCache.get_active_filter_keys(session)
+        query_list = [f'{k}={Filter.query_by_filtered[False]}' for k in filter_keys]
+        display_all_query = '&'.join(query_list)
+        return display_all_query
 
 
 class ReviewersView(ListView):
