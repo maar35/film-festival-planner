@@ -6,7 +6,7 @@ from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.views import generic
 
-from festival_planner.Cookie import Cookie
+from festival_planner.cookie import Cookie
 from festival_planner.tools import add_base_context
 from festivals.forms.set_festival import FestivalEdition, TestNearestFestival
 from festivals.models import Festival, default_festival, switch_festival

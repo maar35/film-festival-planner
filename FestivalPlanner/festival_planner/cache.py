@@ -12,6 +12,8 @@ MAX_CACHES = 10
 class FilmRatingCache:
     caches_count = 0
     cache_by_key = {}
+    FILTER_SEPARATOR = ':'
+    KEY_VALUE_SEPARATOR = '_'
     FESTIVAL_FILTER_INDEX = 0
     NO_FILTERS = {}
 
@@ -28,6 +30,29 @@ class FilmRatingCache:
         if cache_key in self.cache_by_key and self.cache_by_key[cache_key]:
             return True
         return False
+
+    def festival_cache_keys(self, festival):
+        index = self.FESTIVAL_FILTER_INDEX
+        sep = self.FILTER_SEPARATOR
+        return [key for key in self.cache_by_key if key.split(sep)[index] == str(festival)]
+
+    @classmethod
+    def get_active_filter_keys(cls, session):
+        # Get the current cache key from the session.
+        cache_key = cls.get_cache_key(session)
+
+        # Split the cache key into the underlying filters.
+        filters = cache_key.split(cls.FILTER_SEPARATOR)
+
+        # Remove the festival filter.
+        index = cls.FESTIVAL_FILTER_INDEX
+        filters.remove(filters[index])
+
+        # Isolate the keys of active filters.
+        key_value_list = [f.split(cls.KEY_VALUE_SEPARATOR) for f in filters]
+        active_filter_keys = [key for [key, on] in key_value_list if int(on)]
+
+        return active_filter_keys
 
     def get_film_rows(self, session):
         cache_key = self.get_cache_key(session)
@@ -47,18 +72,21 @@ class FilmRatingCache:
         self.check_invalidate_caches()
         pr_debug(f'done, {len(self.get_film_rows(session))} records', with_time=True)
 
-    def update(self, session, film, fan, rating_value):
+    def update_festival_caches(self, session, film, fan, rating_value):
+        festival = current_festival(session)
+        invalid_cache_keys = self.festival_cache_keys(festival)
+        for invalid_cache_key in invalid_cache_keys:
+            self.update(invalid_cache_key, film, fan, rating_value)
+
+    def update(self, cache_key, film, fan, rating_value):
         pr_debug('start', with_time=True)
-        film_rows = self.get_film_rows(session)
+        film_rows = self.cache_by_key[cache_key].get_film_rows()
 
         # Filter out film data.
         try:
             film_row = [row for row in film_rows if row['film'].id == film.id][0]
-        except TypeError as e:
+        except (TypeError, IndexError) as e:
             pr_debug(f'{e} getting film row for {film=}')
-            self.errors.append(f'{e} getting film row for {film=}')
-        except IndexError as e:
-            pr_debug(f'ERROR getting film row for {film=}')
             self.errors.append(f'{e} getting film row for {film=}')
         else:
             # Filter out fan data.
@@ -87,10 +115,10 @@ class FilmRatingCache:
             for cache_key, cache_data in old_cache_items:
                 self.invalidate(cache_key)
 
-        pr_debug('done', with_time=True)
+        pr_debug(f'done, {len(self.cache_by_key)} caches', with_time=True)
 
     def invalidate_festival_caches(self, festival):
-        invalid_cache_keys = [k for k in self.cache_by_key if k.split(':')[self.FESTIVAL_FILTER_INDEX] == str(festival)]
+        invalid_cache_keys = self.festival_cache_keys(festival)
         for invalid_cache_key in invalid_cache_keys:
             self.invalidate(invalid_cache_key)
 
@@ -106,11 +134,11 @@ class FilmRatingCache:
     def set_filters(session, filter_dict):
         session['filters'] = {k: 1 if v else 0 for k, v in filter_dict.items()}
 
-    @staticmethod
-    def get_filters_key(session):
+    @classmethod
+    def get_filters_key(cls, session):
         filter_dict = session.get('filters') or {}
-        filter_keys = [f'{k}_{v}' for k, v in filter_dict.items()]
-        return ':'.join(filter_keys) if filter_keys else ''
+        filter_keys = [f'{k}{cls.KEY_VALUE_SEPARATOR}{v}' for k, v in filter_dict.items()]
+        return cls.FILTER_SEPARATOR.join(filter_keys) if filter_keys else ''
 
 
 class FilmRatingCacheData:

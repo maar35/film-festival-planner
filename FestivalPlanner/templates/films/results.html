@@ -4,13 +4,24 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h2 ><a href="{{ film.url }}">{{ film.title }}</a></h2>
+    <h2 class="row col-left-h2"><a href="{{ film.url }}">{{ film.title }}</a></h2>
+    <div class="row">
+        <span class="col-right">
+            {% if film_in_cache %}
+                <a href="{% url 'films:films' %}#film{{ film.film_id }}">Back to ratings of {{ film.title }}</a>
+            {% else %}
+                Film is hidden in ratings list <a href="{% url 'films:films' %}?{{ display_all_query }}#film{{ film.film_id }}">Clear filters</a>
+            {% endif %}
+            <br>
+            <a href="{% url 'films:films' %}">Back to ratings</a>
+        </span>
+    </div>
     <ul>
         <li>Film#: {{ film.film_id }}</li>
         <li>Duration: {{ film.duration }}</li>
         <li>Subsection: {{ subsection.name }}</li>
         <li>Description: {{ description }}</li>
-        <li>Reviewer: {{ film.reviewer }}</li>
+        <li>Reviewer: {% if film.reviewer %} {{ film.reviewer }} {% else %} - {% endif %}</li>
         <li>Medium category: {{ film.medium_category }}</li>
         <li>Rating count: {{ film.filmfanfilmrating_set.count }}</li>
     </ul>
@@ -53,8 +64,5 @@
         </tbody>
     </table>
     </form>
-    <br><br>
-    <a href="{% url 'films:films' %}#film{{ film.film_id }}">Back to ratings of {{ film.title }}</a>
     <br>
-    <a href="{% url 'films:films' %}">Back to ratings</a>
 {% endblock %}

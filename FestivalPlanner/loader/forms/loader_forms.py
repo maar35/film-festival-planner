@@ -8,7 +8,7 @@ from django.forms import Form, BooleanField, SlugField
 
 from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
-from festival_planner.tools import initialize_log, add_log
+from festival_planner.tools import initialize_log, add_log, CSV_DIALECT
 from festivals.config import Config
 from festivals.models import Festival, FestivalBase
 from films.forms.film_forms import PickRating
@@ -171,7 +171,7 @@ class BaseLoader:
         self.add_log(f'Reading from file {objects_file}.')
         try:
             with open(objects_file, newline='') as csvfile:
-                object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                object_reader = csv.reader(csvfile, dialect=CSV_DIALECT)
 
                 # Read the header.
                 if not self.check_header(objects_file, object_reader):
@@ -707,7 +707,7 @@ class BaseDumper:
         self.add_log(f'Dumping {self.object_name} data.')
         try:
             with open(file, 'w', newline='') as csvfile:
-                csv_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
+                csv_writer = csv.writer(csvfile, dialect=CSV_DIALECT)
                 if self.header:
                     csv_writer.writerow(self.header)
                 for obj in objects:
