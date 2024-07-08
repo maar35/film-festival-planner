@@ -1,3 +1,4 @@
+import csv
 import re
 from os import path
 
@@ -88,3 +89,15 @@ def add_base_context(request, param_dict):
         'user_represents_fan': user_represents_fan(request, fan),
     }
     return base_param_dict | param_dict
+
+
+def get_csv_dialect():
+    dialect = csv.unix_dialect
+    dialect.delimiter = ';'
+    dialect.quotechar = '"'
+    dialect.doublequote = True
+    dialect.quoting = csv.QUOTE_MINIMAL
+    return dialect
+
+
+CSV_DIALECT = get_csv_dialect()

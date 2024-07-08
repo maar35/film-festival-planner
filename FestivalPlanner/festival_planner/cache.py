@@ -38,12 +38,20 @@ class FilmRatingCache:
 
     @classmethod
     def get_active_filter_keys(cls, session):
+        # Get the current cache key from the session.
         cache_key = cls.get_cache_key(session)
+
+        # Split the cache key into the underlying filters.
         filters = cache_key.split(cls.FILTER_SEPARATOR)
+
+        # Remove the festival filter.
         index = cls.FESTIVAL_FILTER_INDEX
         filters.remove(filters[index])
+
+        # Isolate the keys of active filters.
         key_value_list = [f.split(cls.KEY_VALUE_SEPARATOR) for f in filters]
         active_filter_keys = [key for [key, on] in key_value_list if int(on)]
+
         return active_filter_keys
 
     def get_film_rows(self, session):

@@ -11,7 +11,7 @@ from django.urls import reverse
 import festivals.models
 import theaters
 from festival_planner import debug_tools
-from festival_planner.tools import initialize_log, unset_log
+from festival_planner.tools import initialize_log, unset_log, CSV_DIALECT
 from festivals.tests import create_festival, mock_base_festival_mnemonic
 from films.models import FilmFanFilmRating, Film
 from films.tests import create_film, ViewsTestCase, get_request_with_session, new_film
@@ -132,7 +132,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
             subsection='')
 
         with open(self.festival.films_file(), 'w', newline='') as csv_films_file:
-            film_writer = csv.writer(csv_films_file, delimiter=';', quotechar='"')
+            film_writer = csv.writer(csv_films_file, dialect=CSV_DIALECT)
             film_writer.writerow(FilmLoader.expected_header)
             film_writer.writerow(serialize_film(film_1))
             film_writer.writerow(serialize_film(film_2))
@@ -155,7 +155,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         film.reviewer = reviewer or ' '
 
         with open(self.festival.films_file(), 'w', newline='') as csv_films_file:
-            film_writer = csv.writer(csv_films_file, delimiter=';', quotechar='"')
+            film_writer = csv.writer(csv_films_file, dialect=CSV_DIALECT)
             film_writer.writerow(FilmLoader.expected_header)
             film_writer.writerow(serialize_film(film))
 
@@ -181,7 +181,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         film_2 = create_film(2, 'Angst und Freude', 15, festival=self.festival)
         films_file = self.festival.films_file()
         with open(films_file, 'w', newline='') as csvfile:
-            film_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
+            film_writer = csv.writer(csvfile, dialect=CSV_DIALECT)
             film_writer.writerow(FilmLoader.expected_header)
             film_writer.writerow(serialize_film(film_1))
             film_writer.writerow(serialize_film(film_2))
@@ -209,14 +209,14 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         film = create_film(1, 'Leben und Sterben in Tirol', 182, festival=self.festival)
         with open(self.festival.films_file(), 'w', newline='') as csv_films_file:
-            film_writer = csv.writer(csv_films_file, delimiter=';', quotechar='"')
+            film_writer = csv.writer(csv_films_file, dialect=CSV_DIALECT)
             film_writer.writerow(FilmLoader.expected_header)
             film_writer.writerow(serialize_film(film))
 
         rating_1 = create_rating(film, self.admin_fan, 10)
         rating_2 = create_rating(film, self.regular_fan, 8)
         with open(self.festival.ratings_file(), 'w', newline='') as csv_ratings_file:
-            rating_writer = csv.writer(csv_ratings_file, delimiter=';', quotechar='"')
+            rating_writer = csv.writer(csv_ratings_file, dialect=CSV_DIALECT)
             rating_writer.writerow(RatingLoader.expected_header)
             rating_writer.writerow(serialize_rating(rating_1))
             rating_writer.writerow(serialize_rating(rating_2))
@@ -246,14 +246,14 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         film = create_film(1, 'Leben und Sterben in Tirol', 182, festival=self.festival)
         with open(self.festival.films_file(), 'w', newline='') as csv_films_file:
-            film_writer = csv.writer(csv_films_file, delimiter=';', quotechar='"')
+            film_writer = csv.writer(csv_films_file, dialect=CSV_DIALECT)
             film_writer.writerow(FilmLoader.expected_header)
             film_writer.writerow(serialize_film(film))
 
         rating_1 = create_rating(film, self.admin_fan, 10)
         _ = create_rating(film, self.regular_fan, 8)
         with open(self.festival.ratings_file(), 'w', newline='') as csv_ratings_file:
-            rating_writer = csv.writer(csv_ratings_file, delimiter=';', quotechar='"')
+            rating_writer = csv.writer(csv_ratings_file, dialect=CSV_DIALECT)
             rating_writer.writerow(RatingLoader.expected_header)
             rating_writer.writerow(serialize_rating(rating_1))
 
@@ -351,7 +351,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         films_file = self.festival.films_file()
         with open(films_file, 'w', newline='') as csvfile:
-            film_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
+            film_writer = csv.writer(csvfile, dialect=CSV_DIALECT)
             film_writer.writerow(FilmLoader.expected_header[1:])
 
         post_response = self.client.post(reverse('loader:ratings'), self.post_data)
@@ -376,7 +376,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         film = create_film(1, 'Der Faust', 303, festival=self.festival)
         films_file = self.festival.films_file()
         with open(films_file, 'w', newline='') as csvfile:
-            film_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
+            film_writer = csv.writer(csvfile, dialect=CSV_DIALECT)
             film_writer.writerow(FilmLoader.expected_header)
             film_row = serialize_film(film)
             film_row[6] = 'invalid_duration'
@@ -403,14 +403,14 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         film = create_film(1, 'Schwestern und Töchter', 95, festival=self.festival)
         with open(self.festival.films_file(), 'w', newline='') as csv_films_file:
-            film_writer = csv.writer(csv_films_file, delimiter=';', quotechar='"')
+            film_writer = csv.writer(csv_films_file, dialect=CSV_DIALECT)
             film_writer.writerow(FilmLoader.expected_header)
             film_writer.writerow(serialize_film(film))
 
         rating_1 = create_rating(film, self.admin_fan, 6)
         rating_2 = create_rating(film, self.regular_fan, 9)
         with open(self.festival.ratings_file(), 'w', newline='') as csv_ratings_file:
-            rating_writer = csv.writer(csv_ratings_file, delimiter=';', quotechar='"')
+            rating_writer = csv.writer(csv_ratings_file, dialect=CSV_DIALECT)
             rating_writer.writerow(RatingLoader.expected_header)
             rating_writer.writerow(serialize_rating(rating_1))
             rating_writer.writerow((serialize_rating(rating_2))[1:])
@@ -559,7 +559,7 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         section_2 = self.arrange_create_section('Longs', 'Blue')
         sections_file = self.festival.sections_file()
         with open(sections_file, 'w', newline='') as csvfile:
-            section_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
+            section_writer = csv.writer(csvfile, dialect=CSV_DIALECT)
             section_writer.writerow(self.arrange_serialize_section(section_1))
             section_writer.writerow(self.arrange_serialize_section(section_2))
 
@@ -587,7 +587,7 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         section = self.arrange_create_section('Japanese Pink Movies', 'Pink')
         sections_file = self.festival.sections_file()
         with open(sections_file, 'w', newline='') as csvfile:
-            section_writer = csv.writer(csvfile, delimiter=';', quotechar='"')
+            section_writer = csv.writer(csvfile, dialect=CSV_DIALECT)
             section_writer.writerow(self.arrange_serialize_section(section))
 
         # Act.

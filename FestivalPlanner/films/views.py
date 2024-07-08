@@ -12,11 +12,11 @@ from django.views import View
 from django.views.generic import FormView, DetailView, ListView, TemplateView
 
 from authentication.models import FilmFan
-from festival_planner.cookie import Filter, Cookie
 from festival_planner.cache import FilmRatingCache
+from festival_planner.cookie import Filter, Cookie
 from festival_planner.debug_tools import pr_debug
 from festival_planner.tools import add_base_context, unset_log, wrap_up_form_errors, application_name, get_log, \
-    initialize_log, add_log
+    initialize_log, add_log, CSV_DIALECT
 from festivals.config import Config
 from festivals.models import current_festival
 from films.forms.film_forms import PickRating, UserForm, refreshed_rating_action
@@ -261,7 +261,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
         self.fragment_keeper.add_fragments(self.selected_films)
 
         # Fill the film rows.
-        film_rows = [self.get_film_row(row_nr, film) for row_nr, film in enumerate(self.selected_films)]
+        film_rows = [self._get_film_row(row_nr, film) for row_nr, film in enumerate(self.selected_films)]
 
         # Fill the cache.
         PickRating.film_rating_cache.set_film_rows(session, film_rows)
@@ -276,7 +276,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
         new_context = {
             'title': self.title,
             'search_form': PickRating(),
-            'fan_headers': self.get_fan_headers(),
+            'fan_headers': self._get_fan_headers(),
             'feature_count': film_count,
             'rated_features_count': rated_films_count,
             'highest_rating': self.highest_rating,
@@ -317,14 +317,14 @@ class FilmsListView(LoginRequiredMixin, ListView):
         film_info_file = self.festival.filminfo_file()
         try:
             with open(film_info_file, 'r', newline='') as csvfile:
-                object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                object_reader = csv.reader(csvfile, dialect=CSV_DIALECT)
                 self.description_by_film_id = {int(row[0]): row[1] for row in object_reader}
                 add_log(session, f'{len(self.description_by_film_id)} descriptions found.')
         except FileNotFoundError as e:
             self.description_by_film_id = {}
             add_log(session, f'{e}: No descriptions file found.')
 
-    def get_film_row(self, row_nr, film):
+    def _get_film_row(self, row_nr, film):
         prefix = FilmsView.submit_name_prefix
         choices = FilmFanFilmRating.Rating.choices
         fan_ratings = get_fan_ratings(film, self.fan_list, self.logged_in_fan, prefix, choices,
@@ -334,9 +334,9 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'fragment_name': self.fragment_keeper.get_fragment_name(row_nr),
             'duration_str': film.duration_str(),
             'duration_seconds': film.duration.total_seconds(),
-            'subsection': self.get_subsection(film),
+            'subsection': self._get_subsection(film),
             'section': None,
-            'description': self.get_description(film),
+            'description': self._get_description(film),
             'fan_ratings': fan_ratings,
         }
 
@@ -390,7 +390,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
         return film_count, rated_films_count, eligible_rating_counts
 
     @staticmethod
-    def get_subsection(film):
+    def _get_subsection(film):
         if not film.subsection:
             return ''
         try:
@@ -400,14 +400,14 @@ class FilmsListView(LoginRequiredMixin, ListView):
             subsection = ''
         return subsection
 
-    def get_description(self, film):
+    def _get_description(self, film):
         try:
             description = self.description_by_film_id[film.film_id]
         except KeyError:
             description = None
         return description
 
-    def get_fan_headers(self):
+    def _get_fan_headers(self):
         session = self.request.session
         fan_headers = []
         for fan in self.fan_list:
@@ -498,7 +498,7 @@ class VotesListView(LoginRequiredMixin, ListView):
         try:
             with open(screening_info_file, 'r', newline='') as csvfile:
                 _ = csvfile.__next__()  # skip header
-                screening_info_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                screening_info_reader = csv.reader(csvfile, dialect=CSV_DIALECT)
                 film_id_index = 5
                 attended_index = 8
                 tickets_bought_index = 9
@@ -549,17 +549,7 @@ class ResultsView(LoginRequiredMixin, DetailView):
     http_method_names = ['get', 'post']
     submit_name_prefix = 'results_'
     submit_names = []
-    film_in_cache = None
     unexpected_error = ''
-
-    def setup(self, request, *args, **kwargs):
-        super().setup(request, *args, **kwargs)
-        session = request.session
-
-        # Find out if the film is in the current cache.
-        film_rows = PickRating.film_rating_cache.get_film_rows(session)
-        film = self.get_object()
-        self.film_in_cache = film in [row['film'] for row in film_rows]
 
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
@@ -582,7 +572,6 @@ class ResultsView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         film = self.object
         session = self.request.session
-        subsection = get_subsection(film)
         fan_rows = []
         fans = FilmFan.film_fans.all()
         logged_in_fan = current_fan(session)
@@ -595,9 +584,9 @@ class ResultsView(LoginRequiredMixin, DetailView):
             })
         context = add_base_context(self.request, super().get_context_data(**kwargs))
         context['title'] = 'Film Rating Results'
-        context['subsection'] = subsection
+        context['subsection'] = get_subsection(film)
         context['description'] = self.get_description(film)
-        context['film_in_cache'] = self.film_in_cache
+        context['film_in_cache'] = self.film_is_in_cache(session)
         context['display_all_query'] = self.get_query_string_to_display_all(session)
         context['fan_rows'] = fan_rows
         context['unexpected_error'] = self.unexpected_error
@@ -608,17 +597,22 @@ class ResultsView(LoginRequiredMixin, DetailView):
         film_info_file = film.festival.filminfo_file()
         try:
             with open(film_info_file, 'r', newline='') as csvfile:
-                object_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
+                object_reader = csv.reader(csvfile, dialect=CSV_DIALECT)
                 descriptions = [row[1] for row in object_reader if film.film_id == int(row[0])]
         except FileNotFoundError:
             descriptions = []
         description = descriptions[0] if descriptions else '-'
         return description
 
+    def film_is_in_cache(self, session):
+        film_rows = PickRating.film_rating_cache.get_film_rows(session)
+        film = self.get_object()
+        return film in [row['film'] for row in film_rows]
+
     @staticmethod
     def get_query_string_to_display_all(session):
         """
-        Set up an HTML query as to switch of all filters.
+        Set up an HTML query as to switch off all filters.
         """
         filter_keys = FilmRatingCache.get_active_filter_keys(session)
         query_list = [f'{k}={Filter.query_by_filtered[False]}' for k in filter_keys]
