@@ -304,7 +304,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
         filter_kwargs = {'festival': self.festival}
         if self.shorts_filter.on(session):
             filter_kwargs['duration__gt'] = self.short_threshold
-        self.selected_films = Film.films.filter(**filter_kwargs).order_by('seq_nr')
+        self.selected_films = Film.films.filter(**filter_kwargs).order_by('sort_title')
         for fan in self.fan_list:
             if self.rated_filters[fan].on(session):
                 self.selected_films = self.selected_films.filter(
