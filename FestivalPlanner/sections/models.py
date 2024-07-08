@@ -25,7 +25,6 @@ class Section(models.Model):
         return f'{self.section_id} {self.name}'
 
 
-# Subsections table.
 class Subsection(models.Model):
 
     # Define the fields.
