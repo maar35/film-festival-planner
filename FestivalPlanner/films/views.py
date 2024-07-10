@@ -334,7 +334,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'fragment_name': self.fragment_keeper.get_fragment_name(row_nr),
             'duration_str': film.duration_str(),
             'duration_seconds': film.duration.total_seconds(),
-            'subsection': self._get_subsection(film),
+            'subsection': film.subsection,
             'section': None,
             'description': self._get_description(film),
             'fan_ratings': fan_ratings,
@@ -388,17 +388,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
                                                                          rated_films_count))
 
         return film_count, rated_films_count, eligible_rating_counts
-
-    @staticmethod
-    def _get_subsection(film):
-        if not film.subsection:
-            return ''
-        try:
-            subsection = Subsection.subsections.get(festival=film.festival, subsection_id=film.subsection)
-        except Subsection.DoesNotExist as e:
-            FilmsView.unexpected_errors.append(f'{e}')
-            subsection = ''
-        return subsection
 
     def _get_description(self, film):
         try:
@@ -584,7 +573,6 @@ class ResultsView(LoginRequiredMixin, DetailView):
             })
         context = add_base_context(self.request, super().get_context_data(**kwargs))
         context['title'] = 'Film Rating Results'
-        context['subsection'] = get_subsection(film)
         context['description'] = self.get_description(film)
         context['film_in_cache'] = self.film_is_in_cache(session)
         context['display_all_query'] = self.get_query_string_to_display_all(session)
@@ -826,5 +814,8 @@ def get_fan_choices(submit_name_prefix, film, fan, logged_in_fan, submit_names):
 def get_subsection(film):
     if not film.subsection:
         return ''
-    subsection = Subsection.subsections.get(festival=film.festival, subsection_id=film.subsection)
-    return subsection
+    if isinstance(film.subsection, str):
+        subsection = Subsection.subsections.get(festival=film.festival, subsection_id=film.subsection)
+        return subsection
+    elif isinstance(film.subsection, Subsection):
+        return film.subsection

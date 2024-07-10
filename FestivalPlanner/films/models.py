@@ -2,6 +2,7 @@ from django.db import models
 
 from authentication.models import FilmFan
 from festivals.models import Festival
+from sections.models import Subsection
 
 FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
 UNRATED_STR = '-'
@@ -19,7 +20,7 @@ class Film(models.Model):
     sort_title = models.CharField(max_length=128)
     title = models.CharField(max_length=128)
     title_language = models.CharField(max_length=2)
-    subsection = models.CharField(max_length=32, null=True)
+    subsection = models.ForeignKey(Subsection, null=True, on_delete=models.SET_NULL)
     duration = models.DurationField(null=False)
     medium_category = models.CharField(max_length=32)
     reviewer = models.CharField(max_length=32, null=True)

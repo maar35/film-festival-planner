@@ -29,6 +29,10 @@ RATINGS_BACKUP_PATH = os.path.join(BACKUP_DATA_DIR, 'ratings.csv')
 FILMS_FILE_HEADER = Config().config['Headers']['FilmsFileHeader']
 
 
+def get_subsection_id(film):
+    return film.subsection.subsection_id if film.subsection else ''
+
+
 class RatingLoaderForm(Form):
     import_mode = BooleanField(
         label='Use import mode, all ratings are replaced',
@@ -429,11 +433,18 @@ class FilmLoader(SimpleLoader):
         sort_title = row[2]
         title = row[3]
         title_language = row[4]
-        subsection = self.set_blank_to_none(row[5])
+        subsection_id = int(row[5]) if row[5] else None
         duration = datetime.timedelta(minutes=int(row[6].rstrip("′")))
         medium_category = row[7]
         reviewer = self.set_blank_to_none(row[8])
         url = row[9]
+
+        subsection = None
+        if subsection_id:
+            kwargs = {'festival_id': self.festival.id, 'subsection_id': subsection_id}
+            subsection = self.get_foreign_key(Subsection, Subsection.subsections, **kwargs)
+        if not subsection:
+            subsection = None
 
         value_by_field = {
             'festival': self.festival,
@@ -848,7 +859,7 @@ class FilmBackupDumper(BaseDumper):
             film.sort_title,
             film.title,
             film.title_language,
-            film.subsection,
+            get_subsection_id(film),
             film.duration,
             film.medium_category,
             film.reviewer,

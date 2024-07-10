@@ -76,7 +76,7 @@ def create_film(film_id, title, minutes, seq_nr=-1, festival=None, sort_title=No
     duration = timedelta(minutes=minutes)
     sort_title = sort_title or title
     return Film.films.create(festival_id=festival.id, film_id=film_id, seq_nr=seq_nr,
-                             title=title, duration=duration, subsection='',
+                             title=title, duration=duration, subsection=None,
                              sort_title=sort_title.lower())
 
 
@@ -354,14 +354,15 @@ class ResultsViewsTests(ViewsTestCase):
         when not logged in.
         """
         # Arrange.
+        self.client.logout()
         hacked_film = new_film(film_id=5000, title='Future Question', minutes=95)
-        fake_pk = hacked_film.film_id
+        fake_pk = 2000
 
         # Act.
         get_response = self.client.get(reverse('films:results', args=[fake_pk]))
 
         # Assert.
-        self.assertEqual(get_response.status_code, HTTPStatus.NOT_FOUND)
+        self.assertEqual(get_response.status_code, HTTPStatus.FOUND)
 
     def test_results_of_hacked_film_logged_in(self):
         """

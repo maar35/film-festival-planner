@@ -16,7 +16,8 @@ from festivals.tests import create_festival, mock_base_festival_mnemonic
 from films.models import FilmFanFilmRating, Film
 from films.tests import create_film, ViewsTestCase, get_request_with_session, new_film
 from films.views import FilmsView
-from loader.forms.loader_forms import FilmLoader, RatingLoader, CityDumper, TheaterDumper, ScreenDumper
+from loader.forms.loader_forms import FilmLoader, RatingLoader, CityDumper, TheaterDumper, ScreenDumper, \
+    get_subsection_id
 from loader.views import SectionsLoaderView, get_festival_row, RatingsLoaderView, NewTheaterDataView, \
     SaveRatingsView
 from sections.models import Section
@@ -36,7 +37,7 @@ def serialize_film(film):
         film.sort_title,
         film.title,
         film.title_language,
-        film.subsection or '',
+        get_subsection_id(film),
         duration_str,
         film.medium_category,
         film.reviewer or '',
@@ -122,14 +123,14 @@ class RatingLoaderViewsTests(LoaderViewsTests):
             seq_nr=12,
             title='Der schlaue Fuchs',
             duration=timedelta(minutes=88),
-            subsection='')
+            subsection=None)
         film_1 = Film(
             festival=self.festival,
             film_id=other_film_id,
             seq_nr=11,
             title='Die dumme Gans',
             duration=timedelta(minutes=188),
-            subsection='')
+            subsection=None)
 
         with open(self.festival.films_file(), 'w', newline='') as csv_films_file:
             film_writer = csv.writer(csv_films_file, dialect=CSV_DIALECT)
