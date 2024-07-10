@@ -809,13 +809,3 @@ def get_fan_choices(submit_name_prefix, film, fan, logged_in_fan, submit_names):
             submit_names.append(choice['submit_name'])
 
     return choices
-
-
-def get_subsection(film):
-    if not film.subsection:
-        return ''
-    if isinstance(film.subsection, str):
-        subsection = Subsection.subsections.get(festival=film.festival, subsection_id=film.subsection)
-        return subsection
-    elif isinstance(film.subsection, Subsection):
-        return film.subsection
