@@ -569,7 +569,7 @@ class SectionLoaderViewsTests(LoaderViewsTests):
             section_writer.writerows(serialized_sections)
 
     def arrange_write_subsection(self, subsections):
-        serialized_subsections = [ self.arrange_serialize_subsection(s) for s in subsections]
+        serialized_subsections = [self.arrange_serialize_subsection(s) for s in subsections]
         subsections_file = self.festival.subsections_file()
         with open(subsections_file, 'w', newline='') as csvfile:
             subsection_writer = csv.writer(csvfile, dialect=CSV_DIALECT)

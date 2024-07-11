@@ -420,7 +420,6 @@ class FilmLoader(SimpleLoader):
     expected_header = FILMS_FILE_HEADER
     key_fields = ['festival', 'film_id']
     manager = Film.films
-    re_blank = re.compile(r'^\s*$')
 
     def __init__(self, session, festival):
         super().__init__(session, 'film', self.manager, festival.films_file(), festival=festival)
@@ -433,10 +432,10 @@ class FilmLoader(SimpleLoader):
         sort_title = row[2]
         title = row[3]
         title_language = row[4]
-        subsection_id = int(row[5]) if row[5] else None
+        subsection_id = int(row[5]) if row[5].strip() else None
         duration = datetime.timedelta(minutes=int(row[6].rstrip("′")))
         medium_category = row[7]
-        reviewer = self.set_blank_to_none(row[8])
+        reviewer = (row[8]).strip() or None
         url = row[9]
 
         subsection = None
@@ -460,11 +459,6 @@ class FilmLoader(SimpleLoader):
             'url': url,
         }
         return value_by_field
-
-    def set_blank_to_none(self, value):
-        if value is not None and self.re_blank.match(value):
-            return None
-        return value.strip() if value else None
 
 
 class RatingLoader(SimpleLoader):

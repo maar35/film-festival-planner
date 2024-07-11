@@ -20,7 +20,7 @@
         <li>Film#: {{ film.film_id }}</li>
         <li>Duration: {{ film.duration }}</li>
         <li>Subsection: {% if film.subsection %} {{ film.subsection.name }} {% else %} - {% endif %}</li>
-        <li>Description: {{ description }}</li>
+        <li>Description: {% if description %} {{ description }} {% else %} - {% endif %}</li>
         <li>Reviewer: {% if film.reviewer %} {{ film.reviewer }} {% else %} - {% endif %}</li>
         <li>Medium category: {{ film.medium_category }}</li>
         <li>Rating count: {{ film.filmfanfilmrating_set.count }}</li>

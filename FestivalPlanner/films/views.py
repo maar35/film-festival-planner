@@ -588,8 +588,9 @@ class ResultsView(LoginRequiredMixin, DetailView):
                 object_reader = csv.reader(csvfile, dialect=CSV_DIALECT)
                 descriptions = [row[1] for row in object_reader if film.film_id == int(row[0])]
         except FileNotFoundError:
-            descriptions = []
-        description = descriptions[0] if descriptions else '-'
+            description = None
+        else:
+            description = descriptions[0].strip() or None
         return description
 
     def film_is_in_cache(self, session):
