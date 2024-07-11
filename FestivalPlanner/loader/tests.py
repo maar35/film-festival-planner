@@ -16,10 +16,11 @@ from festivals.tests import create_festival, mock_base_festival_mnemonic
 from films.models import FilmFanFilmRating, Film
 from films.tests import create_film, ViewsTestCase, get_request_with_session, new_film
 from films.views import FilmsView
-from loader.forms.loader_forms import FilmLoader, RatingLoader, CityDumper, TheaterDumper, ScreenDumper
+from loader.forms.loader_forms import FilmLoader, RatingLoader, CityDumper, TheaterDumper, ScreenDumper, \
+    get_subsection_id
 from loader.views import SectionsLoaderView, get_festival_row, RatingsLoaderView, NewTheaterDataView, \
     SaveRatingsView
-from sections.models import Section
+from sections.models import Section, Subsection
 from theaters.models import City, new_cities_path, new_theaters_path, new_screens_path, Theater, Screen
 
 
@@ -36,7 +37,7 @@ def serialize_film(film):
         film.sort_title,
         film.title,
         film.title_language,
-        film.subsection or '',
+        get_subsection_id(film),
         duration_str,
         film.medium_category,
         film.reviewer or '',
@@ -122,14 +123,14 @@ class RatingLoaderViewsTests(LoaderViewsTests):
             seq_nr=12,
             title='Der schlaue Fuchs',
             duration=timedelta(minutes=88),
-            subsection='')
+            subsection=None)
         film_1 = Film(
             festival=self.festival,
             film_id=other_film_id,
             seq_nr=11,
             title='Die dumme Gans',
             duration=timedelta(minutes=188),
-            subsection='')
+            subsection=None)
 
         with open(self.festival.films_file(), 'w', newline='') as csv_films_file:
             film_writer = csv.writer(csv_films_file, dialect=CSV_DIALECT)
@@ -549,6 +550,31 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         ]
         return fields
 
+    @staticmethod
+    def arrange_serialize_subsection(subsection):
+        fields = [
+            str(subsection.subsection_id),
+            str(subsection.section.id),
+            subsection.name,
+            subsection.description,
+            subsection.url,
+        ]
+        return fields
+
+    def arrange_write_sections(self, sections):
+        serialized_sections = [self.arrange_serialize_section(s) for s in sections]
+        sections_file = self.festival.sections_file()
+        with open(sections_file, 'w', newline='') as csvfile:
+            section_writer = csv.writer(csvfile, dialect=CSV_DIALECT)
+            section_writer.writerows(serialized_sections)
+
+    def arrange_write_subsection(self, subsections):
+        serialized_subsections = [self.arrange_serialize_subsection(s) for s in subsections]
+        subsections_file = self.festival.subsections_file()
+        with open(subsections_file, 'w', newline='') as csvfile:
+            subsection_writer = csv.writer(csvfile, dialect=CSV_DIALECT)
+            subsection_writer.writerows(serialized_subsections)
+
     def test_admin_can_load_sections(self):
         """
         A file with correct section records can be loaded by an admin fan.
@@ -557,11 +583,7 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         get_response = self.get_get_response(self.get_admin_request())
         section_1 = self.arrange_create_section('Hot items', 'HotPink')
         section_2 = self.arrange_create_section('Longs', 'Blue')
-        sections_file = self.festival.sections_file()
-        with open(sections_file, 'w', newline='') as csvfile:
-            section_writer = csv.writer(csvfile, dialect=CSV_DIALECT)
-            section_writer.writerow(self.arrange_serialize_section(section_1))
-            section_writer.writerow(self.arrange_serialize_section(section_2))
+        self.arrange_write_sections([section_1, section_2])
 
         # Act.
         post_response = self.client.post(reverse('loader:sections'), self.post_data)
@@ -585,10 +607,7 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         """
         # Arrange.
         section = self.arrange_create_section('Japanese Pink Movies', 'Pink')
-        sections_file = self.festival.sections_file()
-        with open(sections_file, 'w', newline='') as csvfile:
-            section_writer = csv.writer(csvfile, dialect=CSV_DIALECT)
-            section_writer.writerow(self.arrange_serialize_section(section))
+        self.arrange_write_sections([section])
 
         # Act.
         get_response = self.get_get_response(self.get_regular_fan_request())
@@ -597,6 +616,72 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
         self.assertContains(get_response, 'Not allowed')
         self.assertNotContains(get_response, 'Pick a festival to load section data from')
+
+    def test_duplicate_subsections_not_accepted(self):
+        # Arrange.
+        _ = self.get_admin_request()
+        sections = Section.sections.all()
+        sections.delete()
+        section = self.arrange_create_section('Markets', 'Blue')
+        subsection_1 = Subsection(festival=section.festival, subsection_id=13, section=section,
+                                  name='Bear Markets', description='When everything goes down')
+        subsection_2 = Subsection(festival=section.festival, subsection_id=13, section=section,
+                                  name='On the Fish Market', description="Something's smelly here")
+
+        self.arrange_write_sections([section])
+        self.arrange_write_subsection([subsection_1, subsection_2])
+
+        # Act.
+        post_response = self.client.post(reverse('loader:sections'), self.post_data)
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        self.assertContains(redirect_response, 'Section Overview')
+        self.assertContains(redirect_response, '1 section records read')
+        self.assertContains(redirect_response, '2 subsection records read')
+        self.assertContains(redirect_response, '1 subsection records created')
+        self.assertContains(redirect_response, '1 subsection records updated')
+        subsection_count = Subsection.subsections.count()
+        self.assertEqual(subsection_count, 1)
+        self.assertContains(redirect_response, subsection_2.name)
+        self.assertNotContains(redirect_response, subsection_1.name)
+        self.assertContains(redirect_response, section.name)
+
+    def test_duplicate_subsections_other_section_not_accepted(self):
+        # Arrange.
+        _ = self.get_admin_request()
+        sections = Section.sections.all()
+        sections.delete()
+        section_1 = self.arrange_create_section('Markets', 'Blue')
+        section_2 = self.arrange_create_section('Food', 'Green')
+        subsection_1 = Subsection(festival=section_1.festival, subsection_id=13, section=section_1,
+                                  name='Bear Markets', description='When everything goes down')
+        subsection_2 = Subsection(festival=section_2.festival, subsection_id=13, section=section_2,
+                                  name='On the Fish Market', description="Something's smelly here")
+
+        self.arrange_write_sections([section_1, section_2])
+        self.arrange_write_subsection([subsection_1, subsection_2])
+
+        # Act.
+        post_response = self.client.post(reverse('loader:sections'), self.post_data)
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        self.assertContains(redirect_response, 'Section Overview')
+        self.assertContains(redirect_response, '2 section records read')
+        self.assertContains(redirect_response, '2 subsection records read')
+        self.assertContains(redirect_response, '1 subsection records created')
+        self.assertContains(redirect_response, '1 subsection records updated')
+        subsection_count = Subsection.subsections.count()
+        self.assertEqual(subsection_count, 1)
+        self.assertContains(redirect_response, subsection_2.name)
+        self.assertNotContains(redirect_response, subsection_1.name)
+        self.assertContains(redirect_response, section_2.name)
+        self.assertNotContains(redirect_response, section_1.name)
 
 
 class TheaterDataLoaderViewsTests(LoaderViewsTests):
