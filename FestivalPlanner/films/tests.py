@@ -350,7 +350,7 @@ class ResultsViewsTests(ViewsTestCase):
 
     def test_results_of_hacked_film_without_login(self):
         """
-        The results view with a hacked film id returns a 404 not found
+        The results view with a hacked film id redirects to login page.
         when not logged in.
         """
         # Arrange.
@@ -360,9 +360,13 @@ class ResultsViewsTests(ViewsTestCase):
 
         # Act.
         get_response = self.client.get(reverse('films:results', args=[fake_pk]))
+        redirect_response = self.client.get(get_response.url)
 
         # Assert.
         self.assertEqual(get_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        self.assertContains(redirect_response, 'Application Login')
+        self.assertContains(redirect_response, 'Access Denied')
 
     def test_results_of_hacked_film_logged_in(self):
         """
