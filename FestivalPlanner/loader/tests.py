@@ -652,8 +652,6 @@ class SectionLoaderViewsTests(LoaderViewsTests):
     def test_duplicate_subsections_other_section_not_accepted(self):
         # Arrange.
         _ = self.get_admin_request()
-        sections = Section.sections.all()
-        sections.delete()
         section_1 = self.arrange_create_section('Markets', 'Blue')
         section_2 = self.arrange_create_section('Food', 'Green')
         subsection_1 = Subsection(festival=section_1.festival, subsection_id=13, section=section_1,

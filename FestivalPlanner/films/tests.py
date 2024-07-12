@@ -22,6 +22,7 @@ from films.forms.film_forms import PickRating
 from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR
 from films.views import FilmsView, ResultsView, MAX_SHORT_MINUTES, BaseFilmsFormView
 from loader.views import SaveRatingsView
+from sections.models import Subsection, Section
 from theaters.models import City
 
 
@@ -142,11 +143,11 @@ class FilmModelTests(TestCase):
 
 class FilmFanModelTests(TestCase):
     def setUp(self):
-        super(FilmFanModelTests, self).setUp()
+        super().setUp()
         arrange_film_fans()
 
     def tearDown(self):
-        super(FilmFanModelTests, self).tearDown()
+        super().tearDown()
         tear_down_film_fans()
 
     def test_film_fan_me_is_number_one(self):
@@ -273,6 +274,23 @@ class VoteModelTests(BaseJudgementModelTests):
 
         # Act and assert.
         self.assertRaises(IndexError, self.arrange_get_vote_label, vote_value)
+
+
+class SectionModelTests(TestCase):
+
+    def test_subsection_can_be_created_from_code(self):
+        # Arrange.
+        city = City.cities.create(city_id=1, name='Oslo', country='no')
+        festival = create_festival('OFF', city, '2023-12-15', '2023-12-16')
+        section = Section.sections.create(festival=festival, section_id=24, name='Shades', color='Grey')
+        subsection = Subsection(festival=section.festival, subsection_id=13, section=section,
+                                name='Direction Favorites', description='What we like best')
+        # Act.
+        subsection.save()
+
+        # Assert.
+        subsection_count = Subsection.subsections.count()
+        self.assertEqual(subsection_count, 1)
 
 
 class ViewsTestCase(TestCase):
