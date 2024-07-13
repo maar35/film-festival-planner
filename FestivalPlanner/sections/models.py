@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from festivals.models import Festival
@@ -40,7 +41,10 @@ class Subsection(models.Model):
 
     class Meta:
         db_table = 'subsection'
-        unique_together = ('festival', 'subsection_id')
+        constraints = [
+            models.UniqueConstraint(fields=['subsection_id', 'section'],
+                                    name='unique_subsection_id_section')
+        ]
 
     def __str__(self):
         return f'{self.subsection_id} {self.name}, part of {self.section.name}'
