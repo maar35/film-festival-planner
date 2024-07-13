@@ -440,7 +440,14 @@ class FilmLoader(SimpleLoader):
 
         subsection = None
         if subsection_id:
-            kwargs = {'festival_id': self.festival.id, 'subsection_id': subsection_id}
+            festival_sections = Section.sections.filter(festival_id=self.festival.id)
+            member_section = None
+            for section in festival_sections:
+                subsections = Subsection.subsections.filter(subsection_id=subsection_id, section_id=section.id)
+                if subsections:
+                    member_section = section
+                    break
+            kwargs = {'section_id': member_section.id, 'subsection_id': subsection_id}
             subsection = self.get_foreign_key(Subsection, Subsection.subsections, **kwargs)
         if not subsection:
             subsection = None
@@ -517,7 +524,7 @@ class SectionLoader(SimpleLoader):
 
 
 class SubsectionLoader(SimpleLoader):
-    key_fields = ['subsection_id', 'festival']
+    key_fields = ['subsection_id', 'section']
     manager = Subsection.subsections
 
     def __init__(self, session, festival):
