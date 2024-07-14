@@ -620,12 +620,10 @@ class SectionLoaderViewsTests(LoaderViewsTests):
     def test_duplicate_subsections_not_accepted(self):
         # Arrange.
         _ = self.get_admin_request()
-        sections = Section.sections.all()
-        sections.delete()
         section = self.arrange_create_section('Markets', 'Blue')
-        subsection_1 = Subsection(festival=section.festival, subsection_id=13, section=section,
+        subsection_1 = Subsection(subsection_id=13, section=section,
                                   name='Bear Markets', description='When everything goes down')
-        subsection_2 = Subsection(festival=section.festival, subsection_id=13, section=section,
+        subsection_2 = Subsection(subsection_id=13, section=section,
                                   name='On the Fish Market', description="Something's smelly here")
 
         self.arrange_write_sections([section])
@@ -649,16 +647,14 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         self.assertNotContains(redirect_response, subsection_1.name)
         self.assertContains(redirect_response, section.name)
 
-    def test_duplicate_subsections_other_section_not_accepted(self):
+    def test_duplicate_subsections_other_section_accepted(self):
         # Arrange.
         _ = self.get_admin_request()
-        sections = Section.sections.all()
-        sections.delete()
         section_1 = self.arrange_create_section('Markets', 'Blue')
         section_2 = self.arrange_create_section('Food', 'Green')
-        subsection_1 = Subsection(festival=section_1.festival, subsection_id=13, section=section_1,
+        subsection_1 = Subsection(subsection_id=13, section=section_1,
                                   name='Bear Markets', description='When everything goes down')
-        subsection_2 = Subsection(festival=section_2.festival, subsection_id=13, section=section_2,
+        subsection_2 = Subsection(subsection_id=13, section=section_2,
                                   name='On the Fish Market', description="Something's smelly here")
 
         self.arrange_write_sections([section_1, section_2])
@@ -674,14 +670,14 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         self.assertContains(redirect_response, 'Section Overview')
         self.assertContains(redirect_response, '2 section records read')
         self.assertContains(redirect_response, '2 subsection records read')
-        self.assertContains(redirect_response, '1 subsection records created')
-        self.assertContains(redirect_response, '1 subsection records updated')
+        self.assertContains(redirect_response, '2 subsection records created')
+        self.assertNotContains(redirect_response, 'subsection records updated')
         subsection_count = Subsection.subsections.count()
-        self.assertEqual(subsection_count, 1)
+        self.assertEqual(subsection_count, 2)
+        self.assertContains(redirect_response, subsection_1.name)
         self.assertContains(redirect_response, subsection_2.name)
-        self.assertNotContains(redirect_response, subsection_1.name)
+        self.assertContains(redirect_response, section_1.name)
         self.assertContains(redirect_response, section_2.name)
-        self.assertNotContains(redirect_response, section_1.name)
 
 
 class TheaterDataLoaderViewsTests(LoaderViewsTests):

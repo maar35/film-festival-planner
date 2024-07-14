@@ -28,7 +28,6 @@ class Section(models.Model):
 class Subsection(models.Model):
 
     # Define the fields.
-    festival = models.ForeignKey(Festival, on_delete=models.CASCADE)
     subsection_id = models.IntegerField()
     section = models.ForeignKey(Section, on_delete=models.CASCADE)
     name = models.CharField(max_length=32)
@@ -40,7 +39,10 @@ class Subsection(models.Model):
 
     class Meta:
         db_table = 'subsection'
-        unique_together = ('festival', 'subsection_id')
+        constraints = [
+            models.UniqueConstraint(fields=['subsection_id', 'section'],
+                                    name='unique_subsection_id_section')
+        ]
 
     def __str__(self):
         return f'{self.subsection_id} {self.name}, part of {self.section.name}'

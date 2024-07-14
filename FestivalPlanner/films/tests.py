@@ -6,6 +6,7 @@ from unittest import skip
 from urllib.parse import urlparse, urlunparse
 
 from django.conf import settings
+from django.db import IntegrityError
 from django.http import HttpRequest
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -13,8 +14,8 @@ from django.urls import reverse
 from authentication.models import me, FilmFan
 from authentication.tests import set_up_user_with_fan
 from festival_planner import debug_tools
-from festival_planner.cookie import Filter
 from festival_planner.cache import FilmRatingCache
+from festival_planner.cookie import Filter
 from festivals.models import current_festival, FestivalBase, Festival
 from festivals.tests import create_festival
 from films import views
@@ -22,6 +23,7 @@ from films.forms.film_forms import PickRating
 from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR
 from films.views import FilmsView, ResultsView, MAX_SHORT_MINUTES, BaseFilmsFormView
 from loader.views import SaveRatingsView
+from sections.models import Subsection, Section
 from theaters.models import City
 
 
@@ -142,11 +144,11 @@ class FilmModelTests(TestCase):
 
 class FilmFanModelTests(TestCase):
     def setUp(self):
-        super(FilmFanModelTests, self).setUp()
+        super().setUp()
         arrange_film_fans()
 
     def tearDown(self):
-        super(FilmFanModelTests, self).tearDown()
+        super().tearDown()
         tear_down_film_fans()
 
     def test_film_fan_me_is_number_one(self):
@@ -273,6 +275,90 @@ class VoteModelTests(BaseJudgementModelTests):
 
         # Act and assert.
         self.assertRaises(IndexError, self.arrange_get_vote_label, vote_value)
+
+
+class SectionModelTests(TestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.city = City.cities.create(city_id=1, name='Oslo', country='no')
+        self.festival = create_festival('OFF', self.city, '2023-12-15', '2023-12-16')
+
+    def test_subsection_can_be_created_from_code(self):
+        """
+        A Subsection object can be created in the database from code.
+        """
+        # Arrange.
+        section = Section.sections.create(festival=self.festival, section_id=24, name='Shades',
+                                          color='Grey')
+        subsection = Subsection(subsection_id=13, section=section,
+                                name='Direction Favorites', description='What we like best')
+        # Act.
+        subsection.save()
+
+        # Assert.
+        self.assertEqual(Subsection.subsections.count(), 1)
+        self.assertEqual(Subsection.subsections.all()[0].name, subsection.name)
+
+    def test_subsection_id_and_section_festival_not_unique_together(self):
+        """
+        Subsection fields subsection_id and section are unique together, independent of the (o
+        """
+        # Arrange.
+        festival_2 = create_festival('CPH:DOX', self.city, '2022-11-11', '2022-11-16')
+        section = Section.sections.create(festival=self.festival, section_id=24, name='Shades',
+                                          color='Grey')
+        subsection_1 = Subsection(subsection_id=13, section=section,
+                                  name='Direction Favorites', description='What we like best')
+        subsection_2 = Subsection(subsection_id=13, section=section,
+                                  name='Scout Favorites', description='Best found footage')
+        # Act and Assert.
+        subsection_1.save()
+        with self.assertRaises(IntegrityError):
+            subsection_2.save()
+
+    def test_subsection_id_and_section_unique_together(self):
+        """
+        Subsection fields subsection_id and section are unique together
+        """
+        # Arrange.
+        section = Section.sections.create(festival=self.festival, section_id=24, name='Shades',
+                                          color='Grey')
+        subsection_1 = Subsection(subsection_id=13, section=section,
+                                  name='Direction Favorites', description='What we like best')
+        subsection_2 = Subsection(subsection_id=13, section=section,
+                                  name='Scout Favorites', description='Best found footage')
+
+        # Act and Assert.
+        subsection_1.save()
+        with self.assertRaises(IntegrityError):
+            subsection_2.save()
+
+    def test_subsection_id_and_festival_not_unique_together(self):
+        """
+        Subsection fields subsection_id and festival are not unique together.
+        """
+        # Arrange.
+        festival_2 = create_festival('CPH:DOX', self.city, '2022-11-11', '2022-11-16')
+        section_1 = Section.sections.create(festival=self.festival, section_id=24, name='Shades',
+                                            color='Grey')
+        section_2 = Section.sections.create(festival=festival_2, section_id=24, name='Markets',
+                                            color='Purple')
+        subsection_1 = Subsection(subsection_id=13, section=section_1,
+                                  name='Direction Favorites', description='What we like best')
+        subsection_2 = Subsection(subsection_id=13, section=section_2,
+                                  name='Scout Favorites', description='Best found footage')
+
+        # Act.
+        subsection_1.save()
+        subsection_2.save()
+
+        # Assert.
+        self.assertEqual(Subsection.subsections.count(), 2)
+        kwargs_1 = {'subsection_id': subsection_1.subsection_id, 'section': section_1}
+        self.assertEqual(Subsection.subsections.get(**kwargs_1), subsection_1)
+        kwargs_2 = {'subsection_id': subsection_2.subsection_id, 'section': section_2}
+        self.assertEqual(Subsection.subsections.get(**kwargs_2), subsection_2)
 
 
 class ViewsTestCase(TestCase):

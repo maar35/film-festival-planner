@@ -440,10 +440,9 @@ class FilmLoader(SimpleLoader):
 
         subsection = None
         if subsection_id:
-            kwargs = {'festival_id': self.festival.id, 'subsection_id': subsection_id}
-            subsection = self.get_foreign_key(Subsection, Subsection.subsections, **kwargs)
-        if not subsection:
-            subsection = None
+            subsection = Subsection.subsections.filter(section__festival_id=self.festival.id,
+                                                       subsection_id=subsection_id
+                                                       ).first()
 
         value_by_field = {
             'festival': self.festival,
@@ -452,7 +451,7 @@ class FilmLoader(SimpleLoader):
             'sort_title': sort_title,
             'title': title,
             'title_language': title_language,
-            'subsection': subsection,
+            'subsection': subsection or None,
             'duration': duration,
             'medium_category': medium_category,
             'reviewer': reviewer,
@@ -500,7 +499,7 @@ class SectionLoader(SimpleLoader):
 
     def __init__(self, session, festival):
         file = festival.sections_file()
-        super().__init__(session, 'section', self.manager, file, festival)
+        super().__init__(session, 'section', self.manager, file, festival=festival)
 
     def read_row(self, row):
         section_id = int(row[0])
@@ -517,12 +516,13 @@ class SectionLoader(SimpleLoader):
 
 
 class SubsectionLoader(SimpleLoader):
-    key_fields = ['subsection_id', 'festival']
+    key_fields = ['subsection_id', 'section']
     manager = Subsection.subsections
 
     def __init__(self, session, festival):
         file = festival.subsections_file()
-        super().__init__(session, 'subsection', self.manager, file, festival)
+        super().__init__(session, 'subsection', self.manager, file,
+                         festival=festival,festival_pk='section__festival__pk')
 
     def read_row(self, row):
         subsection_id = int(row[0])
@@ -538,7 +538,6 @@ class SubsectionLoader(SimpleLoader):
 
         value_by_field = {
             'subsection_id': subsection_id,
-            'festival': self.festival,
             'section': section,
             'name': name,
             'description': description,

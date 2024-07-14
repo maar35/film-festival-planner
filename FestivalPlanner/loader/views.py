@@ -40,7 +40,7 @@ def get_festival_row(festival):
         'section_count_on_file': file_record_count(festival.sections_file()),
         'section_count': Section.sections.filter(festival=festival).count,
         'subsection_count_on_file': file_record_count(festival.subsections_file()),
-        'subsection_count': Subsection.subsections.filter(festival=festival).count,
+        'subsection_count': Subsection.subsections.filter(section__festival=festival).count,
     }
     return festival_row
 
