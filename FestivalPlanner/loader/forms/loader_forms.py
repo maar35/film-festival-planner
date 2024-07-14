@@ -507,7 +507,7 @@ class SectionLoader(SimpleLoader):
 
     def __init__(self, session, festival):
         file = festival.sections_file()
-        super().__init__(session, 'section', self.manager, file, festival)
+        super().__init__(session, 'section', self.manager, file, festival=festival)
 
     def read_row(self, row):
         section_id = int(row[0])
@@ -529,7 +529,8 @@ class SubsectionLoader(SimpleLoader):
 
     def __init__(self, session, festival):
         file = festival.subsections_file()
-        super().__init__(session, 'subsection', self.manager, file, festival)
+        super().__init__(session, 'subsection', self.manager, file,
+                         festival=festival,festival_pk='section__festival__pk')
 
     def read_row(self, row):
         subsection_id = int(row[0])
@@ -545,7 +546,6 @@ class SubsectionLoader(SimpleLoader):
 
         value_by_field = {
             'subsection_id': subsection_id,
-            'festival': self.festival,
             'section': section,
             'name': name,
             'description': description,

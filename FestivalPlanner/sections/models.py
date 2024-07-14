@@ -29,7 +29,6 @@ class Section(models.Model):
 class Subsection(models.Model):
 
     # Define the fields.
-    festival = models.ForeignKey(Festival, on_delete=models.CASCADE)
     subsection_id = models.IntegerField()
     section = models.ForeignKey(Section, on_delete=models.CASCADE)
     name = models.CharField(max_length=32)

@@ -12,7 +12,7 @@ class IndexView(generic.ListView):
 
     def get_queryset(self):
         festival = current_festival(self.request.session)
-        return Subsection.subsections.order_by('section', 'name').filter(festival=festival)
+        return Subsection.subsections.order_by('section', 'name').filter(section__festival=festival)
 
     def get_context_data(self, **kwargs):
         context = add_base_context(self.request, super().get_context_data(**kwargs))

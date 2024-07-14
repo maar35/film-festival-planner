@@ -291,7 +291,7 @@ class SectionModelTests(TestCase):
         # Arrange.
         section = Section.sections.create(festival=self.festival, section_id=24, name='Shades',
                                           color='Grey')
-        subsection = Subsection(festival=section.festival, subsection_id=13, section=section,
+        subsection = Subsection(subsection_id=13, section=section,
                                 name='Direction Favorites', description='What we like best')
         # Act.
         subsection.save()
@@ -300,7 +300,7 @@ class SectionModelTests(TestCase):
         subsection_count = Subsection.subsections.count()
         self.assertEqual(subsection_count, 1)
 
-    def test_subsection_id_and_section_festival_unique_together(self):
+    def test_subsection_id_and_section_festival_not_unique_together(self):
         """
         Subsection fields subsection_id and section are unique together, independent of the (o
         """
@@ -308,9 +308,9 @@ class SectionModelTests(TestCase):
         festival_2 = create_festival('CPH:DOX', self.city, '2022-11-11', '2022-11-16')
         section = Section.sections.create(festival=self.festival, section_id=24, name='Shades',
                                           color='Grey')
-        subsection_1 = Subsection(festival=section.festival, subsection_id=13, section=section,
+        subsection_1 = Subsection(subsection_id=13, section=section,
                                   name='Direction Favorites', description='What we like best')
-        subsection_2 = Subsection(festival=festival_2, subsection_id=13, section=section,
+        subsection_2 = Subsection(subsection_id=13, section=section,
                                   name='Scout Favorites', description='Best found footage')
         # Act and Assert.
         subsection_1.save()
@@ -322,12 +322,11 @@ class SectionModelTests(TestCase):
         Subsection fields subsection_id and section are unique together
         """
         # Arrange.
-        festival_2 = create_festival('CPH:DOX', self.city, '2022-11-11', '2022-11-16')
         section = Section.sections.create(festival=self.festival, section_id=24, name='Shades',
                                           color='Grey')
-        subsection_1 = Subsection(festival=section.festival, subsection_id=13, section=section,
+        subsection_1 = Subsection(subsection_id=13, section=section,
                                   name='Direction Favorites', description='What we like best')
-        subsection_2 = Subsection(festival=festival_2, subsection_id=13, section=section,
+        subsection_2 = Subsection(subsection_id=13, section=section,
                                   name='Scout Favorites', description='Best found footage')
 
         # Act and Assert.
@@ -345,9 +344,9 @@ class SectionModelTests(TestCase):
                                             color='Grey')
         section_2 = Section.sections.create(festival=festival_2, section_id=24, name='Markets',
                                             color='Purple')
-        subsection_1 = Subsection(festival=self.festival, subsection_id=13, section=section_1,
+        subsection_1 = Subsection(subsection_id=13, section=section_1,
                                   name='Direction Favorites', description='What we like best')
-        subsection_2 = Subsection(festival=self.festival, subsection_id=13, section=section_2,
+        subsection_2 = Subsection(subsection_id=13, section=section_2,
                                   name='Scout Favorites', description='Best found footage')
 
         # Act.
