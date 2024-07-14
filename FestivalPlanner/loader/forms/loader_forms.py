@@ -440,17 +440,9 @@ class FilmLoader(SimpleLoader):
 
         subsection = None
         if subsection_id:
-            festival_sections = Section.sections.filter(festival_id=self.festival.id)
-            member_section = None
-            for section in festival_sections:
-                subsections = Subsection.subsections.filter(subsection_id=subsection_id, section_id=section.id)
-                if subsections:
-                    member_section = section
-                    break
-            kwargs = {'section_id': member_section.id, 'subsection_id': subsection_id}
-            subsection = self.get_foreign_key(Subsection, Subsection.subsections, **kwargs)
-        if not subsection:
-            subsection = None
+            subsection = Subsection.subsections.filter(section__festival_id=self.festival.id,
+                                                       subsection_id=subsection_id
+                                                       ).first()
 
         value_by_field = {
             'festival': self.festival,
@@ -459,7 +451,7 @@ class FilmLoader(SimpleLoader):
             'sort_title': sort_title,
             'title': title,
             'title_language': title_language,
-            'subsection': subsection,
+            'subsection': subsection or None,
             'duration': duration,
             'medium_category': medium_category,
             'reviewer': reviewer,

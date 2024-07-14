@@ -297,8 +297,8 @@ class SectionModelTests(TestCase):
         subsection.save()
 
         # Assert.
-        subsection_count = Subsection.subsections.count()
-        self.assertEqual(subsection_count, 1)
+        self.assertEqual(Subsection.subsections.count(), 1)
+        self.assertEqual(Subsection.subsections.all()[0].name, subsection.name)
 
     def test_subsection_id_and_section_festival_not_unique_together(self):
         """
@@ -354,8 +354,11 @@ class SectionModelTests(TestCase):
         subsection_2.save()
 
         # Assert.
-        subsection_count = Subsection.subsections.count()
-        self.assertEqual(subsection_count, 2)
+        self.assertEqual(Subsection.subsections.count(), 2)
+        kwargs_1 = {'subsection_id': subsection_1.subsection_id, 'section': section_1}
+        self.assertEqual(Subsection.subsections.get(**kwargs_1), subsection_1)
+        kwargs_2 = {'subsection_id': subsection_2.subsection_id, 'section': section_2}
+        self.assertEqual(Subsection.subsections.get(**kwargs_2), subsection_2)
 
 
 class ViewsTestCase(TestCase):
