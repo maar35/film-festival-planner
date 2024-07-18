@@ -1,7 +1,6 @@
 import csv
 import datetime
 import os
-import re
 
 from django.db import IntegrityError, transaction
 from django.forms import Form, BooleanField, SlugField
@@ -440,6 +439,10 @@ class FilmLoader(SimpleLoader):
 
         subsection = None
         if subsection_id:
+            """
+            Relies on uniqueness of subsection_id together with section.festival,
+            which is guaranteed ion the Loader.
+            """
             subsection = Subsection.subsections.filter(section__festival_id=self.festival.id,
                                                        subsection_id=subsection_id
                                                        ).first()

@@ -85,7 +85,7 @@
                         <br>
                         <a href="{% url 'films:films' %}{{ display_shorts_href_filter }}">{{ display_shorts_action }}</a>
                     </th>
-                    <th class="sticky-t-head" style="vertical-align: text-top;">Subsection<br></th>
+                    <th class="sticky-t-head" style="vertical-align: text-top;">Subsection</th>
                     {% for fan_header in fan_headers %}
                         <th class="sticky-t-head">
                             {{ fan_header.fan }}
@@ -117,7 +117,26 @@
                 {% else %}
                     <td>{{ row.duration_str }}</td>
                 {% endif %}
-                <td style="color:{{ row.subsection.section.color }}">{{ row.subsection.name }}</td>
+                {% if row.subsection %}
+                    <td class="modest-dropdown">
+                        <span class="active-text" style="color:{{ row.subsection.section.color }};">
+                            {{ row.subsection.name }}
+                        </span>
+                        <div class="modest-dropdown-content" style="background-color: black; cursor: default; min-width: 350px">
+                            <table style="width: 100%;"><tr><td>
+                                <a href="">Filter subsection</a>
+                                <span style="color:{{ row.subsection.section.color }}"> {{ row.subsection.name }}</span>
+                            <br>
+                                <a href="">Filter section</a>
+                                <span style="color:{{ row.subsection.section.color }}"> {{ row.subsection.section.name }}</span>
+                            <br>
+                            <a href="{% url 'sections:index' %}">To subsection page</a>
+                            </td></tr></table>
+                        </div>
+                    </td>
+                {% else %}
+                    <td></td>
+                {% endif %}
                 {% for fan_rating in row.fan_ratings %}
                     {% if fan_rating.fan == current_fan %}
                         <td class="cell-dropdown">

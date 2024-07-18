@@ -41,11 +41,11 @@
         {% for row in reviewer_rows %}
         <tr>
             {% if row.judged_count %}
-                <td class="dropdown">
-                    <span>
+                <td class="modest-dropdown">
+                    <span class="active-text" style="color: var(--regularColor)">
                         {{ row.reviewer }}
                     </span>
-                    <div class="dropdown-content" style="background-color: black; cursor: default;">
+                    <div class="modest-dropdown-content" style="background-color: black; cursor: default;">
                         <table>
                             <thead>
                             <tr>

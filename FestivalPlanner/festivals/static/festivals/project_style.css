@@ -1,8 +1,20 @@
+/* Define variables.*/
+:root {
+    --regularColor: silver;
+    --linkColor: green;
+    --inputBackground: forestGreen;
+    --hoverBackground: darkGreen;
+    --focusBackgrond: yellowGreen;
+    --stickyBackground: #00000090;
+    --tableBackground: #00000070;
+    --modestBackground: #00000070;
+}
+
 /* Color links green, conform Django style. */
 a,
 li a,
 td a {
-    color: green;
+    color: var(--linkColor);
 }
 
 /* Style the h1 header as to stand out within the page.
@@ -26,7 +38,7 @@ span,
 table,
 th,
 td {
-    color: silver;
+    color: var(--regularColor);
     font-family: "trebuchet ms", sans-serif;
 }
 
@@ -45,7 +57,10 @@ th,
 td {
     padding: 10px;
     border-collapse: collapse;
-    background-color: #00000070;
+    background-color: var(--tableBackground);
+}
+th.active {
+    padding: 0 8px;
 }
 
 /* Table cell style when containing an input widget */
@@ -63,7 +78,7 @@ a bit larger. */
 input[type=submit] {
     width: 50%;
     font-size: large;
-    background-color: forestgreen;
+    background-color: var(--inputBackground);
     color: ivory;
     padding: 14px 20px;
     margin: 8px 0;
@@ -72,7 +87,7 @@ input[type=submit] {
     cursor: pointer;
 }
 input[type=submit]:hover {
-    background-color: darkgreen;
+    background-color: var(--hoverBackground);
 }
 
 /* Customize the text and password input widgets as to make the text
@@ -80,7 +95,7 @@ larger and to create harmony with the submit widget. */
 input[type=password],
 input[type=text] {
     font-size: large;
-    background-color: forestgreen;
+    background-color: var(--inputBackground);
     color: ivory;
     padding: 7px 20px;
     border: none;
@@ -88,11 +103,11 @@ input[type=text] {
 }
 input[type=password]:hover,
 input[type=text]:hover {
-    background-color: darkgreen;
+    background-color: var(--hoverBackground);
 }
 input[type=password]:focus,
 input[type=text]:focus {
-    background-color: green;
+    background-color: var(--focusBackgrond);
 }
 
 /* Specifics for in-table input widgets */
@@ -103,7 +118,7 @@ input[type=submit].in-table {
     border-radius: 4px;
 }
 input[type=submit].in-table:hover {
-    background-color: darkgreen;
+    background-color: var(--hoverBackground);
 }
 
 /* Include padding and border in the width and height of each element */
@@ -133,125 +148,125 @@ input[type=submit].in-table:hover {
 .sticky-index {
     position: sticky;
     top: 0;
-    background-color: #00000090;
+    background-color: var(--stickyBackground);
 }
 .sticky-t-head {
     position: sticky;
     top: 14pt;
-    background-color: #00000090;
+    background-color:var(--stickyBackground);
 }
 .sticky-footer {
     position: sticky;
     bottom: 0;
-    background-color: #00000090;
+    background-color: var(--stickyBackground);
 }
 
 /* Put an element left and one right on the same line */
-    .row::after {
-        content: "";
-        clear: both;
-        display: table;
-    }
+.row::after {
+    content: "";
+    clear: both;
+    display: table;
+}
 
-    [class*="col-"] {
-        float: left;
-        padding: 0px;
-    }
+[class*="col-"] {
+    float: left;
+    padding: 0px;
+}
 
-    .col-left {width: 50%;}
-    .col-left-h2 {width: 50%; margin-top: 6px;}
-    .col-right {width: 50%; text-align: right;}
-    .col-all {width: 100%; text-align: center;}
+.col-left {width: 50%;}
+.col-left-h2 {width: 50%; margin-top: 6px;}
+.col-right {width: 50%; text-align: right;}
+.col-all {width: 100%; text-align: center;}
 
-    .left-half {
-        display: inline-block;
-        text-align: left;
-        width: 50%;
-    }
-    .right-half {
-        display: inline-block;
-        text-align: right;
-        width: 49%;
-        position: absolute;
-        right: 1%;
-    }
+.left-half {
+    display: inline-block;
+    text-align: left;
+    width: 50%;
+}
+.right-half {
+    display: inline-block;
+    text-align: right;
+    width: 49%;
+    position: absolute;
+    right: 1%;
+}
 
-    .cell-dropdown {
-        position: relative;
-        display: table-cell;
-        background-color: forestgreen;
-        text-align: center;
-        margin: auto;
-        width: auto;
-        height: auto;
-    }
-    .cell-dropdown:hover {
-        background-color: darkgreen;
-    }
-    .cell-dropdown-content {
-        display: none;
-        position: absolute;
-        cursor: pointer;
-        background-color: forestgreen;
-        box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-        min-width: 200px;
-        padding: 6px 8px;
-        z-index: 1;
-    }
-    .cell-dropdown-content input {
-        color: ivory;
-        background-color: forestgreen;
-        width: 100%;
-        margin: 0px;
-        padding: 4px 16px;
-        text-decoration: none;
-        text-align: left;
-        display: block;
-    }
-    .cell-dropdown-content input:hover {
-        background-color: darkgreen
-    }
-    .cell-dropdown:hover .cell-dropdown-content {
-        display: block;
-    }
-    .cell-dropdown:hover .drop-button {
-        background-color: darkgreen;
-    }
+.cell-dropdown {
+    position: relative;
+    display: table-cell;
+    background-color: var(--inputBackground);
+    text-align: center;
+    margin: auto;
+    width: auto;
+    height: auto;
+}
+.cell-dropdown:hover {
+    background-color: var(--hoverBackground);
+}
+.cell-dropdown-content {
+    display: none;
+    position: absolute;
+    cursor: pointer;
+    background-color: var(--inputBackground);
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    min-width: 200px;
+    padding: 6px 8px;
+    z-index: 1;
+}
+.cell-dropdown-content input {
+    color: ivory;
+    background-color: var(--inputBackground);
+    width: 100%;
+    margin: 0px;
+    padding: 4px 16px;
+    text-decoration: none;
+    text-align: left;
+    display: block;
+}
+.cell-dropdown-content input:hover {
+    background-color: var(--hoverBackground)
+}
+.cell-dropdown:hover .cell-dropdown-content {
+    display: block;
+}
+.cell-dropdown:hover .drop-button {
+    background-color: var(--hoverBackground);
+}
 
-    /*
-    Get apart of a lone to a new line one higher.
-    In combination with column-based left and right alignment, this will look better
-    on a small screen and will allow for a one-lie sticky header on a small screen.
-    */
+/*
+Move a part of a line to a new line one higher.
+In combination with column-based left and right alignment, this will look better
+on a small screen and will allow for a one-lie sticky header on a small screen.
+*/
+div.up {
+    text-align: right;
+}
+span.up {
+    text-align: right;
+}
+@media screen and (min-width: 601px) {
     div.up {
-        text-align: right;
+        display: none;
     }
+}
+@media screen and (max-width: 600px) {
     span.up {
-        text-align: right;
+        display: none;
     }
-    @media screen and (min-width: 601px) {
-        div.up {
-            display: none;
-        }
-    }
-    @media screen and (max-width: 600px) {
-        span.up {
-            display: none;
-        }
-    }
+}
 
 /* The container <div> - needed to position the dropdown content */
 .dropdown {
     position: relative;
     display: block;
-    background-color: forestgreen;
+    background-color: var(--inputBackground);
     text-align: center;
     margin: auto;
     width: auto;
     height: auto;
 }
 .dropdown:hover {
-    background-color: darkgreen;
+    background-color: var(--hoverBackground);
 }
 
 /* Style The Dropdown Button */
@@ -271,7 +286,7 @@ input[type=submit].in-table:hover {
     display: none;
     position: absolute;
     cursor: pointer;
-    background-color: forestgreen;
+    background-color: var(--inputBackground);
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
     min-width: 200px;
     padding: 6px 8px;
@@ -281,7 +296,7 @@ input[type=submit].in-table:hover {
 /* Links inside the dropdown */
 .dropdown-content input {
     color: ivory;
-    background-color: forestgreen;
+    background-color: var(--inputBackground);
     width: 100%;
     margin: 0px;
     padding: 4px 16px;
@@ -290,7 +305,7 @@ input[type=submit].in-table:hover {
     display: block;
 }
 .dropdown-content input:hover {
-    background-color: darkgreen
+    background-color: var(--hoverBackground)
 }
 
 /* Show the dropdown menu on hover */
@@ -300,7 +315,40 @@ input[type=submit].in-table:hover {
 
 /* Change the background color of the dropdown button when the dropdown content is shown */
 .dropdown:hover .drop-button {
-    background-color: darkgreen;
+    background-color: var(--hoverBackground);
+}
+
+/* More modest drop down */
+.modest-dropdown {
+    position: relative;
+    display: table-cell;
+    background-color: var(--modestBackground);
+    text-align: left;
+    margin: auto;
+    width: auto;
+    height: auto;
+
+}
+.modest-dropdown:hover {
+    background-color: var(--hoverBackground);
+}
+.modest-dropdown-content {
+    display: none;
+    position: absolute;
+    cursor: default;
+    background-color: black;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    min-width: 200px;
+    padding: 6px 8px;
+    z-index: 2;
+}
+.modest-dropdown:hover .modest-dropdown-content {
+    display: block;
+}
+.active-text {
+    color: var(--linkColor);
+    text-decoration-line: underline;
+    text-decoration-style: dashed;
 }
 
 /* Disable text selection */
