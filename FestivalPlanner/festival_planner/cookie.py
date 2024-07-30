@@ -62,11 +62,11 @@ class Filter(Cookie):
             filtered = self.filtered_by_query[query_key]
             self.set(request.session, filtered)
 
-    def get_href_filter(self, session):
+    def get_href_filter(self, session, first=True):
         """
         Shortcut filter query as to use in template variable.
         """
-        return f'?{self.get_cookie_key()}={self.next_query(session)}'
+        return f'{"?" if first else "&"}{self.get_cookie_key()}={self.next_query(session)}'
 
     def on(self, session, default=None):
         return self.get(session, default)

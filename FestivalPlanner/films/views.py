@@ -22,7 +22,7 @@ from festivals.models import current_festival
 from films.forms.film_forms import PickRating, UserForm, refreshed_rating_action
 from films.models import FilmFanFilmRating, Film, current_fan, get_present_fans, fan_rating_str, \
     FilmFanFilmVote, fan_rating
-from sections.models import Subsection
+from sections.models import Subsection, Section
 
 STICKY_HEIGHT = 3
 CONSTANTS_CONFIG = Config().config['Constants']
@@ -193,6 +193,8 @@ class FilmsListView(LoginRequiredMixin, ListView):
     eligible_ratings = FilmFanFilmRating.Rating.values[LOWEST_PLANNABLE_RATING:]
     short_threshold = timedelta(minutes=MAX_SHORT_MINUTES)
     fan_list = get_present_fans()
+    section_list = Section.sections.all()
+    subsection_list = Subsection.subsections.all()
     fragment_keeper = None
     logged_in_fan = None
     festival = None
@@ -203,6 +205,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
         self.description_by_film_id = {}
         self.festival_feature_films = None
 
+        # Define the filters.
         self.filters = []
         self.shorts_filter = Filter('shorts')
         self.filters.append(self.shorts_filter)
@@ -210,6 +213,20 @@ class FilmsListView(LoginRequiredMixin, ListView):
         for fan in self.fan_list:
             self.rated_filters[fan] = Filter('rated', cookie_key=f'{fan}-rated')
             self.filters.append(self.rated_filters[fan])
+        self.section_filters = {}
+        for section in self.section_list:
+            self.section_filters[section] = Filter('section',
+                                                   cookie_key=f'section_{section.id}',
+                                                   action_false='Filter section',
+                                                   action_true='Remove filter')
+            self.filters.append(self.section_filters[section])
+        self.subsection_filters = {}
+        for subsection in self.subsection_list:
+            self.subsection_filters[subsection] = Filter('subsection',
+                                                         cookie_key=f'subsection_{subsection.id}',
+                                                         action_false='Filter subsection',
+                                                         action_true='Remove filter')
+            self.filters.append(self.subsection_filters[subsection])
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
@@ -304,6 +321,12 @@ class FilmsListView(LoginRequiredMixin, ListView):
         filter_kwargs = {'festival': self.festival}
         if self.shorts_filter.on(session):
             filter_kwargs['duration__gt'] = self.short_threshold
+        for section in self.section_list:
+            if self.section_filters[section].on(session):
+                filter_kwargs['subsection__section'] = section
+        for subsection in self.subsection_list:
+            if self.subsection_filters[subsection].on(session):
+                filter_kwargs['subsection'] = subsection
         self.selected_films = Film.films.filter(**filter_kwargs).order_by('sort_title')
         for fan in self.fan_list:
             if self.rated_filters[fan].on(session):
@@ -335,6 +358,8 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'duration_str': film.duration_str(),
             'duration_seconds': film.duration.total_seconds(),
             'subsection': film.subsection,
+            'subsection_filter': self._get_subsection_filter(film.subsection),
+            'section_filter': self._get_section_filter(film.subsection),
             'section': None,
             'description': self._get_description(film),
             'fan_ratings': fan_ratings,
@@ -388,6 +413,35 @@ class FilmsListView(LoginRequiredMixin, ListView):
                                                                          rated_films_count))
 
         return film_count, rated_films_count, eligible_rating_counts
+
+    def _get_subsection_filter(self, subsection):
+        subsection_row = None
+        if subsection:
+            session = self.request.session
+            subsection_filter = self.subsection_filters[subsection]
+            subsection_row = {
+                'subsection': subsection,
+                'href_filter': subsection_filter.get_href_filter(session),
+                'action': subsection_filter.action(session),
+            }
+        return subsection_row
+
+    def _get_section_filter(self, subsection):
+        section_row = None
+        if subsection:
+            session = self.request.session
+            section = subsection.section
+            section_filter = self.section_filters[section]
+            href_filter = section_filter.get_href_filter(session)
+            subsection_filter = self.subsection_filters[subsection]
+            if subsection_filter.on(session):
+                href_filter += subsection_filter.get_href_filter(session, first=False)
+            section_row = {
+                'section': section,
+                'href_filter': href_filter,
+                'action': section_filter.action(session),
+            }
+            return section_row
 
     def _get_description(self, film):
         try:

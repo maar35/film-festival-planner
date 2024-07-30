@@ -124,10 +124,14 @@
                         </span>
                         <div class="modest-dropdown-content" style="background-color: black; cursor: default; min-width: 350px">
                             <table style="width: 100%;"><tr><td>
-                                <a href="">Filter subsection</a>
+                                <a href="{% url 'films:films' %}{{ row.subsection_filter.href_filter }}">
+                                    {{ row.subsection_filter.action }}
+                                </a>
                                 <span style="color:{{ row.subsection.section.color }}"> {{ row.subsection.name }}</span>
                             <br>
-                                <a href="">Filter section</a>
+                                <a href="{% url 'films:films' %}{{ row.section_filter.href_filter }}">
+                                    {{ row.section_filter.action }}
+                                </a>
                                 <span style="color:{{ row.subsection.section.color }}"> {{ row.subsection.section.name }}</span>
                             <br>
                             <a href="{% url 'sections:index' %}">To subsection page</a>
