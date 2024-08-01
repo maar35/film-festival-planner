@@ -236,7 +236,7 @@ input[type=submit].in-table:hover {
 /*
 Move a part of a line to a new line one higher.
 In combination with column-based left and right alignment, this will look better
-on a small screen and will allow for a one-lie sticky header on a small screen.
+on a small screen and will allow for a one-line sticky header on a small screen.
 */
 div.up {
     text-align: right;

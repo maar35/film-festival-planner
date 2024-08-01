@@ -217,14 +217,14 @@ class FilmsListView(LoginRequiredMixin, ListView):
         for section in self.section_list:
             self.section_filters[section] = Filter('section',
                                                    cookie_key=f'section_{section.id}',
-                                                   action_false='Filter section',
+                                                   action_false='Select section',
                                                    action_true='Remove filter')
             self.filters.append(self.section_filters[section])
         self.subsection_filters = {}
         for subsection in self.subsection_list:
             self.subsection_filters[subsection] = Filter('subsection',
                                                          cookie_key=f'subsection_{subsection.id}',
-                                                         action_false='Filter subsection',
+                                                         action_false='Select subsection',
                                                          action_true='Remove filter')
             self.filters.append(self.subsection_filters[subsection])
 
@@ -441,7 +441,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
                 'href_filter': href_filter,
                 'action': section_filter.action(session),
             }
-            return section_row
+        return section_row
 
     def _get_description(self, film):
         try:
