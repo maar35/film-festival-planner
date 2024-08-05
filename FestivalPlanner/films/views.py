@@ -187,14 +187,15 @@ class FilmsListView(LoginRequiredMixin, ListView):
     template_name = FilmsView.template_name
     context_object_name = 'film_rows'
     http_method_names = ['get']
+    object_list = None
     title = 'Film Rating List'
     class_tag = 'rating'
     highest_rating = FilmFanFilmRating.Rating.values[-1]
     eligible_ratings = FilmFanFilmRating.Rating.values[LOWEST_PLANNABLE_RATING:]
     short_threshold = timedelta(minutes=MAX_SHORT_MINUTES)
     fan_list = get_present_fans()
-    section_list = Section.sections.all()
-    subsection_list = Subsection.subsections.all()
+    section_list = None
+    subsection_list = None
     fragment_keeper = None
     logged_in_fan = None
     festival = None
@@ -202,8 +203,25 @@ class FilmsListView(LoginRequiredMixin, ListView):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.subsection_filters = None
+        self.section_filters = None
+        self.rated_filters = None
+        self.shorts_filter = None
+        self.filters = None
         self.description_by_film_id = {}
         self.festival_feature_films = None
+        self.section_list = Section.sections.all()
+        self.subsection_list = Subsection.subsections.all()
+
+    def setup(self, request, *args, **kwargs):
+        pr_debug('start', with_time=True)
+        super().setup(request, *args, **kwargs)
+        self.festival = current_festival(request.session)
+
+        # Save the list of festival feature films.
+        filter_kwargs = {'festival': self.festival, 'duration__gt': self.short_threshold}
+        self.festival_feature_films = Film.films.filter(**filter_kwargs)
+        pr_debug('done', with_time=True)
 
         # Define the filters.
         self.filters = []
@@ -227,16 +245,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
                                                          action_false='Select subsection',
                                                          action_true='Remove filter')
             self.filters.append(self.subsection_filters[subsection])
-
-    def setup(self, request, *args, **kwargs):
-        super().setup(request, *args, **kwargs)
-
-        # Save the list of festival films.
-        pr_debug('start', with_time=True)
-        self.festival = current_festival(request.session)
-        filter_kwargs = {'festival': self.festival, 'duration__gt': self.short_threshold}
-        self.festival_feature_films = Film.films.filter(**filter_kwargs)
-        pr_debug('done', with_time=True)
 
     def dispatch(self, request, *args, **kwargs):
         session = self.request.session

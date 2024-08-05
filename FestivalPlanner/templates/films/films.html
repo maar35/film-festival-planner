@@ -127,12 +127,12 @@
                                 <a href="{% url 'films:films' %}{{ row.subsection_filter.href_filter }}">
                                     {{ row.subsection_filter.action }}
                                 </a>
-                                <span style="color:{{ row.subsection.section.color }}"> {{ row.subsection.name }}</span>
+                                <span style="color:{{ row.subsection.section.color }}">{{ row.subsection.name }}</span>
                             <br>
                                 <a href="{% url 'films:films' %}{{ row.section_filter.href_filter }}">
                                     {{ row.section_filter.action }}
                                 </a>
-                                <span style="color:{{ row.subsection.section.color }}"> {{ row.subsection.section.name }}</span>
+                                <span style="color:{{ row.subsection.section.color }}">{{ row.subsection.section.name }}</span>
                             <br>
                             <a href="{% url 'sections:index' %}">To subsection page</a>
                             </td></tr></table>
