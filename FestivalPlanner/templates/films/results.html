@@ -10,7 +10,7 @@
             {% if film_in_cache %}
                 <a href="{% url 'films:films' %}#film{{ film.film_id }}">Back to ratings of {{ film.title }}</a>
             {% else %}
-                Film is hidden in ratings list <a href="{% url 'films:films' %}?{{ display_all_query }}#film{{ film.film_id }}">Clear filters</a>
+                Film is hidden in ratings list <a href="{% url 'films:films' %}{{ display_all_query }}#film{{ film.film_id }}">Clear filters</a>
             {% endif %}
             <br>
             <a href="{% url 'films:films' %}">Back to ratings</a>

@@ -21,7 +21,7 @@ from festivals.tests import create_festival
 from films import views
 from films.forms.film_forms import PickRating
 from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR
-from films.views import FilmsView, ResultsView, MAX_SHORT_MINUTES, BaseFilmsFormView
+from films.views import FilmsView, ResultsView, MAX_SHORT_MINUTES, BaseFilmsFormView, FilmsListView
 from loader.views import SaveRatingsView
 from sections.models import Subsection, Section
 from theaters.models import City
@@ -70,7 +70,7 @@ def new_std_festival():
     return festival
 
 
-def create_film(film_id, title, minutes, seq_nr=-1, festival=None, sort_title=None):
+def create_film(film_id, title, minutes, seq_nr=-1, festival=None, sort_title=None, subsection=None):
     """
     Create a film with the given arguments in the database.
     """
@@ -78,7 +78,7 @@ def create_film(film_id, title, minutes, seq_nr=-1, festival=None, sort_title=No
     duration = timedelta(minutes=minutes)
     sort_title = sort_title or title
     return Film.films.create(festival_id=festival.id, film_id=film_id, seq_nr=seq_nr,
-                             title=title, duration=duration, subsection=None,
+                             title=title, duration=duration, subsection=subsection,
                              sort_title=sort_title.lower())
 
 
@@ -305,8 +305,8 @@ class SectionModelTests(TestCase):
         Subsection fields subsection_id and section are unique together, independent of the (o
         """
         # Arrange.
-        festival_2 = create_festival('CPH:DOX', self.city, '2022-11-11', '2022-11-16')
-        section = Section.sections.create(festival=self.festival, section_id=24, name='Shades',
+        festival = create_festival('CPH:DOX', self.city, '2022-11-11', '2022-11-16')
+        section = Section.sections.create(festival=festival, section_id=24, name='Shades',
                                           color='Grey')
         subsection_1 = Subsection(subsection_id=13, section=section,
                                   name='Direction Favorites', description='What we like best')
@@ -367,6 +367,7 @@ class ViewsTestCase(TestCase):
         super().setUp()
         debug_tools.SUPPRESS_DEBUG_PRINT = True
         self.client = Client()
+        self.session = self.client.session
 
         # Set up an admin user.
         self.admin_fan, self.admin_user, self.admin_credentials = \
@@ -599,8 +600,20 @@ class FilmListViewsTests(ViewsTestCase):
         self.city.delete()
 
     @staticmethod
-    def rating_post_data(film, rating_value=0):
+    def arrange_get_rating_post_data(film, rating_value=0):
         return {f'{FilmsView.submit_name_prefix}{film.id}_{rating_value}': ['label']}
+
+    def arrange_filtered_view(self, filter_setter, setter_arg):
+        request = self.get_regular_fan_request()
+        request.method = 'GET'
+        films_view = FilmsListView()
+        session = request.session
+        films_view.setup(request)
+        filter_setter(session, films_view, setter_arg)
+        films_view.dispatch(request)
+        films_view.queryset = films_view.get_queryset()
+        context = films_view.get_context_data()
+        return films_view, context
 
     def assert_rating_action_redirect(self, user, get_response, post_response, redirect_response):
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
@@ -728,7 +741,7 @@ class FilmListViewsTests(ViewsTestCase):
         _ = self.get_admin_request()
         fan = self.admin_fan
 
-        post_data = self.rating_post_data(film, rating_value=rating_value)
+        post_data = self.arrange_get_rating_post_data(film, rating_value=rating_value)
 
         # Act.
         post_response = self.client.post(reverse('films:films'), data=post_data)
@@ -757,7 +770,7 @@ class FilmListViewsTests(ViewsTestCase):
         log_response = client.post(reverse('authentication:login'), self.regular_credentials)
         get_response = client.get(reverse('films:films'))
         get_request = self.get_regular_fan_request()
-        post_data = self.rating_post_data(film, rating_value=new_rating_value)
+        post_data = self.arrange_get_rating_post_data(film, rating_value=new_rating_value)
 
         # Act.
         post_response = client.post(reverse('films:films'), data=post_data)
@@ -787,7 +800,7 @@ class FilmListViewsTests(ViewsTestCase):
         FilmFanFilmRating.film_ratings.create(film=film, film_fan=fan, rating=rating_value)
         rating = FilmFanFilmRating.film_ratings.get(film=film, film_fan=fan)
 
-        post_data = self.rating_post_data(film, rating_value=new_rating_value)
+        post_data = self.arrange_get_rating_post_data(film, rating_value=new_rating_value)
 
         # Act.
         post_response = self.client.post(reverse('films:films'), data=post_data)
@@ -869,9 +882,139 @@ class FilmListViewsTests(ViewsTestCase):
         self.assertNotContains(hide_shorts_response, short_film.title)
         self.assertNotContains(hide_shorts_response, edge_film.title)
 
+    def test_select_subsection(self):
+        """
+        Films can be filtered as to keep one subsection visible.
+        """
+        def set_subsection_filter(session, view, setter_arg):
+            su_filter = view.subsection_filters[setter_arg]
+            su_filter.set(session, not su_filter.get(session))
+
+        # Arrange.
+        festival = create_std_festival()
+        section = Section.sections.create(festival=festival, section_id=24, name='Fighting', color='red')
+        subsection_1 = Subsection.subsections.create(
+            subsection_id=1, section=section, name='War movies', description='In these films, people fight in wars')
+        subsection_2 = Subsection.subsections.create(
+            subsection_id=2, section=section, name='Activism', description='About people who fight for piece')
+        film_without_subsection = create_film(film_id=200, title='A Bear and a Forest', minutes=139, festival=festival)
+        film_with_subsection_1 = create_film(film_id=201, title='War Chickens', minutes=86,
+                                             subsection=subsection_1, festival=festival)
+        film_with_subsection_2 = create_film(film_id=202, title='The Freemen', minutes=116,
+                                             subsection=subsection_2, festival=festival)
+
+        films_view, context = self.arrange_filtered_view(set_subsection_filter, subsection_1)
+
+        # Act.
+        get_response = films_view.render_to_response(context)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertNotContains(get_response, film_without_subsection.title)
+        self.assertContains(get_response, film_with_subsection_1.title)
+        self.assertNotContains(get_response, film_with_subsection_2.title)
+
+    def test_select_section(self):
+        """
+        Films can be filtered as to keep one section visible.
+        """
+        def set_section_filter(session, view, setter_arg):
+            se_filter = view.section_filters[setter_arg]
+            se_filter.set(session, not se_filter.get(session))
+
+        # Arrange.
+        festival = create_std_festival()
+        section_1 = Section.sections.create(festival=festival, section_id=20, name='Gods', color='blue')
+        section_2 = Section.sections.create(festival=festival, section_id=21, name='Animals', color='pink')
+        section_3 = Section.sections.create(festival=festival, section_id=22, name='Plants', color='green')
+        subsection_1 = Subsection.subsections.create(
+            subsection_id=1, section=section_1, name='Led Zeppelin', description='These films concern Gods of Rock')
+        subsection_2 = Subsection.subsections.create(
+            subsection_id=2, section=section_2, name='Tuna season', description='About symbolic use of fishes')
+        subsection_3 = Subsection.subsections.create(
+            subsection_id=3, section=section_3, name='Speaking trees', description='About secret properties of plants')
+        film_with_subsection_1 = create_film(film_id=211, title='Pages or Plants', minutes=98,
+                                             subsection=subsection_1, festival=festival)
+        film_with_subsection_2 = create_film(film_id=212, title='Salmons Go Crazy', minutes=79,
+                                             subsection=subsection_2, festival=festival)
+        film_with_subsection_3 = create_film(film_id=210, title='Symbolic Strangling', minutes=111,
+                                             subsection=subsection_3, festival=festival)
+
+        films_view, context = self.arrange_filtered_view(set_section_filter, section_2)
+
+        # Act.
+        get_response = films_view.render_to_response(context)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertContains(get_response, film_with_subsection_2.title)
+        self.assertNotContains(get_response, film_with_subsection_1.title)
+        self.assertNotContains(get_response, film_with_subsection_3.title)
+
+    def test_select_section_deselects_subsection(self):
+        """
+        If a section is selected while a subsection is already selected, the subsection filter is cleared.
+        """
+        def set_subsection_filter(session, view, setter_arg):
+            su_filter = view.subsection_filters[setter_arg]
+            su_filter.set(session, not su_filter.get(session))
+
+        def get_section_query_from_content(response):
+            content = get_decoded_content(response)
+            m = re_section_query.search(content)
+            return m.group(1)
+
+        # Arrange.
+
+        # Arrange data in the database.
+        festival = create_std_festival()
+        section = Section.sections.create(festival=festival, section_id=23, name='Running', color='yellow')
+        subsection_1 = Subsection.subsections.create(
+            subsection_id=31, section=section, name='The Olympics', description='Collects films about olympic runners')
+        subsection_2 = Subsection.subsections.create(
+            subsection_id=32, section=section, name='Cold', description='Films about adults with running noses')
+        film_with_subsection_1 = create_film(film_id=301, title='Haruki Murakami', minutes=102,
+                                             subsection=subsection_1, festival=festival)
+        film_with_subsection_2 = create_film(film_id=302, title='Hot Chili!', minutes=134,
+                                             subsection=subsection_2, festival=festival)
+
+        # Arrange a compiled regex for multiple use in get_section_query_from_content().
+        str_section_query = r'<a href="([^>]*)">[^<]*</a>\s*<span[^>]*>\s*' + section.name + r'\s*</span>'
+        re_section_query = re.compile(str_section_query, re.MULTILINE)
+
+        # Arrange a response with a subsection selected.
+        films_view, context_1 = self.arrange_filtered_view(set_subsection_filter, subsection_1)
+        get_response_1 = films_view.render_to_response(context_1)
+
+        # Arrange a response with the accessory section selected. This should deselect the subsection.
+        select_section_url = get_section_query_from_content(get_response_1.render())
+        get_response_2 = self.client.get(select_section_url)
+
+        # Act.
+        # Deselect the sector. All films should be visible again.
+        deselect_section_url = get_section_query_from_content(get_response_2)
+        get_response_3 = self.client.get(deselect_section_url)
+
+        # Assert.
+        self.assertEqual(get_response_1.status_code, HTTPStatus.OK)
+        self.assertEqual(get_response_2.status_code, HTTPStatus.OK)
+        self.assertContains(get_response_1, film_with_subsection_1.title)
+        self.assertNotContains(get_response_1, film_with_subsection_2.title)
+        self.assertContains(get_response_2, film_with_subsection_1.title)
+        self.assertContains(get_response_2, film_with_subsection_2.title)
+        self.assertRegex(get_decoded_content(get_response_2),
+                         r'<a[^>]*>\s*Select subsection',
+                         'Subsection should be deselected')
+        self.assertRegex(get_decoded_content(get_response_2),
+                         r'<a[^>]*>\s*Remove filter\s*</a>\s*<span[^>]*>\s*' + section.name + r'\s*</span',
+                         'Subsection should be selected')
+        self.assertContains(get_response_3, film_with_subsection_1.title)
+        self.assertContains(get_response_3, film_with_subsection_2.title)
+
     def test_find_title(self):
         """
-        Films starting with or containing a text snipped entered in
+        Films starting with or containing a text snippet that is entered
+        in the search box are displayed as links.
         """
         # Arrange.
         festival = create_std_festival()
