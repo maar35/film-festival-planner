@@ -959,15 +959,9 @@ class FilmListViewsTests(ViewsTestCase):
             su_filter = view.subsection_filters[setter_arg]
             su_filter.set(session, not su_filter.get(session))
 
-        def get_section_query_from_queryset(view, film):
-            film_row_list = [f["section_filter"] for f in view.queryset if f["film"] == film]
-            return film_row_list[0]['href_filter']
-
         def get_section_query_from_content(response):
-            str_query = r'<a href="([^>]*)">[^<]*</a>\s*<span[^>]*>\s*' + section.name + r'\s*</span>'
-            re_query = re.compile(str_query, re.MULTILINE)
             content = get_decoded_content(response)
-            m = re_query.search(content)
+            m = re_section_query.search(content)
             return m.group(1)
 
         # Arrange.
@@ -984,14 +978,17 @@ class FilmListViewsTests(ViewsTestCase):
         film_with_subsection_2 = create_film(film_id=302, title='Hot Chili!', minutes=134,
                                              subsection=subsection_2, festival=festival)
 
+        # Arrange a compiled regex for multiple use in get_section_query_from_content().
+        str_section_query = r'<a href="([^>]*)">[^<]*</a>\s*<span[^>]*>\s*' + section.name + r'\s*</span>'
+        re_section_query = re.compile(str_section_query, re.MULTILINE)
+
         # Arrange a response with a subsection selected.
         films_view, context_1 = self.arrange_filtered_view(set_subsection_filter, subsection_1)
         get_response_1 = films_view.render_to_response(context_1)
 
-        # Arrange a response with the accessory section selected. This
-        # should deselect the subsection.
-        select_section_query = get_section_query_from_queryset(films_view, film_with_subsection_1)
-        get_response_2 = self.client.get(reverse('films:films') + select_section_query)
+        # Arrange a response with the accessory section selected. This should deselect the subsection.
+        select_section_url = get_section_query_from_content(get_response_1.render())
+        get_response_2 = self.client.get(select_section_url)
 
         # Act.
         # Deselect the sector. All films should be visible again.
@@ -1016,7 +1013,7 @@ class FilmListViewsTests(ViewsTestCase):
 
     def test_find_title(self):
         """
-        Films starting with or containing a text snipped that is entered
+        Films starting with or containing a text snippet that is entered
         in the search box are displayed as links.
         """
         # Arrange.

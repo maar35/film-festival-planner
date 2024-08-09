@@ -68,6 +68,11 @@ class Filter(Cookie):
         """
         return f'{"?" if first else "&"}{self.get_cookie_key()}={self.next_query(session)}'
 
+    @classmethod
+    def get_display_query_from_keys(cls, filter_keys):
+        query_list = [f'{k}={cls.query_by_filtered[False]}' for k in filter_keys]
+        return '?' + '&'.join(query_list) if query_list else ''
+
     def on(self, session, default=None):
         return self.get(session, default)
 

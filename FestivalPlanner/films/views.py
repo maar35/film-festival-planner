@@ -194,8 +194,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
     eligible_ratings = FilmFanFilmRating.Rating.values[LOWEST_PLANNABLE_RATING:]
     short_threshold = timedelta(minutes=MAX_SHORT_MINUTES)
     fan_list = get_present_fans()
-    section_list = None
-    subsection_list = None
     fragment_keeper = None
     logged_in_fan = None
     festival = None
@@ -215,36 +213,18 @@ class FilmsListView(LoginRequiredMixin, ListView):
 
     def setup(self, request, *args, **kwargs):
         pr_debug('start', with_time=True)
+
         super().setup(request, *args, **kwargs)
         self.festival = current_festival(request.session)
 
         # Save the list of festival feature films.
         filter_kwargs = {'festival': self.festival, 'duration__gt': self.short_threshold}
         self.festival_feature_films = Film.films.filter(**filter_kwargs)
-        pr_debug('done', with_time=True)
 
         # Define the filters.
-        self.filters = []
-        self.shorts_filter = Filter('shorts')
-        self.filters.append(self.shorts_filter)
-        self.rated_filters = {}
-        for fan in self.fan_list:
-            self.rated_filters[fan] = Filter('rated', cookie_key=f'{fan}-rated')
-            self.filters.append(self.rated_filters[fan])
-        self.section_filters = {}
-        for section in self.section_list:
-            self.section_filters[section] = Filter('section',
-                                                   cookie_key=f'section_{section.id}',
-                                                   action_false='Select section',
-                                                   action_true='Remove filter')
-            self.filters.append(self.section_filters[section])
-        self.subsection_filters = {}
-        for subsection in self.subsection_list:
-            self.subsection_filters[subsection] = Filter('subsection',
-                                                         cookie_key=f'subsection_{subsection.id}',
-                                                         action_false='Select subsection',
-                                                         action_true='Remove filter')
-            self.filters.append(self.subsection_filters[subsection])
+        self._setup_filters()
+
+        pr_debug('done', with_time=True)
 
     def dispatch(self, request, *args, **kwargs):
         session = self.request.session
@@ -309,6 +289,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'short_threshold': self.short_threshold.total_seconds(),
             'display_shorts_href_filter': self.shorts_filter.get_href_filter(session),
             'display_shorts_action': self.shorts_filter.action(session),
+            'display_all_subsections_query': self._get_query_string_to_select_all_subsections(session),
             'found_films': BaseFilmsFormView.found_films,
             'action': refreshed_rating_action(session, self.class_tag),
             'unexpected_errors': FilmsView.unexpected_errors,
@@ -323,6 +304,29 @@ class FilmsListView(LoginRequiredMixin, ListView):
         FilmsView.unexpected_errors = []
         BaseFilmsFormView.found_films = None
         return response
+
+    def _setup_filters(self):
+        self.filters = []
+        self.shorts_filter = Filter('shorts')
+        self.filters.append(self.shorts_filter)
+        self.rated_filters = {}
+        for fan in self.fan_list:
+            self.rated_filters[fan] = Filter('rated', cookie_key=f'{fan}-rated')
+            self.filters.append(self.rated_filters[fan])
+        self.section_filters = {}
+        for section in self.section_list:
+            self.section_filters[section] = Filter('section',
+                                                   cookie_key=f'section-{section.id}',
+                                                   action_false='Select section',
+                                                   action_true='Remove filter')
+            self.filters.append(self.section_filters[section])
+        self.subsection_filters = {}
+        for subsection in self.subsection_list:
+            self.subsection_filters[subsection] = Filter('subsection',
+                                                         cookie_key=f'subsection-{subsection.id}',
+                                                         action_false='Select subsection',
+                                                         action_true='Remove filter')
+            self.filters.append(self.subsection_filters[subsection])
 
     def _filter_films(self, session):
         pr_debug('start filtered query', with_time=True)
@@ -341,6 +345,13 @@ class FilmsListView(LoginRequiredMixin, ListView):
                 self.selected_films = self.selected_films.filter(
                     ~Exists(FilmFanFilmRating.film_ratings.filter(film=OuterRef('pk'), film_fan=fan))
                 )
+
+    @staticmethod
+    def _get_query_string_to_select_all_subsections(session):
+        active_keys = FilmRatingCache.get_active_filter_keys(session)
+        section_keys = [k for k in active_keys if k.startswith('subsection-') or k.startswith('section-')]
+        query_string = Filter.get_display_query_from_keys(section_keys)
+        return query_string
 
     def _read_film_descriptions(self, session):
         if not get_log(session):
@@ -666,8 +677,7 @@ class ResultsView(LoginRequiredMixin, DetailView):
         Set up an HTML query as to switch off all filters.
         """
         filter_keys = FilmRatingCache.get_active_filter_keys(session)
-        query_list = [f'{k}={Filter.query_by_filtered[False]}' for k in filter_keys]
-        display_all_query = '&'.join(query_list)
+        display_all_query = Filter.get_display_query_from_keys(filter_keys)
         return display_all_query
 
 
