@@ -10,13 +10,15 @@ from django.views.generic import FormView, ListView
 
 from authentication.models import FilmFan
 from festival_planner.cookie import Cookie
-from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log
+from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, wrap_up_form_errors
 from festivals.models import Festival, switch_festival, current_festival, FestivalBase
 from films.models import Film, FilmFanFilmRating
 from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoaderForm, TheaterDataLoaderForm, \
     TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm, SaveRatingsForm, \
     RatingDataBackupForm, FILM_FANS_BACKUP_PATH, RATINGS_BACKUP_PATH, FILMS_BACKUP_PATH, \
-    FESTIVALS_BACKUP_PATH, FESTIVAL_BASES_BACKUP_PATH, BACKUP_DATA_DIR, CITIES_BACKUP_PATH
+    FESTIVALS_BACKUP_PATH, FESTIVAL_BASES_BACKUP_PATH, BACKUP_DATA_DIR, CITIES_BACKUP_PATH, ScreeningsLoaderForm, \
+    ScreeningLoader
+from screenings.models import Screening
 from sections.models import Section, Subsection
 from theaters.models import Theater, City, cities_path, theaters_path, screens_path, Screen, new_screens_path, \
     new_cities_path, new_theaters_path
@@ -414,3 +416,75 @@ class SaveRatingsView(LoginRequiredMixin, FormView):
         festival = current_festival(session)
         form.save_ratings(session, festival)
         return super().form_valid(form)
+
+
+class ScreeningsLoaderView(LoginRequiredMixin, View):
+    """
+    Class-based view to load the screenings of a specific festival.
+    """
+    template_name = 'loader/screenings.html'
+    unexpected_error = ''
+
+    @staticmethod
+    def get(request, *args, **kwargs):
+        view = ScreeningLoaderListView.as_view()
+        return view(request, *args, **kwargs)
+
+    @staticmethod
+    def post(request, *args, **kwargs):
+        view = ScreeningLoaderFormView.as_view()
+        return view(request, *args, **kwargs)
+
+
+class ScreeningLoaderListView(LoginRequiredMixin, ListView):
+    template_name = ScreeningsLoaderView.template_name
+    http_method_names = ['get']
+    context_object_name = 'festival_rows'
+    object_list = None
+
+    def get_queryset(self):
+        festivals = Festival.festivals.order_by('-start_date')
+        festival_rows = [self._get_festival_row(festival) for festival in festivals]
+        return festival_rows
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        session = self.request.session
+        context = add_base_context(self.request, super().get_context_data(object_list=object_list, **kwargs))
+        context['title'] = 'Festival Screenings Loader'
+        context['unexpected_error'] = ScreeningsLoaderView.unexpected_error
+        context['log'] = get_log(session)
+        unset_log(session)
+        return context
+
+    @staticmethod
+    def _get_festival_row(festival):
+        festival_row = {
+            'festival': festival,
+            'screening_file_field_count': 0,                            # TODO: add flesh here!
+            'screening_count_on_file': file_record_count(festival.screenings_file(), has_header=True),
+            'screening_count': Screening.screenings.filter(film__festival=festival).count,
+        }
+        return festival_row
+
+
+class ScreeningLoaderFormView(LoginRequiredMixin, FormView):
+    template_name = ScreeningsLoaderView.template_name
+    form_class = ScreeningsLoaderForm
+    http_method_names = ['post']
+
+    def form_valid(self, form):
+        session = self.request.session
+        festival_id = list(self.request.POST.keys())[-1]
+        festival = Festival.festivals.get(id=festival_id)
+        switch_festival(session, festival)
+        initialize_log(session)
+        _ = ScreeningLoader(session, festival, festival_pk='film__festival__pk').load_objects()
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        super().form_invalid(form)
+        ScreeningsLoaderView.unexpected_error = '\n'.join(wrap_up_form_errors(form.errors))
+        return HttpResponseRedirect(reverse('loader:screenings'))
+
+    def get_success_url(self):
+        return reverse('screenings:day_schema')

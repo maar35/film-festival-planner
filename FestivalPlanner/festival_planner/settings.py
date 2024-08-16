@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'loader.apps.LoaderConfig',
     'sections.apps.SectionsConfig',
     'theaters.apps.TheatersConfig',
+    'screenings.apps.ScreeningsConfig',
 ]
 
 MIDDLEWARE = [

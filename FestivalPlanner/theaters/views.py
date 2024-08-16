@@ -27,13 +27,6 @@ class IndexView(ListView):
 
     # Define custom attributes.
     label_by_priority = {p: p.label for p in Theater.Priority}
-    color_by_priority = {}
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.color_by_priority[Theater.Priority.NO_GO] = 'SlateGray'
-        self.color_by_priority[Theater.Priority.LOW] = 'PowderBlue'
-        self.color_by_priority[Theater.Priority.HIGH] = 'Coral'
 
     def get_queryset(self):
         theater_list = sorted(Theater.theaters.all(), key=attrgetter('city.name', 'abbreviation'))
@@ -54,7 +47,7 @@ class IndexView(ListView):
         theater_row = {
             'is_festival_city': is_festival_city,
             'theater': theater,
-            'priority_color': self.color_by_priority[theater.priority],
+            'priority_color': Theater.color_by_priority[theater.priority],
             'priority_label': self.label_by_priority[theater.priority],
             'screen_count': Screen.screens.filter(theater=theater).count()
         }

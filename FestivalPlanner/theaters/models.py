@@ -87,6 +87,13 @@ class Theater(models.Model):
         LOW = 1
         HIGH = 2
 
+    # Define color dictionary.
+    color_by_priority = {
+        Priority.NO_GO: 'SlateGray',
+        Priority.LOW: 'PowderBlue',
+        Priority.HIGH: 'Coral'
+    }
+
     # Define the fields.
     theater_id = models.IntegerField(unique=True, null=False)
     city = models.ForeignKey(City, on_delete=models.CASCADE)

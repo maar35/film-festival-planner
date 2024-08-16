@@ -1,0 +1,49 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+<h2 class="row col-left-h2">{{ sub_header }}</h2>
+<div class="row">
+    <span class="col-right">
+        <a href="{% url 'loader:screenings' %}">Load screenings</a>
+    </span>
+</div>
+{% if log %}
+    <h3 class="log-header">{{ log.action }} results</h3>
+    {% if found_films %}
+        {% for film in found_films %}
+            <a href="{% url 'films:results' film.id %}" style="padding-left: 40px;" >{{ film.title }}</a>
+            <br>
+        {% endfor %}
+    {% else %}
+        {% for result in log.results %}
+            <p class="log">{{ result }}</p>
+        {% endfor %}
+    {% endif %}
+<br>
+{% endif %}
+<div>Festival day {{ day }}</div>
+<br>
+{% if screen_rows %}
+    <table>
+        <thead><tr><th>Screen</th><th>Timescale (for the time being empty)</th></tr></thead>
+        <tbody>
+        {% for row in screen_rows %}
+            <tr>
+                <td style="color: {{ row.color }};vertical-align: top;">{{ row.screen }}</td>
+                <td>
+                    {% for screening in row.screenings %}
+                        {{ screening }}
+                        <br>
+                    {% endfor %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No screenings available for this festival.</p>
+{% endif %}
+{% endblock %}

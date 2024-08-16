@@ -24,6 +24,8 @@
     <a href="{% url 'sections:index' %}">Sections</a>
     <br>
     <a href="{% url 'theaters:theaters' %}">Theaters</a>
+    <br>
+    <a href="{% url 'screenings:day_schema' %}">Screenings day schema</a>
     <h3>Loading and unloading</h3>
     <a href="/loader/theaters?action=dump">Dump theater data</a>
     <br>
@@ -34,6 +36,8 @@
     <a href="{% url 'loader:sections' %}">Load sections</a>
     <br>
     <a href="{% url 'loader:ratings' %}">Load films and ratings</a>
+    <br>
+    <a href="{% url 'loader:screenings' %}">Load screenings</a>
     <br><br>
     <a href="{% url 'loader:film_backup' %}">Backup rating data</a>
     <h3>Testing</h3>
