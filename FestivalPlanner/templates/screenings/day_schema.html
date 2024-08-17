@@ -24,7 +24,25 @@
     {% endif %}
 <br>
 {% endif %}
-<div>Festival day {{ day }}</div>
+<form method="post">
+{% csrf_token %}
+    <div>Festival day
+        <span style="display: inline; position: relative; width: 20%;" class="dropdown">
+            <span class="drop-button">
+                {{ day }}
+            </span>
+            <span class="dropdown-content">
+                {% for choice in day_choices %}
+                    {% if choice == day %}
+                        <input type="submit" value="{{ choice }}" name="day" style="color: lightgrey">
+                    {% else %}
+                        <input type="submit" value="{{ choice }}" name="day">
+                    {% endif %}
+                {% endfor %}
+            </span>
+        </span>
+    </div>
+</form>
 <br>
 {% if screen_rows %}
     <table>
