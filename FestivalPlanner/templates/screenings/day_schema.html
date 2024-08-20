@@ -12,52 +12,59 @@
 </div>
 {% if log %}
     <h3 class="log-header">{{ log.action }} results</h3>
-    {% if found_films %}
-        {% for film in found_films %}
-            <a href="{% url 'films:results' film.id %}" style="padding-left: 40px;" >{{ film.title }}</a>
-            <br>
-        {% endfor %}
-    {% else %}
-        {% for result in log.results %}
-            <p class="log">{{ result }}</p>
-        {% endfor %}
-    {% endif %}
+    {% for result in log.results %}
+        <p class="log">{{ result }}</p>
+    {% endfor %}
 <br>
 {% endif %}
 <form method="post">
 {% csrf_token %}
-    <div>Festival day
-        <span style="display: inline; position: relative; width: 20%;" class="dropdown">
+    <h3>Festival day
+        <span class="dropdown"
+              style="display: inline; padding: 0.5rem;">
             <span class="drop-button">
                 {{ day }}
             </span>
             <span class="dropdown-content">
                 {% for choice in day_choices %}
                     {% if choice == day %}
-                        <input type="submit" value="{{ choice }}" name="day" style="color: lightgrey">
+                        <input type="submit" value="{{ choice }}" name="day"
+                               style="color: lightgrey; text-align: right">
                     {% else %}
-                        <input type="submit" value="{{ choice }}" name="day">
+                        <input type="submit" value="{{ choice }}" name="day" style="text-align: right;">
                     {% endif %}
                 {% endfor %}
             </span>
         </span>
-    </div>
+    </h3>
 </form>
 <br>
 {% if screen_rows %}
-    <table>
-        <thead><tr><th>Screen</th><th>Timescale (for the time being empty)</th></tr></thead>
+    <table class="day-schema-border">
+        <thead>
+        <tr class="sticky-t-head" >
+            <th class="day-schema-border">Screen</th>
+            <th class="day-schema-border"
+                style="position: relative; vertical-align: text-top;">
+                {% for time in timescale %}
+                <span style="padding: 0 0.5rem; border-left: 2px solid {{ festival_color }}; background-color: black; position: absolute; left: {{ time.left }}px">{{ time.text }}</span>
+                {% endfor %}
+            </th>
+        </tr>
+        </thead>
         <tbody>
         {% for row in screen_rows %}
-            <tr>
-                <td style="color: {{ row.color }};vertical-align: top;">{{ row.screen }}</td>
-                <td>
-                    {% for screening in row.screenings %}
-                        {{ screening }}
-                        <br>
-                    {% endfor %}
-                </td>
-            </tr>
+        <tr class="day-schema-border"
+            style="vertical-align: text-top;">
+            <td class="sticky-left"
+                style="border: var(--screeningBorderWidth) solid var(--screeningBorderColor); color: {{ row.color }};">{{ row.screen }}
+            </td>
+            <td style="background-color: var(--screeningBackground); min-width: {{ row.total_width }}px; position: relative;">
+                {% for spec in row.screening_specs %}
+                <span style="width: {{ spec.width }}px; padding: 0 0.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid {{ festival_color }}; background-color: var(--screeningBackground); position: absolute; top: 0px; bottom: 0px; left: {{ spec.left }}px;">{{ spec.line_1 }}<br>{{ spec.line_2 }}</span>
+                {% endfor %}
+            </td>
+        </tr>
         {% endfor %}
         </tbody>
     </table>

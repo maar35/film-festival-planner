@@ -21,9 +21,9 @@
             {% csrf_token %}
             <table>
                 <thead>
-                    <tr>
+                    <tr class="sticky-t-head">
                         <th>Festival</th>
-                        <th>#Fields in file</th>
+                        <th>File header fields</th>
                         <th>#Screenings on file</th>
                         <th>#Screenings</th>
                         <th>Action</th>
@@ -32,12 +32,12 @@
                 <tbody>
                 {% for festival_row in festival_rows %}
                     <tr>
-                        <td style="color:{{ festival_row.festival.festival_color }}">{{ festival_row.festival }} ({{ festival_row.festival.id }})</td>
-                        <td>{{ festival_row.screening_file_field_count }}</td>
-                        <td>{{ festival_row.screening_count_on_file }}</td>
-                        <td>{{ festival_row.screening_count }}</td>
+                        <td style="color:{{ festival_row.festival.festival_color }};">{{ festival_row.festival }}</td>
+                        <td>{{ festival_row.field_props.comment }}</td>
+                        <td style="text-align: right;">{{ festival_row.screening_count_on_file }}</td>
+                        <td style="text-align: right;">{{ festival_row.screening_count }}</td>
                         <td class="with-submit">
-                        {% if festival_row.screening_count_on_file > 0 %}
+                        {% if festival_row.field_props.loadable %}
                             <input type="submit" value="Load" name="{{ festival_row.festival.id }}" class="in-table">
                         {% endif %}
                         </td>

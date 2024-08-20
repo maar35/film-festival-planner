@@ -1,3 +1,4 @@
+import csv
 import os
 from operator import attrgetter
 
@@ -10,7 +11,8 @@ from django.views.generic import FormView, ListView
 
 from authentication.models import FilmFan
 from festival_planner.cookie import Cookie
-from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, wrap_up_form_errors
+from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, wrap_up_form_errors, \
+    CSV_DIALECT
 from festivals.models import Festival, switch_festival, current_festival, FestivalBase
 from films.models import Film, FilmFanFilmRating
 from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoaderForm, TheaterDataLoaderForm, \
@@ -456,15 +458,44 @@ class ScreeningLoaderListView(LoginRequiredMixin, ListView):
         unset_log(session)
         return context
 
-    @staticmethod
-    def _get_festival_row(festival):
+    def _get_festival_row(self, festival):
         festival_row = {
             'festival': festival,
-            'screening_file_field_count': 0,                            # TODO: add flesh here!
+            'field_props': self._check_file_header(festival.screenings_file()),
             'screening_count_on_file': file_record_count(festival.screenings_file(), has_header=True),
             'screening_count': Screening.screenings.filter(film__festival=festival).count,
         }
         return festival_row
+
+    @staticmethod
+    def _check_file_header(path):
+        expected_header = ScreeningLoader.expected_header
+        expected_headers = set(expected_header)
+        headers = set()
+        loadable = False
+        comments = []
+        try:
+            with open(path, newline='') as csvfile:
+                reader = csv.reader(csvfile, dialect=CSV_DIALECT)
+                header = reader.__next__()
+            headers = set(header)
+            if header == expected_header:
+                loadable = True
+                comments.append('OK')
+        except FileNotFoundError:
+            comments.append('file not found')
+        else:
+            missing = expected_headers - headers
+            if missing:
+                comments.append(f'{len(missing)} missing')
+            extra = headers - expected_headers
+            if extra:
+                comments.append(f'{len(extra)} unrecognized')
+        field_dict = {
+            'comment': f'{", ".join(comments)}',
+            'loadable': loadable,
+        }
+        return field_dict
 
 
 class ScreeningLoaderFormView(LoginRequiredMixin, FormView):

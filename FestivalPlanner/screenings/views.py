@@ -6,7 +6,7 @@ from django.views import View
 from django.views.generic import ListView, FormView
 
 from festival_planner.cookie import Cookie
-from festival_planner.tools import add_base_context, get_log
+from festival_planner.tools import add_base_context, get_log, unset_log
 from festivals.models import current_festival
 from loader.forms.loader_forms import ScreeningsLoaderForm
 from screenings.models import Screening
@@ -22,7 +22,7 @@ class FestivalDay:
 
     def check_session(self, session):
         self.festival = current_festival(session)
-        day_str = self.day_cookie.get(session)
+        day_str = self.day_cookie.get(session) or datetime.date.today().isoformat()
         if day_str < self.festival.start_date.isoformat() or day_str > self.festival.end_date.isoformat():
             day_str = ''
         if not day_str:
@@ -77,6 +77,9 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
     template_name = DaySchemaView.template_name
     http_method_names = ['get']
     context_object_name = 'screen_rows'
+    start_hour = datetime.time(hour=9)
+    hour_count = 16
+    pixels_per_hour = 120
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -106,21 +109,58 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         day_choices = DaySchemaView.current_day.get_festival_days()
         new_context = {
             'title': 'Screenings Day Schema',
-            'sub_header': 'Watch this day plan grow',
+            'sub_header': 'The screenings of the current festival day are visualized',
             'day': current_day_str,
             'day_choices': day_choices,
+            'timescale': self._get_timescale(),
+            'timebox_length': 60,
+            'px_per_hour': self.pixels_per_hour,
             'log': get_log(self.request.session),
         }
+        unset_log(self.request.session)
         return add_base_context(self.request, super_context | new_context)
 
-    @staticmethod
-    def _get_screen_row(screen, screenings):
+    def _get_screen_row(self, screen, screenings):
+        screening_specs = [self._screening_spec(s) for s in screenings]
         screen_row = {
             'screen': screen,
             'color': Theater.color_by_priority[screen.theater.priority],
-            'screenings': sorted(str(s) for s in screenings),
+            'total_width': self.hour_count * self.pixels_per_hour,
+            'screening_specs': sorted(screening_specs, key=lambda spec: spec['screening'].start_dt),
         }
         return screen_row
+
+    def _pixels_from_dt(self, dt):
+        start_date = DaySchemaView.current_day.get_date(self.request.session)
+        start_dt = datetime.datetime.combine(start_date, self.start_hour)
+        pixel_minutes = (dt.replace(tzinfo=start_dt.tzinfo) - start_dt).total_seconds() / 60
+        pixels = self.pixels_per_hour * pixel_minutes / 60
+        return pixels
+
+    def _screening_spec(self, screening):
+        left_pixels = self._pixels_from_dt(screening.start_dt)
+        screening_spec = {
+            'line_1': f'{screening.film.title}',
+            'line_2': f'{screening.start_dt.strftime("%H:%M")} - {screening.end_dt.strftime("%H:%M")}',
+            'screening': screening,
+            'left': left_pixels,
+            'width': self._pixels_from_dt(screening.end_dt) - left_pixels,
+        }
+        return screening_spec
+
+    def _get_timescale(self):
+        hour_list = []
+        delta = datetime.timedelta(hours=1)
+        start_date = DaySchemaView.current_day.get_date(self.request.session)
+        start_dt = datetime.datetime.combine(start_date, self.start_hour)
+        for hour in range(self.hour_count):
+            dt = (start_dt + hour * delta)
+            specs_by_hour = {
+                'text': dt.strftime('%H:%M %Z'),
+                'left': self._pixels_from_dt(dt),
+            }
+            hour_list.append(specs_by_hour)
+        return hour_list
 
 
 class DaySchemaFormView(LoginRequiredMixin, FormView):

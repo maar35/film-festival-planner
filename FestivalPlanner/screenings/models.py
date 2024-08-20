@@ -33,3 +33,18 @@ class Screening(models.Model):
         start_time = self.start_dt.time().isoformat(timespec='minutes')
         end_time = self.end_dt.time().isoformat(timespec='minutes')
         return f'{start_date} {start_time} - {end_time} {self.screen} {self.film.title}'
+
+    def __eq__(self, other):
+        lhs = (self.film.film_id, self.screen.screen_id, self.start_dt, self.end_dt)
+        rhs = (other.film.film_id, other.screen.screen_id, other.start_dt, other.end_dt)
+        return lhs == rhs
+
+    def __lt__(self, other):
+        lhs = (self.film.film_id, self.screen.screen_id, self.start_dt, self.end_dt)
+        rhs = (other.film.film_id, other.screen.screen_id, other.start_dt, other.end_dt)
+        return lhs < rhs
+
+    def __hash__(self):
+        return hash((
+            self.film.film_id, self.screen.screen_id, self.start_dt, self.end_dt
+        ))
