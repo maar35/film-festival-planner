@@ -1,4 +1,3 @@
-import csv
 import os
 from operator import attrgetter
 
@@ -11,9 +10,7 @@ from django.views.generic import FormView, ListView
 
 from authentication.models import FilmFan
 from festival_planner.cookie import Cookie
-from festival_planner.debug_tools import pr_debug
-from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, wrap_up_form_errors, \
-    CSV_DIALECT
+from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, wrap_up_form_errors
 from festivals.models import Festival, switch_festival, current_festival, FestivalBase
 from films.models import Film, FilmFanFilmRating
 from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoaderForm, TheaterDataLoaderForm, \
@@ -507,7 +504,6 @@ class ScreeningLoaderFormView(LoginRequiredMixin, FormView):
 
     def form_valid(self, form):
         session = self.request.session
-        pr_debug(f'{self.request.POST=}')
         festival_id = list(self.request.POST.keys())[-1]
         festival = Festival.festivals.get(id=festival_id)
         switch_festival(session, festival)

@@ -15,25 +15,22 @@
     body {
         background: black url("{% static background_image %}") no-repeat;
     }
-    html {
-        --festival-color: {{ festival_color }};
-    }
     table,
     th,
     td {
-        border: 1px solid var(--festival-color);
+        border: 1px solid {{ festival_color }};
     }
     em {
-        color: var(--festival-color);
+        color: {{ festival_color }};
     }
     .log-header {
-        color: var(--festival-color);
+        color: {{ festival_color }};
         margin-top: 4px;
         margin-bottom: 2px
     }
     .day-schema-time-mark {
         padding: 0 0.5rem;
-        border-left: 2px solid var(--festival-color);
+        border-left: 2px solid {{ festival_color }};
         background-color: black;
         position: absolute;
     }
