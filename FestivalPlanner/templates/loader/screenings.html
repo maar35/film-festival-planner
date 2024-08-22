@@ -1,0 +1,59 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    {% if user_is_admin %}
+        <h2 class="row col-left-h2">Pick a festival to load screenings from</h2>
+        <div class="row">
+            <span class="col-right">
+                <a href="{% url 'screenings:day_schema' %}">Screenings day schema</a>
+                <br>
+                <a href="{% url 'loader:ratings' %}">Films loader</a>
+            </span>
+        </div>
+        {% if unexpected_error %}
+            <h2 class="error">Unexpected error</h2>
+            <p>{{ unexpected_error }}</p>
+        {% endif %}
+        <br>
+        {% if festival_rows %}
+            <form method="post">
+            {% csrf_token %}
+            <table>
+                <thead>
+                    <tr class="sticky-t-head">
+                        <th>Festival</th>
+                        <th>File header fields</th>
+                        <th>#Screenings on file</th>
+                        <th>#Screenings</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for festival_row in festival_rows %}
+                    <tr>
+                        <td style="color:{{ festival_row.festival.festival_color }};">{{ festival_row.festival }}</td>
+                        <td>{{ festival_row.field_props.comment }}</td>
+                        <td style="text-align: right;">{{ festival_row.screening_count_on_file }}</td>
+                        <td style="text-align: right;">{{ festival_row.screening_count }}</td>
+                        <td class="with-submit">
+                        {% if festival_row.field_props.loadable and festival_row.screening_count_on_file %}
+                            <input type="submit" value="Load" name="{{ festival_row.festival.id }}" class="in-table">
+                        {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </form>
+        {% else %}
+            <p>No festivals are available.</p>
+        {% endif %}
+        <br>
+    {% else %}
+        <h2 class="error">Not allowed</h2>
+        <p>Only an admin fan can load festival data.</p>
+    {% endif %}
+{% endblock %}}

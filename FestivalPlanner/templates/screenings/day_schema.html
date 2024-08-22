@@ -1,0 +1,80 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+<h2 class="row col-left-h2">{{ sub_header }}</h2>
+<div class="row">
+    <span class="col-right">
+        <a href="{% url 'theaters:theaters' %}">Theaters</a>
+        <br>
+        <a href="{% url 'loader:screenings' %}">Load screenings</a>
+    </span>
+</div>
+{% if log %}
+    <h3 class="log-header">{{ log.action }} results</h3>
+    {% for result in log.results %}
+        <p class="log">{{ result }}</p>
+    {% endfor %}
+<br>
+{% endif %}
+<form method="post">
+{% csrf_token %}
+    <h3>Festival day
+        <span class="dropdown"
+              style="display: inline; padding: 0.5rem;">
+            <span class="drop-button">
+                {{ day }}
+            </span>
+            <span class="dropdown-content">
+                {% for choice in day_choices %}
+                    {% if choice == day %}
+                        <input type="submit" value="{{ choice }}" name="day" disabled
+                               style="cursor: default; color: lightgrey; text-align: right">
+                    {% else %}
+                        <input type="submit" value="{{ choice }}" name="day" style="text-align: right;">
+                    {% endif %}
+                {% endfor %}
+            </span>
+        </span>
+    </h3>
+</form>
+<br>
+{% if screen_rows %}
+    <table class="day-schema-border">
+        <thead>
+        <tr class="sticky-t-head" >
+            <th class="day-schema-border">Screen</th>
+            <th class="day-schema-border"
+                style="position: relative; vertical-align: text-top;">
+                {% for time in timescale %}
+                    <span class="day-schema-time-mark" style="left: {{ time.left }}px">{{ time.text }}</span>
+                {% endfor %}
+            </th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for row in screen_rows %}
+        <tr class="day-schema-border"
+            style="vertical-align: text-top;">
+            <td class="sticky-left"
+                style="border: var(--screeningBorderWidth) solid var(--screeningBorderColor); color: {{ row.color }};">
+                {{ row.screen }}
+            </td>
+            <td class="day-schema-row" style="min-width: {{ row.total_width }}px;">
+                {% for spec in row.screening_specs %}
+                <span class="day-schema-screening"
+                      style="width: {{ spec.width }}px; border: 1px solid {{ festival_color }}; left: {{ spec.left }}px;">
+                    {{ spec.line_1 }}<br>{{ spec.line_2 }}
+                </span>
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>No screenings available for this festival.</p>
+{% endif %}
+{% endblock %}

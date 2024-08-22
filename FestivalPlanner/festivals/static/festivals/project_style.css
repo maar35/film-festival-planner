@@ -8,6 +8,9 @@
     --stickyBackground: #00000090;
     --tableBackground: #00000070;
     --modestBackground: #00000070;
+    --screeningBackground: #000000BB;
+    --screeningBorderWidth: 3px;
+    --screeningBorderColor: #00000070;
 }
 
 /* Color links green, conform Django style. */
@@ -34,6 +37,7 @@ h2,
 h3,
 h4,
 li,
+div,
 span,
 table,
 th,
@@ -144,6 +148,26 @@ input[type=submit].in-table:hover {
     margin-bottom: 0px;
 }
 
+/* Screening day scheme grid style */
+.day-schema-border {
+    border: var(--screeningBorderWidth) solid var(--screeningBorderColor);
+}
+.day-schema-row {
+    background-color: var(--screeningBackground);
+    position: relative;
+}
+.day-schema-screening {
+    padding: 0 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background-color: var(--screeningBackground);
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    /* left should be defined in the template because it is variable */
+}
+
 /* Create a sticky, half-transparant header */
 .sticky-index {
     position: sticky;
@@ -153,11 +177,16 @@ input[type=submit].in-table:hover {
 .sticky-t-head {
     position: sticky;
     top: 14pt;
-    background-color:var(--stickyBackground);
+    background-color: var(--stickyBackground);
 }
 .sticky-footer {
     position: sticky;
     bottom: 0;
+    background-color: var(--stickyBackground);
+}
+.sticky-left {
+    position: sticky;
+    left: 0;
     background-color: var(--stickyBackground);
 }
 
@@ -167,16 +196,25 @@ input[type=submit].in-table:hover {
     clear: both;
     display: table;
 }
-
 [class*="col-"] {
     float: left;
     padding: 0px;
 }
-
-.col-left {width: 50%;}
-.col-left-h2 {width: 50%; margin-top: 6px;}
-.col-right {width: 50%; text-align: right;}
-.col-all {width: 100%; text-align: center;}
+.col-left {
+    width: 50%;
+}
+.col-left-h2 {
+    width: 50%;
+    margin-top: 6px;
+}
+.col-right {
+    width: 50%;
+    text-align: right;
+}
+.col-all {
+    width: 100%;
+    text-align: center;
+}
 
 .left-half {
     display: inline-block;
@@ -191,6 +229,7 @@ input[type=submit].in-table:hover {
     right: 1%;
 }
 
+/* Dropdown definitions for cells within a table */
 .cell-dropdown {
     position: relative;
     display: table-cell;
