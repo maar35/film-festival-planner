@@ -20,24 +20,15 @@ class FestivalDay:
         self.festival = None
         self.day_cookie = Cookie(cookie_key)
 
-    def check_session(self, session):
-        self.festival = current_festival(session)
-        day_str = self.day_cookie.get(session) or datetime.date.today().isoformat()
-        if day_str < self.festival.start_date.isoformat() or day_str > self.festival.end_date.isoformat():
-            day_str = ''
-        if not day_str:
-            day_str = self.festival.start_date.isoformat()
-            self.day_cookie.set(session, day_str)
-        return self.festival
-
     def get_date(self, session):
         day_str = self.day_cookie.get(session)
         return datetime.date.fromisoformat(day_str)
 
-    def get_str(self, session):
-        return self.day_cookie.get(session)
+    def get_datetime(self, session, time):
+        date = self.get_date(session)
+        return datetime.datetime.combine(date, time)
 
-    def day_str(self, session):
+    def get_str(self, session):
         date = self.get_date(session)
         return date.strftime(self.day_str_format)
 
@@ -53,6 +44,16 @@ class FestivalDay:
         for factor in range(all_days.days):
             day_choices.append((day + factor * delta).strftime(self.day_str_format))
         return day_choices
+
+    def check_session(self, session):
+        self.festival = current_festival(session)
+        day_str = self.day_cookie.get(session) or datetime.date.today().isoformat()
+        if day_str < self.festival.start_date.isoformat() or day_str > self.festival.end_date.isoformat():
+            day_str = ''
+        if not day_str:
+            day_str = self.festival.start_date.isoformat()
+            self.day_cookie.set(session, day_str)
+        return self.festival
 
 
 class DaySchemaView(LoginRequiredMixin, View):
@@ -105,11 +106,11 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         super_context = super().get_context_data(**kwargs)
-        current_day_str = DaySchemaView.current_day.day_str(self.request.session)
+        current_day_str = DaySchemaView.current_day.get_str(self.request.session)
         day_choices = DaySchemaView.current_day.get_festival_days()
         new_context = {
             'title': 'Screenings Day Schema',
-            'sub_header': 'The screenings of the current festival day are visualized',
+            'sub_header': 'Visualized screenings of the current festival day',
             'day': current_day_str,
             'day_choices': day_choices,
             'timescale': self._get_timescale(),
@@ -130,10 +131,12 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         }
         return screen_row
 
+    def _get_start_dt(self):
+        return DaySchemaView.current_day.get_datetime(self.request.session, self.start_hour)
+
     def _pixels_from_dt(self, dt):
-        start_date = DaySchemaView.current_day.get_date(self.request.session)
-        start_dt = datetime.datetime.combine(start_date, self.start_hour)
-        pixel_minutes = (dt.replace(tzinfo=start_dt.tzinfo) - start_dt).total_seconds() / 60
+        start_dt = self._get_start_dt()
+        pixel_minutes = (dt - start_dt).total_seconds() / 60
         pixels = self.pixels_per_hour * pixel_minutes / 60
         return pixels
 
@@ -151,8 +154,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
     def _get_timescale(self):
         hour_list = []
         delta = datetime.timedelta(hours=1)
-        start_date = DaySchemaView.current_day.get_date(self.request.session)
-        start_dt = datetime.datetime.combine(start_date, self.start_hour)
+        start_dt = self._get_start_dt()
         for hour in range(self.hour_count):
             dt = (start_dt + hour * delta)
             specs_by_hour = {

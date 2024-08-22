@@ -7,6 +7,8 @@
 <h2 class="row col-left-h2">{{ sub_header }}</h2>
 <div class="row">
     <span class="col-right">
+        <a href="{% url 'theaters:theaters' %}">Theaters</a>
+        <br>
         <a href="{% url 'loader:screenings' %}">Load screenings</a>
     </span>
 </div>
@@ -28,8 +30,8 @@
             <span class="dropdown-content">
                 {% for choice in day_choices %}
                     {% if choice == day %}
-                        <input type="submit" value="{{ choice }}" name="day"
-                               style="color: lightgrey; text-align: right">
+                        <input type="submit" value="{{ choice }}" name="day" disabled
+                               style="cursor: default; color: lightgrey; text-align: right">
                     {% else %}
                         <input type="submit" value="{{ choice }}" name="day" style="text-align: right;">
                     {% endif %}
@@ -47,7 +49,7 @@
             <th class="day-schema-border"
                 style="position: relative; vertical-align: text-top;">
                 {% for time in timescale %}
-                <span style="padding: 0 0.5rem; border-left: 2px solid {{ festival_color }}; background-color: black; position: absolute; left: {{ time.left }}px">{{ time.text }}</span>
+                    <span class="day-schema-time-mark" style="left: {{ time.left }}px">{{ time.text }}</span>
                 {% endfor %}
             </th>
         </tr>
@@ -57,11 +59,15 @@
         <tr class="day-schema-border"
             style="vertical-align: text-top;">
             <td class="sticky-left"
-                style="border: var(--screeningBorderWidth) solid var(--screeningBorderColor); color: {{ row.color }};">{{ row.screen }}
+                style="border: var(--screeningBorderWidth) solid var(--screeningBorderColor); color: {{ row.color }};">
+                {{ row.screen }}
             </td>
-            <td style="background-color: var(--screeningBackground); min-width: {{ row.total_width }}px; position: relative;">
+            <td class="day-schema-row" style="min-width: {{ row.total_width }}px;">
                 {% for spec in row.screening_specs %}
-                <span style="width: {{ spec.width }}px; padding: 0 0.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border: 1px solid {{ festival_color }}; background-color: var(--screeningBackground); position: absolute; top: 0px; bottom: 0px; left: {{ spec.left }}px;">{{ spec.line_1 }}<br>{{ spec.line_2 }}</span>
+                <span class="day-schema-screening"
+                      style="width: {{ spec.width }}px; border: 1px solid {{ festival_color }}; left: {{ spec.left }}px;">
+                    {{ spec.line_1 }}<br>{{ spec.line_2 }}
+                </span>
                 {% endfor %}
             </td>
         </tr>

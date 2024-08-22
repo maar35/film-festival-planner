@@ -8,6 +8,8 @@
         <h2 class="row col-left-h2">Pick a festival to load screenings from</h2>
         <div class="row">
             <span class="col-right">
+                <a href="{% url 'screenings:day_schema' %}">Screenings day schema</a>
+                <br>
                 <a href="{% url 'loader:ratings' %}">Films loader</a>
             </span>
         </div>
@@ -37,7 +39,7 @@
                         <td style="text-align: right;">{{ festival_row.screening_count_on_file }}</td>
                         <td style="text-align: right;">{{ festival_row.screening_count }}</td>
                         <td class="with-submit">
-                        {% if festival_row.field_props.loadable %}
+                        {% if festival_row.field_props.loadable and festival_row.screening_count_on_file %}
                             <input type="submit" value="Load" name="{{ festival_row.festival.id }}" class="in-table">
                         {% endif %}
                         </td>

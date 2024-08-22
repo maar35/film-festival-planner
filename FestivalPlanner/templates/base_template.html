@@ -10,25 +10,34 @@
 </head>
 
 <style>
+    /* Style properties and classes that depend on a actual variable */
+
     body {
         background: black url("{% static background_image %}") no-repeat;
     }
-
+    html {
+        --festival-color: {{ festival_color }};
+    }
     table,
     th,
     td {
-        border: 1px solid {{ festival_color }};
+        border: 1px solid var(--festival-color);
     }
-
     em {
-        color: {{ festival_color }};
+        color: var(--festival-color);
     }
-
     .log-header {
-        color: {{ festival_color }};
+        color: var(--festival-color);
         margin-top: 4px;
         margin-bottom: 2px
     }
+    .day-schema-time-mark {
+        padding: 0 0.5rem;
+        border-left: 2px solid var(--festival-color);
+        background-color: black;
+        position: absolute;
+    }
+
 </style>
 
 <body>

@@ -150,8 +150,24 @@ input[type=submit].in-table:hover {
 
 /* Screening day scheme grid style */
 .day-schema-border {
-    border: var(--screeningBorderWidth) solid var(--screeningBorderColor)
+    border: var(--screeningBorderWidth) solid var(--screeningBorderColor);
 }
+.day-schema-row {
+    background-color: var(--screeningBackground);
+    position: relative;
+}
+.day-schema-screening {
+    padding: 0 0.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background-color: var(--screeningBackground);
+    position: absolute;
+    top: 0px;
+    bottom: 0px;
+    /* left should be defined in the template because it is variable */
+}
+
 /* Create a sticky, half-transparant header */
 .sticky-index {
     position: sticky;
@@ -161,11 +177,6 @@ input[type=submit].in-table:hover {
 .sticky-t-head {
     position: sticky;
     top: 14pt;
-    background-color: var(--stickyBackground);
-}
-.sticky-right {
-    position: sticky;
-    right: 0;
     background-color: var(--stickyBackground);
 }
 .sticky-footer {
@@ -185,21 +196,25 @@ input[type=submit].in-table:hover {
     clear: both;
     display: table;
 }
-
 [class*="col-"] {
     float: left;
     padding: 0px;
 }
-
-.col-left {width: 50%;}
-.col-left-h2 {width: 50%; margin-top: 6px;}
+.col-left {
+    width: 50%;
+}
+.col-left-h2 {
+    width: 50%;
+    margin-top: 6px;
+}
 .col-right {
     width: 50%;
     text-align: right;
-    position: sticky;
-    right: 0;
 }
-.col-all {width: 100%; text-align: center;}
+.col-all {
+    width: 100%;
+    text-align: center;
+}
 
 .left-half {
     display: inline-block;
@@ -214,6 +229,7 @@ input[type=submit].in-table:hover {
     right: 1%;
 }
 
+/* Dropdown definitions for cells within a table */
 .cell-dropdown {
     position: relative;
     display: table-cell;

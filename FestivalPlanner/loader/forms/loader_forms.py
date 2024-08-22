@@ -651,25 +651,28 @@ class ScreenLoader(SimpleLoader):
 class ScreeningLoader(SimpleLoader):
     expected_header = ['film_id', 'screen_id', 'start_time', 'end_time', 'combination_id',
                        'subtitles', 'qanda', 'extra', 'sold_out']
+    alternative_header = expected_header[:-1]
     key_fields = ['film', 'screen', 'start_dt']
     manager = Screening.screenings
 
     def __init__(self, session, festival, festival_pk=None):
         super().__init__(session, 'screening', self.manager, festival.screenings_file(),
                          festival=festival, festival_pk=festival_pk)
+        self._check_header()
         self.delete_disappeared_objects = True
         initialize_log(session)
 
     def read_row(self, row):
         film_id = int(row[0])
         screen_id = int(row[1])
-        start_dt = datetime.datetime.fromisoformat(row[2])
-        end_dt = datetime.datetime.fromisoformat(row[3])
+        start_dt = datetime.datetime.fromisoformat(row[2]).replace(tzinfo=None)
+        end_dt = datetime.datetime.fromisoformat(row[3]).replace(tzinfo=None)
         combination_id = int(row[4]) if row[4] else None
         subtitles = row[5]
         q_and_a = True if row[6] else False
-        _ = row[7]  # extra
-        _ = row[8]  # sold_out
+        _ = row[7]      # extra
+        if len(self.expected_header) == 7:
+            _ = row[8]  # sold_out
 
         film = self.get_foreign_key(Film, Film.films, **{'festival': self.festival, 'film_id': film_id})
         screen = self.get_foreign_key(Screen, Screen.screens, **{'screen_id': screen_id})
@@ -692,6 +695,23 @@ class ScreeningLoader(SimpleLoader):
             'q_and_a': q_and_a,
         }
         return value_by_field
+
+    @staticmethod
+    def get_header(path):
+        try:
+            with open(path, newline='') as csvfile:
+                reader = csv.reader(csvfile, dialect=CSV_DIALECT)
+                header = reader.__next__()
+        except FileNotFoundError:
+            header = None
+        return header
+
+    def _check_header(self):
+        header = self.get_header(self.objects_file)
+        if header == self.expected_header:
+            pass
+        elif header == self.alternative_header:
+            self.expected_header = self.alternative_header
 
 
 class CityUpdater(SimpleLoader):

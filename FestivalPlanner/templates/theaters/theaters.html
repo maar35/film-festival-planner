@@ -34,7 +34,7 @@
             {% for row in theater_rows %}
                 <tr>
                     {% if row.is_festival_city %}
-                        <td style="color:{{ festival_color }}">{{ row.theater.city.name }}</td>
+                        <td style="color: {{ festival_color }};">{{ row.theater.city.name }}</td>
                     {% else %}
                         <td>{{ row.theater.city.name }}</td>
                     {% endif %}

@@ -11,6 +11,7 @@ from django.views.generic import FormView, ListView
 
 from authentication.models import FilmFan
 from festival_planner.cookie import Cookie
+from festival_planner.debug_tools import pr_debug
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, wrap_up_form_errors, \
     CSV_DIALECT
 from festivals.models import Festival, switch_festival, current_festival, FestivalBase
@@ -461,41 +462,42 @@ class ScreeningLoaderListView(LoginRequiredMixin, ListView):
     def _get_festival_row(self, festival):
         festival_row = {
             'festival': festival,
-            'field_props': self._check_file_header(festival.screenings_file()),
+            'field_props': self._get_field_props(festival.screenings_file()),
             'screening_count_on_file': file_record_count(festival.screenings_file(), has_header=True),
             'screening_count': Screening.screenings.filter(film__festival=festival).count,
         }
         return festival_row
 
     @staticmethod
-    def _check_file_header(path):
-        expected_header = ScreeningLoader.expected_header
-        expected_headers = set(expected_header)
-        headers = set()
+    def _get_field_props(path):
         loadable = False
         comments = []
-        try:
-            with open(path, newline='') as csvfile:
-                reader = csv.reader(csvfile, dialect=CSV_DIALECT)
-                header = reader.__next__()
-            headers = set(header)
-            if header == expected_header:
-                loadable = True
-                comments.append('OK')
-        except FileNotFoundError:
+        expected_header = ScreeningLoader.expected_header
+        header = ScreeningLoader.get_header(path)
+
+        if not header:
             comments.append('file not found')
+        elif header == expected_header:
+            loadable = True
+            comments.append('OK')
+        elif header == ScreeningLoader.alternative_header:
+            loadable = True
+            comments.append('OK, using alternative header')
         else:
-            missing = expected_headers - headers
+            expected_fields = set(expected_header)
+            fields = set(header)
+            missing = expected_fields - fields
             if missing:
                 comments.append(f'{len(missing)} missing')
-            extra = headers - expected_headers
+            extra = fields - expected_fields
             if extra:
                 comments.append(f'{len(extra)} unrecognized')
-        field_dict = {
-            'comment': f'{", ".join(comments)}',
+
+        field_props = {
             'loadable': loadable,
+            'comment': f'{", ".join(comments)}',
         }
-        return field_dict
+        return field_props
 
 
 class ScreeningLoaderFormView(LoginRequiredMixin, FormView):
@@ -505,6 +507,7 @@ class ScreeningLoaderFormView(LoginRequiredMixin, FormView):
 
     def form_valid(self, form):
         session = self.request.session
+        pr_debug(f'{self.request.POST=}')
         festival_id = list(self.request.POST.keys())[-1]
         festival = Festival.festivals.get(id=festival_id)
         switch_festival(session, festival)
