@@ -32,13 +32,12 @@ def mock_base_festival_mnemonic():
 class FestivalModelTests(TestCase):
 
     def setUp(self):
-        super(FestivalModelTests, self).setUp()
+        super().setUp()
         self.city = City.cities.create(city_id=1, name='Berlin', country='de')
         debug_tools.SUPPRESS_DEBUG_PRINT = True
 
-
     def tearDown(self):
-        super(FestivalModelTests, self).tearDown()
+        super().tearDown()
         self.city.delete()
 
     def create_festival(self, mnemonic, start_date_str, end_date_str):
