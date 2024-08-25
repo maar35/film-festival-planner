@@ -13,7 +13,7 @@ from festivals.models import Festival, FestivalBase
 from films.forms.film_forms import PickRating
 from films.models import Film, FilmFanFilmRating
 from films.views import FilmsView
-from screenings.models import Screening
+from screenings.models import Screening, Attendance
 from sections.models import Section, Subsection
 from theaters.models import Theater, theaters_path, City, cities_path, Screen, screens_path, cities_cache_path, \
     theaters_cache_path, screens_cache_path
@@ -141,10 +141,6 @@ class RatingDataBackupForm(Form):
         _ = CityBackupDumper(session).dump_objects(CITIES_BACKUP_PATH)
 
 
-class ScreeningsLoaderForm(Form):
-    dummy_field = SlugField(required=False)
-
-
 class BaseLoader:
     """
     Base class for loading objects such as films or ratings from CSV files.
@@ -188,9 +184,10 @@ class BaseLoader:
                 # Read the data records.
                 for record in object_reader:
                     self.objects_on_file += 1
-                    value_by_field = self.read_row(record)
-                    if value_by_field:
-                        values_list.append(value_by_field)
+                    row_generator = self.read_row(record)
+                    for value_by_field in row_generator:
+                        if value_by_field:
+                            values_list.append(value_by_field)
 
         except FileNotFoundError:
             if self.file_required:
@@ -210,6 +207,9 @@ class BaseLoader:
 
         return True
 
+    def generate_rows(self, record):
+        yield from self.read_row(record)
+
     def check_header(self, file, reader):
         """Internal method to handle presence of a data header"""
         if self.expected_header is None:
@@ -227,7 +227,7 @@ class BaseLoader:
         :param row: Line from the file being read
         :return: The object read, None if no object could be read
         """
-        return None
+        yield None
 
     def get_foreign_key(self, foreign_class, foreign_manager, **kwargs):
         """
@@ -290,7 +290,6 @@ class BaseLoader:
 
 
 class SimpleLoader(BaseLoader):
-
     key_fields = []
     default_fields = []
     label_by_created = {
@@ -342,6 +341,9 @@ class SimpleLoader(BaseLoader):
 
             # Delete disappeared objects from the database.
             self.delete_objects(disappeared_objects)
+
+        # Allow subclasses to round up.
+        self.finalize()
 
         return True
 
@@ -419,6 +421,14 @@ class SimpleLoader(BaseLoader):
 
         return value_by_key_field, value_by_default_field
 
+    def finalize(self):
+        """
+        "Virtual" method to allow derived classes to round things up.
+
+        :return: None
+        """
+        return None
+
 
 class FilmLoader(SimpleLoader):
     expected_header = FILMS_FILE_HEADER
@@ -465,7 +475,7 @@ class FilmLoader(SimpleLoader):
             'reviewer': reviewer,
             'url': url,
         }
-        return value_by_field
+        yield value_by_field
 
 
 class RatingLoader(SimpleLoader):
@@ -487,18 +497,18 @@ class RatingLoader(SimpleLoader):
 
         film = self.get_foreign_key(Film, Film.films, **{'festival_id': self.festival.id, 'film_id': film_id})
         if not film:
-            return None
+            yield None
 
         film_fan = self.get_foreign_key(FilmFan, FilmFan.film_fans, **{'name': film_fan_name})
         if not film_fan:
-            return None
+            yield None
 
         value_by_field = {
             'film': film,
             'film_fan': film_fan,
             'rating': rating,
         }
-        return value_by_field
+        yield value_by_field
 
 
 class SectionLoader(SimpleLoader):
@@ -520,7 +530,7 @@ class SectionLoader(SimpleLoader):
             'name': name,
             'color': color,
         }
-        return value_by_field
+        yield value_by_field
 
 
 class SubsectionLoader(SimpleLoader):
@@ -530,7 +540,7 @@ class SubsectionLoader(SimpleLoader):
     def __init__(self, session, festival):
         file = festival.subsections_file()
         super().__init__(session, 'subsection', self.manager, file,
-                         festival=festival,festival_pk='section__festival__pk')
+                         festival=festival, festival_pk='section__festival__pk')
 
     def read_row(self, row):
         subsection_id = int(row[0])
@@ -542,7 +552,7 @@ class SubsectionLoader(SimpleLoader):
         kwargs = {'festival_id': self.festival.id, 'section_id': section_id}
         section = self.get_foreign_key(Section, Section.sections, **kwargs)
         if not section:
-            return None
+            yield None
 
         value_by_field = {
             'subsection_id': subsection_id,
@@ -551,7 +561,7 @@ class SubsectionLoader(SimpleLoader):
             'description': description,
             'url': url,
         }
-        return value_by_field
+        yield value_by_field
 
 
 class CityLoader(SimpleLoader):
@@ -573,7 +583,7 @@ class CityLoader(SimpleLoader):
             'name': name,
             'country': country,
         }
-        return value_by_field
+        yield value_by_field
 
     def construct_object(self, value_by_field):
         city = City(**value_by_field)
@@ -598,7 +608,7 @@ class TheaterLoader(SimpleLoader):
 
         city = self.get_foreign_key(City, City.cities, **{'city_id': city_id})
         if not city:
-            return None
+            yield None
 
         value_by_field = {
             'theater_id': theater_id,
@@ -607,7 +617,7 @@ class TheaterLoader(SimpleLoader):
             'abbreviation': abbreviation,
             'priority': priority,
         }
-        return value_by_field
+        yield value_by_field
 
     def construct_object(self, value_by_field):
         theater = Theater(**value_by_field)
@@ -632,7 +642,7 @@ class ScreenLoader(SimpleLoader):
 
         theater = self.get_foreign_key(Theater, Theater.theaters, **{'theater_id': theater_id})
         if not theater:
-            return None
+            yield None
 
         value_by_field = {
             'screen_id': screen_id,
@@ -641,7 +651,7 @@ class ScreenLoader(SimpleLoader):
             'abbreviation': abbreviation,
             'address_type': address_type,
         }
-        return value_by_field
+        yield value_by_field
 
     def construct_object(self, value_by_field):
         screen = Screen(**value_by_field)
@@ -656,8 +666,8 @@ class ScreeningLoader(SimpleLoader):
     manager = Screening.screenings
 
     def __init__(self, session, festival, festival_pk=None):
-        super().__init__(session, 'screening', self.manager, festival.screenings_file(),
-                         festival=festival, festival_pk=festival_pk)
+        file = festival.screenings_file()
+        super().__init__(session, 'screening', self.manager, file, festival=festival, festival_pk=festival_pk)
         self._check_header()
         self.delete_disappeared_objects = True
         initialize_log(session)
@@ -683,7 +693,7 @@ class ScreeningLoader(SimpleLoader):
                                                     ).first()
 
         if not film or not screen:
-            return None
+            yield None
 
         value_by_field = {
             'film': film,
@@ -694,7 +704,7 @@ class ScreeningLoader(SimpleLoader):
             'subtitles': subtitles,
             'q_and_a': q_and_a,
         }
-        return value_by_field
+        yield value_by_field
 
     @staticmethod
     def get_header(path):
@@ -712,6 +722,71 @@ class ScreeningLoader(SimpleLoader):
             pass
         elif header == self.alternative_header:
             self.expected_header = self.alternative_header
+
+
+class AttendanceLoader(SimpleLoader):
+    TRUE = 'WAAR'
+    expected_header = [
+        'filmid', 'screenid', 'starttime', 'movablestarttime', 'movableendtime', 'combinedfilmid',
+        'autoplanned', 'blocked', 'Maarten,Adrienne,Manfred,Piggel,Rijk,Geeth', 'ticketsbought', 'soldout'
+    ]
+    key_fields = ['fan', 'screening']
+    manager = Attendance.attendances
+
+    def __init__(self, session, festival, festival_pk):
+        file = festival.screening_info_file()
+        festival_pk = 'screening__film__festival__pk'
+        super().__init__(session, 'attendance', self.manager, file, festival=festival, festival_pk=festival_pk)
+        self.unknown_screenings = 0
+        initialize_log(session)
+
+    def read_row(self, row):
+        film_id = row[0]
+        screen_id = row[1]
+        start_dt = datetime.datetime.fromisoformat(row[2]).replace(tzinfo=None)
+        _ = row[3]  # movable_start_time
+        _ = row[4]  # movable_end_time
+        _ = row[5]  # combined_film_id
+        _ = row[6]  # auto_planned
+        _ = row[7]  # blocked
+        fan_attendances = (Maarten, Adrienne, Manfred, Piggel, Rijk, Geeth) = row[8].split(',')
+        tickets_bought = row[9] == self.TRUE
+        _ = row[10] # sold_out
+
+        film = self.get_foreign_key(Film, Film.films, **{'festival': self.festival, 'film_id': film_id})
+        screen = self.get_foreign_key(Screen, Screen.screens, **{'screen_id': screen_id})
+        screening_kwargs = {'film': film, 'screen': screen, 'start_dt': start_dt}
+        screening = self.get_foreign_key(Screening, Screening.screenings, **screening_kwargs)
+        fan_names = ('Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk', 'Geeth')
+        attendance_props_by_fan_name = {}
+        for i, fan_name in enumerate(fan_names):
+            try:
+                fan = FilmFan.film_fans.get(name=fan_name)
+            except FilmFan.DoesNotExist:
+                pass
+            else:
+                fan_attendance = fan_attendances[i] == self.TRUE
+                if fan_attendance:
+                    attendance_props_by_fan_name[fan_name] = {
+                        'fan': fan,
+                        'attendance': fan_attendance,
+                        'tickets': tickets_bought,
+                    }
+
+        if not screening:
+            self.unknown_screenings += 1
+            yield None
+
+        for props in attendance_props_by_fan_name.values():
+            value_by_field = {
+                'screening': screening,
+                'fan': props['fan'],
+                'tickets': props['tickets'],
+            }
+            yield value_by_field
+
+    def finalize(self):
+        self.add_log(f'{self.unknown_screenings} unknown screenings.')
 
 
 class CityUpdater(SimpleLoader):

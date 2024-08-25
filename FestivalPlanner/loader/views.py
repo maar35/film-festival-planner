@@ -16,9 +16,10 @@ from films.models import Film, FilmFanFilmRating
 from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoaderForm, TheaterDataLoaderForm, \
     TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm, SaveRatingsForm, \
     RatingDataBackupForm, FILM_FANS_BACKUP_PATH, RATINGS_BACKUP_PATH, FILMS_BACKUP_PATH, \
-    FESTIVALS_BACKUP_PATH, FESTIVAL_BASES_BACKUP_PATH, BACKUP_DATA_DIR, CITIES_BACKUP_PATH, ScreeningsLoaderForm, \
-    ScreeningLoader
-from screenings.models import Screening
+    FESTIVALS_BACKUP_PATH, FESTIVAL_BASES_BACKUP_PATH, BACKUP_DATA_DIR, CITIES_BACKUP_PATH, \
+    ScreeningLoader, AttendanceLoader
+from screenings.forms.screening_forms import DummyForm
+from screenings.models import Screening, Attendance
 from sections.models import Section, Subsection
 from theaters.models import Theater, City, cities_path, theaters_path, screens_path, Screen, new_screens_path, \
     new_cities_path, new_theaters_path
@@ -418,11 +419,103 @@ class SaveRatingsView(LoginRequiredMixin, FormView):
         return super().form_valid(form)
 
 
+class BaseListActionListView(LoginRequiredMixin, ListView):
+    http_method_names = ['get']
+    context_object_name = 'festival_rows'
+    template_name = None
+    object_list = None
+    loader_class = None
+    load_file = None
+    manager = None
+    title = None
+    data_name = None
+    festival_filter = None
+    alternative_headers = None
+
+    def get_queryset(self):
+        festivals = Festival.festivals.order_by('-start_date')
+        festival_rows = [self._get_festival_row(festival) for festival in festivals]
+        return festival_rows
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        session = self.request.session
+        super_context = super().get_context_data(object_list=object_list, **kwargs)
+        new_context = {
+            'title': self.title,
+            'data_name': self.data_name,
+            'unexpected_error': ScreeningsLoaderView.unexpected_error,
+            'log': get_log(session),
+        }
+        context = add_base_context(self.request, super_context | new_context)
+        unset_log(session)
+        return context
+
+    def _get_festival_row(self, festival):
+        path = getattr(festival, self.load_file)()
+        festival_kwargs = {self.festival_filter: festival}
+        festival_row = {
+            'festival': festival,
+            'field_props': self._get_field_props(path),
+            'data_count_on_file': file_record_count(path, has_header=True),
+            'data_count': self.manager.filter(**festival_kwargs).count,
+        }
+        return festival_row
+
+    def _get_field_props(self, path):
+        loadable = False
+        comments = []
+        expected_header = self.loader_class.expected_header
+        header = ScreeningLoader.get_header(path)
+
+        if not header:
+            comments.append('File not found')
+        elif header == expected_header:
+            loadable = True
+            comments.append('OK')
+        elif self.alternative_headers and header in self.alternative_headers:
+            loadable = True
+            comments.append('OK, using alternative header')
+        else:
+            comments.append('Incompatible')
+
+        field_props = {
+            'loadable': loadable,
+            'comment': f'{", ".join(comments)}',
+        }
+        return field_props
+
+
+class BaseListActionFormView(LoginRequiredMixin, FormView):
+    http_method_names = ['post']
+    form_class = DummyForm
+    template_name = None
+    loader_class = None
+    success_view_name = None
+    invalid_view_name = None
+
+    def form_valid(self, form):
+        session = self.request.session
+        festival_id = list(self.request.POST.keys())[-1]
+        festival = Festival.festivals.get(id=festival_id)
+        switch_festival(session, festival)
+        initialize_log(session)
+        _ = self.loader_class(session, festival, festival_pk='film__festival__pk').load_objects()
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        super().form_invalid(form)
+        ScreeningsLoaderView.unexpected_error = '\n'.join(wrap_up_form_errors(form.errors))
+        return HttpResponseRedirect(reverse(self.invalid_view_name))
+
+    def get_success_url(self):
+        return reverse(self.success_view_name)
+
+
 class ScreeningsLoaderView(LoginRequiredMixin, View):
     """
     Class-based view to load the screenings of a specific festival.
     """
-    template_name = 'loader/screenings.html'
+    template_name = 'loader/list_action.html'
     unexpected_error = ''
 
     @staticmethod
@@ -436,85 +529,78 @@ class ScreeningsLoaderView(LoginRequiredMixin, View):
         return view(request, *args, **kwargs)
 
 
-class ScreeningLoaderListView(LoginRequiredMixin, ListView):
+class ScreeningLoaderListView(BaseListActionListView):
     template_name = ScreeningsLoaderView.template_name
-    http_method_names = ['get']
-    context_object_name = 'festival_rows'
-    object_list = None
+    loader_class = ScreeningLoader
+    load_file = 'screenings_file'
+    manager = Screening.screenings
+    title = 'Festival Screenings Loader'
+    data_name = 'screenings'
+    festival_filter = 'film__festival'
+    alternative_headers = [ScreeningLoader.alternative_header]
 
-    def get_queryset(self):
-        festivals = Festival.festivals.order_by('-start_date')
-        festival_rows = [self._get_festival_row(festival) for festival in festivals]
-        return festival_rows
 
-    def get_context_data(self, *, object_list=None, **kwargs):
-        session = self.request.session
-        context = add_base_context(self.request, super().get_context_data(object_list=object_list, **kwargs))
-        context['title'] = 'Festival Screenings Loader'
-        context['unexpected_error'] = ScreeningsLoaderView.unexpected_error
-        context['log'] = get_log(session)
-        unset_log(session)
-        return context
+class ScreeningLoaderFormView(BaseListActionFormView):
+    template_name = ScreeningsLoaderView.template_name
+    loader_class = ScreeningLoader
+    success_view_name = 'screenings:day_schema'
+    invalid_view_name = 'loader:screenings'
 
-    def _get_festival_row(self, festival):
-        festival_row = {
-            'festival': festival,
-            'field_props': self._get_field_props(festival.screenings_file()),
-            'screening_count_on_file': file_record_count(festival.screenings_file(), has_header=True),
-            'screening_count': Screening.screenings.filter(film__festival=festival).count,
-        }
-        return festival_row
+
+class AttendanceLoaderView(LoginRequiredMixin, View):
+    """
+    Class-based view to load the attendances of a specific festival.
+    """
+    template_name = 'loader/list_action.html'
+    unexpected_error = ''
 
     @staticmethod
-    def _get_field_props(path):
-        loadable = False
-        comments = []
-        expected_header = ScreeningLoader.expected_header
-        header = ScreeningLoader.get_header(path)
+    def get(request, *args, **kwargs):
+        view = AttendanceLoaderListView.as_view()
+        return view(request, *args, **kwargs)
 
-        if not header:
-            comments.append('file not found')
-        elif header == expected_header:
-            loadable = True
-            comments.append('OK')
-        elif header == ScreeningLoader.alternative_header:
-            loadable = True
-            comments.append('OK, using alternative header')
-        else:
-            expected_fields = set(expected_header)
-            fields = set(header)
-            missing = expected_fields - fields
-            if missing:
-                comments.append(f'{len(missing)} missing')
-            extra = fields - expected_fields
-            if extra:
-                comments.append(f'{len(extra)} unrecognized')
-
-        field_props = {
-            'loadable': loadable,
-            'comment': f'{", ".join(comments)}',
-        }
-        return field_props
+    @staticmethod
+    def post(request, *args, **kwargs):
+        view = AttendanceLoaderFormView.as_view()
+        return view(request, *args, **kwargs)
 
 
-class ScreeningLoaderFormView(LoginRequiredMixin, FormView):
-    template_name = ScreeningsLoaderView.template_name
-    form_class = ScreeningsLoaderForm
-    http_method_names = ['post']
+class AttendanceLoaderListView(BaseListActionListView):
+    template_name = AttendanceLoaderView.template_name
+    loader_class = AttendanceLoader
+    load_file = 'screening_info_file'
+    manager = Attendance.attendances
+    title = 'Festival Attendances Loader'
+    data_name = 'attendances'
+    festival_filter = 'screening__film__festival'
 
-    def form_valid(self, form):
-        session = self.request.session
-        festival_id = list(self.request.POST.keys())[-1]
-        festival = Festival.festivals.get(id=festival_id)
-        switch_festival(session, festival)
-        initialize_log(session)
-        _ = ScreeningLoader(session, festival, festival_pk='film__festival__pk').load_objects()
-        return super().form_valid(form)
 
-    def form_invalid(self, form):
-        super().form_invalid(form)
-        ScreeningsLoaderView.unexpected_error = '\n'.join(wrap_up_form_errors(form.errors))
-        return HttpResponseRedirect(reverse('loader:screenings'))
+class AttendanceLoaderFormView(BaseListActionFormView):
+    template_name = AttendanceLoaderView.template_name
+    loader_class = AttendanceLoader
+    success_view_name = 'screenings:day_schema'
+    invalid_view_name = 'loader:attendances'
 
-    def get_success_url(self):
-        return reverse('screenings:day_schema')
+
+class BaseActionListView(View):
+    http_method_names = ['get', 'post']
+    view_class_by_data = {
+        'screenings': ScreeningsLoaderView,
+        'attendances': AttendanceLoaderView,
+    }
+    data_cookie = Cookie('data')
+    view_class = None
+
+    def dispatch(self, request, *args, **kwargs):
+        self.data_cookie.handle_get_request(request)
+        data_name = self.data_cookie.get(request.session)
+        self.view_class = self.view_class_by_data[data_name]
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        view = self.view_class.as_view()
+        return view(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        view = self.view_class.as_view()
+        return view(request, *args, **kwargs)

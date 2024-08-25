@@ -8,7 +8,7 @@ from django.views.generic import ListView, FormView
 from festival_planner.cookie import Cookie
 from festival_planner.tools import add_base_context, get_log, unset_log
 from festivals.models import current_festival
-from loader.forms.loader_forms import ScreeningsLoaderForm
+from screenings.forms.screening_forms import DummyForm
 from screenings.models import Screening
 from theaters.models import Theater
 
@@ -167,7 +167,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
 
 class DaySchemaFormView(LoginRequiredMixin, FormView):
     template_name = DaySchemaView.template_name
-    form_class = ScreeningsLoaderForm
+    form_class = DummyForm
     http_method_names = ['post']
 
     def form_valid(self, form):

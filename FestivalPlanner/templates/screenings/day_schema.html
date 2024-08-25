@@ -9,7 +9,9 @@
     <span class="col-right">
         <a href="{% url 'theaters:theaters' %}">Theaters</a>
         <br>
-        <a href="{% url 'loader:screenings' %}">Load screenings</a>
+        <a href="/loader/list_action?data=screenings">Load screenings</a>
+        <br>
+        <a href="/loader/list_action?data=attendances">Load attendances</a>
     </span>
 </div>
 {% if log %}
