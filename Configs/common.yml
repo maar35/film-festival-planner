@@ -1,6 +1,8 @@
 Constants:
     MaxShortMinutes: 40
     LowestPlannableRating: 8
+    WalkMinutesSameTheater: 15
+    TravelMinutesOtherTheater: 40
 
 Paths:
     FestivalRootDirectory: Documents/Film

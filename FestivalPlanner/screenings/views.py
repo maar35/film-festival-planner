@@ -6,10 +6,12 @@ from django.views import View
 from django.views.generic import ListView, FormView
 
 from festival_planner.cookie import Cookie
+from festival_planner.debug_tools import pr_debug
 from festival_planner.tools import add_base_context, get_log, unset_log
 from festivals.models import current_festival
+from films.models import current_fan, initial
 from screenings.forms.screening_forms import DummyForm
-from screenings.models import Screening
+from screenings.models import Screening, Attendance
 from theaters.models import Theater
 
 
@@ -84,24 +86,35 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.festival = None
+        self.day_screenings = None
+        self.attendances_by_screening = None
+        self.attends_by_screening = None
+        self.has_attended_film_by_screening = None
 
     def setup(self, request, *args, **kwargs):
+        pr_debug('start', with_time=True)
         super().setup(request, *args, **kwargs)
-        self.festival = DaySchemaView.current_day.check_session(request.session)
+        festival = DaySchemaView.current_day.check_session(request.session)
+        current_date = DaySchemaView.current_day.get_date(self.request.session)
+        self.day_screenings = Screening.screenings.filter(film__festival=festival, start_dt__date=current_date)
+        fan = current_fan(self.request.session)
+        attendance_manager = Attendance.attendances
+        self.attendances_by_screening = {s: attendance_manager.filter(screening=s) for s in self.day_screenings}
+        self.attends_by_screening = {s: self.attendances_by_screening[s].filter(fan=fan) for s in self.day_screenings}
+        self.has_attended_film_by_screening = {s: attendance_manager.filter(screening__film=s.film, fan=fan) for s in self.day_screenings}
+        pr_debug('done', with_time=True)
 
     def get_queryset(self):
-        festival_screenings = Screening.screenings.filter(film__festival=self.festival)
-        current_date = DaySchemaView.current_day.get_date(self.request.session)
-        day_screenings = [s for s in festival_screenings if s.start_dt.date() == current_date]
+        pr_debug('start', with_time=True)
         screenings_by_screen = {}
-        sorted_screenings = sorted(day_screenings, key=lambda s: str(s.screen))
+        sorted_screenings = sorted(self.day_screenings, key=lambda s: str(s.screen))
         for screening in sorted(sorted_screenings, key=lambda s: s.screen.theater.priority, reverse=True):
             try:
                 screenings_by_screen[screening.screen].append(screening)
             except KeyError:
                 screenings_by_screen[screening.screen] = [screening]
         screen_rows = [self._get_screen_row(screen, screenings) for screen, screenings in screenings_by_screen.items()]
+        pr_debug('done', with_time=True)
         return screen_rows
 
     def get_context_data(self, **kwargs):
@@ -142,12 +155,16 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
 
     def _screening_spec(self, screening):
         left_pixels = self._pixels_from_dt(screening.start_dt)
+        attendants = self._get_attendants(screening)
+        attendants_str = self._attendants_str(attendants)
+        line_2 = f'{screening.start_dt.strftime("%H:%M")} - {screening.end_dt.strftime("%H:%M")} {attendants_str}'
         screening_spec = {
             'line_1': f'{screening.film.title}',
-            'line_2': f'{screening.start_dt.strftime("%H:%M")} - {screening.end_dt.strftime("%H:%M")}',
+            'line_2': line_2,
             'screening': screening,
             'left': left_pixels,
             'width': self._pixels_from_dt(screening.end_dt) - left_pixels,
+            'pair': self._screening_color_pair(screening, attendants),
         }
         return screening_spec
 
@@ -163,6 +180,54 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             }
             hour_list.append(specs_by_hour)
         return hour_list
+
+    def _attendants_str(self, attendants):
+        attendance_str = ''
+        for attendant in attendants:
+            attendance_str += initial(attendant, self.request.session)
+        return attendance_str
+
+    def _get_screening_status(self, screening, attendants):
+        if current_fan(self.request.session) in attendants:
+            status = Screening.ScreeningStatus.ATTENDS
+        elif attendants:
+            status = Screening.ScreeningStatus.FRIEND_ATTENDS
+        elif self._has_attended_film(screening):
+            status = Screening.ScreeningStatus.ATTENDS_FILM
+        else:
+            status = self._get_overlap_status(screening)
+        return status
+
+    def _get_attendants(self, screening):
+        attendances = self.attendances_by_screening[screening]
+        attendants = [attendance.fan for attendance in attendances]
+        return attendants
+
+    def _has_attended_film(self, screening):
+        """ Returns whether another screening of the same film is already attended. """
+        film_screenings = self.has_attended_film_by_screening[screening]
+        return film_screenings
+
+    def _get_overlap_status(self, screening):
+        status = Screening.ScreeningStatus.FREE
+        overlapping_screenings = []
+        no_travel_time_screenings = []
+        for s in self.day_screenings:
+            if self.attends_by_screening[s]:
+                if s.start_dt.date() == screening.start_dt.date():
+                    if screening.overlaps(s):
+                        overlapping_screenings.append(s)
+                    elif screening.overlaps(s, use_travel_time=True):
+                        no_travel_time_screenings.append(s)
+        if overlapping_screenings:
+            status = Screening.ScreeningStatus.TIME_OVERLAP
+        elif no_travel_time_screenings:
+            status = Screening.ScreeningStatus.NO_TRAVEL_TIME
+        return status
+
+    def _screening_color_pair(self, screening, attendants):
+        status = self._get_screening_status(screening, attendants)
+        return Screening.color_pair_by_screening_status[status]
 
 
 class DaySchemaFormView(LoginRequiredMixin, FormView):

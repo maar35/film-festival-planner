@@ -1,8 +1,29 @@
+import datetime
+
 from django.db import models
 
 from authentication.models import FilmFan
+from festivals.config import Config
 from films.models import Film
 from theaters.models import Screen
+
+CONSTANTS_CONFIG = Config().config['Constants']
+WALK_TIME_SAME_THEATER = datetime.timedelta(minutes=CONSTANTS_CONFIG['WalkMinutesSameTheater'])
+TRAVEL_TIME_OTHER_THEATER = datetime.timedelta(minutes=CONSTANTS_CONFIG['TravelMinutesOtherTheater'])
+
+
+def color_pair(color, background):
+    return {'color': color, 'background': background}
+
+
+COLOR_PAIR_FREE = color_pair(None, None)
+COLOR_PAIR_UNAVAILABLE = color_pair(None, None)
+COLOR_PAIR_ATTENDS = color_pair('white', 'rgb(176, 0, 38)')
+COLOR_PAIR_FRIEND_ATTENDS = color_pair('yellow', 'rgb(0, 38, 176)')
+COLOR_PAIR_ATTENDS_FILM = color_pair('black', 'yellow')
+COLOR_PAIR_TIME_OVERLAP = color_pair('black', 'rgb(79, 79, 79)')
+COLOR_PAIR_NO_TRAVEL_TIME = color_pair('darkgrey', 'rgb(38, 38, 38)')
+COLOR_PAIR_NEEDS_TICKETS = color_pair('white', 'rgb(176, 0, 176)')
 
 
 class Screening(models.Model):
@@ -19,6 +40,18 @@ class Screening(models.Model):
         TIME_OVERLAP = 5,
         NO_TRAVEL_TIME = 6,
         NEEDS_TICKETS = 7,
+
+    # Define color dictionary.
+    color_pair_by_screening_status = {
+        ScreeningStatus.FREE: COLOR_PAIR_FREE,
+        ScreeningStatus.UNAVAILABLE: COLOR_PAIR_UNAVAILABLE,
+        ScreeningStatus.ATTENDS: COLOR_PAIR_ATTENDS,
+        ScreeningStatus.FRIEND_ATTENDS: COLOR_PAIR_FRIEND_ATTENDS,
+        ScreeningStatus.ATTENDS_FILM: COLOR_PAIR_ATTENDS_FILM,
+        ScreeningStatus.TIME_OVERLAP: COLOR_PAIR_TIME_OVERLAP,
+        ScreeningStatus.NO_TRAVEL_TIME: COLOR_PAIR_NO_TRAVEL_TIME,
+        ScreeningStatus.NEEDS_TICKETS: COLOR_PAIR_NEEDS_TICKETS,
+    }
 
     # Define the fields.
     film = models.ForeignKey(Film, on_delete=models.CASCADE)
@@ -47,8 +80,15 @@ class Screening(models.Model):
         end_time = self.end_dt.time().isoformat(timespec='minutes')
         return f'{start_date} {start_time} - {end_time} {self.screen} {self.film.title}'
 
-    def get_status(self, fan):
-        pass
+    def overlaps(self, other_screening, use_travel_time=False):
+        travel_time = self.get_travel_time(other_screening) if use_travel_time else datetime.timedelta(0)
+        ok = other_screening.start_dt <= self.end_dt + travel_time and other_screening.end_dt >= self.start_dt - travel_time
+        return ok
+
+    def get_travel_time(self, other_screening):
+        same_theater = self.screen.theater == other_screening.screen.theater
+        travel_time = WALK_TIME_SAME_THEATER if same_theater else TRAVEL_TIME_OTHER_THEATER
+        return travel_time
 
 
 class Attendance(models.Model):

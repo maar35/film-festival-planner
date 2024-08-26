@@ -7,6 +7,8 @@
 <h2 class="row col-left-h2">{{ sub_header }}</h2>
 <div class="row">
     <span class="col-right">
+        <a href="{% url 'films:films' %}">Film ratings</a>
+        <br>
         <a href="{% url 'theaters:theaters' %}">Theaters</a>
         <br>
         <a href="/loader/list_action?data=screenings">Load screenings</a>
@@ -19,7 +21,7 @@
     {% for result in log.results %}
         <p class="log">{{ result }}</p>
     {% endfor %}
-<br>
+    <br>
 {% endif %}
 <form method="post">
 {% csrf_token %}
@@ -67,7 +69,7 @@
             <td class="day-schema-row" style="min-width: {{ row.total_width }}px;">
                 {% for spec in row.screening_specs %}
                 <span class="day-schema-screening"
-                      style="width: {{ spec.width }}px; border: 1px solid {{ festival_color }}; left: {{ spec.left }}px;">
+                      style="background: {{ spec.pair.background }}; color: {{ spec.pair.color }}; width: {{ spec.width }}px; border: 1px solid {{ festival_color }}; left: {{ spec.left }}px;">
                     {{ spec.line_1 }}<br>{{ spec.line_2 }}
                 </span>
                 {% endfor %}

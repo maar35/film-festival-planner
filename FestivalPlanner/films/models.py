@@ -1,6 +1,6 @@
 from django.db import models
 
-from authentication.models import FilmFan
+from authentication.models import FilmFan, INITIAL_MAARTEN, me
 from festivals.models import Festival
 from sections.models import Subsection
 
@@ -48,7 +48,7 @@ def set_current_fan(request):
 
 def current_fan(session):
     fan_name = session.get('fan_name')
-    fan = FilmFan.film_fans.get(name=fan_name) if fan_name is not None else None
+    fan = FilmFan.film_fans.get(name=fan_name) if fan_name else None
     return fan
 
 
@@ -67,6 +67,10 @@ def get_user_fan(user):
     user_fan_name = user_name_to_fan_name(user.username)
     user_fan = FilmFan.film_fans.get(name=user_fan_name) if user_fan_name is not None else None
     return user_fan
+
+
+def initial(fan, session):
+    return '' if fan == current_fan(session) else fan.initial()
 
 
 def get_present_fans():
