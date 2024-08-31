@@ -78,7 +78,7 @@ class Screening(models.Model):
         start_date = self.start_dt.date().isoformat()
         start_time = self.start_dt.time().isoformat(timespec='minutes')
         end_time = self.end_dt.time().isoformat(timespec='minutes')
-        return f'{start_date} {start_time} - {end_time} {self.screen} {self.film.title}'
+        return f'{self.film.title} · {self.screen} · {start_date} {start_time} - {end_time}'
 
     def overlaps(self, other_screening, use_travel_time=False):
         travel_time = self.get_travel_time(other_screening) if use_travel_time else datetime.timedelta(0)

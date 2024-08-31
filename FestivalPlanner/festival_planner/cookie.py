@@ -24,9 +24,6 @@ class Cookie:
             query_value = request.GET[self._cookie_key]
             self.set(request.session, query_value)
 
-    def set(self, session, value):
-        session[self._cookie_key] = value
-
     def get(self, session, default=None):
         """
         Return the cookie value from the session or default if it doesn't exist.
@@ -34,6 +31,9 @@ class Cookie:
         self._set_value_from_session(session)
         value = session.get(self._cookie_key, default)
         return value
+
+    def set(self, session, value):
+        session[self._cookie_key] = value
 
     def remove(self, session):
         if self._cookie_key in session:

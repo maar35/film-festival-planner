@@ -1,16 +1,21 @@
 import datetime
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.views import View
 from django.views.generic import ListView, FormView
+from django.views.generic.detail import SingleObjectMixin
 
+from authentication.models import FilmFan
 from festival_planner.cookie import Cookie
 from festival_planner.debug_tools import pr_debug
-from festival_planner.tools import add_base_context, get_log, unset_log
+from festival_planner.fan_action import FanAction
+from festival_planner.tools import add_base_context, get_log, unset_log, wrap_up_form_errors, initialize_log, add_log
 from festivals.models import current_festival
-from films.models import current_fan, initial
-from screenings.forms.screening_forms import DummyForm
+from films.models import current_fan, initial, MINUTES_STR
+from films.views import ResultsView
+from screenings.forms.screening_forms import DummyForm, AttendanceForm
 from screenings.models import Screening, Attendance
 from theaters.models import Theater
 
@@ -119,7 +124,8 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         super_context = super().get_context_data(**kwargs)
-        current_day_str = DaySchemaView.current_day.get_str(self.request.session)
+        session = self.request.session
+        current_day_str = DaySchemaView.current_day.get_str(session)
         day_choices = DaySchemaView.current_day.get_festival_days()
         new_context = {
             'title': 'Screenings Day Schema',
@@ -129,7 +135,8 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'timescale': self._get_timescale(),
             'timebox_length': 60,
             'px_per_hour': self.pixels_per_hour,
-            'log': get_log(self.request.session),
+            'log': get_log(session),
+            'action': ScreeningDetailView.fan_action.get_refreshed_action(session),
         }
         unset_log(self.request.session)
         return add_base_context(self.request, super_context | new_context)
@@ -243,3 +250,83 @@ class DaySchemaFormView(LoginRequiredMixin, FormView):
     def get_success_url(self):
         return reverse('screenings:day_schema')
 
+
+class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
+    model = Screening
+    form_class = AttendanceForm
+    template_name = 'screenings/details.html'
+    http_method_names = ['get', 'post']
+    fan_action = FanAction('update')
+    errors_cookie = Cookie('errors', [])
+    update_by_attends = {True: 'joins', False: "couldn't come"}
+    fans = FilmFan.film_fans.all()
+    object = None
+    screening = None
+    initial_attendance_by_fan = None
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        session = self.request.session
+        initialize_log(request.session, 'Update attendances')
+        _ = self.errors_cookie.get(session)
+        self.screening = self.get_object()
+        self.fan_action.init_action(session, screening=self.screening)
+        manager = Attendance.attendances
+        self.initial_attendance_by_fan = {f: bool(manager.filter(screening=self.screening, fan=f))for f in self.fans}
+
+    def get_context_data(self, **kwargs):
+        super_context = super().get_context_data(**kwargs)
+        session = self.request.session
+        duration = self.screening.end_dt - self.screening.start_dt
+        fan_specs = []
+        for fan in self.fans:
+            attends = self.initial_attendance_by_fan[fan]
+            fan_specs.append({
+                'fan': fan.name,
+                'attends': attends,
+                'checked': attends,
+            })
+        new_context = {
+            'title': 'Screening Details',
+            'subtitle': f'Screening of {self.screening.film}',
+            'screening': self.screening,
+            'duration': duration,
+            'minutes': f'{duration.total_seconds() / 60:.0f}{MINUTES_STR}',
+            'film_description': ResultsView.get_description(self.screening.film),
+            'fan_specs': fan_specs,
+            'form_errors': self.errors_cookie.get(session),
+        }
+        self.errors_cookie.remove(session)
+        context = add_base_context(self.request, super_context | new_context)
+        return context
+
+    def form_valid(self, form):
+        new_attendance_by_fan = {fan: fan.name in self.request.POST for fan in self.fans}
+        self._update_attendance(new_attendance_by_fan)
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        errors = self.errors_cookie.get(self.request.session)
+        errors.extend(wrap_up_form_errors(form.errors))
+        self.errors_cookie.set(self.request.session, errors)
+        super().form_invalid(form)
+        return self._dirty_response()
+
+    def get_success_url(self):
+        return reverse('screenings:day_schema')
+
+    def _dirty_response(self):
+        return HttpResponseRedirect(reverse('screenings:details', kwargs={'pk': self.screening.id}))
+
+    def _update_attendance(self, new_attendance_by_fan):
+        session = self.request.session
+        changed_attendance_by_fan = {}
+        for fan, initial_attendance in self.initial_attendance_by_fan.items():
+            attends = new_attendance_by_fan[fan]
+            if initial_attendance != attends:
+                changed_attendance_by_fan[fan] = attends
+        if changed_attendance_by_fan:
+            _ = AttendanceForm.update_attendances(
+                session, self.screening, changed_attendance_by_fan, self.update_by_attends, self.fan_action)
+        else:
+            add_log(session, f'No attendances of {self.screening} were updated by {current_fan(session)}.')

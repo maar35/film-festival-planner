@@ -1,0 +1,62 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+<h2 class="row col-left-h2" xmlns="http://www.w3.org/1999/html">{{ subtitle }}</h2>
+<div class="row">
+    <span class="col-right">
+        <a href="{% url 'screenings:day_schema' %}">Back to day schema</a>
+        <br>
+        <a href="{% url 'films:films' %}">Ratings</a>
+    </span>
+</div>
+{% if form_errors %}
+    <h2 class="error">Form errors</h2>
+    {% for error in form_errors %}
+        <span class="log">{{ error }}</span>
+        <br>
+    {% endfor %}
+{% endif %}
+<ul>
+    <li>Screen: {{ screening.screen }}</li>
+    <li>Time: {{ screening.start_dt|date:"D j M H:i" }} - {{ screening.end_dt|date:"H:i" }}</li>
+    <li>Film: <a href="{% url 'films:results' screening.film.id %}"> {{ screening.film.title }}</a></li>
+    <li>Film description: {{ film_description }}</li>
+    <li>Screening duration: {{ duration }} ({{ minutes }})</li>
+    <li>Subtitles: {% if screening.subtitles %} {{ screening.subtitles }} {% else %} - {% endif %}</li>
+    <li>Q&A: {% if screening.q_and_a %} {{ screening.q_and_a }} {% else %} - {% endif %}</li>
+    <li>Combination program: {% if screening.combination_program %} {{ screening.combination_program }} {% else %} - {% endif %}</li>
+    <li>Screening#: {{ screening.id }}</li>
+</ul>
+<br>
+<form method="post">
+    {% csrf_token %}
+    <table style="min-width: 30%">
+        <thead>
+            <tr>
+                <th>Film fan</th>
+                <th style="text-align: center">Attends</th>
+                <th>Preset</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for spec in fan_specs %}
+            <tr>
+                <td>{{ spec.fan }}</td>
+                {% if spec.checked %}
+                    <td class="with-submit" style="text-align: center"><input type="checkbox" checked="" value="{{ spec.value }}" name="{{ spec.fan }}"></td>
+                {% else %}
+                    <td class="with-submit" style="text-align: center"><input type="checkbox" value="attends" name="{{ spec.fan }}"></td>
+                {% endif %}
+                <td style="background: var(--screeningBackground)">{{ spec.attends }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+<br>
+<input type="submit" value="Submit attendances">
+</form>
+<br>
+{% endblock %}

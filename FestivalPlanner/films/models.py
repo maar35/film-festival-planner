@@ -1,10 +1,11 @@
 from django.db import models
 
-from authentication.models import FilmFan, INITIAL_MAARTEN, me
+from authentication.models import FilmFan
 from festivals.models import Festival
 from sections.models import Subsection
 
 FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
+MINUTES_STR = "'"
 UNRATED_STR = '-'
 
 
@@ -34,7 +35,7 @@ class Film(models.Model):
         unique_together = ('festival', 'film_id')
 
     def __str__(self):
-        return f"{self.title} ({self.duration.total_seconds() / 60:.0f}')"
+        return f"{self.title} ({self.duration.total_seconds() / 60:.0f}{MINUTES_STR})"
 
     def duration_str(self):
         return ':'.join(f'{self.duration}'.split(':')[:2])

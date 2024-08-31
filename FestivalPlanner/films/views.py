@@ -19,7 +19,7 @@ from festival_planner.tools import add_base_context, unset_log, wrap_up_form_err
     initialize_log, add_log, CSV_DIALECT
 from festivals.config import Config
 from festivals.models import current_festival
-from films.forms.film_forms import PickRating, UserForm, refreshed_rating_action
+from films.forms.film_forms import PickRating, UserForm
 from films.models import FilmFanFilmRating, Film, current_fan, get_present_fans, fan_rating_str, \
     FilmFanFilmVote, fan_rating
 from sections.models import Subsection, Section
@@ -291,7 +291,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'display_shorts_action': self.shorts_filter.action(session),
             'display_all_subsections_query': self._get_query_string_to_select_all_subsections(session),
             'found_films': BaseFilmsFormView.found_films,
-            'action': refreshed_rating_action(session, self.class_tag),
+            'action': PickRating.rating_action_by_field[self.class_tag].get_refreshed_action(session),
             'unexpected_errors': FilmsView.unexpected_errors,
             'log': get_log(session)
         }
@@ -379,7 +379,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'subsection': film.subsection,
             'subsection_filter': self._get_subsection_filter(film.subsection),
             'section_filter': self._get_section_filter(film.subsection),
-            'section': None,
             'description': self._get_description(film),
             'fan_ratings': fan_ratings,
         }
@@ -548,7 +547,7 @@ class VotesListView(LoginRequiredMixin, ListView):
         new_context = {
             'title': self.title,
             'fans': self.fan_list,
-            'action': refreshed_rating_action(self.request.session, self.class_tag),
+            'action': PickRating.rating_action_by_field[self.class_tag].get_refreshed_action(self.request.session),
             'unexpected_errors': VotesView.unexpected_errors,
         }
         context = add_base_context(self.request, super_context | new_context)
@@ -632,6 +631,7 @@ class ResultsView(LoginRequiredMixin, DetailView):
         return response
 
     def get_context_data(self, **kwargs):
+        super_context = super().get_context_data(**kwargs)
         film = self.object
         session = self.request.session
         fan_rows = []
@@ -644,13 +644,15 @@ class ResultsView(LoginRequiredMixin, DetailView):
                 'rating_str': fan_rating_str(fan, film),
                 'choices': choices,
             })
-        context = add_base_context(self.request, super().get_context_data(**kwargs))
-        context['title'] = 'Film Rating Results'
-        context['description'] = self.get_description(film)
-        context['film_in_cache'] = self.film_is_in_cache(session)
-        context['display_all_query'] = self.get_query_string_to_display_all(session)
-        context['fan_rows'] = fan_rows
-        context['unexpected_error'] = self.unexpected_error
+        new_context = {
+            'title': 'Film Rating Results',
+            'description': self.get_description(film),
+            'film_in_cache': self.film_is_in_cache(session),
+            'display_all_query': self.get_query_string_to_display_all(session),
+            'fan_rows': fan_rows,
+            'unexpected_error': self.unexpected_error,
+        }
+        context = add_base_context(self.request, super_context | new_context)
         return context
 
     @staticmethod
@@ -667,7 +669,10 @@ class ResultsView(LoginRequiredMixin, DetailView):
         return description
 
     def film_is_in_cache(self, session):
-        film_rows = PickRating.film_rating_cache.get_film_rows(session)
+        try:
+            film_rows = PickRating.film_rating_cache.get_film_rows(session)
+        except AttributeError:
+            return False
         film = self.get_object()
         return film in [row['film'] for row in film_rows]
 
