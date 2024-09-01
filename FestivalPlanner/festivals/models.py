@@ -172,3 +172,6 @@ class Festival(models.Model):
 
     def screening_info_file(self):
         return os.path.join(self.festival_data_dir(), 'screeninginfo.csv')
+
+    def attendances_file(self):
+        return os.path.join(self.festival_data_dir(), 'attendances.csv')

@@ -17,7 +17,7 @@ from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoa
     TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm, SaveRatingsForm, \
     RatingDataBackupForm, FILM_FANS_BACKUP_PATH, RATINGS_BACKUP_PATH, FILMS_BACKUP_PATH, \
     FESTIVALS_BACKUP_PATH, FESTIVAL_BASES_BACKUP_PATH, BACKUP_DATA_DIR, CITIES_BACKUP_PATH, \
-    ScreeningLoader, AttendanceLoader
+    ScreeningLoader, AttendanceLoader, AttendanceDumperForm
 from screenings.forms.screening_forms import DummyForm
 from screenings.models import Screening, Attendance
 from sections.models import Section, Subsection
@@ -48,18 +48,6 @@ def get_festival_row(festival):
     return festival_row
 
 
-def get_theater_items():
-    theater_items = {
-        'city_count': City.cities.count,
-        'city_count_on_file': file_record_count(cities_path()),
-        'theater_count': Theater.theaters.count,
-        'theater_count_on_file': file_record_count(theaters_path()),
-        'screen_count': Screen.screens.count,
-        'screen_count_on_file': file_record_count(screens_path()),
-    }
-    return theater_items
-
-
 class TheaterDataInterfaceView(LoginRequiredMixin, FormView):
     model = Theater
     template_name = 'loader/theaters.html'
@@ -80,7 +68,7 @@ class TheaterDataInterfaceView(LoginRequiredMixin, FormView):
         action = self.action_cookie.get(session)
         context['title'] = f'{action} Theater Data'
         context['action'] = action
-        context['theater_items'] = get_theater_items()
+        context['theater_items'] = self._get_theater_items()
         context['log'] = get_log(session)
         unset_log(session)
         return context
@@ -94,6 +82,18 @@ class TheaterDataInterfaceView(LoginRequiredMixin, FormView):
         elif action == 'load':
             form.load_theater_data(session)
         return HttpResponseRedirect('/theaters/theaters')
+
+    @staticmethod
+    def _get_theater_items():
+        theater_items = {
+            'city_count': City.cities.count,
+            'city_count_on_file': file_record_count(cities_path()),
+            'theater_count': Theater.theaters.count,
+            'theater_count_on_file': file_record_count(theaters_path()),
+            'screen_count': Screen.screens.count,
+            'screen_count_on_file': file_record_count(screens_path()),
+        }
+        return theater_items
 
 
 class NewTheaterDataListView(ListView):
@@ -398,7 +398,6 @@ class SaveRatingsView(LoginRequiredMixin, FormView):
         session = self.request.session
         festival = current_festival(session)
         festival_items = {
-            'festival': festival,
             'film_count': len(Film.films.filter(festival=festival)),
             'film_count_on_file': file_record_count(festival.films_file(), has_header=True),
             'rating_count': len(FilmFanFilmRating.film_ratings.filter(film__festival=festival)),
@@ -604,3 +603,39 @@ class BaseActionListView(View):
     def post(self, request, *args, **kwargs):
         view = self.view_class.as_view()
         return view(request, *args, **kwargs)
+
+
+class AttendanceDumperView(LoginRequiredMixin, FormView):
+    model = Festival
+    template_name = 'loader/dump_attendances.html'
+    form_class = AttendanceDumperForm
+    success_url = '/screenings/day_schema/'
+    http_method_names = ['get', 'post']
+    festival = None
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.festival = current_festival(request.session)
+
+    def get_context_data(self, **kwargs):
+        super_context = super().get_context_data(**kwargs)
+        session = self.request.session
+        dump_file = self.festival.attendances_file()
+        festival_props = {
+            'attendance_count': len(Attendance.attendances.filter(screening__film__festival=self.festival)),
+            'attendance_count_on_file': file_record_count(dump_file, has_header=True),
+            'dump_file': dump_file,
+        }
+        new_context = {
+            'title': 'Dump Attendances',
+            'subtitle': f'Dump attendances of {self.festival}',
+            'festival_props': festival_props,
+            'log': get_log(session),
+        }
+        unset_log(session)
+        context = add_base_context(self.request, super_context | new_context)
+        return context
+
+    def form_valid(self, form):
+        form.dump_attendances(self.request.session, self.festival)
+        return super().form_valid(form)

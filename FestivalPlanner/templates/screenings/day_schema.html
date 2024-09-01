@@ -14,6 +14,8 @@
         <a href="/loader/list_action?data=screenings">Load screenings</a>
         <br>
         <a href="/loader/list_action?data=attendances">Load attendances</a>
+        <br>
+        <a href="{% url 'loader:dump_attendances' festival.id %}">Dump attendances</a>
     </span>
 </div>
 {% if log.results %}

@@ -11,4 +11,5 @@ urlpatterns = [
     path('new_screens', views.NewTheaterDataView.as_view(), name='new_screens'),
     path('list_action', views.BaseActionListView.as_view(), name='list_action'),
     path('film_backup', views.FilmDataBackupView.as_view(), name='film_backup'),
+    path('<int:pk>/dump_attendances', views.AttendanceDumperView.as_view(), name='dump_attendances'),
 ]

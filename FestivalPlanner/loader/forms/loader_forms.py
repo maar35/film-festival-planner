@@ -141,6 +141,17 @@ class RatingDataBackupForm(Form):
         _ = CityBackupDumper(session).dump_objects(CITIES_BACKUP_PATH)
 
 
+class AttendanceDumperForm(Form):
+    dummy_field = SlugField(required=False)
+
+    @staticmethod
+    def dump_attendances(session, festival):
+        initialize_log(session, 'Dump')
+        add_log(session, 'Dump attendances.')
+        if not AttendanceDumper(session).save_attendances(festival, festival.attendances_file()):
+            add_log(session, f'Failed to save the {festival} attendances.')
+
+
 class BaseLoader:
     """
     Base class for loading objects such as films or ratings from CSV files.
@@ -732,6 +743,7 @@ class AttendanceLoader(SimpleLoader):
     ]
     key_fields = ['fan', 'screening']
     manager = Attendance.attendances
+    fan_names = ('Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk', 'Geeth')
 
     def __init__(self, session, festival, festival_pk):
         file = festival.screening_info_file()
@@ -744,22 +756,21 @@ class AttendanceLoader(SimpleLoader):
         film_id = row[0]
         screen_id = row[1]
         start_dt = datetime.datetime.fromisoformat(row[2]).replace(tzinfo=None)
-        _ = row[3]  # movable_start_time
-        _ = row[4]  # movable_end_time
-        _ = row[5]  # combined_film_id
-        _ = row[6]  # auto_planned
-        _ = row[7]  # blocked
+        _ = row[3]      # movable_start_time
+        _ = row[4]      # movable_end_time
+        _ = row[5]      # combined_film_id
+        _ = row[6]      # auto_planned
+        _ = row[7]      # blocked
         fan_attendances = (Maarten, Adrienne, Manfred, Piggel, Rijk, Geeth) = row[8].split(',')
         tickets_bought = row[9] == self.TRUE
-        _ = row[10] # sold_out
+        _ = row[10]     # sold_out
 
         film = self.get_foreign_key(Film, Film.films, **{'festival': self.festival, 'film_id': film_id})
         screen = self.get_foreign_key(Screen, Screen.screens, **{'screen_id': screen_id})
         screening_kwargs = {'film': film, 'screen': screen, 'start_dt': start_dt}
         screening = self.get_foreign_key(Screening, Screening.screenings, **screening_kwargs)
-        fan_names = ('Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk', 'Geeth')
         attendance_props_by_fan_name = {}
-        for i, fan_name in enumerate(fan_names):
+        for i, fan_name in enumerate(self.fan_names):
             try:
                 fan = FilmFan.film_fans.get(name=fan_name)
             except FilmFan.DoesNotExist:
@@ -1052,3 +1063,36 @@ class RatingDumper(BaseDumper):
     def save_ratings(self, festival, file):
         festival_ratings = self.manager.filter(film__festival_id=festival.id)
         return self.dump_objects(file, festival_ratings)
+
+
+class AttendanceDumper(BaseDumper):
+    manager = Attendance.attendances
+    header = AttendanceLoader.expected_header
+    TRUE = AttendanceLoader.TRUE
+    FALSE = 'ONWAAR'
+    field_by_bool = {True: TRUE, False: FALSE}
+    fan_names = AttendanceLoader.fan_names
+
+    def __init__(self, session):
+        super().__init__(session, 'attendance', self.manager, self.header)
+
+    def object_row(self, attendance):
+        attending_fans = [self.field_by_bool[attendance.fan.name == fan_name] for fan_name in self.fan_names]
+        field_by_index = {
+            0: attendance.screening.film.film_id,
+            1: attendance.screening.screen.screen_id,
+            2: attendance.screening.start_dt.isoformat(timespec='minutes'),
+            3: '',      # movable_start_time
+            4: '',      # movable_end_time
+            5: '',      # combined_film_id
+            6: '',      # auto_planned
+            7: '',      # blocked
+            8: ','.join(attending_fans),
+            9: self.TRUE if attendance.tickets else self.FALSE,
+            10: '',     # sold_out
+        }
+        return field_by_index.values()
+
+    def save_attendances(self, festival, file):
+        festival_attendances = self.manager.filter(screening__film__festival_id=festival.id)
+        return self.dump_objects(file, festival_attendances)

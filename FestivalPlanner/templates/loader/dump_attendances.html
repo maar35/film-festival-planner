@@ -4,10 +4,10 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h2 class="row col-left-h2">Save ratings of {{ festival }}</h2>
+    <h2 class="row col-left-h2">{{ subtitle }}</h2>
     <div class="row">
         <span class="col-right">
-            <a href="{% url 'films:films' %}">Back to ratings list</a>
+            <a href="{% url 'screenings:day_schema' %}">Screenings day schema</a>
         </span>
     </div>
     {% if form.errors %}
@@ -21,20 +21,18 @@
         <table>
             <tbody>
                 <tr><td><b>Festival</b></td><td>{{ festival }}</td></tr>
-                <tr><td><b>#Films</b></td><td>{{ festival_items.film_count }}</td></tr>
-                <tr><td><b>#Films on file</b></td><td>{{ festival_items.film_count_on_file }}</td></tr>
-                <tr><td><b>#Ratings</b></td><td>{{ festival_items.rating_count }}</td></tr>
-                <tr><td><b>#Ratings on file</b></td><td>{{ festival_items.rating_count_on_file }}</td></tr>
-                <tr><td><b>File</b></td><td>{{ festival_items.ratings_file }}</td></tr>
+                <tr><td><b>#Attendances</b></td><td>{{ festival_props.attendance_count }}</td></tr>
+                <tr><td><b>#Attendances on file</b></td><td>{{ festival_props.attendance_count_on_file }}</td></tr>
+                <tr><td><b>File</b></td><td>{{ festival_props.dump_file }}</td></tr>
             </tbody>
         </table>
         <br>
         <form method="post">
             {% csrf_token %}
-            <input type="submit"; value="Save {{ festival_items.rating_count }} ratings">
+            <input type="submit" value="Save {{ festival_props.attendance_count }} attendances">
         </form>
     {% else %}
         <h2 class="error">Not allowed</h2>
-        <p>Only an admin fan can save ratings.</p>
+        <p>Only an admin fan can dump attendances.</p>
     {% endif %}
 {% endblock %}
