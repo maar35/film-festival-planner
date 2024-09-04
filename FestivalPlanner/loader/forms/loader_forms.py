@@ -41,9 +41,9 @@ class RatingLoaderForm(Form):
     )
 
     @staticmethod
-    def load_rating_data(session, festival, import_mode=False):
+    def load_rating_data(session, festival, rating_queryset, rating_dumpfile, import_mode=False):
         initialize_log(session)
-        import_mode or add_log(session, 'No ratings will be effected.')
+        import_mode or add_log(session, 'No ratings will be loaded.')
 
         # Invalidate the cache associated with the current festival.
         if not PickRating.film_rating_cache:
@@ -53,7 +53,7 @@ class RatingLoaderForm(Form):
         # Save ratings if the import mode flag is set and all ratings
         # are replaced.
         if import_mode:
-            _ = RatingDumper(session).save_ratings(festival, festival.ratings_cache())
+            _ = RatingDumper(session).dump_objects(rating_dumpfile, rating_queryset)
 
         # Load films and, if applicable, ratings.
         if FilmLoader(session, festival).load_objects():
@@ -62,15 +62,15 @@ class RatingLoaderForm(Form):
                 RatingLoader(session, festival).load_objects()
 
 
-class SaveRatingsForm(Form):
+class SingleTableDumperForm(Form):
     dummy_field = SlugField(required=False)
 
     @staticmethod
-    def save_ratings(session, festival):
-        initialize_log(session, 'Save')
-        add_log(session, f'Saving the {festival} ratings.')
-        if not RatingDumper(session).save_ratings(festival, festival.ratings_file()):
-            add_log(session, f'Failed to save the {festival} ratings.')
+    def dump_data(session, festival, data_name, dumper_class, dumpfile, queryset):
+        initialize_log(session, 'Dump')
+        add_log(session, f'Dumping the {festival} {data_name}.')
+        if not dumper_class(session).dump_objects(dumpfile, queryset):
+            add_log(session, f'Failed to dump the {festival} {data_name}.')
 
 
 class TheaterDataLoaderForm(Form):
@@ -141,17 +141,6 @@ class RatingDataBackupForm(Form):
         _ = CityBackupDumper(session).dump_objects(CITIES_BACKUP_PATH)
 
 
-class AttendanceDumperForm(Form):
-    dummy_field = SlugField(required=False)
-
-    @staticmethod
-    def dump_attendances(session, festival):
-        initialize_log(session, 'Dump')
-        add_log(session, 'Dump attendances.')
-        if not AttendanceDumper(session).save_attendances(festival, festival.attendances_file()):
-            add_log(session, f'Failed to save the {festival} attendances.')
-
-
 class BaseLoader:
     """
     Base class for loading objects such as films or ratings from CSV files.
@@ -217,9 +206,6 @@ class BaseLoader:
         self.add_log(f'{object_count} {self.object_name} records read.')
 
         return True
-
-    def generate_rows(self, record):
-        yield from self.read_row(record)
 
     def check_header(self, file, reader):
         """Internal method to handle presence of a data header"""
@@ -737,13 +723,14 @@ class ScreeningLoader(SimpleLoader):
 
 class AttendanceLoader(SimpleLoader):
     TRUE = 'WAAR'
+    ATTENDANCE_FIELD_INDEX = 8
     expected_header = [
         'filmid', 'screenid', 'starttime', 'movablestarttime', 'movableendtime', 'combinedfilmid',
         'autoplanned', 'blocked', 'Maarten,Adrienne,Manfred,Piggel,Rijk,Geeth', 'ticketsbought', 'soldout'
     ]
     key_fields = ['fan', 'screening']
     manager = Attendance.attendances
-    fan_names = ('Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk', 'Geeth')
+    fan_names = expected_header[ATTENDANCE_FIELD_INDEX].split(',')
 
     def __init__(self, session, festival, festival_pk):
         file = festival.screening_info_file()
@@ -1060,10 +1047,6 @@ class RatingDumper(BaseDumper):
     def object_row(self, rating):
         return [rating.film.film_id, rating.film_fan.name, rating.rating]
 
-    def save_ratings(self, festival, file):
-        festival_ratings = self.manager.filter(film__festival_id=festival.id)
-        return self.dump_objects(file, festival_ratings)
-
 
 class AttendanceDumper(BaseDumper):
     manager = Attendance.attendances
@@ -1092,7 +1075,3 @@ class AttendanceDumper(BaseDumper):
             10: '',     # sold_out
         }
         return field_by_index.values()
-
-    def save_attendances(self, festival, file):
-        festival_attendances = self.manager.filter(screening__film__festival_id=festival.id)
-        return self.dump_objects(file, festival_attendances)

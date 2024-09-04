@@ -5,7 +5,7 @@
 
 {% block content %}
     {% if user_is_admin %}
-        <h2 class="row col-left-h2">Pick a festival to load {{ data_name }} from</h2>
+        <h2 class="row col-left-h2">Pick a festival to load {{ list_name }} from</h2>
         <div class="row">
             <span class="col-right">
                 <a href="{% url 'screenings:day_schema' %}">Screenings day schema</a>
@@ -26,8 +26,8 @@
                     <tr class="sticky-t-head">
                         <th>Festival</th>
                         <th>File header fields</th>
-                        <th>#{{ data_name|title }} on file</th>
-                        <th>#{{ data_name|title }}</th>
+                        <th>#{{ list_name|title }} on file</th>
+                        <th>#{{ list_name|title }}</th>
                         <th>Action</th>
                     </tr>
                 </thead>

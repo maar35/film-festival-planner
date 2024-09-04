@@ -2,7 +2,6 @@ import copy
 import datetime
 
 from festival_planner.cookie import Cookie
-from festival_planner.debug_tools import pr_debug
 from festivals.models import current_festival
 from films.models import current_fan, get_rating_name
 
@@ -16,7 +15,7 @@ class BaseAction:
 
     def init_action(self, session, **kwargs):
         """
-        Initialize the action dictionary.
+        Initialize the action cookie now a session can be supplied.
         """
         # set the cookie.
         cookie_key = self._get_cookie_key_from_session(session)

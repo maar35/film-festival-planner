@@ -22,7 +22,7 @@ class FilmRatingCache:
         self.errors = errors
 
     def invalidate(self, cache_key):
-        pr_debug(f'delete cache key {cache_key}')
+        pr_debug(f'delete cache key with {cache_key.split(":")[0]}')
         del self.cache_by_key[cache_key]
 
     def is_valid(self, session):

@@ -14,10 +14,10 @@ from festival_planner.tools import add_base_context, get_log, unset_log, initial
 from festivals.models import Festival, switch_festival, current_festival, FestivalBase
 from films.models import Film, FilmFanFilmRating
 from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoaderForm, TheaterDataLoaderForm, \
-    TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm, SaveRatingsForm, \
-    RatingDataBackupForm, FILM_FANS_BACKUP_PATH, RATINGS_BACKUP_PATH, FILMS_BACKUP_PATH, \
+    TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm, RatingDataBackupForm, \
+    FILM_FANS_BACKUP_PATH, RATINGS_BACKUP_PATH, FILMS_BACKUP_PATH, \
     FESTIVALS_BACKUP_PATH, FESTIVAL_BASES_BACKUP_PATH, BACKUP_DATA_DIR, CITIES_BACKUP_PATH, \
-    ScreeningLoader, AttendanceLoader, AttendanceDumperForm
+    ScreeningLoader, AttendanceLoader, AttendanceDumper, RatingDumper, SingleTableDumperForm
 from screenings.forms.screening_forms import DummyForm
 from screenings.models import Screening, Attendance
 from sections.models import Section, Subsection
@@ -340,7 +340,7 @@ class RatingsLoaderView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         festival_list = sorted(Festival.festivals.all(), key=attrgetter('start_date'), reverse=True)
-        festival_rows = [self.get_festival_row(festival) for festival in festival_list]
+        festival_rows = [self._get_festival_row(festival) for festival in festival_list]
         return festival_rows
 
     def get_context_data(self, **kwargs):
@@ -366,56 +366,37 @@ class RatingsLoaderView(LoginRequiredMixin, ListView):
                     import_mode = form.cleaned_data['import_mode']
                     festival_id = int(festival_indicator.strip(self.submit_name_prefix))
                     festival = Festival.festivals.get(pk=festival_id)
-                    switch_festival(request.session, festival)
-                    form.load_rating_data(request.session, festival, import_mode)
+                    session = request.session
+                    switch_festival(session, festival)
+                    rating_dumpfile = self._ratings_dumpfile(festival)
+                    rating_queryset = self._ratings_queryset(festival)
+                    form.load_rating_data(session, festival, rating_queryset, rating_dumpfile, import_mode=import_mode)
                     return HttpResponseRedirect(reverse('films:films'))
                 else:
                     self.unexpected_error = "Can't identify submit widget."
 
         return render(request, 'loader/ratings.html', self.get_context_data())
 
-    def get_festival_row(self, festival):
+    def _get_festival_row(self, festival):
         festival_row = {
             'str': festival,
             'submit_name': f'{self.submit_name_prefix}{festival.id}',
             'color': festival.festival_color,
             'film_count_on_file': file_record_count(festival.films_file(), has_header=True),
             'film_count': Film.films.filter(festival=festival).count,
-            'rating_count_on_file': file_record_count(festival.ratings_file(), has_header=True),
-            'rating_count': FilmFanFilmRating.film_ratings.filter(film__festival=festival).count,
+            'rating_count_on_file': file_record_count(self._ratings_dumpfile(festival), has_header=True),
+            'rating_count': self._ratings_queryset(festival).count,
         }
         return festival_row
 
+    @staticmethod
+    def _ratings_queryset(festival):
+        ratings_queryset = FilmFanFilmRating.film_ratings.filter(film__festival=festival)
+        return ratings_queryset
 
-class SaveRatingsView(LoginRequiredMixin, FormView):
-    model = Festival
-    template_name = 'loader/save_ratings.html'
-    form_class = SaveRatingsForm
-    success_url = '/films/films/'
-    http_method_names = ['get', 'post']
-
-    def get_context_data(self, **kwargs):
-        session = self.request.session
-        festival = current_festival(session)
-        festival_items = {
-            'film_count': len(Film.films.filter(festival=festival)),
-            'film_count_on_file': file_record_count(festival.films_file(), has_header=True),
-            'rating_count': len(FilmFanFilmRating.film_ratings.filter(film__festival=festival)),
-            'rating_count_on_file': file_record_count(festival.ratings_file(), has_header=True),
-            'ratings_file': festival.ratings_file(),
-        }
-        context = add_base_context(self.request, super().get_context_data(**kwargs))
-        context['title'] = 'Save Ratings'
-        context['festival_items'] = festival_items
-        context['log'] = get_log(session)
-        unset_log(session)
-        return context
-
-    def form_valid(self, form):
-        session = self.request.session
-        festival = current_festival(session)
-        form.save_ratings(session, festival)
-        return super().form_valid(form)
+    @staticmethod
+    def _ratings_dumpfile(festival):
+        return festival.ratings_cache()
 
 
 class BaseListActionListView(LoginRequiredMixin, ListView):
@@ -427,7 +408,7 @@ class BaseListActionListView(LoginRequiredMixin, ListView):
     load_file = None
     manager = None
     title = None
-    data_name = None
+    list_name = None
     festival_filter = None
     alternative_headers = None
 
@@ -441,7 +422,7 @@ class BaseListActionListView(LoginRequiredMixin, ListView):
         super_context = super().get_context_data(object_list=object_list, **kwargs)
         new_context = {
             'title': self.title,
-            'data_name': self.data_name,
+            'list_name': self.list_name,
             'unexpected_error': ScreeningsLoaderView.unexpected_error,
             'log': get_log(session),
         }
@@ -534,7 +515,7 @@ class ScreeningLoaderListView(BaseListActionListView):
     load_file = 'screenings_file'
     manager = Screening.screenings
     title = 'Festival Screenings Loader'
-    data_name = 'screenings'
+    list_name = 'screenings'
     festival_filter = 'film__festival'
     alternative_headers = [ScreeningLoader.alternative_header]
 
@@ -570,7 +551,7 @@ class AttendanceLoaderListView(BaseListActionListView):
     load_file = 'screening_info_file'
     manager = Attendance.attendances
     title = 'Festival Attendances Loader'
-    data_name = 'attendances'
+    list_name = 'attendances'
     festival_filter = 'screening__film__festival'
 
 
@@ -581,19 +562,107 @@ class AttendanceLoaderFormView(BaseListActionFormView):
     invalid_view_name = 'loader:attendances'
 
 
-class BaseActionListView(View):
+class BaseDumperView(LoginRequiredMixin, FormView):
+    """
+    Base view to derive single model date dumpers from.
+
+    These globals should be filled:
+    - dump_class, must be derived from BaseDumper
+    - success_utl
+    - data_name, for use in log texts
+    - has_header, whether the dumpfile should have a header
+
+    Thes globals should be assigned in setup():
+    - dumpfile
+    - queryset
+    """
+    model = Festival
     http_method_names = ['get', 'post']
-    view_class_by_data = {
-        'screenings': ScreeningsLoaderView,
-        'attendances': AttendanceLoaderView,
-    }
-    data_cookie = Cookie('data')
+    template_name = 'loader/dump_data.html'
+    form_class = SingleTableDumperForm
+    dump_class = None
+    success_url = None
+    data_name = None
+    dumpfile = None
+    has_header = None
+    manager = None
+    queryset = None
+    session = None
+    display_props = None
+    festival = None
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.session = request.session
+        self.festival = current_festival(self.session)
+        self.display_props = []
+
+    def get_context_data(self, **kwargs):
+        super_context = super().get_context_data(**kwargs)
+        self.add_display_props(self.data_name, self.queryset, self.dumpfile, self.has_header)
+        new_context = {
+            'title': f'Dump {self.data_name}',
+            'subtitle': f'Dump {self.data_name} of {self.festival}',
+            'data_name': self.data_name,
+            'display_props': self.display_props,
+            'dumpfile': self.dumpfile,
+            'log': get_log(self.session),
+        }
+        unset_log(self.session)
+        context = add_base_context(self.request, super_context | new_context)
+        return context
+
+    def form_valid(self, form):
+        form.dump_data(self.session, self.festival, self.data_name, self.dump_class, self.dumpfile, self.queryset)
+        return super().form_valid(form)
+
+    def add_display_props(self, name, queryset, dumpfile, has_header=False):
+        self.display_props.append({
+            'name': name,
+            'data_count': len(queryset),
+            'data_count_on_file': file_record_count(dumpfile, has_header=has_header),
+        })
+
+
+class RatingDumperView(BaseDumperView):
+    dump_class = RatingDumper
+    success_url = '/films/films/'
+    data_name = 'ratings'
+    has_header = True
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.dumpfile = self.festival.ratings_file()
+        self.queryset = FilmFanFilmRating.film_ratings.filter(film__festival=self.festival)
+
+        extra_queryset = Film.films.filter(festival=self.festival)
+        extra_dump_file = self.festival.films_file()
+        self.add_display_props('films', extra_queryset, extra_dump_file, has_header=True)
+
+
+class AttendanceDumperView(BaseDumperView):
+    dump_class = AttendanceDumper
+    success_url = '/screenings/day_schema/'
+    data_name = 'attendances'
+    has_header = True
+    queryset = None
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.dumpfile = self.festival.attendances_file()
+        self.queryset = Attendance.attendances.filter(screening__film__festival=self.festival)
+
+
+class SingleTemplateBaseView(View):
+    http_method_names = ['get', 'post']
+    label_cookie = Cookie('label')
+    view_class_by_label = None
     view_class = None
 
     def dispatch(self, request, *args, **kwargs):
-        self.data_cookie.handle_get_request(request)
-        data_name = self.data_cookie.get(request.session)
-        self.view_class = self.view_class_by_data[data_name]
+        self.label_cookie.handle_get_request(request)
+        data_name = self.label_cookie.get(request.session)
+        self.view_class = self.view_class_by_label[data_name]
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
@@ -605,37 +674,15 @@ class BaseActionListView(View):
         return view(request, *args, **kwargs)
 
 
-class AttendanceDumperView(LoginRequiredMixin, FormView):
-    model = Festival
-    template_name = 'loader/dump_attendances.html'
-    form_class = AttendanceDumperForm
-    success_url = '/screenings/day_schema/'
-    http_method_names = ['get', 'post']
-    festival = None
+class SingleTemplateListView(SingleTemplateBaseView):
+    view_class_by_label = {
+        'screenings': ScreeningsLoaderView,
+        'attendances': AttendanceLoaderView,
+    }
 
-    def setup(self, request, *args, **kwargs):
-        super().setup(request, *args, **kwargs)
-        self.festival = current_festival(request.session)
 
-    def get_context_data(self, **kwargs):
-        super_context = super().get_context_data(**kwargs)
-        session = self.request.session
-        dump_file = self.festival.attendances_file()
-        festival_props = {
-            'attendance_count': len(Attendance.attendances.filter(screening__film__festival=self.festival)),
-            'attendance_count_on_file': file_record_count(dump_file, has_header=True),
-            'dump_file': dump_file,
-        }
-        new_context = {
-            'title': 'Dump Attendances',
-            'subtitle': f'Dump attendances of {self.festival}',
-            'festival_props': festival_props,
-            'log': get_log(session),
-        }
-        unset_log(session)
-        context = add_base_context(self.request, super_context | new_context)
-        return context
-
-    def form_valid(self, form):
-        form.dump_attendances(self.request.session, self.festival)
-        return super().form_valid(form)
+class SingleTemplateDumperView(SingleTemplateBaseView):
+    view_class_by_label = {
+        'ratings': RatingDumperView,
+        'attendances': AttendanceDumperView,
+    }

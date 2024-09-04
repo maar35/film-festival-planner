@@ -8,6 +8,8 @@
     <div class="row">
         <span class="col-right">
             <a href="{% url 'screenings:day_schema' %}">Screenings day schema</a>
+            <br>
+            <a href="{% url 'films:films' %}">Ratings</a>
         </span>
     </div>
     {% if form.errors %}
@@ -21,15 +23,17 @@
         <table>
             <tbody>
                 <tr><td><b>Festival</b></td><td>{{ festival }}</td></tr>
-                <tr><td><b>#Attendances</b></td><td>{{ festival_props.attendance_count }}</td></tr>
-                <tr><td><b>#Attendances on file</b></td><td>{{ festival_props.attendance_count_on_file }}</td></tr>
-                <tr><td><b>File</b></td><td>{{ festival_props.dump_file }}</td></tr>
+                {% for prop in display_props %}
+                    <tr><td><b>#{{ prop.name|title }}</b></td><td>{{ prop.data_count }}</td></tr>
+                    <tr><td><b>#{{ prop.name|title }} on file</b></td><td>{{ prop.data_count_on_file }}</td></tr>
+                {% endfor %}
+                <tr><td><b>File</b></td><td>{{ dumpfile }}</td></tr>
             </tbody>
         </table>
         <br>
         <form method="post">
             {% csrf_token %}
-            <input type="submit" value="Save {{ festival_props.attendance_count }} attendances">
+            <input type="submit" value="Dump {{ data_count }} {{ data_name }}">
         </form>
     {% else %}
         <h2 class="error">Not allowed</h2>
