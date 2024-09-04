@@ -22,7 +22,7 @@ from films import views
 from films.forms.film_forms import PickRating
 from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR
 from films.views import FilmsView, ResultsView, MAX_SHORT_MINUTES, BaseFilmsFormView, FilmsListView
-from loader.views import SaveRatingsView
+from loader.views import RatingDumperView
 from sections.models import Subsection, Section
 from theaters.models import City
 
@@ -821,7 +821,7 @@ class FilmListViewsTests(ViewsTestCase):
         # Arrange.
         festival = create_festival('IDFA', self.city, '2023-11-19', '2023-11-28')
         get_request = self.get_regular_fan_request()
-        save_view = SaveRatingsView()
+        save_view = RatingDumperView()
         save_view.object = festival
         save_view.setup(get_request)
         context = save_view.get_context_data()
@@ -841,7 +841,7 @@ class FilmListViewsTests(ViewsTestCase):
         festival = create_festival('IDFA', self.city, '2023-11-19', '2023-11-28')
         get_request = self.get_admin_request()
 
-        save_view = SaveRatingsView()
+        save_view = RatingDumperView()
         save_view.object = festival
         save_view.setup(get_request)
         context = save_view.get_context_data()

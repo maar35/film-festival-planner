@@ -1,0 +1,42 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h2 class="row col-left-h2">{{ subtitle }}</h2>
+    <div class="row">
+        <span class="col-right">
+            <a href="{% url 'screenings:day_schema' %}">Screenings day schema</a>
+            <br>
+            <a href="{% url 'films:films' %}">Ratings</a>
+        </span>
+    </div>
+    {% if form.errors %}
+        <h2 class="error">Unexpected error</h2>
+        {% for error in form.errors %}
+            <p class="log">{{ error }}</p>
+        {% endfor %}
+        <br>
+    {% endif %}
+    {% if user_is_admin %}
+        <table>
+            <tbody>
+                <tr><td><b>Festival</b></td><td>{{ festival }}</td></tr>
+                {% for prop in display_props %}
+                    <tr><td><b>#{{ prop.name|title }}</b></td><td>{{ prop.data_count }}</td></tr>
+                    <tr><td><b>#{{ prop.name|title }} on file</b></td><td>{{ prop.data_count_on_file }}</td></tr>
+                {% endfor %}
+                <tr><td><b>File</b></td><td>{{ dumpfile }}</td></tr>
+            </tbody>
+        </table>
+        <br>
+        <form method="post">
+            {% csrf_token %}
+            <input type="submit" value="Dump {{ data_count }} {{ data_name }}">
+        </form>
+    {% else %}
+        <h2 class="error">Not allowed</h2>
+        <p>Only an admin fan can dump attendances.</p>
+    {% endif %}
+{% endblock %}

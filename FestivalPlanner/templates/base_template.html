@@ -40,22 +40,22 @@
 <body>
     <hr>
     <h1 style="margin-bottom: 0px;"><a name="top"></a>{% block header %} Page Title {% endblock %}</h1>
-    <small style="display: block; color: ivory; text-align: center; margin-top: 8px; margin-bottom: 0px;">{{app_name}} App</small>
+    <small class="app">{{app_name}} App</small>
     <div class="row">
         <span class="col-left">
         {% if festival %}
             <a href="{% url 'festivals:index' %}?next={{ request.path }}">{{ festival }}</a>
             {% now "Y-m-d" as today_as_date %}
             {% if today_as_date < festival.start_date|date:"Y-m-d" %}
-                <span style="color: ivory"> starts in {{ festival.start_date|timeuntil }}</span>
+                <span style="color: var(--modestStandoutColor)"> starts in {{ festival.start_date|timeuntil }}</span>
             {% elif today_as_date == festival.start_date|date:"Y-m-d" %}
-                <span style="color: ivory"> started today!</span>
+                <span style="color: var(--modestStandoutColor)"> started today!</span>
             {% elif today_as_date == festival.end_date|date:"Y-m-d" %}
-                <span style="color: ivory"> last day!</span>
+                <span style="color: var(--modestStandoutColor)"> last day!</span>
             {% elif today_as_date > festival.end_date|date:"Y-m-d" %}
-                <span style="color: silver"> ended {{ festival.end_date|timesince }} ago</span>
+                <span style="color: var(--regularColor)"> ended {{ festival.end_date|timesince }} ago</span>
             {% else %}
-                <span style="color:ivory"> still going on {{ festival.end_date|timeuntil }}!</span>
+                <span style="color: var(--modestStandoutColor)"> still going on {{ festival.end_date|timeuntil }}!</span>
             {% endif %}
         {% else %}
             No festival selected.

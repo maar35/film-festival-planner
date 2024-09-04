@@ -6,8 +6,9 @@ from django.core.validators import RegexValidator
 from django.forms import CharField
 
 from authentication.models import FilmFan
+from festival_planner.fan_action import RatingAction
 from festivals.models import rating_action_key
-from films.models import FilmFanFilmRating, get_rating_name, current_fan, fan_rating_str, field_by_post_attendance, \
+from films.models import FilmFanFilmRating, fan_rating_str, field_by_post_attendance, \
     manager_by_post_attendance
 
 SEARCH_TEST_VALIDATOR = RegexValidator(r'^[a-z0-9]+$', 'Type only lower case letters and digits')
@@ -36,6 +37,7 @@ class PickRating(forms.Form):
         min_length=2,
     )
     film_rating_cache = None
+    rating_action_by_field = {key: RatingAction(key) for key in field_by_post_attendance.values()}
 
     @classmethod
     def update_rating(cls, session, film, fan, rating_value, post_attendance=False):
@@ -69,25 +71,12 @@ class RatingForm(forms.Form):
 
 
 def init_rating_action(session, old_rating_str, new_rating, field):
-    new_rating_value = getattr(new_rating, field)
-    new_rating_name = get_rating_name(new_rating_value)
-    now = datetime.now()
-    rating_action = {
-        'fan': str(current_fan(session)),
-        'rating_type': field,
-        'old_rating': old_rating_str,
-        'new_rating': str(new_rating_value),
-        'new_rating_name': new_rating_name,
-        'rated_film': str(new_rating.film),
-        'rated_film_id': new_rating.film.id,
-        'action_time': now.isoformat(),
+    kwargs = {
+        'old_rating_str': old_rating_str,
+        'new_rating': new_rating,
+        'field': field,
     }
-
-    # Store the current time as a string in the cookie, then
-    # recover the time variable.
-    key = rating_action_key(session, field)
-    session[key] = copy.deepcopy(rating_action)
-    rating_action['action_time'] = now
+    PickRating.rating_action_by_field[field].init_action(session, **kwargs)
 
 
 def refreshed_rating_action(session, tag):

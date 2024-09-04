@@ -5,6 +5,7 @@ from festivals.models import Festival
 from sections.models import Subsection
 
 FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
+MINUTES_STR = "'"
 UNRATED_STR = '-'
 
 
@@ -34,7 +35,7 @@ class Film(models.Model):
         unique_together = ('festival', 'film_id')
 
     def __str__(self):
-        return f"{self.title} ({self.duration.total_seconds() / 60:.0f}')"
+        return f"{self.title} ({self.duration.total_seconds() / 60:.0f}{MINUTES_STR})"
 
     def duration_str(self):
         return ':'.join(f'{self.duration}'.split(':')[:2])
@@ -48,7 +49,7 @@ def set_current_fan(request):
 
 def current_fan(session):
     fan_name = session.get('fan_name')
-    fan = FilmFan.film_fans.get(name=fan_name) if fan_name is not None else None
+    fan = FilmFan.film_fans.get(name=fan_name) if fan_name else None
     return fan
 
 
@@ -67,6 +68,10 @@ def get_user_fan(user):
     user_fan_name = user_name_to_fan_name(user.username)
     user_fan = FilmFan.film_fans.get(name=user_fan_name) if user_fan_name is not None else None
     return user_fan
+
+
+def initial(fan, session):
+    return '' if fan == current_fan(session) else fan.initial()
 
 
 def get_present_fans():

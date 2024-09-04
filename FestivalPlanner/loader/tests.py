@@ -19,7 +19,7 @@ from films.views import FilmsView
 from loader.forms.loader_forms import FilmLoader, RatingLoader, CityDumper, TheaterDumper, ScreenDumper, \
     get_subsection_id
 from loader.views import SectionsLoaderView, get_festival_row, RatingsLoaderView, NewTheaterDataView, \
-    SaveRatingsView
+    RatingDumperView
 from sections.models import Section, Subsection
 from theaters.models import City, new_cities_path, new_theaters_path, new_screens_path, Theater, Screen
 
@@ -194,7 +194,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         # Assert.
         self.assert_reading_from_file(get_response, post_response, redirect_response)
-        self.assertContains(redirect_response, 'No ratings will be effected')
+        self.assertContains(redirect_response, 'No ratings will be loaded')
         self.assertNotContains(redirect_response, 'not found')
         self.assertNotContains(redirect_response, 'Bad value in file')
         self.assertNotContains(redirect_response, 'incompatible header')
@@ -292,7 +292,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         # Assert.
         self.assert_reading_from_file(get_response, post_response, redirect_response)
-        self.assertContains(redirect_response, 'No ratings will be effected.')
+        self.assertContains(redirect_response, 'No ratings will be loaded.')
         self.assertContains(redirect_response, '2 film records read')
         self.assertContains(redirect_response, 'database rolled back')
         self.assertNotContains(redirect_response, 'Die dumme Gans')
@@ -319,7 +319,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
 
         # Assert.
         self.assert_reading_from_file(get_response, post_response, redirect_response)
-        self.assertContains(redirect_response, 'No ratings will be effected.')
+        self.assertContains(redirect_response, 'No ratings will be loaded.')
         self.assertContains(redirect_response, '2 film records read')
         self.assertNotContains(redirect_response, 'database rolled back')
         self.assertContains(redirect_response, 'Die dumme Gans')
@@ -414,7 +414,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
             rating_writer = csv.writer(csv_ratings_file, dialect=CSV_DIALECT)
             rating_writer.writerow(RatingLoader.expected_header)
             rating_writer.writerow(serialize_rating(rating_1))
-            rating_writer.writerow((serialize_rating(rating_2))[1:])
+            rating_writer.writerow(serialize_rating(rating_2)[1:])
 
         self.post_data['import_mode'] = ['on']
         post_response = self.client.post(reverse('loader:ratings'), self.post_data)
@@ -484,7 +484,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         _ = create_rating(film_2, self.regular_fan, 8)
 
         request = self.get_admin_request()
-        save_view = SaveRatingsView()
+        save_view = RatingDumperView()
         save_view.object = self.festival
         save_view.setup(request)
         context = save_view.get_context_data()
@@ -500,7 +500,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         post_request.session = request.session
 
         # Act.
-        post_response = SaveRatingsView.as_view()(post_request)
+        post_response = RatingDumperView.as_view()(post_request)
 
         # Assert.
         redirect_request = get_request_with_session(request)
@@ -511,7 +511,7 @@ class RatingLoaderViewsTests(LoaderViewsTests):
         self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
         self.assertURLEqual(post_response.url, reverse('films:films'))
         self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
-        self.assertContains(redirect_response, 'Save results')
+        self.assertContains(redirect_response, 'Dump results')
         self.assertContains(redirect_response, '3 existing rating objects saved')
         log_re = re.compile(r'\b3 existing rating objects saved in.*?csv')
         self.assertRegex(redirect_response.content.decode('utf-8'), log_re)

@@ -7,11 +7,13 @@
     <h2 class="row col-left-h2">Film list with pre-attendance ratings</h2>
     <div class="row">
         <span class="col-right">
-            <a href="{% url 'loader:save_ratings' festival.id %}">Dump ratings</a>
+            <a href="{% url 'screenings:day_schema' %}">Screenings day schema</a>
+            <br>
+            <a href="{% url 'films:reviewers' %}">Reviewers</a>
             <br>
             <a href="{% url 'loader:ratings' %}">Load films and ratings</a>
             <br>
-            <a href="{% url 'films:reviewers' %}">Reviewers</a>
+            <a href="/loader/{{ festival.id }}/dump_data?label=ratings">Dump ratings</a>
         </span>
     </div>
     {% if log %}
@@ -62,11 +64,7 @@
         {% else %}
             changed {{ action.rating_type }} {{ action.old_rating }} of <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a> into <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% endif %}
-        {% if action.action_time|timesince == "0 minutes" %}
-            less than a minute ago
-        {% else %}
-            {{ action.action_time|timesince }} ago
-        {% endif %}
+        {{ action.action_time|timesince }} ago
         </p>
     {% endif %}
     <form method="post">

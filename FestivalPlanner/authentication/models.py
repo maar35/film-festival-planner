@@ -1,5 +1,7 @@
 from django.db import models
 
+INITIAL_MAARTEN = 'Ⓜ'
+
 
 class FilmFan(models.Model):
 
@@ -18,7 +20,7 @@ class FilmFan(models.Model):
         return f'{self.name}'
 
     def initial(self):
-        return self.name[:1] if self != me() else ""
+        return INITIAL_MAARTEN if self == me() else self.name[:1]
 
     def switch_current(self, session):
         session['fan_name'] = self.name
