@@ -257,7 +257,6 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
     template_name = 'screenings/details.html'
     http_method_names = ['get', 'post']
     fan_action = FanAction('update')
-    errors_cookie = Cookie('errors', [])
     update_by_attends = {True: 'joins', False: "couldn't come"}
     fans = FilmFan.film_fans.all()
     object = None
@@ -268,11 +267,10 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
         super().setup(request, *args, **kwargs)
         session = self.request.session
         initialize_log(request.session, 'Update attendances')
-        _ = self.errors_cookie.get(session)
         self.screening = self.get_object()
         self.fan_action.init_action(session, screening=self.screening)
         manager = Attendance.attendances
-        self.initial_attendance_by_fan = {f: bool(manager.filter(screening=self.screening, fan=f))for f in self.fans}
+        self.initial_attendance_by_fan = {f: bool(manager.filter(screening=self.screening, fan=f)) for f in self.fans}
 
     def get_context_data(self, **kwargs):
         super_context = super().get_context_data(**kwargs)
@@ -284,7 +282,6 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
             fan_specs.append({
                 'fan': fan.name,
                 'attends': attends,
-                'checked': attends,
             })
         new_context = {
             'title': 'Screening Details',
@@ -294,9 +291,7 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
             'minutes': f'{duration.total_seconds() / 60:.0f}{MINUTES_STR}',
             'film_description': ResultsView.get_description(self.screening.film),
             'fan_specs': fan_specs,
-            'form_errors': self.errors_cookie.get(session),
         }
-        self.errors_cookie.remove(session)
         context = add_base_context(self.request, super_context | new_context)
         return context
 
@@ -305,20 +300,13 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
         self._update_attendance(new_attendance_by_fan)
         return super().form_valid(form)
 
-    def form_invalid(self, form):
-        errors = self.errors_cookie.get(self.request.session)
-        errors.extend(wrap_up_form_errors(form.errors))
-        self.errors_cookie.set(self.request.session, errors)
-        super().form_invalid(form)
-        return self._dirty_response()
-
     def get_success_url(self):
         return reverse('screenings:day_schema')
 
-    def _dirty_response(self):
-        return HttpResponseRedirect(reverse('screenings:details', kwargs={'pk': self.screening.id}))
-
     def _update_attendance(self, new_attendance_by_fan):
+        def update_log(film_fan, fan_attends):
+            self.fan_action.add_update(session, f'{film_fan} {self.update_by_attends[fan_attends]}')
+
         session = self.request.session
         changed_attendance_by_fan = {}
         for fan, initial_attendance in self.initial_attendance_by_fan.items():
@@ -326,7 +314,6 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
             if initial_attendance != attends:
                 changed_attendance_by_fan[fan] = attends
         if changed_attendance_by_fan:
-            _ = AttendanceForm.update_attendances(
-                session, self.screening, changed_attendance_by_fan, self.update_by_attends, self.fan_action)
+            _ = AttendanceForm.update_attendances(session, self.screening, changed_attendance_by_fan, update_log)
         else:
             add_log(session, f'No attendances of {self.screening} were updated by {current_fan(session)}.')

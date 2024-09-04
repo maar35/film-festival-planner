@@ -17,7 +17,7 @@ class AttendanceForm(forms.Form):
     attendance = forms.CheckboxInput()
 
     @staticmethod
-    def update_attendances(session, screening, changed_attendance_by_fan, update_by_attends, action):
+    def update_attendances(session, screening, changed_attendance_by_fan, update_log):
         manager = Attendance.attendances
         transaction_committed = True
         try:
@@ -30,7 +30,7 @@ class AttendanceForm(forms.Form):
                         existing_attendances = manager.filter(**kwargs)
                         if len(existing_attendances) > 0:
                             existing_attendances.delete()
-                    action.add_update(session, f'{fan} {update_by_attends[attends]}')
+                    update_log(fan, attends)
         except Exception as e:
             transaction_committed = False
             add_log(session, f'{e}, transaction rolled back')

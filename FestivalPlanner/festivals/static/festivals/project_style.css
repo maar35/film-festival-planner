@@ -131,10 +131,11 @@ input[type=submit].in-table:hover {
   box-sizing: border-box;
 }
 
-/* Class selectors. */
+/* ----- Class selectors ----- */
+
+/* Style for error reports */
 .error {
     color: tomato;
-    background; var(--modestStandoutColor);
     text-shadow: 4px 4px 3px green;
     margin-bottom: 2px;
 }
@@ -146,6 +147,15 @@ input[type=submit].in-table:hover {
     padding-top: 1px;
     padding-bottom: 0px;
     margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+/* Style for the app name */
+.app {
+    display: block;
+    color: var(--modestStandoutColor);
+    text-align: center;
+    margin-top: 8px;
     margin-bottom: 0px;
 }
 

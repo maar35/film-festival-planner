@@ -12,13 +12,6 @@
         <a href="{% url 'films:films' %}">Ratings</a>
     </span>
 </div>
-{% if form_errors %}
-    <h2 class="error">Form errors</h2>
-    {% for error in form_errors %}
-        <span class="log">{{ error }}</span>
-        <br>
-    {% endfor %}
-{% endif %}
 <ul>
     <li>Screen: {{ screening.screen }}</li>
     <li>Time: {{ screening.start_dt|date:"D j M H:i" }} - {{ screening.end_dt|date:"H:i" }}</li>
@@ -45,7 +38,7 @@
         {% for spec in fan_specs %}
             <tr>
                 <td>{{ spec.fan }}</td>
-                {% if spec.checked %}
+                {% if spec.attends %}
                     <td class="with-submit" style="text-align: center"><input type="checkbox" checked="" value="{{ spec.value }}" name="{{ spec.fan }}"></td>
                 {% else %}
                     <td class="with-submit" style="text-align: center"><input type="checkbox" value="attends" name="{{ spec.fan }}"></td>

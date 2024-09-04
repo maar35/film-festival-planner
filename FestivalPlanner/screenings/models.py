@@ -16,14 +16,23 @@ def color_pair(color, background):
     return {'color': color, 'background': background}
 
 
-COLOR_PAIR_FREE = color_pair(None, None)
-COLOR_PAIR_UNAVAILABLE = color_pair(None, None)
-COLOR_PAIR_ATTENDS = color_pair('white', 'rgb(176, 0, 38)')
-COLOR_PAIR_FRIEND_ATTENDS = color_pair('yellow', 'rgb(0, 38, 176)')
-COLOR_PAIR_ATTENDS_FILM = color_pair('black', 'yellow')
-COLOR_PAIR_TIME_OVERLAP = color_pair('black', 'rgb(79, 79, 79)')
-COLOR_PAIR_NO_TRAVEL_TIME = color_pair('darkgrey', 'rgb(38, 38, 38)')
-COLOR_PAIR_NEEDS_TICKETS = color_pair('white', 'rgb(176, 0, 176)')
+COLOR_PAIR_TRANSPARANT = color_pair(None, None)
+COLOR_PAIR_OFF_BLACK = color_pair('orange', None)
+COLOR_PAIR_RED = color_pair('white', 'rgb(176, 0, 38)')
+COLOR_PAIR_BLUE = color_pair('yellow', 'rgb(0, 38, 176)')
+COLOR_PAIR_YELLOW = color_pair('black', 'yellow')
+COLOR_PAIR_GREY = color_pair('black', 'rgb(79, 79, 79)')
+COLOR_PAIR_DARKGREY = color_pair('darkgrey', 'rgb(38, 38, 38)')
+COLOR_PAIR_PURPLE = color_pair('white', 'rgb(176, 0, 176)')
+
+COLOR_PAIR_FREE = COLOR_PAIR_TRANSPARANT
+COLOR_PAIR_UNAVAILABLE = COLOR_PAIR_OFF_BLACK
+COLOR_PAIR_ATTENDS = COLOR_PAIR_RED
+COLOR_PAIR_FRIEND_ATTENDS = COLOR_PAIR_BLUE
+COLOR_PAIR_ATTENDS_FILM = COLOR_PAIR_YELLOW
+COLOR_PAIR_TIME_OVERLAP = COLOR_PAIR_GREY
+COLOR_PAIR_NO_TRAVEL_TIME = COLOR_PAIR_DARKGREY
+COLOR_PAIR_NEEDS_TICKETS = COLOR_PAIR_PURPLE
 
 
 class Screening(models.Model):
@@ -58,7 +67,6 @@ class Screening(models.Model):
     screen = models.ForeignKey(Screen, on_delete=models.CASCADE)
     start_dt = models.DateTimeField()
     end_dt = models.DateTimeField()
-    status = models.IntegerField(choices=ScreeningStatus.choices, default=ScreeningStatus.FREE)
     combination_program = models.ForeignKey(Film, null=True, on_delete=models.SET_NULL,
                                             related_name='combined_screening')
     subtitles = models.CharField(max_length=24)
@@ -93,7 +101,7 @@ class Screening(models.Model):
 
 class Attendance(models.Model):
     """
-    Attendance tabel, holds who attend what screenings.
+    Attendance table, holds who attend what screenings.
     """
     # Define the fields.
     fan = models.ForeignKey(FilmFan, on_delete=models.CASCADE)
