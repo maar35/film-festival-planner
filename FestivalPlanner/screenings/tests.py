@@ -189,7 +189,7 @@ class ScreeningViewsTests(TestCase):
             'screen_id': 1,
             'theater': theater,
             'parse_name': 'Sala Grande',
-            'abbreviation': '-sg',
+            'abbreviation': '-g',
             'address_type': Screen.ScreenAddressType.PHYSICAL,
         }
         self.screen_sg = Screen.screens.create(**screen_kwargs)
@@ -198,12 +198,12 @@ class ScreeningViewsTests(TestCase):
             'screen_id': 2,
             'theater': theater,
             'parse_name': 'PalaBiennale',
-            'abbreviation': '-sd',
+            'abbreviation': '-b',
             'address_type': Screen.ScreenAddressType.PHYSICAL,
         }
         self.screen_b = Screen.screens.create(**screen_kwargs)
 
-    def arrange_regular_user_client(self):
+    def arrange_get_regular_user_pops(self):
         views_testcase = ViewsTestCase()
         views_testcase.setUp()
         client = views_testcase.client
@@ -251,7 +251,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
         A screening is found in the day schema of its start date.
         """
         # Arrange.
-        client, _ = self.arrange_regular_user_client()
+        client, _ = self.arrange_get_regular_user_pops()
         session = client.session
 
         start_dt = datetime.datetime.fromisoformat('2024-08-30 11:15').replace(tzinfo=None)
@@ -268,7 +268,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
 
     def test_attendance(self):
         # Arrange.
-        client, fan = self.arrange_regular_user_client()
+        client, fan = self.arrange_get_regular_user_pops()
         session = client.session
 
         start_dt = datetime.datetime.fromisoformat('2024-08-31 11:30').replace(tzinfo=None)

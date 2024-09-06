@@ -58,8 +58,11 @@ class FestivalDay:
             if day_str < self.festival.start_date.isoformat() or day_str > self.festival.end_date.isoformat():
                 day_str = ''
         if not day_str:
-            first_screening = (Screening.screenings.filter(film__festival=self.festival).earliest('start_dt'))
-            day_str = first_screening.start_dt.date().isoformat()
+            try:
+                first_screening = (Screening.screenings.filter(film__festival=self.festival).earliest('start_dt'))
+                day_str = first_screening.start_dt.date().isoformat()
+            except Screening.DoesNotExist:
+                day_str = self.festival.start_date.isoformat()
             self.day_cookie.set(session, day_str)
         return self.festival
 
