@@ -13,7 +13,9 @@
                 Film is hidden in ratings list <a href="{% url 'films:films' %}{{ display_all_query }}#film{{ film.film_id }}">Clear filters</a>
             {% endif %}
             <br>
-            <a href="{% url 'films:films' %}">Back to ratings</a>
+            <a href="{% url 'films:films' %}">Ratings</a>
+            <br>
+            <a href="{% url 'screenings:day_schema' %}">Screenings day schema</a>
         </span>
     </div>
     <ul>

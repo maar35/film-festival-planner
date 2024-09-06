@@ -1,14 +1,17 @@
 import datetime
+from http import HTTPStatus
 
 from django.db import IntegrityError
 from django.test import TestCase
+from django.urls import reverse
 
 from authentication.models import FilmFan
 from festival_planner import debug_tools
-from festival_planner.debug_tools import pr_debug
-from films.tests import create_film
+from festivals.models import FestivalBase, Festival, switch_festival, current_festival
+from films.models import Film
+from films.tests import create_film, ViewsTestCase, get_decoded_content
 from screenings.models import Screening, Attendance
-from theaters.models import Theater, Screen
+from theaters.models import Theater, Screen, City
 
 
 def arrange_screening_attributes():
@@ -120,7 +123,6 @@ class AttendanceModelTests(TestCase):
         string = str(attendance)
 
         # Assert.
-        pr_debug(string)
         self.assertRegex(string, r'Tue 6Feb')
 
     def test_attendance_string_decimal_zero(self):
@@ -134,5 +136,155 @@ class AttendanceModelTests(TestCase):
         string = str(attendance)
 
         # Assert.
-        pr_debug(string)
         self.assertRegex(string, r'Tue 30Nov')
+
+
+class ScreeningViewsTests(TestCase):
+
+    def setUp(self):
+        super().setUp()
+        debug_tools.SUPPRESS_DEBUG_PRINT = True
+
+        city = City.cities.create(city_id=2, name='Venezia', country='it')
+
+        base_kwargs = {
+            'mnemonic': 'Biennali',
+            'name': 'La Biennale di Venezia',
+            'home_city': city,
+        }
+        festival_base = FestivalBase.festival_bases.create(**base_kwargs)
+
+        year = 2024
+        festival_kwargs = {
+            'base': festival_base,
+            'year': year,
+            'start_date': datetime.date(year, 8, 28),
+            'end_date': datetime.date(year, 9, 7),
+            'festival_color': 'red',
+        }
+        self.festival = Festival.festivals.create(**festival_kwargs)
+
+        film_kwargs = {
+            'festival': self.festival,
+            'film_id': 7,
+            'seq_nr': 15,
+            'sort_title': 'babygirl',
+            'title': 'Babygirl',
+            'duration': datetime.timedelta(minutes=114),
+            'medium_category': 'films',
+            'url': 'https://www.labiennale.org/en/cinema/2024/venezia-81-competition/babygirl'
+        }
+        self.film = Film.films.create(**film_kwargs)
+
+        theater_kwargs = {
+            'theater_id': 1,
+            'city': city,
+            'parse_name': 'Palazzo del Cinema',
+            'abbreviation': 'palazzo',
+            'priority': Theater.Priority.HIGH,
+        }
+        theater = Theater.theaters.create(**theater_kwargs)
+
+        screen_kwargs = {
+            'screen_id': 1,
+            'theater': theater,
+            'parse_name': 'Sala Grande',
+            'abbreviation': '-sg',
+            'address_type': Screen.ScreenAddressType.PHYSICAL,
+        }
+        self.screen_sg = Screen.screens.create(**screen_kwargs)
+
+        screen_kwargs = {
+            'screen_id': 2,
+            'theater': theater,
+            'parse_name': 'PalaBiennale',
+            'abbreviation': '-sd',
+            'address_type': Screen.ScreenAddressType.PHYSICAL,
+        }
+        self.screen_b = Screen.screens.create(**screen_kwargs)
+
+    def arrange_regular_user_client(self):
+        views_testcase = ViewsTestCase()
+        views_testcase.setUp()
+        client = views_testcase.client
+        session = client.session
+
+        regular_credentials = views_testcase.regular_credentials
+        request = views_testcase.get_regular_fan_request()
+        fan_name = request.session['fan_name']
+        fan = FilmFan.film_fans.get(name=fan_name)
+        logged_in = views_testcase.login(regular_credentials)
+        self.assertIs(logged_in, True)
+
+        switch_festival(session, self.festival)
+
+        return client, fan
+
+    def arrange_create_screening(self, screen, start_dt):
+        screening_kwargs = {
+            'film': self.film,
+            'screen': screen,
+            'start_dt': start_dt,
+            'end_dt': start_dt + self.film.duration,
+            'subtitles': 'it, en',
+            'q_and_a': True,
+        }
+        screening = Screening.screenings.create(**screening_kwargs)
+        return screening
+
+    def assert_screening_status(self, response, screening_status):
+        def make_re_str(re_str):
+            return str(re_str).replace('(', '\\(').replace(')', '\\)')
+
+        content = get_decoded_content(response)
+        color_pair = Screening.color_pair_by_screening_status[screening_status]
+        background = make_re_str(color_pair['background'])
+        color = make_re_str(color_pair['color'])
+        re_screening = (r'<span\s+class="day-schema-screening"\s+'
+                        + f'style="background: {background}; color: {color};')
+        self.assertRegex(content, re_screening)
+
+
+class DaySchemaViewTests(ScreeningViewsTests):
+    def test_screening_in_day_schema(self):
+        """
+        A screening is found in the day schema of its start date.
+        """
+        # Arrange.
+        client, _ = self.arrange_regular_user_client()
+        session = client.session
+
+        start_dt = datetime.datetime.fromisoformat('2024-08-30 11:15').replace(tzinfo=None)
+        _ = self.arrange_create_screening(self.screen_sg, start_dt)
+
+        # Act.
+        response = client.get(reverse('screenings:day_schema'))
+
+        # Assert.
+        self.assertEqual(current_festival(session), self.festival)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertEqual(Screening.screenings.count(), 1)
+        self.assert_screening_status(response, Screening.ScreeningStatus.FREE)
+
+    def test_attendance(self):
+        # Arrange.
+        client, fan = self.arrange_regular_user_client()
+        session = client.session
+
+        start_dt = datetime.datetime.fromisoformat('2024-08-31 11:30').replace(tzinfo=None)
+        screening = self.arrange_create_screening(self.screen_b, start_dt)
+
+        attendance = Attendance.attendances.create(fan=fan, screening=screening)
+
+        # Act.
+        response = client.get(reverse('screenings:day_schema'))
+
+        # Assert.
+        self.assertEqual(current_festival(session), self.festival)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertEqual(Screening.screenings.count(), 1)
+        self.assert_screening_status(response, Screening.ScreeningStatus.ATTENDS)
+
+
+class DetailsViewTest(ScreeningViewsTests):
+    pass

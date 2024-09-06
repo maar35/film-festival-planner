@@ -1,7 +1,6 @@
 import datetime
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.views import View
 from django.views.generic import ListView, FormView
@@ -11,7 +10,7 @@ from authentication.models import FilmFan
 from festival_planner.cookie import Cookie
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fan_action import FanAction
-from festival_planner.tools import add_base_context, get_log, unset_log, wrap_up_form_errors, initialize_log, add_log
+from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
 from festivals.models import current_festival
 from films.models import current_fan, initial, MINUTES_STR
 from films.views import ResultsView
@@ -54,11 +53,13 @@ class FestivalDay:
 
     def check_session(self, session):
         self.festival = current_festival(session)
-        day_str = self.day_cookie.get(session) or datetime.date.today().isoformat()
-        if day_str < self.festival.start_date.isoformat() or day_str > self.festival.end_date.isoformat():
-            day_str = ''
+        day_str = self.day_cookie.get(session)
+        if day_str:
+            if day_str < self.festival.start_date.isoformat() or day_str > self.festival.end_date.isoformat():
+                day_str = ''
         if not day_str:
-            day_str = self.festival.start_date.isoformat()
+            first_screening = (Screening.screenings.filter(film__festival=self.festival).earliest('start_dt'))
+            day_str = first_screening.start_dt.date().isoformat()
             self.day_cookie.set(session, day_str)
         return self.festival
 
@@ -100,9 +101,9 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         pr_debug('start', with_time=True)
         super().setup(request, *args, **kwargs)
         festival = DaySchemaView.current_day.check_session(request.session)
-        current_date = DaySchemaView.current_day.get_date(self.request.session)
+        current_date = DaySchemaView.current_day.get_date(request.session)
         self.day_screenings = Screening.screenings.filter(film__festival=festival, start_dt__date=current_date)
-        fan = current_fan(self.request.session)
+        fan = current_fan(request.session)
         attendance_manager = Attendance.attendances
         self.attendances_by_screening = {s: attendance_manager.filter(screening=s) for s in self.day_screenings}
         self.attends_by_screening = {s: self.attendances_by_screening[s].filter(fan=fan) for s in self.day_screenings}
