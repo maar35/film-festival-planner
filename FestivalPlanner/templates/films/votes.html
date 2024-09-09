@@ -21,11 +21,11 @@
         <p>
         {{ action.fan }}
         {% if action.old_rating == '-' %}
-            gave <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a> a post-attendance {{ action.rating_type }} of <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
+            gave <a href="{% url 'films:details' action.rated_film_id %}">{{ action.rated_film }}</a> a post-attendance {{ action.rating_type }} of <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% elif action.new_rating == '0' %}
-            removed {{ action.rating_type }} {{ action.old_rating }} of <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a>
+            removed {{ action.rating_type }} {{ action.old_rating }} of <a href="{% url 'films:details' action.rated_film_id %}">{{ action.rated_film }}</a>
         {% else %}
-            changed {{ action.rating_type }} {{ action.old_rating }} of <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a> into <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
+            changed {{ action.rating_type }} {{ action.old_rating }} of <a href="{% url 'films:details' action.rated_film_id %}">{{ action.rated_film }}</a> into <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% endif %}
         {% if action.action_time|timesince == "0 minutes" %}
             less than a minute ago

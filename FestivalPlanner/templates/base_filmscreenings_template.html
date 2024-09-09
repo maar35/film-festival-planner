@@ -1,0 +1,33 @@
+{% extends "base_template.html" %}
+
+{% block filmscreenings %}
+<br>
+<h3>All screenings of <span style="color: {{ festival_color }}">{{ film_title }}</span></h3>
+<table style="min-width: 30%">
+    <thead>
+    <tr>
+        <th>Screening</th>
+        <th>Status</th>
+        <th>Attendants</th>
+        <th>Attendants rating</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for spec in film_screening_props %}
+    <tr>
+        {% if spec.film_screening == screening %}
+            <td style="background: {{ spec.pair_selected.background }}; color: {{ spec.pair_selected.color }}">
+                {{ spec.film_screening.str_short }}
+            </td>
+        {% else %}
+            <td>{{ spec.film_screening.str_short }}</td>
+        {% endif %}
+        <td style="background: {{ spec.pair.background }}; color: {{ spec.pair.color }}">{{ spec.status.label }}</td>
+        <td>{% if spec.attendants %} {{ spec.attendants }} {% else %} - {% endif %}</td>
+        <td>{% if spec.attendants %} {{ spec.ratings }} {% else %} - {% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<br>
+{% endblock %}

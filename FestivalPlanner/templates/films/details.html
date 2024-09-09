@@ -1,21 +1,24 @@
-{% extends "base_template.html" %}
+{% extends "base_filmscreenings_template.html" %}
 
 {% block title %}{{ title }}{% endblock %}
 {% block header %}{{ title }}{% endblock %}
+{% block festival %} <a href="{% url 'festivals:index' %}?next={% url 'films:films' %}">{{ festival }}</a> {% endblock %}
 
 {% block content %}
     <h2 class="row col-left-h2"><a href="{{ film.url }}">{{ film.title }}</a></h2>
     <div class="row">
         <span class="col-right">
             {% if film_in_cache %}
-                <a href="{% url 'films:films' %}#film{{ film.film_id }}">Back to ratings of {{ film.title }}</a>
+                <a href="{% url 'films:films' %}#film{{ film.film_id }}">Ratings of {{ film.title }}</a>
+            {% elif no_cache %}
+                Film not directly addressable in uninitialized film list
             {% else %}
                 Film is hidden in ratings list <a href="{% url 'films:films' %}{{ display_all_query }}#film{{ film.film_id }}">Clear filters</a>
             {% endif %}
             <br>
             <a href="{% url 'films:films' %}">Ratings</a>
             <br>
-            <a href="{% url 'screenings:day_schema' %}">Screenings day schema</a>
+            <a href="{% url 'screenings:day_schema' %}">Day schema</a>
         </span>
     </div>
     <ul>
@@ -60,11 +63,15 @@
                     {{ fan_row.rating_str }}
                     </td>
                     {% endif %}
-                <td>{{ fan_row.rating_name }}</td>
+                <td>{{ fan_row.rating_label }}</td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
     </form>
     <br>
+    {% block filmscreenings %}
+        {{ block.super }}
+    {% endblock filmscreenings %}
+
 {% endblock %}

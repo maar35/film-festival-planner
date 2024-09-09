@@ -10,10 +10,11 @@ from authentication.models import FilmFan
 from festival_planner.cookie import Cookie
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fan_action import FanAction
+from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
 from festivals.models import current_festival
 from films.models import current_fan, initial, MINUTES_STR
-from films.views import ResultsView
+from films.views import FilmDetailView
 from screenings.forms.screening_forms import DummyForm, AttendanceForm
 from screenings.models import Screening, Attendance
 from theaters.models import Theater
@@ -95,6 +96,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.status_getter = None
         self.day_screenings = None
         self.attendances_by_screening = None
         self.attends_by_screening = None
@@ -106,11 +108,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         festival = DaySchemaView.current_day.check_session(request.session)
         current_date = DaySchemaView.current_day.get_date(request.session)
         self.day_screenings = Screening.screenings.filter(film__festival=festival, start_dt__date=current_date)
-        fan = current_fan(request.session)
-        attendance_manager = Attendance.attendances
-        self.attendances_by_screening = {s: attendance_manager.filter(screening=s) for s in self.day_screenings}
-        self.attends_by_screening = {s: self.attendances_by_screening[s].filter(fan=fan) for s in self.day_screenings}
-        self.has_attended_film_by_screening = {s: attendance_manager.filter(screening__film=s.film, fan=fan) for s in self.day_screenings}
+        self.status_getter = ScreeningStatusGetter(request.session, self.day_screenings)
         pr_debug('done', with_time=True)
 
     def get_queryset(self):
@@ -166,7 +164,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
 
     def _screening_spec(self, screening):
         left_pixels = self._pixels_from_dt(screening.start_dt)
-        attendants = self._get_attendants(screening)
+        attendants = self.status_getter.get_attendants(screening)
         attendants_str = self._attendants_str(attendants)
         line_2 = f'{screening.start_dt.strftime("%H:%M")} - {screening.end_dt.strftime("%H:%M")} {attendants_str}'
         screening_spec = {
@@ -198,46 +196,8 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             attendance_str += initial(attendant, self.request.session)
         return attendance_str
 
-    def _get_screening_status(self, screening, attendants):
-        if current_fan(self.request.session) in attendants:
-            status = Screening.ScreeningStatus.ATTENDS
-        elif attendants:
-            status = Screening.ScreeningStatus.FRIEND_ATTENDS
-        elif self._has_attended_film(screening):
-            status = Screening.ScreeningStatus.ATTENDS_FILM
-        else:
-            status = self._get_overlap_status(screening)
-        return status
-
-    def _get_attendants(self, screening):
-        attendances = self.attendances_by_screening[screening]
-        attendants = [attendance.fan for attendance in attendances]
-        return attendants
-
-    def _has_attended_film(self, screening):
-        """ Returns whether another screening of the same film is already attended. """
-        film_screenings = self.has_attended_film_by_screening[screening]
-        return film_screenings
-
-    def _get_overlap_status(self, screening):
-        status = Screening.ScreeningStatus.FREE
-        overlapping_screenings = []
-        no_travel_time_screenings = []
-        for s in self.day_screenings:
-            if self.attends_by_screening[s]:
-                if s.start_dt.date() == screening.start_dt.date():
-                    if screening.overlaps(s):
-                        overlapping_screenings.append(s)
-                    elif screening.overlaps(s, use_travel_time=True):
-                        no_travel_time_screenings.append(s)
-        if overlapping_screenings:
-            status = Screening.ScreeningStatus.TIME_OVERLAP
-        elif no_travel_time_screenings:
-            status = Screening.ScreeningStatus.NO_TRAVEL_TIME
-        return status
-
     def _screening_color_pair(self, screening, attendants):
-        status = self._get_screening_status(screening, attendants)
+        status = self.status_getter.get_screening_status(screening, attendants)
         return Screening.color_pair_by_screening_status[status]
 
 
@@ -269,16 +229,13 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
-        session = self.request.session
         initialize_log(request.session, 'Update attendances')
         self.screening = self.get_object()
-        self.fan_action.init_action(session, screening=self.screening)
         manager = Attendance.attendances
         self.initial_attendance_by_fan = {f: bool(manager.filter(screening=self.screening, fan=f)) for f in self.fans}
 
     def get_context_data(self, **kwargs):
         super_context = super().get_context_data(**kwargs)
-        session = self.request.session
         duration = self.screening.end_dt - self.screening.start_dt
         fan_specs = []
         for fan in self.fans:
@@ -289,12 +246,13 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
             })
         new_context = {
             'title': 'Screening Details',
-            'subtitle': f'Screening of {self.screening.film}',
             'screening': self.screening,
             'duration': duration,
             'minutes': f'{duration.total_seconds() / 60:.0f}{MINUTES_STR}',
-            'film_description': ResultsView.get_description(self.screening.film),
+            'film_description': FilmDetailView.get_description(self.screening.film),
             'fan_specs': fan_specs,
+            'film_title': self.screening.film.title,
+            'film_screening_props': self._get_film_screening_props(),
         }
         context = add_base_context(self.request, super_context | new_context)
         return context
@@ -318,6 +276,12 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
             if initial_attendance != attends:
                 changed_attendance_by_fan[fan] = attends
         if changed_attendance_by_fan:
+            self.fan_action.init_action(session, screening=self.screening)
             _ = AttendanceForm.update_attendances(session, self.screening, changed_attendance_by_fan, update_log)
         else:
             add_log(session, f'No attendances of {self.screening} were updated by {current_fan(session)}.')
+
+    def _get_film_screening_props(self):
+        session = self.request.session
+        film_screening_props = ScreeningStatusGetter.get_filmscreening_props(session, self.screening.film)
+        return film_screening_props

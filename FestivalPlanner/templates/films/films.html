@@ -7,7 +7,7 @@
     <h2 class="row col-left-h2">Film list with pre-attendance ratings</h2>
     <div class="row">
         <span class="col-right">
-            <a href="{% url 'screenings:day_schema' %}">Screenings day schema</a>
+            <a href="{% url 'screenings:day_schema' %}">Day schema</a>
             <br>
             <a href="{% url 'films:reviewers' %}">Reviewers</a>
             <br>
@@ -20,7 +20,7 @@
         <h3 class="log-header">{{ log.action }} results</h3>
         {% if found_films %}
             {% for film in found_films %}
-                <a href="{% url 'films:results' film.id %}" style="padding-left: 40px;" >{{ film.title }}</a>
+                <a href="{% url 'films:details' film.id %}" style="padding-left: 40px;" >{{ film.title }}</a>
                 <br>
             {% endfor %}
         {% else %}
@@ -58,11 +58,11 @@
         <p>
         {{ action.fan }}
         {% if action.old_rating == '-' %}
-            gave <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a> a pre-attendance {{ action.rating_type }} of <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
+            gave <a href="{% url 'films:details' action.rated_film_id %}">{{ action.rated_film }}</a> a pre-attendance {{ action.rating_type }} of <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% elif action.new_rating == '0' %}
-            removed {{ action.rating_type }} {{ action.old_rating }} of <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a>
+            removed {{ action.rating_type }} {{ action.old_rating }} of <a href="{% url 'films:details' action.rated_film_id %}">{{ action.rated_film }}</a>
         {% else %}
-            changed {{ action.rating_type }} {{ action.old_rating }} of <a href="{% url 'films:results' action.rated_film_id %}">{{ action.rated_film }}</a> into <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
+            changed {{ action.rating_type }} {{ action.old_rating }} of <a href="{% url 'films:details' action.rated_film_id %}">{{ action.rated_film }}</a> into <em> {{ action.new_rating }} ({{ action.new_rating_name }})</em>
         {% endif %}
         {{ action.action_time|timesince }} ago
         </p>
@@ -105,13 +105,13 @@
                 <td style="max-width: 720px;">
                     <a name="{{ row.fragment_name }}"></a>
                     {% if row.description %}
-                        <a href="{% url 'films:results' row.film.id %}">
+                        <a href="{% url 'films:details' row.film.id %}">
                             {{ row.film.title }}
                         </a>
                         <br>
                         {{ row.description }}
                     {% else %}
-                        <a href="{% url 'films:results' row.film.id %}">
+                        <a href="{% url 'films:details' row.film.id %}">
                             {{ row.film.title }}
                         </a>
                     {% endif %}

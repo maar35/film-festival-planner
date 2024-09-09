@@ -21,7 +21,7 @@ from festivals.tests import create_festival
 from films import views
 from films.forms.film_forms import PickRating
 from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR
-from films.views import FilmsView, ResultsView, MAX_SHORT_MINUTES, BaseFilmsFormView, FilmsListView
+from films.views import FilmsView, FilmDetailView, MAX_SHORT_MINUTES, BaseFilmsFormView, FilmsListView
 from loader.views import RatingDumperView
 from sections.models import Subsection, Section
 from theaters.models import City
@@ -446,7 +446,7 @@ class ResultsViewsTests(ViewsTestCase):
         fake_pk = 2000
 
         # Act.
-        get_response = self.client.get(reverse('films:results', args=[fake_pk]))
+        get_response = self.client.get(reverse('films:details', args=[fake_pk]))
         redirect_response = self.client.get(get_response.url)
 
         # Assert.
@@ -465,7 +465,7 @@ class ResultsViewsTests(ViewsTestCase):
         _ = self.get_regular_fan_request()
 
         # Act.
-        get_response = self.client.get(reverse('films:results', args=[fake_pk]))
+        get_response = self.client.get(reverse('films:details', args=[fake_pk]))
 
         # Assert.
         self.assertEqual(get_response.status_code, HTTPStatus.NOT_FOUND)
@@ -478,7 +478,7 @@ class ResultsViewsTests(ViewsTestCase):
         """
         # Arrange.
         saved_film = create_film(film_id=6000, title='New Adventure', minutes=114)
-        url = reverse('films:results', args=[saved_film.pk])
+        url = reverse('films:details', args=[saved_film.pk])
         PickRating.film_rating_cache = FilmRatingCache(self.client.session, FilmsView.unexpected_errors)
 
         # Act.
@@ -501,7 +501,7 @@ class ResultsViewsTests(ViewsTestCase):
         films_response = self.client.get(reverse('films:films'))    # Initialize cache.
 
         # Act.
-        get_response = self.client.get(reverse('films:results', args=[saved_film.pk]))
+        get_response = self.client.get(reverse('films:details', args=[saved_film.pk]))
 
         # Assert.
         self.assertEqual(films_response.status_code, HTTPStatus.OK)
@@ -525,7 +525,7 @@ class ResultsViewsTests(ViewsTestCase):
         films_response = self.client.get(reverse('films:films'))    # Initialize cache.
 
         # Act.
-        get_response = self.client.get(reverse('films:results', args=[saved_film.pk]))
+        get_response = self.client.get(reverse('films:details', args=[saved_film.pk]))
 
         # Assert.
         self.assertEqual(films_response.status_code, HTTPStatus.OK)
@@ -547,7 +547,7 @@ class ResultsViewsTests(ViewsTestCase):
         films_response = self.client.get(reverse('films:films'))    # Initialize cache.
 
         # Act.
-        get_response = self.client.get(reverse('films:results', args=[saved_film.pk]))
+        get_response = self.client.get(reverse('films:details', args=[saved_film.pk]))
 
         # Assert.
         self.assertEqual(films_response.status_code, HTTPStatus.OK)
@@ -575,14 +575,14 @@ class ResultsViewsTests(ViewsTestCase):
         rating = FilmFanFilmRating.film_ratings.get(film=film, film_fan=fan)
         self.assertEqual(rating.rating, rating_value)
 
-        post_data = {'fan_rating': [f'{ResultsView.submit_name_prefix}{film.film_id}_{new_rating_value}']}
+        post_data = {'fan_rating': [f'{FilmDetailView.submit_name_prefix}{film.film_id}_{new_rating_value}']}
 
         # Act.
-        post_response = self.client.post(reverse('films:results', args=[film.pk]), data=post_data)
+        post_response = self.client.post(reverse('films:details', args=[film.pk]), data=post_data)
 
         # Assert.
-        self.assertEqual(post_response.status_code, HTTPStatus.FOUND, f'Unexpected POST response of {ResultsView.__name__}')
-        self.assertURLEqual(post_response.url, reverse('films:results', args=[film.id]))
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND, f'Unexpected POST response of {FilmDetailView.__name__}')
+        self.assertURLEqual(post_response.url, reverse('films:details', args=[film.id]))
         self.assertContains(post_response, self.regular_fan.name)
         self.assertContains(post_response, self.admin_fan.name)
         self.assert_fan_row(fan, str(new_rating_value), post_response)
@@ -679,7 +679,7 @@ class FilmListViewsTests(ViewsTestCase):
         _ = self.client.get(reverse('films:films'))    # Initialize cache.
 
         # Act.
-        response = self.client.get(reverse('films:results', args=[created_film.pk]))
+        response = self.client.get(reverse('films:details', args=[created_film.pk]))
 
         # Assert.
         self.assertEqual(response.status_code, HTTPStatus.OK)
@@ -790,7 +790,7 @@ class FilmListViewsTests(ViewsTestCase):
         A logged in fan can remove a rating from the film list view.
         """
         # Arrange.
-        unexpected_post_status_msg = f'Unexpected POST response of {ResultsView.__name__}'
+        unexpected_post_status_msg = f'Unexpected POST response of {FilmDetailView.__name__}'
         _ = self.get_regular_fan_request()
         fan = self.regular_fan
 

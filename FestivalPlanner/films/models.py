@@ -119,7 +119,10 @@ class FilmFanFilmRating(models.Model):
         unique_together = ('film', 'film_fan')
 
     def __str__(self):
-        return f"{self.film} - {self.film_fan.initial()}{self.rating}"
+        return f"{self.film} - {self.str_fan_rating()}"
+
+    def str_fan_rating(self):
+        return f'{self.film_fan.initial()}{self.rating}'
 
 
 class FilmFanFilmVote(models.Model):

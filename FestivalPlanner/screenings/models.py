@@ -24,6 +24,7 @@ COLOR_PAIR_YELLOW = color_pair('black', 'yellow')
 COLOR_PAIR_GREY = color_pair('black', 'rgb(79, 79, 79)')
 COLOR_PAIR_DARKGREY = color_pair('darkgrey', 'rgb(38, 38, 38)')
 COLOR_PAIR_PURPLE = color_pair('white', 'rgb(176, 0, 176)')
+COLOR_PAIR_SELECT_BLUE = color_pair(None,  'rgba(0, 0, 255, 0.8)')
 
 COLOR_PAIR_FREE = COLOR_PAIR_TRANSPARANT
 COLOR_PAIR_UNAVAILABLE = COLOR_PAIR_OFF_BLACK
@@ -33,6 +34,7 @@ COLOR_PAIR_ATTENDS_FILM = COLOR_PAIR_YELLOW
 COLOR_PAIR_TIME_OVERLAP = COLOR_PAIR_GREY
 COLOR_PAIR_NO_TRAVEL_TIME = COLOR_PAIR_DARKGREY
 COLOR_PAIR_NEEDS_TICKETS = COLOR_PAIR_PURPLE
+COLOR_PAIR_SELECTED = COLOR_PAIR_SELECT_BLUE
 
 
 class Screening(models.Model):
@@ -88,6 +90,18 @@ class Screening(models.Model):
         end_time = self.end_dt.time().isoformat(timespec='minutes')
         return f'{self.film.title} · {self.screen} · {start_date} {start_time} - {end_time}'
 
+    def str_day_of_month(self):
+        return self.start_dt.strftime('%d').lstrip('0')
+
+    def str_day(self):
+        return self.start_dt.strftime(f'%a {self.str_day_of_month()} %b')
+
+    def str_start_time(self):
+        return self.start_dt.strftime('%H:%M')
+
+    def str_short(self):
+        return f'{self.str_day()} {self.str_start_time()} {self.screen}'
+
     def overlaps(self, other_screening, use_travel_time=False):
         travel_time = self.get_travel_time(other_screening) if use_travel_time else datetime.timedelta(0)
         ok = other_screening.start_dt <= self.end_dt + travel_time and other_screening.end_dt >= self.start_dt - travel_time
@@ -119,7 +133,6 @@ class Attendance(models.Model):
 
     def __str__(self):
         title = self.screening.film.title
-        dom = self.screening.start_dt.strftime('%d').lstrip('0')
-        day = self.screening.start_dt.strftime(f'%a {dom}%b')
-        start_time = self.screening.start_dt.strftime('%H:%M')
+        day = self.screening.str_day()
+        start_time = self.screening.start_time()
         return f'{self.fan} attends {title} on {day} at {start_time}'
