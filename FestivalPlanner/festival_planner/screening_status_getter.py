@@ -79,11 +79,13 @@ class ScreeningStatusGetter:
         attendants = self.get_attendants(film_screening)
         ratings = [f'{fan.initial()}{fan_rating_str(fan, film_screening.film)}' for fan in attendants]
         status = self.get_screening_status(film_screening, attendants)
-        return {
+        day_props = {
             'film_screening': film_screening,
             'status': status,
+            'day': film_screening.start_dt.date().isoformat(),
             'pair_selected': COLOR_PAIR_SELECTED,
             'pair': Screening.color_pair_by_screening_status[status],
             'attendants': ', '.join([attendant.name for attendant in attendants]),
             'ratings': ', '.join(ratings),
         }
+        return day_props

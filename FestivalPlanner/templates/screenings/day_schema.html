@@ -11,11 +11,11 @@
         <br>
         <a href="{% url 'theaters:theaters' %}">Theaters</a>
         <br>
-        <a href="/loader/list_action?label=screenings">Load screenings</a>
+        <a href="{% url 'loader:list_action' %}?label=screenings">Load screenings</a>
         <br>
-        <a href="/loader/list_action?label=attendances">Load attendances</a>
+        <a href="{% url 'loader:list_action' %}?label=attendances">Load attendances</a>
         <br>
-        <a href="/loader/{{ festival.id }}/dump_data?label=attendances">Dump attendances</a>
+        <a href="{% url 'loader:dump_data' festival.id %}?label=attendances">Dump attendances</a>
     </span>
 </div>
 {% if log.results %}

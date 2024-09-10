@@ -75,6 +75,10 @@ class DaySchemaView(LoginRequiredMixin, View):
     template_name = 'screenings/day_schema.html'
     current_day = FestivalDay('day')
 
+    def dispatch(self, request, *args, **kwargs):
+        self.current_day.day_cookie.handle_get_request(request)
+        return super().dispatch(request, *args, **kwargs)
+
     @staticmethod
     def get(request, *args, **kwargs):
         view = DaySchemaListView.as_view()

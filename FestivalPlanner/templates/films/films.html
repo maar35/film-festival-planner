@@ -13,7 +13,7 @@
             <br>
             <a href="{% url 'loader:ratings' %}">Load films and ratings</a>
             <br>
-            <a href="/loader/{{ festival.id }}/dump_data?label=ratings">Dump ratings</a>
+            <a href="{% url 'loader:dump_data' festival.id %}?label=ratings">Dump ratings</a>
         </span>
     </div>
     {% if log %}

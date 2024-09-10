@@ -7,7 +7,7 @@
     <h2 class="row col-left-h2">Theaters Overview</h2>
     <span class="row">
         <span class="col-right">
-            <a href="/loader/theaters?action=dump">Dump theater data</a>
+            <a href="{% url 'loader:theaters' %}?action=dump">Dump theater data</a>
             <br>
             <a href="{% url 'loader:new_screens' %}">Insert new theater data</a>
         </span>

@@ -13,18 +13,27 @@
     </tr>
     </thead>
     <tbody>
-    {% for spec in film_screening_props %}
+    {% for prop in film_screening_props %}
     <tr>
-        {% if spec.film_screening == screening %}
-            <td style="background: {{ spec.pair_selected.background }}; color: {{ spec.pair_selected.color }}">
-                {{ spec.film_screening.str_short }}
+        {% if prop.film_screening == screening %}
+            <td style="background: {{ prop.pair_selected.background }}; color: {{ prop.pair_selected.color }}">
+                <a href="{% url 'screenings:day_schema' %}?day={{ prop.day }}">
+                    {{ prop.film_screening.str_short }}
+                </a>
             </td>
         {% else %}
-            <td>{{ spec.film_screening.str_short }}</td>
+            <td>
+                <a href="{% url 'screenings:day_schema' %}?day={{ prop.day }}">
+                    {{ prop.film_screening.str_short }}
+                </a>
+            </td>
+            {# <td>{{ prop.film_screening.str_short }}</td> #}
         {% endif %}
-        <td style="background: {{ spec.pair.background }}; color: {{ spec.pair.color }}">{{ spec.status.label }}</td>
-        <td>{% if spec.attendants %} {{ spec.attendants }} {% else %} - {% endif %}</td>
-        <td>{% if spec.attendants %} {{ spec.ratings }} {% else %} - {% endif %}</td>
+        <td style="background: {{ prop.pair.background }}; color: {{ prop.pair.color }}">
+            {{ prop.status.label }}
+        </td>
+        <td>{% if prop.attendants %} {{ prop.attendants }} {% else %} - {% endif %}</td>
+        <td>{% if prop.attendants %} {{ prop.ratings }} {% else %} - {% endif %}</td>
     </tr>
     {% endfor %}
     </tbody>
