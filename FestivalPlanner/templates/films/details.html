@@ -9,11 +9,11 @@
     <div class="row">
         <span class="col-right">
             {% if film_in_cache %}
-                <a href="{% url 'films:films' %}#film{{ film.film_id }}">Ratings of {{ film.title }}</a>
+                <a href="{% url 'films:films' %}{{ fragment }}">Ratings of {{ film.title }}</a>
             {% elif no_cache %}
                 Film not directly addressable in uninitialized film list
             {% else %}
-                Film is hidden in ratings list <a href="{% url 'films:films' %}{{ display_all_query }}#film{{ film.film_id }}">Clear filters</a>
+                Film is hidden in ratings list <a href="{% url 'films:films' %}{{ display_all_query }}{{ fragment }}">Clear filters</a>
             {% endif %}
             <br>
             <a href="{% url 'films:films' %}">Ratings</a>

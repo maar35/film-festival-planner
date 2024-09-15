@@ -15,6 +15,7 @@ from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
 from festival_planner.cookie import Filter, Cookie
 from festival_planner.debug_tools import pr_debug
+from festival_planner.fragment_keeper import FilmFragmentKeeper
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_base_context, unset_log, wrap_up_form_errors, application_name, get_log, \
     initialize_log, add_log, CSV_DIALECT
@@ -25,41 +26,9 @@ from films.models import FilmFanFilmRating, Film, current_fan, get_present_fans,
     FilmFanFilmVote, fan_rating
 from sections.models import Subsection, Section
 
-STICKY_HEIGHT = 3
 CONSTANTS_CONFIG = Config().config['Constants']
 MAX_SHORT_MINUTES = CONSTANTS_CONFIG['MaxShortMinutes']
 LOWEST_PLANNABLE_RATING = CONSTANTS_CONFIG['LowestPlannableRating']
-
-
-class FragmentKeeper:
-
-    def __init__(self):
-        self.film_id_by_row_nr = {}
-
-    @staticmethod
-    def fragment_name(film_id):
-        return f'film{film_id}'
-
-    @classmethod
-    def fragment_code(cls, film_id):
-        return f'#{cls.fragment_name(film_id)}'
-
-    def add_fragments(self, films):
-        for row_nr, film in enumerate(films):
-            self.add_fragment(row_nr, film)
-
-    def add_fragment(self, row_nr, film):
-        fragment_row = row_nr - STICKY_HEIGHT if row_nr > STICKY_HEIGHT else 0
-        self.film_id_by_row_nr[fragment_row] = film.film_id
-
-    def get_fragment_name(self, row_nr):
-        try:
-            film_id = self.film_id_by_row_nr[row_nr]
-        except KeyError:
-            fragment_name = ''
-        else:
-            fragment_name = FragmentKeeper.fragment_name(film_id)
-        return fragment_name
 
 
 class IndexView(TemplateView):
@@ -117,7 +86,7 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
 
     def get_success_url(self):
         errors = self.view.unexpected_errors
-        fragment = '#top' if not self.film or errors else FragmentKeeper.fragment_code(self.film.film_id)
+        fragment = '#top' if not self.film or errors else FilmFragmentKeeper.fragment_code(self.film.film_id)
         return reverse(self.success_view_name) + fragment
 
     @staticmethod
@@ -229,7 +198,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
 
     def dispatch(self, request, *args, **kwargs):
         session = self.request.session
-        self.fragment_keeper = FragmentKeeper()
+        self.fragment_keeper = FilmFragmentKeeper('film_id')
 
         # Ensure the film rating cache is initialized.
         if not PickRating.film_rating_cache:
@@ -525,7 +494,7 @@ class VotesListView(LoginRequiredMixin, ListView):
         session = self.request.session
         self.festival = current_festival(session)
         self.logged_in_fan = current_fan(session)
-        self.fragment_keeper = FragmentKeeper()
+        self.fragment_keeper = FilmFragmentKeeper('film_id')
         VotesView.unexpected_errors = []
 
         # Read the films that were attended.
@@ -652,6 +621,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         new_context = {
             'title': 'Film Rating Results',
             'description': self.get_description(film),
+            'fragment': FilmFragmentKeeper.fragment_code(film.film_id),
             'film_in_cache': in_cache,
             'no_cache': in_cache is None,
             'display_all_query': self.get_query_string_to_display_all(session),

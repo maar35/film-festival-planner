@@ -1,4 +1,5 @@
 from festival_planner.debug_tools import pr_debug
+from festival_planner.fragment_keeper import ScreeningFragmentKeeper
 from festivals.models import current_festival
 from films.models import current_fan, fan_rating_str
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED
@@ -79,13 +80,17 @@ class ScreeningStatusGetter:
         attendants = self.get_attendants(film_screening)
         ratings = [f'{fan.initial()}{fan_rating_str(fan, film_screening.film)}' for fan in attendants]
         status = self.get_screening_status(film_screening, attendants)
+        day = film_screening.start_dt.date().isoformat()
         day_props = {
             'film_screening': film_screening,
             'status': status,
-            'day': film_screening.start_dt.date().isoformat(),
+            'day': day,
             'pair_selected': COLOR_PAIR_SELECTED,
             'pair': Screening.color_pair_by_screening_status[status],
             'attendants': ', '.join([attendant.name for attendant in attendants]),
             'ratings': ', '.join(ratings),
+            'q_and_a': film_screening.str_q_and_a(),
+            'query_string': f'?day={day}&screening={film_screening.pk}',
+            'fragment': ScreeningFragmentKeeper.fragment_code(film_screening.screen.pk),
         }
         return day_props

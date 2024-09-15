@@ -52,7 +52,7 @@ class Screening(models.Model):
         NO_TRAVEL_TIME = 6,
         NEEDS_TICKETS = 7,
 
-    # Define color dictionary.
+    # Define color dictionaries.
     color_pair_by_screening_status = {
         ScreeningStatus.FREE: COLOR_PAIR_FREE,
         ScreeningStatus.UNAVAILABLE: COLOR_PAIR_UNAVAILABLE,
@@ -62,6 +62,16 @@ class Screening(models.Model):
         ScreeningStatus.TIME_OVERLAP: COLOR_PAIR_TIME_OVERLAP,
         ScreeningStatus.NO_TRAVEL_TIME: COLOR_PAIR_NO_TRAVEL_TIME,
         ScreeningStatus.NEEDS_TICKETS: COLOR_PAIR_NEEDS_TICKETS,
+    }
+    color_pair_selected_by_screening_status = {
+        ScreeningStatus.FREE: color_pair('white', 'blue'),
+        ScreeningStatus.UNAVAILABLE: color_pair('white', 'blue'),
+        ScreeningStatus.ATTENDS: color_pair('white', 'blue'),
+        ScreeningStatus.FRIEND_ATTENDS: color_pair('white', 'red'),
+        ScreeningStatus.ATTENDS_FILM: color_pair('white', 'blue'),
+        ScreeningStatus.TIME_OVERLAP: color_pair('white', 'blue'),
+        ScreeningStatus.NO_TRAVEL_TIME: color_pair('white', 'blue'),
+        ScreeningStatus.NEEDS_TICKETS: color_pair('white', 'blue'),
     }
 
     # Define the fields.
@@ -101,6 +111,9 @@ class Screening(models.Model):
 
     def str_short(self):
         return f'{self.str_day()} {self.str_start_time()} {self.screen}'
+
+    def str_q_and_a(self):
+        return 'Yes!' if self.q_and_a else None
 
     def overlaps(self, other_screening, use_travel_time=False):
         travel_time = self.get_travel_time(other_screening) if use_travel_time else datetime.timedelta(0)

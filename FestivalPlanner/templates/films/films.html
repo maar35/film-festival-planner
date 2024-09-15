@@ -104,16 +104,12 @@
             <tr>
                 <td style="max-width: 720px;">
                     <a name="{{ row.fragment_name }}"></a>
+                    <a href="{% url 'films:details' row.film.id %}">
+                        {{ row.film.title }}
+                    </a>
                     {% if row.description %}
-                        <a href="{% url 'films:details' row.film.id %}">
-                            {{ row.film.title }}
-                        </a>
                         <br>
                         {{ row.description }}
-                    {% else %}
-                        <a href="{% url 'films:details' row.film.id %}">
-                            {{ row.film.title }}
-                        </a>
                     {% endif %}
                 </td>
                 {% if row.duration_seconds <= short_threshold %}

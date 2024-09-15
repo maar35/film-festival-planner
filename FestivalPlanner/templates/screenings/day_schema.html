@@ -1,4 +1,4 @@
-{% extends "base_template.html" %}
+{% extends "base_filmscreenings_template.html" %}
 
 {% block title %}{{ title }}{% endblock %}
 {% block header %}{{ title }}{% endblock %}
@@ -18,6 +18,7 @@
         <a href="{% url 'loader:dump_data' festival.id %}?label=attendances">Dump attendances</a>
     </span>
 </div>
+
 {% if log.results %}
     <h3 class="log-header">{{ log.action }} results</h3>
     {% for result in log.results %}
@@ -25,23 +26,28 @@
     {% endfor %}
     <br>
 {% endif %}
+
+<a name="header_screening"></a>
+<div class="no-select">
 {% if action.screening_id %}
     <p>
         {{ action.fan }}
         updated attendances of
         <a href="{% url 'screenings:details' action.screening_id %}">{{ action.screening_str }}</a>,
         {{ action.action_time|timesince }} ago
-        <ul>
-        {% for update in action.updates %}
-            <li>{{ update }}</li>
-        {% endfor %}
-        </ul>
-        <br>
     </p>
+    <ul>
+    {% for update in action.updates %}
+        <li>{{ update }}</li>
+    {% endfor %}
+    </ul>
+    <br>
 {% endif %}
+
 <form method="post">
 {% csrf_token %}
-    <h3>Festival day
+    <h3>
+        Festival day
         <span class="dropdown"
               style="display: inline; padding: 0.5rem;">
             <span class="drop-button">
@@ -61,6 +67,68 @@
     </h3>
 </form>
 <br>
+
+{% if selected_screening_props %}
+<div>
+    {% with props=selected_screening_props %}
+    <h3>
+        Selected screening
+        <span class="modest-dropdown"
+              style="display: inline; padding: 0.5rem; font-size: 1rem">
+            <span class="active-text" style="color: {{ festival_color }}">
+                {{ props.selected_screening }}
+            </span>
+            <span class="modest-dropdown-content"
+                  style="min-width:42rem; margin-left: 12rem; background-color: black; cursor: default;">
+                <table>
+                    <tbody>
+                    <tr>
+                        <th>Status</th>
+                        <td style="background: {{ props.pair.background }}; color: {{ props.pair.color }}">
+                            {{ props.status.label }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Attendants</th>
+                        <td>{% if props.attendants %} {{ props.attendants }} {% else %} - {% endif %}</td>
+                    </tr>
+                    <tr>
+                        {% with film=props.selected_screening.film %}
+                            <th>Ratings of <a href="{% url 'films:details' film.id %}">{{ film.title }}</a></th>
+                            <td>{% if props.ratings %} {{ props.ratings }} {% else %} - {% endif %}</td>
+                        {% endwith %}
+                    </tr>
+                    <tr>
+                        <th>Film duration</th>
+                        <td>{{ props.film_duration }}</td>
+                    </tr>
+                    <tr>
+                        <th>Screening duration</th>
+                        <td>{{ props.screening_duration }}</td>
+                    </tr>
+                    <tr>
+                        <th>Q&A</th>
+                        <td>{% if props.q_and_a %} {{ props.q_and_a }} {% else %} - {% endif %}</td>
+                    </tr>
+                    <tr>
+                        <th>Film description</th>
+                        <td>{% if props.description %} {{ props.description }} {% else %} - {% endif %}</td>
+                    </tr>
+                    </tbody>
+                </table>
+                {% with film_screening_props=props.film_screening_props film_title=props.selected_screening.film.title %}
+                    {% block filmscreenings %}
+                        {{ block.super }}
+                    {% endblock filmscreenings %}
+                {% endwith %}
+            </span>
+        </span>
+    </h3>
+    {% endwith %}
+</div>
+<br>
+{% endif %}
+
 {% if screen_rows %}
     <table class="day-schema-border">
         <thead>
@@ -79,17 +147,30 @@
         <tr class="day-schema-border"
             style="vertical-align: text-top;">
             <td class="sticky-left"
-                style="border: var(--screeningBorderWidth) solid var(--screeningBorderColor); color: {{ row.color }};">
+                style="border: var(--screeningBorderWidth) solid var(--screeningBorderColor); color: {{ row.color }}; background: {{ row.background }}">
+                <a name="{{ row.fragment_name }}"></a>
                 {{ row.screen }}
             </td>
-            <td class="day-schema-row" style="min-width: {{ row.total_width }}px;">
+            <td class="day-schema-row"
+                style="min-width: {{ row.total_width }}px;">
                 {% for spec in row.screening_specs %}
-                <span class="day-schema-screening"
-                      style="background: {{ spec.pair.background }}; color: {{ spec.pair.color }}; width: {{ spec.width }}px; border: 1px solid {{ festival_color }}; left: {{ spec.left }}px;">
-                    <a style="color: {{ spec.pair.color }};" href="{% url 'screenings:details' spec.screening.id %}">{{ spec.line_1 }}</a>
-                    <br>
-                    {{ spec.line_2 }}
-                </span>
+                    <span class="day-schema-screening"
+                          style="background: {{ spec.pair.background }}; color: {{ spec.pair.color }}; left: {{ spec.left }}px; width: {{ spec.width }}px; border: 1px solid {{ spec.frame_color }};">
+                        <a style="color: {{ spec.pair.color }};" href="{% url 'screenings:details' spec.screening.id %}">
+                            {{ spec.line_1 }}
+                        </a>
+                        <br>
+                        <span style="color: {{ spec.rating_color }}">{{ spec.film_rating }}</span>
+                        <span class="day-schema-screening-info"
+                              style="background: {{ spec.info_pair.background }}; color: {{ spec.info_pair.color }};">
+                            {% if spec.selected %}
+                                <a style="color: {{ spec.info_pair.color }}" href="{% url 'screenings:day_schema' %}#header_screening">{{ spec.info_spot }}</a>
+                            {% else %}
+                                <a style="color: {{ spec.info_pair.color }}" href="{% url 'screenings:day_schema' %}{{ spec.query_string }}{{ spec.fragment }}">{{ spec.info_spot }}</a>
+                            {% endif %}
+                        </span>
+                        {{ spec.line_2 }}
+                    </span>
                 {% endfor %}
             </td>
         </tr>
@@ -99,4 +180,5 @@
 {% else %}
     <p>No screenings available for this festival day.</p>
 {% endif %}
+</div>
 {% endblock %}
