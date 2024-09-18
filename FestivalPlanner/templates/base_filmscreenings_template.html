@@ -2,7 +2,7 @@
 
 {% block filmscreenings %}
 <br>
-<h3>All screenings of <span style="color: {{ festival_color }}">{{ film_title }}</span></h3>
+<h3>All screenings of <span style="color: {{ festival_color }};">{{ film_title }}</span></h3>
 <table style="min-width: 30%">
     <thead>
     <tr>
@@ -16,7 +16,7 @@
     {% for prop in film_screening_props %}
     <tr>
         {% if prop.film_screening == screening %}
-            <td style="background: {{ prop.pair_selected.background }}; color: {{ prop.pair_selected.color }}">
+            <td style="background: {{ prop.pair_selected.background }}; color: {{ prop.pair_selected.color }};">
         {% else %}
             <td>
         {% endif %}
@@ -24,7 +24,7 @@
                     {{ prop.film_screening.str_short }}
                 </a>
             </td>
-        <td style="background: {{ prop.pair.background }}; color: {{ prop.pair.color }}">
+        <td style="background: {{ prop.pair.background }}; color: {{ prop.pair.color }};">
             {{ prop.status.label }}
         </td>
         <td>{% if prop.attendants %} {{ prop.attendants }} {% else %} - {% endif %}</td>
