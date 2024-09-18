@@ -4,6 +4,7 @@
     --modestStandoutColor: ivory;
     --linkColor: green;
     --inputBackground: forestGreen;
+    --inputDisabledColor: lightGrey;
     --hoverBackground: darkGreen;
     --focusBackgrond: yellowGreen;
     --stickyBackground: #00000090;
@@ -178,6 +179,12 @@ input[type=submit].in-table:hover {
     bottom: 0px;
     /* left should be defined in the template because it is variable */
 }
+.day-schema-screening-info {
+    margin-right: 0.5rem;
+    padding: 0 1rem;
+    border 3px solid white;
+    border-radius: 1rem;
+}
 
 /* Create a sticky, half-transparant header */
 .sticky-index {
@@ -241,6 +248,11 @@ input[type=submit].in-table:hover {
 }
 
 /* Dropdown definitions for cells within a table */
+.inline-dropdown-addition {
+    display: inline !important;
+    padding: 0.5rem;
+    font-size: 1rem
+}
 .cell-dropdown {
     position: relative;
     display: table-cell;
@@ -406,4 +418,5 @@ span.up {
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
+    cursor: default;
 }

@@ -4,11 +4,11 @@ from authentication.models import FilmFan
 from festivals.models import Festival
 from sections.models import Subsection
 
-FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
 MINUTES_STR = "'"
 UNRATED_STR = '-'
+FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
 
-
+# FIELD_BY_POST_ATTENDANCE
 class Film(models.Model):
     """
     Film table.
@@ -35,10 +35,91 @@ class Film(models.Model):
         unique_together = ('festival', 'film_id')
 
     def __str__(self):
-        return f"{self.title} ({self.duration.total_seconds() / 60:.0f}{MINUTES_STR})"
+        return f"{self.title} ({minutes_str(self.duration)})"
 
     def duration_str(self):
         return ':'.join(f'{self.duration}'.split(':')[:2])
+
+    def film_rating(self):
+        """ The highest rating represents all ratings of a film"""
+        film_rating = FilmFanFilmRating.film_ratings.filter(film=self).order_by('-rating').first()
+        if film_rating:
+            rating = film_rating.rating
+        else:
+            rating = FilmFanFilmRating.Rating.UNRATED
+        return rating
+
+class FilmFanFilmRating(models.Model):
+    """
+    Film Fan Film Rating table.
+    This rating is an estimate in advance, used to choose which films to see in a festival.
+    """
+
+    class Rating(models.IntegerChoices):
+        UNRATED = 0
+        ALREADY_SEEN = 1
+        WILL_SEE = 2
+        VERY_BAD = 3
+        BAD = 4
+        BELOW_MEDIOCRE = 5
+        MEDIOCRE = 6
+        INDECISIVE = 7
+        GOOD = 8
+        VERY_GOOD = 9
+        EXCELLENT = 10
+
+    # Define the fields.
+    film = models.ForeignKey(Film, on_delete=models.CASCADE)
+    film_fan = models.ForeignKey(FilmFan, on_delete=models.CASCADE)
+    rating = models.IntegerField(choices=Rating.choices)
+
+    # Define a manager.
+    film_ratings = models.Manager()
+
+    class Meta:
+        db_table = 'film_rating'
+        unique_together = ('film', 'film_fan')
+
+    def __str__(self):
+        return f"{self.film} - {self.str_fan_rating()}"
+
+    @classmethod
+    def super_ratings(cls):
+        return [cls.Rating.GOOD, cls.Rating.VERY_GOOD, cls.Rating.EXCELLENT]
+
+    @classmethod
+    def interesting_ratings(cls):
+        return [cls.Rating.UNRATED] + cls.super_ratings()
+
+    def str_fan_rating(self):
+        return f'{self.film_fan.initial()}{self.rating}'
+
+
+class FilmFanFilmVote(models.Model):
+    """
+    Film Fan Film Vote table.
+    This vote is a retrospective judgement of a film that a fan saw on a festival.
+    """
+    choices = [(member.value, member.label) for member in FilmFanFilmRating.Rating if member.name not in ['ALREADY_SEEN', 'WILL_SEE']]
+
+    # Define the fields.
+    film = models.ForeignKey(Film, on_delete=models.CASCADE)
+    film_fan = models.ForeignKey(FilmFan, on_delete=models.CASCADE)
+    vote = models.IntegerField(choices=choices)
+
+    # Define a manager.
+    film_votes = models.Manager()
+
+    class Meta:
+        db_table = 'film_vote'
+        unique_together = ('film', 'film_fan')
+
+    def __str__(self):
+        return f"{self.film} - {self.film_fan.initial()}{self.vote}"
+
+
+def minutes_str(duration):
+    return f'{duration.total_seconds() / 60:.0f}{MINUTES_STR}'
 
 
 def set_current_fan(request):
@@ -87,68 +168,6 @@ def get_rating_name(rating_value):
     return name
 
 
-class FilmFanFilmRating(models.Model):
-    """
-    Film Fan Film Rating table.
-    This rating is an estimate in advance, used to choose which films to see in a festival.
-    """
-
-    class Rating(models.IntegerChoices):
-        UNRATED = 0
-        ALREADY_SEEN = 1
-        WILL_SEE = 2
-        VERY_BAD = 3
-        BAD = 4
-        BELOW_MEDIOCRE = 5
-        MEDIOCRE = 6
-        INDECISIVE = 7
-        GOOD = 8
-        VERY_GOOD = 9
-        EXCELLENT = 10
-
-    # Define the fields.
-    film = models.ForeignKey(Film, on_delete=models.CASCADE)
-    film_fan = models.ForeignKey(FilmFan, on_delete=models.CASCADE)
-    rating = models.IntegerField(choices=Rating.choices)
-
-    # Define a manager.
-    film_ratings = models.Manager()
-
-    class Meta:
-        db_table = 'film_rating'
-        unique_together = ('film', 'film_fan')
-
-    def __str__(self):
-        return f"{self.film} - {self.film_fan.initial()}{self.rating}"
-
-
-class FilmFanFilmVote(models.Model):
-    """
-    Film Fan Film Vote table.
-    This vote is a retrospective judgement of a film that a fan saw on a festival.
-    """
-    choices = [(member.value, member.label) for member in FilmFanFilmRating.Rating if member.name not in ['ALREADY_SEEN', 'WILL_SEE']]
-
-    # Define the fields.
-    film = models.ForeignKey(Film, on_delete=models.CASCADE)
-    film_fan = models.ForeignKey(FilmFan, on_delete=models.CASCADE)
-    vote = models.IntegerField(choices=choices)
-
-    # Define a manager.
-    film_votes = models.Manager()
-
-    class Meta:
-        db_table = 'film_vote'
-        unique_together = ('film', 'film_fan')
-
-    def __str__(self):
-        return f"{self.film} - {self.film_fan.initial()}{self.vote}"
-
-
-field_by_post_attendance = {False: 'rating', True: 'vote'}
-manager_by_post_attendance = {False: FilmFanFilmRating.film_ratings, True: FilmFanFilmVote.film_votes}
-
-
 def fan_rating(fan, film, manager=None):
     manager = manager or FilmFanFilmRating.film_ratings
     try:
@@ -158,12 +177,16 @@ def fan_rating(fan, film, manager=None):
     return rating
 
 
+FIELD_BY_POST_ATTENDANCE = {False: 'rating', True: 'vote'}
+MANAGER_BY_POST_ATTENDANCE = {False: FilmFanFilmRating.film_ratings, True: FilmFanFilmVote.film_votes}
+
+
 def fan_rating_str(fan, film, post_attendance=False):
-    manager = manager_by_post_attendance[post_attendance]
-    field = field_by_post_attendance[post_attendance]
+    manager = MANAGER_BY_POST_ATTENDANCE[post_attendance]
+    field = FIELD_BY_POST_ATTENDANCE[post_attendance]
     rating = fan_rating(fan, film, manager)
     return f'{getattr(rating, field)}' if rating is not None else UNRATED_STR
 
 
 def rating_str(rating):
-    return '-' if rating == '0' else rating
+    return UNRATED_STR if rating == '0' else rating

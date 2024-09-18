@@ -24,6 +24,7 @@ COLOR_PAIR_YELLOW = color_pair('black', 'yellow')
 COLOR_PAIR_GREY = color_pair('black', 'rgb(79, 79, 79)')
 COLOR_PAIR_DARKGREY = color_pair('darkgrey', 'rgb(38, 38, 38)')
 COLOR_PAIR_PURPLE = color_pair('white', 'rgb(176, 0, 176)')
+COLOR_PAIR_SELECT_BLUE = color_pair(None,  'rgba(0, 0, 255, 0.8)')
 
 COLOR_PAIR_FREE = COLOR_PAIR_TRANSPARANT
 COLOR_PAIR_UNAVAILABLE = COLOR_PAIR_OFF_BLACK
@@ -33,6 +34,7 @@ COLOR_PAIR_ATTENDS_FILM = COLOR_PAIR_YELLOW
 COLOR_PAIR_TIME_OVERLAP = COLOR_PAIR_GREY
 COLOR_PAIR_NO_TRAVEL_TIME = COLOR_PAIR_DARKGREY
 COLOR_PAIR_NEEDS_TICKETS = COLOR_PAIR_PURPLE
+COLOR_PAIR_SELECTED = COLOR_PAIR_SELECT_BLUE
 
 
 class Screening(models.Model):
@@ -50,7 +52,7 @@ class Screening(models.Model):
         NO_TRAVEL_TIME = 6,
         NEEDS_TICKETS = 7,
 
-    # Define color dictionary.
+    # Define color dictionaries.
     color_pair_by_screening_status = {
         ScreeningStatus.FREE: COLOR_PAIR_FREE,
         ScreeningStatus.UNAVAILABLE: COLOR_PAIR_UNAVAILABLE,
@@ -60,6 +62,16 @@ class Screening(models.Model):
         ScreeningStatus.TIME_OVERLAP: COLOR_PAIR_TIME_OVERLAP,
         ScreeningStatus.NO_TRAVEL_TIME: COLOR_PAIR_NO_TRAVEL_TIME,
         ScreeningStatus.NEEDS_TICKETS: COLOR_PAIR_NEEDS_TICKETS,
+    }
+    color_pair_selected_by_screening_status = {
+        ScreeningStatus.FREE: color_pair('white', 'blue'),
+        ScreeningStatus.UNAVAILABLE: color_pair('white', 'blue'),
+        ScreeningStatus.ATTENDS: color_pair('white', 'blue'),
+        ScreeningStatus.FRIEND_ATTENDS: color_pair('white', 'red'),
+        ScreeningStatus.ATTENDS_FILM: color_pair('white', 'blue'),
+        ScreeningStatus.TIME_OVERLAP: color_pair('white', 'blue'),
+        ScreeningStatus.NO_TRAVEL_TIME: color_pair('white', 'blue'),
+        ScreeningStatus.NEEDS_TICKETS: color_pair('white', 'blue'),
     }
 
     # Define the fields.
@@ -87,6 +99,21 @@ class Screening(models.Model):
         start_time = self.start_dt.time().isoformat(timespec='minutes')
         end_time = self.end_dt.time().isoformat(timespec='minutes')
         return f'{self.film.title} · {self.screen} · {start_date} {start_time} - {end_time}'
+
+    def str_day_of_month(self):
+        return self.start_dt.strftime('%d').lstrip('0')
+
+    def str_day(self):
+        return self.start_dt.strftime(f'%a {self.str_day_of_month()} %b')
+
+    def str_start_time(self):
+        return self.start_dt.strftime('%H:%M')
+
+    def str_short(self):
+        return f'{self.str_day()} {self.str_start_time()} {self.screen}'
+
+    def str_q_and_a(self):
+        return 'Yes!' if self.q_and_a else None
 
     def overlaps(self, other_screening, use_travel_time=False):
         travel_time = self.get_travel_time(other_screening) if use_travel_time else datetime.timedelta(0)
@@ -119,7 +146,6 @@ class Attendance(models.Model):
 
     def __str__(self):
         title = self.screening.film.title
-        dom = self.screening.start_dt.strftime('%d').lstrip('0')
-        day = self.screening.start_dt.strftime(f'%a {dom}%b')
-        start_time = self.screening.start_dt.strftime('%H:%M')
+        day = self.screening.str_day()
+        start_time = self.screening.str_start_time()
         return f'{self.fan} attends {title} on {day} at {start_time}'

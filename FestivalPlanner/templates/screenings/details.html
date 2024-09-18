@@ -1,10 +1,11 @@
-{% extends "base_template.html" %}
+{% extends "base_filmscreenings_template.html" %}
 
 {% block title %}{{ title }}{% endblock %}
 {% block header %}{{ title }}{% endblock %}
+{% block festival %} <a href="{% url 'festivals:index' %}?next={% url 'screenings:day_schema' %}">{{ festival }}</a> {% endblock %}
 
 {% block content %}
-<h2 class="row col-left-h2" xmlns="http://www.w3.org/1999/html">{{ subtitle }}</h2>
+<h2 class="row col-left-h2">Screening of <span style="color: {{ festival_color }};">{{ screening.film }}</span></h2>
 <div class="row">
     <span class="col-right">
         <a href="{% url 'screenings:day_schema' %}">Back to day schema</a>
@@ -12,10 +13,14 @@
         <a href="{% url 'films:films' %}">Ratings</a>
     </span>
 </div>
+<div style="text-align: center;">
+{{ screening }}
+</div>
+<h3>Screening details</h3>
 <ul>
     <li>Screen: {{ screening.screen }}</li>
     <li>Time: {{ screening.start_dt|date:"D j M H:i" }} - {{ screening.end_dt|date:"H:i" }}</li>
-    <li>Film: <a href="{% url 'films:results' screening.film.id %}"> {{ screening.film.title }}</a></li>
+    <li>Film: <a href="{% url 'films:details' screening.film.id %}"> {{ screening.film.title }}</a></li>
     <li>Film description: {{ film_description }}</li>
     <li>Screening duration: {{ duration }} ({{ minutes }})</li>
     <li>Subtitles: {% if screening.subtitles %} {{ screening.subtitles }} {% else %} - {% endif %}</li>
@@ -24,6 +29,7 @@
     <li>Screening#: {{ screening.id }}</li>
 </ul>
 <br>
+<h3>Screening attendances</h3>
 <form method="post">
     {% csrf_token %}
     <table style="min-width: 30%">
@@ -35,15 +41,15 @@
             </tr>
         </thead>
         <tbody>
-        {% for spec in fan_specs %}
+        {% for prop in fan_props %}
             <tr>
-                <td>{{ spec.fan }}</td>
-                {% if spec.attends %}
-                    <td class="with-submit" style="text-align: center"><input type="checkbox" checked="" value="{{ spec.value }}" name="{{ spec.fan }}"></td>
+                <td>{{ prop.fan }}</td>
+                {% if prop.attends %}
+                    <td class="with-submit" style="text-align: center"><input type="checkbox" checked="" value="{{ prop.value }}" name="{{ prop.fan }}"></td>
                 {% else %}
-                    <td class="with-submit" style="text-align: center"><input type="checkbox" value="attends" name="{{ spec.fan }}"></td>
+                    <td class="with-submit" style="text-align: center"><input type="checkbox" value="attends" name="{{ prop.fan }}"></td>
                 {% endif %}
-                <td style="background: var(--screeningBackground)">{{ spec.attends }}</td>
+                <td style="background: var(--screeningBackground)">{{ prop.attends }}</td>
             </tr>
         {% endfor %}
         </tbody>
@@ -52,4 +58,8 @@
 <input type="submit" value="Submit attendances">
 </form>
 <br>
+{% block filmscreenings %}
+    {{ block.super }}
+{% endblock filmscreenings %}
+
 {% endblock %}

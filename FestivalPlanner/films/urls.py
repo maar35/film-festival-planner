@@ -13,7 +13,7 @@ urlpatterns = [
 
     # Display ratings by fans of a specific film.
     # Example: /films/5/results/
-    path('<int:pk>/results/', views.ResultsView.as_view(), name='results'),
+    path('<int:pk>/details/', views.FilmDetailView.as_view(), name='details'),
 
     # Display ratings of all films by all fans.
     path('films/', views.FilmsView.as_view(), name='films'),

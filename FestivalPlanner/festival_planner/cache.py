@@ -59,7 +59,6 @@ class FilmRatingCache:
         try:
             cache_data = self.cache_by_key[cache_key]
         except KeyError as e:
-            pr_debug(f'ERROR {e} getting film rows')
             self.errors.append(f'{e} getting film rows')
             return []
         return cache_data.get_film_rows()
@@ -93,7 +92,7 @@ class FilmRatingCache:
             try:
                 fan_data = [r for r in film_row['fan_ratings'] if r['fan'] == fan][0]
             except IndexError as e:
-                pr_debug(f'ERROR getting rating for {fan=}')
+                pr_debug(f'{IndexError.__name__} getting rating for {fan=}')
                 self.errors.append(f'{e} getting rating for {fan=}')
             else:
                 fan_data['rating'] = rating_str(rating_value)

@@ -8,8 +8,8 @@ from django.forms import CharField
 from authentication.models import FilmFan
 from festival_planner.fan_action import RatingAction
 from festivals.models import rating_action_key
-from films.models import FilmFanFilmRating, fan_rating_str, field_by_post_attendance, \
-    manager_by_post_attendance
+from films.models import FilmFanFilmRating, fan_rating_str, FIELD_BY_POST_ATTENDANCE, \
+    MANAGER_BY_POST_ATTENDANCE
 
 SEARCH_TEST_VALIDATOR = RegexValidator(r'^[a-z0-9]+$', 'Type only lower case letters and digits')
 """
@@ -37,12 +37,12 @@ class PickRating(forms.Form):
         min_length=2,
     )
     film_rating_cache = None
-    rating_action_by_field = {key: RatingAction(key) for key in field_by_post_attendance.values()}
+    rating_action_by_field = {key: RatingAction(key) for key in FIELD_BY_POST_ATTENDANCE.values()}
 
     @classmethod
     def update_rating(cls, session, film, fan, rating_value, post_attendance=False):
-        field = field_by_post_attendance[post_attendance]
-        manager = manager_by_post_attendance[post_attendance]
+        field = FIELD_BY_POST_ATTENDANCE[post_attendance]
+        manager = MANAGER_BY_POST_ATTENDANCE[post_attendance]
         old_rating_str = fan_rating_str(fan, film, post_attendance=post_attendance)
 
         # Update the indicated rating.

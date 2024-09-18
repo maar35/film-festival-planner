@@ -15,6 +15,8 @@ from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
 from festival_planner.cookie import Filter, Cookie
 from festival_planner.debug_tools import pr_debug
+from festival_planner.fragment_keeper import FilmFragmentKeeper
+from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_base_context, unset_log, wrap_up_form_errors, application_name, get_log, \
     initialize_log, add_log, CSV_DIALECT
 from festivals.config import Config
@@ -24,41 +26,9 @@ from films.models import FilmFanFilmRating, Film, current_fan, get_present_fans,
     FilmFanFilmVote, fan_rating
 from sections.models import Subsection, Section
 
-STICKY_HEIGHT = 3
 CONSTANTS_CONFIG = Config().config['Constants']
 MAX_SHORT_MINUTES = CONSTANTS_CONFIG['MaxShortMinutes']
 LOWEST_PLANNABLE_RATING = CONSTANTS_CONFIG['LowestPlannableRating']
-
-
-class FragmentKeeper:
-
-    def __init__(self):
-        self.film_id_by_row_nr = {}
-
-    @staticmethod
-    def fragment_name(film_id):
-        return f'film{film_id}'
-
-    @classmethod
-    def fragment_code(cls, film_id):
-        return f'#{cls.fragment_name(film_id)}'
-
-    def add_fragments(self, films):
-        for row_nr, film in enumerate(films):
-            self.add_fragment(row_nr, film)
-
-    def add_fragment(self, row_nr, film):
-        fragment_row = row_nr - STICKY_HEIGHT if row_nr > STICKY_HEIGHT else 0
-        self.film_id_by_row_nr[fragment_row] = film.film_id
-
-    def get_fragment_name(self, row_nr):
-        try:
-            film_id = self.film_id_by_row_nr[row_nr]
-        except KeyError:
-            fragment_name = ''
-        else:
-            fragment_name = FragmentKeeper.fragment_name(film_id)
-        return fragment_name
 
 
 class IndexView(TemplateView):
@@ -116,7 +86,7 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
 
     def get_success_url(self):
         errors = self.view.unexpected_errors
-        fragment = '#top' if not self.film or errors else FragmentKeeper.fragment_code(self.film.film_id)
+        fragment = '#top' if not self.film or errors else FilmFragmentKeeper.fragment_code(self.film.film_id)
         return reverse(self.success_view_name) + fragment
 
     @staticmethod
@@ -228,7 +198,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
 
     def dispatch(self, request, *args, **kwargs):
         session = self.request.session
-        self.fragment_keeper = FragmentKeeper()
+        self.fragment_keeper = FilmFragmentKeeper('film_id')
 
         # Ensure the film rating cache is initialized.
         if not PickRating.film_rating_cache:
@@ -329,7 +299,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
             self.filters.append(self.subsection_filters[subsection])
 
     def _filter_films(self, session):
-        pr_debug('start filtered query', with_time=True)
+        pr_debug('start', with_time=True)
         filter_kwargs = {'festival': self.festival}
         if self.shorts_filter.on(session):
             filter_kwargs['duration__gt'] = self.short_threshold
@@ -345,6 +315,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
                 self.selected_films = self.selected_films.filter(
                     ~Exists(FilmFanFilmRating.film_ratings.filter(film=OuterRef('pk'), film_fan=fan))
                 )
+        pr_debug('done', with_time=True)
 
     @staticmethod
     def _get_query_string_to_select_all_subsections(session):
@@ -523,7 +494,7 @@ class VotesListView(LoginRequiredMixin, ListView):
         session = self.request.session
         self.festival = current_festival(session)
         self.logged_in_fan = current_fan(session)
-        self.fragment_keeper = FragmentKeeper()
+        self.fragment_keeper = FilmFragmentKeeper('film_id')
         VotesView.unexpected_errors = []
 
         # Read the films that were attended.
@@ -601,12 +572,12 @@ class VotesFormView(BaseFilmsFormView):
     success_view_name = 'films:votes'
 
 
-class ResultsView(LoginRequiredMixin, DetailView):
+class FilmDetailView(LoginRequiredMixin, DetailView):
     """
     Define generic view classes.
     """
     model = Film
-    template_name = 'films/results.html'
+    template_name = 'films/details.html'
     http_method_names = ['get', 'post']
     submit_name_prefix = 'results_'
     submit_names = []
@@ -623,7 +594,7 @@ class ResultsView(LoginRequiredMixin, DetailView):
                 film = Film.films.get(id=film_pk)
                 PickRating.update_rating(session, film, current_fan(session), rating_value)
 
-                return HttpResponseRedirect(reverse('films:results', args=(film_pk,)))
+                return HttpResponseRedirect(reverse('films:details', args=(film_pk,)))
             else:
                 self.unexpected_error = "Can't identify submit widget."
 
@@ -639,17 +610,24 @@ class ResultsView(LoginRequiredMixin, DetailView):
         logged_in_fan = current_fan(session)
         for fan in fans:
             choices = get_fan_choices(self.submit_name_prefix, film, fan, logged_in_fan, self.submit_names)
+            rating = FilmFanFilmRating.film_ratings.filter(film=film, film_fan=fan).first()
             fan_rows.append({
                 'fan': fan,
                 'rating_str': fan_rating_str(fan, film),
                 'choices': choices,
+                'rating_label': FilmFanFilmRating.Rating(rating.rating).label if rating else '',
             })
+        in_cache = self.film_is_in_cache(session)
         new_context = {
             'title': 'Film Rating Results',
             'description': self.get_description(film),
-            'film_in_cache': self.film_is_in_cache(session),
+            'fragment': FilmFragmentKeeper.fragment_code(film.film_id),
+            'film_in_cache': in_cache,
+            'no_cache': in_cache is None,
             'display_all_query': self.get_query_string_to_display_all(session),
             'fan_rows': fan_rows,
+            'film_title': film.title,
+            'film_screening_props': self._get_film_screening_props(),
             'unexpected_error': self.unexpected_error,
         }
         context = add_base_context(self.request, super_context | new_context)
@@ -669,10 +647,15 @@ class ResultsView(LoginRequiredMixin, DetailView):
         return description
 
     def film_is_in_cache(self, session):
+        """
+        Returns whether the current film is in cache or None if no cache exists.
+        """
         try:
             film_rows = PickRating.film_rating_cache.get_film_rows(session)
         except AttributeError:
-            return False
+            return None
+        if not film_rows:
+            return None
         film = self.get_object()
         return film in [row['film'] for row in film_rows]
 
@@ -684,6 +667,12 @@ class ResultsView(LoginRequiredMixin, DetailView):
         filter_keys = FilmRatingCache.get_active_filter_keys(session)
         display_all_query = Filter.get_display_query_from_keys(filter_keys)
         return display_all_query
+
+    def _get_film_screening_props(self):
+        session = self.request.session
+        film = self.object
+        film_screening_props = ScreeningStatusGetter.get_filmscreening_props(session, film)
+        return film_screening_props
 
 
 class ReviewersView(ListView):
@@ -827,7 +816,6 @@ def film_fan(request):
     match request.method:
         case 'GET':
             next_cookie.handle_get_request(request)
-            pr_debug(f'{next_cookie.get(request.session)=}')
         case 'POST':
             form = UserForm(request.POST)
             if form.is_valid():
@@ -838,7 +826,6 @@ def film_fan(request):
 
                 # Redirect to calling page.
                 redirect_path = next_cookie.get(session)
-                pr_debug(f'{redirect_path=}')
                 next_cookie.remove(session)
                 return HttpResponseRedirect(redirect_path or reverse('films:index'))
 

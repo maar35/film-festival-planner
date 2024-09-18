@@ -123,7 +123,7 @@ class AttendanceModelTests(TestCase):
         string = str(attendance)
 
         # Assert.
-        self.assertRegex(string, r'Tue 6Feb')
+        self.assertRegex(string, r'Tue 6 Feb')
 
     def test_attendance_string_decimal_zero(self):
         # Arrange.
@@ -136,7 +136,7 @@ class AttendanceModelTests(TestCase):
         string = str(attendance)
 
         # Assert.
-        self.assertRegex(string, r'Tue 30Nov')
+        self.assertRegex(string, r'Tue 30 Nov')
 
 
 class ScreeningViewsTests(TestCase):
@@ -203,7 +203,7 @@ class ScreeningViewsTests(TestCase):
         }
         self.screen_b = Screen.screens.create(**screen_kwargs)
 
-    def arrange_get_regular_user_pops(self):
+    def arrange_get_regular_user_props(self):
         views_testcase = ViewsTestCase()
         views_testcase.setUp()
         client = views_testcase.client
@@ -232,15 +232,21 @@ class ScreeningViewsTests(TestCase):
         screening = Screening.screenings.create(**screening_kwargs)
         return screening
 
-    def assert_screening_status(self, response, screening_status):
+    def assert_screening_status(self, response, screening_status, view='day_schema'):
         def make_re_str(re_str):
             return str(re_str).replace('(', '\\(').replace(')', '\\)')
+
+        prefix_by_view = {
+            'day_schema': r'<span\s+class="day-schema-screening"\s+',
+            'details': r'<td\s+',
+        }
+        prefix = prefix_by_view[view]
 
         content = get_decoded_content(response)
         color_pair = Screening.color_pair_by_screening_status[screening_status]
         background = make_re_str(color_pair['background'])
         color = make_re_str(color_pair['color'])
-        re_screening = (r'<span\s+class="day-schema-screening"\s+'
+        re_screening = (f'{prefix}'
                         + f'style="background: {background}; color: {color};')
         self.assertRegex(content, re_screening)
 
@@ -251,7 +257,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
         A screening is found in the day schema of its start date.
         """
         # Arrange.
-        client, _ = self.arrange_get_regular_user_pops()
+        client, _ = self.arrange_get_regular_user_props()
         session = client.session
 
         start_dt = datetime.datetime.fromisoformat('2024-08-30 11:15').replace(tzinfo=None)
@@ -267,14 +273,17 @@ class DaySchemaViewTests(ScreeningViewsTests):
         self.assert_screening_status(response, Screening.ScreeningStatus.FREE)
 
     def test_attendance(self):
+        """
+        An attended screening has the correct colors in the day schema.
+        """
         # Arrange.
-        client, fan = self.arrange_get_regular_user_pops()
+        client, fan = self.arrange_get_regular_user_props()
         session = client.session
 
         start_dt = datetime.datetime.fromisoformat('2024-08-31 11:30').replace(tzinfo=None)
         screening = self.arrange_create_screening(self.screen_b, start_dt)
 
-        attendance = Attendance.attendances.create(fan=fan, screening=screening)
+        _ = Attendance.attendances.create(fan=fan, screening=screening)
 
         # Act.
         response = client.get(reverse('screenings:day_schema'))
@@ -287,4 +296,74 @@ class DaySchemaViewTests(ScreeningViewsTests):
 
 
 class DetailsViewTest(ScreeningViewsTests):
-    pass
+    def test_attendance(self):
+        """
+        An attended screening is correctly displayed in the screening details view.
+        """
+        # Arrange.
+        client, fan = self.arrange_get_regular_user_props()
+        session = client.session
+
+        start_dt = datetime.datetime.fromisoformat('2024-08-30 11:15').replace(tzinfo=None)
+        screening = self.arrange_create_screening(self.screen_sg, start_dt)
+
+        _ = Attendance.attendances.create(fan=fan, screening=screening)
+
+        # Act.
+        response = client.get(reverse('screenings:details', args=[screening.pk]))
+
+        # Assert.
+        self.assertEqual(current_festival(session), self.festival)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertEqual(Screening.screenings.count(), 1)
+        self.assert_screening_status(response, Screening.ScreeningStatus.ATTENDS, view='details')
+
+    def test_attends_film(self):
+        """
+        If a screening is attended, other screenings of the same film are marked 'attends film'.
+        """
+        # Arrange.
+        client, fan = self.arrange_get_regular_user_props()
+        session = client.session
+
+        start_dt_1 = datetime.datetime.fromisoformat('2024-08-30 11:15').replace(tzinfo=None)
+        screening_1 = self.arrange_create_screening(self.screen_sg, start_dt_1)
+        start_dt_2 = datetime.datetime.fromisoformat('2024-08-31 11:30').replace(tzinfo=None)
+        screening_2 = self.arrange_create_screening(self.screen_b, start_dt_2)
+
+        _ = Attendance.attendances.create(fan=fan, screening=screening_1)
+
+        # Act.
+        response = client.get(reverse('screenings:details', args=[screening_2.pk]))
+
+        # Assert.
+        self.assertEqual(current_festival(session), self.festival)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertEqual(Screening.screenings.count(), 2)
+        self.assert_screening_status(response, Screening.ScreeningStatus.ATTENDS_FILM, view='details')
+
+    def test_details(self):
+        """
+        Details in the details view correspond with the screening.
+        """
+        # Arrange.
+        client, fan = self.arrange_get_regular_user_props()
+        session = client.session
+
+        start_dt = datetime.datetime.fromisoformat('2024-08-31 11:30').replace(tzinfo=None)
+        screening = self.arrange_create_screening(self.screen_b, start_dt)
+        film = screening.film
+
+        _ = Attendance.attendances.create(fan=fan, screening=screening)
+
+        # Act.
+        response = client.get(reverse('screenings:details', args=[screening.pk]))
+
+        # Assert.
+        self.assertEqual(current_festival(session), self.festival)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertEqual(Screening.screenings.count(), 1)
+        self.assertContains(response, f'<li>Screen: {screening.screen}</li>')
+        self.assertContains(response, f'<li>Time: Sat 31 Aug 11:30 - 13:24</li>')
+        self.assertContains(response, f'<li>Film: <a href="/films/{film.pk}/details/"> {film.title}</a></li>')
+        self.assertContains(response, '<li>Film description: None</li>')

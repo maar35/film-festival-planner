@@ -44,7 +44,9 @@
     <div class="row">
         <span class="col-left">
         {% if festival %}
+            {% block festival %}
             <a href="{% url 'festivals:index' %}?next={{ request.path }}">{{ festival }}</a>
+            {% endblock %}
             {% now "Y-m-d" as today_as_date %}
             {% if today_as_date < festival.start_date|date:"Y-m-d" %}
                 <span style="color: var(--modestStandoutColor)"> starts in {{ festival.start_date|timeuntil }}</span>

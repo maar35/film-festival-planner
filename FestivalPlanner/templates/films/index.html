@@ -17,7 +17,7 @@
     <br>
     <a href="{% url 'films:reviewers' %}">Reviewers</a>
     <h3>Related entities</h3>
-    <a href="{% url 'screenings:day_schema' %}">Screenings day schema</a>
+    <a href="{% url 'screenings:day_schema' %}">Day schema</a>
     <br>
     <a href="{% url 'theaters:theaters' %}">Theaters</a>
     <br>
@@ -27,19 +27,19 @@
     <br>
     <a href="{% url 'films:film_fan' %}">Film fans</a>
     <h3>Loading and unloading</h3>
-    <a href="/loader/theaters?action=dump">Dump theater data</a>
+    <a href="{% url 'loader:theaters' %}?action=dump">Dump theater data</a>
     <br>
     <a href="{% url 'loader:new_screens' %}">Insert new theater data</a>
     <br>
-    <a href="/loader/theaters?action=load">Load theater data</a>
+    <a href="{% url 'loader:theaters' %}?action=load">Load theater data</a>
     <br>
     <a href="{% url 'loader:sections' %}">Load sections</a>
     <br>
     <a href="{% url 'loader:ratings' %}">Load films and ratings</a>
     <br>
-    <a href="/loader/list_action?label=screenings">Load screenings</a>
+    <a href="{% url 'loader:list_action' %}?label=screenings">Load screenings</a>
     <br>
-    <a href="/loader/list_action?label=attendances">Load attendances</a>
+    <a href="{% url 'loader:list_action' %}?label=attendances">Load attendances</a>
     <br><br>
     <a href="{% url 'loader:film_backup' %}">Backup rating data</a>
     <h3>Testing</h3>
@@ -48,6 +48,6 @@
     <a href="{% url 'festivals:test_default_festival' %}">Test nearest festival</a>
     <br><br>
     <h3>Admin</h3>
-    <a href="/admin">Admin</a>
+    <a href="{% url 'admin:login' %}">Admin</a>
     <br>
 {% endblock %}
