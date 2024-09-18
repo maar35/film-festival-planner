@@ -41,15 +41,15 @@
             </tr>
         </thead>
         <tbody>
-        {% for spec in fan_specs %}
+        {% for prop in fan_props %}
             <tr>
-                <td>{{ spec.fan }}</td>
-                {% if spec.attends %}
-                    <td class="with-submit" style="text-align: center"><input type="checkbox" checked="" value="{{ spec.value }}" name="{{ spec.fan }}"></td>
+                <td>{{ prop.fan }}</td>
+                {% if prop.attends %}
+                    <td class="with-submit" style="text-align: center"><input type="checkbox" checked="" value="{{ prop.value }}" name="{{ prop.fan }}"></td>
                 {% else %}
-                    <td class="with-submit" style="text-align: center"><input type="checkbox" value="attends" name="{{ spec.fan }}"></td>
+                    <td class="with-submit" style="text-align: center"><input type="checkbox" value="attends" name="{{ prop.fan }}"></td>
                 {% endif %}
-                <td style="background: var(--screeningBackground)">{{ spec.attends }}</td>
+                <td style="background: var(--screeningBackground)">{{ prop.attends }}</td>
             </tr>
         {% endfor %}
         </tbody>

@@ -7,10 +7,10 @@ from django.views.generic import ListView, FormView
 from django.views.generic.detail import SingleObjectMixin
 
 from authentication.models import FilmFan
-from festival_planner.cookie import Cookie
+from festival_planner.cookie import Cookie, Filter
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fan_action import FanAction
-from festival_planner.fragment_keeper import ScreeningFragmentKeeper
+from festival_planner.fragment_keeper import ScreeningFragmentKeeper, FRAGMENT_INDICATOR
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
 from festivals.models import current_festival
@@ -119,7 +119,6 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         self.day_screenings = None
         self.attendances_by_screening = None
         self.attends_by_screening = None
-        self.has_attended_film_by_screening = None
         self.fragment_keeper = None
 
     def setup(self, request, *args, **kwargs):
@@ -158,7 +157,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'sub_header': 'Visualized screenings of the current festival day',
             'day': current_day_str,
             'day_choices': day_choices,
-            'film_title': self.selected_screening.film.title,
+            'film_title': self.selected_screening.film.title if self.selected_screening else '',
             'screening': self.selected_screening,
             'selected_screening_props': selected_screening_props,
             'timescale': self._get_timescale(),
@@ -171,15 +170,15 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         return add_base_context(self.request, super_context | new_context)
 
     def _get_screen_row(self, screen_nr, screen, screenings):
-        screening_specs = [self._screening_spec(s) for s in screenings]
-        selected = len([spec['selected'] for spec in screening_specs if spec['selected']])
+        screening_props = [self._screening_prop(s) for s in screenings]
+        selected = len([prop['selected'] for prop in screening_props if prop['selected']])
         fragment_name = self.fragment_keeper.get_fragment_name(screen_nr)
         screen_row = {
             'screen': screen,
             'fragment_name': fragment_name,
             'color': Theater.color_by_priority[screen.theater.priority],
             'total_width': self.hour_count * self.pixels_per_hour,
-            'screening_specs': sorted(screening_specs, key=lambda spec: spec['screening'].start_dt),
+            'screening_props': sorted(screening_props, key=lambda prop: prop['screening'].start_dt),
             'background': COLOR_PAIR_SELECTED['background'] if selected else None,
         }
         return screen_row
@@ -193,7 +192,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         pixels = self.pixels_per_hour * pixel_minutes / 60
         return pixels
 
-    def _screening_spec(self, screening):
+    def _screening_prop(self, screening):
         attendants = self.status_getter.get_attendants(screening)
         info_str = f'{"Q " if screening.q_and_a else ""}{self._attendants_str(attendants)}'
         status, pair = self._screening_color_pair(screening, attendants)
@@ -210,7 +209,9 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         rating_color = pair_selected['background'] if attends_film else pair_selected['color']
         festival_color = screening.film.festival.festival_color
         film_rating = screening.film.film_rating()
-        screening_spec = {
+        querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
+        fragment = ScreeningFragmentKeeper.fragment_code(screening.screen.pk)
+        screening_prop = {
             'screening': screening,
             'line_1': f'{screening.film.title}',
             'line_2': line_2,
@@ -223,10 +224,10 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'frame_color': pair_selected['color'] if selected else festival_color,
             'info_pair': pair_selected if selected else pair,
             'info_spot': info_str or 'info',
-            'query_string': f'?day={day}&screening={screening.pk}',
-            'fragment': ScreeningFragmentKeeper.fragment_code(screening.screen.pk),
+            'query_string': '' if selected else querystring,
+            'fragment': f'{FRAGMENT_INDICATOR}header_screening' if selected else fragment,
         }
-        return screening_spec
+        return screening_prop
 
     def _get_timescale(self):
         hour_list = []
@@ -234,11 +235,11 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         start_dt = self._get_start_dt()
         for hour in range(self.hour_count):
             dt = (start_dt + hour * delta)
-            specs_by_hour = {
+            props_by_hour = {
                 'text': dt.strftime('%H:%M %Z'),
                 'left': self._pixels_from_dt(dt),
             }
-            hour_list.append(specs_by_hour)
+            hour_list.append(props_by_hour)
         return hour_list
 
     def _attendants_str(self, attendants):
@@ -312,20 +313,14 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
     def get_context_data(self, **kwargs):
         super_context = super().get_context_data(**kwargs)
         duration = self.screening.end_dt - self.screening.start_dt
-        fan_specs = []
-        for fan in self.fans:
-            attends = self.initial_attendance_by_fan[fan]
-            fan_specs.append({
-                'fan': fan.name,
-                'attends': attends,
-            })
+        fan_props = [{'fan': fan.name, 'attends': self.initial_attendance_by_fan[fan]} for fan in self.fans]
         new_context = {
             'title': 'Screening Details',
             'screening': self.screening,
             'duration': duration,
             'minutes': minutes_str(duration),
             'film_description': FilmDetailView.get_description(self.screening.film),
-            'fan_specs': fan_specs,
+            'fan_props': fan_props,
             'film_title': self.screening.film.title,
             'film_screening_props': self._get_filmscreening_props(),
         }

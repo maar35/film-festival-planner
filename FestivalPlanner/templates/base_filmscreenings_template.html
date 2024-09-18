@@ -17,17 +17,13 @@
     <tr>
         {% if prop.film_screening == screening %}
             <td style="background: {{ prop.pair_selected.background }}; color: {{ prop.pair_selected.color }}">
-                <a href="{% url 'screenings:day_schema' %}{{ prop.query_string }}{{ prop.fragment }}">
-                    {{ prop.film_screening.str_short }}
-                </a>
-            </td>
         {% else %}
             <td>
+        {% endif %}
                 <a href="{% url 'screenings:day_schema' %}{{ prop.query_string }}{{ prop.fragment }}">
                     {{ prop.film_screening.str_short }}
                 </a>
             </td>
-        {% endif %}
         <td style="background: {{ prop.pair.background }}; color: {{ prop.pair.color }}">
             {{ prop.status.label }}
         </td>

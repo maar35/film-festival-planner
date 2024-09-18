@@ -147,5 +147,5 @@ class Attendance(models.Model):
     def __str__(self):
         title = self.screening.film.title
         day = self.screening.str_day()
-        start_time = self.screening.start_time()
+        start_time = self.screening.str_start_time()
         return f'{self.fan} attends {title} on {day} at {start_time}'

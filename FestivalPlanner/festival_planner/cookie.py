@@ -1,4 +1,3 @@
-
 class Cookie:
     """
     Support basic operations on same-keyed cookies.
@@ -62,6 +61,11 @@ class Filter(Cookie):
             filtered = self.filtered_by_query[query_key]
             self.set(request.session, filtered)
 
+    @staticmethod
+    def get_querystring(**kwargs):
+        query_list = [f'{key}={value}' for key, value in kwargs.items()]
+        return '?' + '&'.join(query_list) if query_list else ''
+
     def get_href_filter(self, session, first=True):
         """
         Shortcut filter query as to use in template variable.
@@ -70,8 +74,8 @@ class Filter(Cookie):
 
     @classmethod
     def get_display_query_from_keys(cls, filter_keys):
-        query_list = [f'{k}={cls.query_by_filtered[False]}' for k in filter_keys]
-        return '?' + '&'.join(query_list) if query_list else ''
+        kwargs = {key: cls.query_by_filtered[False] for key in filter_keys}
+        return cls.get_querystring(**kwargs)
 
     def on(self, session, default=None):
         return self.get(session, default)

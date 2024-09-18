@@ -647,9 +647,12 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         return description
 
     def film_is_in_cache(self, session):
+        """
+        Returns whether the current film is in cache or None if no cache exists.
+        """
         try:
             film_rows = PickRating.film_rating_cache.get_film_rows(session)
-        except AttributeError as e:
+        except AttributeError:
             return None
         if not film_rows:
             return None

@@ -1,3 +1,4 @@
+from festival_planner.cookie import Filter
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fragment_keeper import ScreeningFragmentKeeper
 from festivals.models import current_festival
@@ -52,12 +53,12 @@ class ScreeningStatusGetter:
 
     def _get_has_attended_film_by_screening(self):
         manager = Attendance.attendances
-        return {s: manager.filter(screening__film=s.film, fan=self.fan) for s in self.day_screenings}
+        return {s: manager.filter(screening__film=s.film, fan=self.fan).exists() for s in self.day_screenings}
 
     def _has_attended_film(self, screening):
         """ Returns whether the current fan attends another screening of the same film. """
-        film_screenings = self.has_attended_film_by_screening[screening]
-        return film_screenings
+        current_fan_attends_other_filmscreening = self.has_attended_film_by_screening[screening]
+        return current_fan_attends_other_filmscreening
 
     def _get_overlap_status(self, screening, screenings):
         status = Screening.ScreeningStatus.FREE
@@ -90,7 +91,7 @@ class ScreeningStatusGetter:
             'attendants': ', '.join([attendant.name for attendant in attendants]),
             'ratings': ', '.join(ratings),
             'q_and_a': film_screening.str_q_and_a(),
-            'query_string': f'?day={day}&screening={film_screening.pk}',
+            'query_string': Filter.get_querystring(**{'day': day, 'screening': film_screening.pk}),
             'fragment': ScreeningFragmentKeeper.fragment_code(film_screening.screen.pk),
         }
         return day_props

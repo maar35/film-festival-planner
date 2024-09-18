@@ -123,7 +123,7 @@ class AttendanceModelTests(TestCase):
         string = str(attendance)
 
         # Assert.
-        self.assertRegex(string, r'Tue 6Feb')
+        self.assertRegex(string, r'Tue 6 Feb')
 
     def test_attendance_string_decimal_zero(self):
         # Arrange.
@@ -136,7 +136,7 @@ class AttendanceModelTests(TestCase):
         string = str(attendance)
 
         # Assert.
-        self.assertRegex(string, r'Tue 30Nov')
+        self.assertRegex(string, r'Tue 30 Nov')
 
 
 class ScreeningViewsTests(TestCase):
@@ -203,7 +203,7 @@ class ScreeningViewsTests(TestCase):
         }
         self.screen_b = Screen.screens.create(**screen_kwargs)
 
-    def arrange_get_regular_user_pops(self):
+    def arrange_get_regular_user_props(self):
         views_testcase = ViewsTestCase()
         views_testcase.setUp()
         client = views_testcase.client
@@ -251,7 +251,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
         A screening is found in the day schema of its start date.
         """
         # Arrange.
-        client, _ = self.arrange_get_regular_user_pops()
+        client, _ = self.arrange_get_regular_user_props()
         session = client.session
 
         start_dt = datetime.datetime.fromisoformat('2024-08-30 11:15').replace(tzinfo=None)
@@ -268,7 +268,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
 
     def test_attendance(self):
         # Arrange.
-        client, fan = self.arrange_get_regular_user_pops()
+        client, fan = self.arrange_get_regular_user_props()
         session = client.session
 
         start_dt = datetime.datetime.fromisoformat('2024-08-31 11:30').replace(tzinfo=None)
