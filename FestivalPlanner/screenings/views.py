@@ -60,13 +60,17 @@ class FestivalDay:
             if day_str < self.festival.start_date.isoformat() or day_str > self.festival.end_date.isoformat():
                 day_str = ''
         if not day_str:
-            try:
-                first_screening = (Screening.screenings.filter(film__festival=self.festival).earliest('start_dt'))
-                day_str = first_screening.start_dt.date().isoformat()
-            except Screening.DoesNotExist:
-                day_str = self.festival.start_date.isoformat()
+            day_str = self.alternative_day_str()
             self.day_cookie.set(session, day_str)
         return self.festival
+
+    def alternative_day_str(self):
+        try:
+            first_screening = (Screening.screenings.filter(film__festival=self.festival).earliest('start_dt'))
+            day_str = first_screening.start_dt.date().isoformat()
+        except Screening.DoesNotExist:
+            day_str = self.festival.start_date.isoformat()
+        return day_str
 
 
 class DaySchemaView(LoginRequiredMixin, View):
@@ -155,6 +159,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         new_context = {
             'title': 'Screenings Day Schema',
             'sub_header': 'Visualized screenings of the current festival day',
+            'date_picker_head': 'Festival day',
             'day': current_day_str,
             'day_choices': day_choices,
             'film_title': self.selected_screening.film.title if self.selected_screening else '',

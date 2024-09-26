@@ -1,0 +1,125 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h2 class="row col-left-h2">Availabilities overview</h2>
+    <span class="row">
+        <span class="col-right">
+            <a href="{% url 'screenings:day_schema' %}">Day schema</a>
+            <br>
+            <a href="{% url 'films:films' %}">Ratings</a>
+        </span>
+    </span>
+
+    <div class="no-select">
+        <h3>Add an availability period</h3>
+        {% block errors %}
+            {{ block.super }}
+        {% endblock %}
+
+        <form method="post">
+        {% csrf_token %}
+            <h3>
+                <span class="label-8rem">{{ fan_picker_label }}</span>
+                <span class="dropdown inline-dropdown-addition">
+                    <span class="drop-button">
+                        {{ fan }}
+                    </span>
+                    <span class="dropdown-content">
+                        {% for choice in fan_choices %}
+                            {% if choice.name == fan %}
+                                <input type="submit" value="{{ choice }}" name="fan" disabled
+                                       style="cursor: default; color: var(--inputDisabledColor); text-align: right;">
+                            {% else %}
+                                <input type="submit" value="{{ choice }}" name="fan" style="text-align: right;">
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </span>
+            </h3>
+        </form>
+
+        {% block date_picker %}
+            {{ block.super }}
+        {% endblock date_picker %}
+
+        {% block time_picker %}
+            {{ block.super }}
+        {% endblock time_picker %}
+
+        {% block alt_date_picker %}
+            {{ block.super }}
+        {% endblock alt_date_picker %}
+
+        {% block alt_time_picker %}
+            {{ block.super }}
+        {% endblock alt_time_picker %}
+
+        <form method="post">
+            {% csrf_token %}
+            {% if can_submit %}
+                <input type="submit" value="Add availability period" name="add"/>
+            {% else %}
+                <input type="submit" value="Invalid availability period" disabled
+                       style="cursor: default; color: var(--inputDisabledColor); background: var(--inputDisabledBackground);"/>
+            {% endif %}
+        </form>
+        <br>
+
+    {% if availability_rows %}
+        <h3>Availabilities {{ festival }} </h3>
+        <div style="color: {{ festival_color }}">
+            {{ festival_start_dt|date:"D Y-m-d H:i" }} - {{ festival_end_dt|date:"D Y-m-d H:i" }}
+        </div>
+        <br>
+        <table>
+            <thead>
+                <tr>
+                    <th class="sticky-t-head">Start date</th>
+                    <th class="sticky-t-head">End date</th>
+                    <td class="modest-dropdown">
+                        <span class="active-text" style="color: var(--modestStandoutColor);">
+                            Fan
+                        </span>
+                        <div class="modest-dropdown-content">
+                            <table style="min-width: 12rem;">
+                                <tbody>
+                                    {% for prop in fan_filter_props %}
+                                        <tr><td>
+                                            <a href="{{ prop.href_filter }}">
+                                                {{ prop.action }} {{ prop.fan }}
+                                            </a>
+                                        </td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>
+            </thead>
+            <tbody>
+            {% for row in availability_rows %}
+                <tr>
+                    <td>
+                        {% ifchanged row.start_dt %}
+                            {{ row.start_dt|date:"D Y-m-d H:i" }}
+                        {% endifchanged %}
+                    </td>
+                    <td>
+                        {% ifchanged row.end_dt %}
+                            {{ row.end_dt|date:"D Y-m-d H:i" }}
+                        {% endifchanged %}
+                    </td>
+                    <td>{{ row.fan }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No availabilities available for this festival</p>
+    {% endif %}
+    </div>
+    <br>
+{% endblock %}}

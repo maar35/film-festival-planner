@@ -8,7 +8,7 @@ MINUTES_STR = "'"
 UNRATED_STR = '-'
 FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
 
-# FIELD_BY_POST_ATTENDANCE
+
 class Film(models.Model):
     """
     Film table.
@@ -49,6 +49,7 @@ class Film(models.Model):
             rating = FilmFanFilmRating.Rating.UNRATED
         return rating
 
+
 class FilmFanFilmRating(models.Model):
     """
     Film Fan Film Rating table.
@@ -85,6 +86,7 @@ class FilmFanFilmRating(models.Model):
 
     @classmethod
     def super_ratings(cls):
+        # TODO: Be consequent: have either the list below or [LOWEST_PLANNABLE_RATING:]
         return [cls.Rating.GOOD, cls.Rating.VERY_GOOD, cls.Rating.EXCELLENT]
 
     @classmethod

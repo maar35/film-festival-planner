@@ -35,6 +35,24 @@
         position: absolute;
     }
 
+    /* TODO: cleanup! */
+    select {
+        font-size: large;
+        background-color: var(--inputBackground);
+        color: var(--modestStandoutColor);
+        padding: 14px 20px;
+        margin: 8px 0 !important;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    select:hover {
+        background-color: var(--hoverBackground);
+    }
+    select:focus {
+        background-color: var(--focusBackgrond);
+    }
+
 </style>
 
 <body>
@@ -97,8 +115,116 @@
     </div>
     <hr>
     {% block content %}
+        {% block errors %}
+            {% if form_errors %}
+                <h2 class="error">Form Error</h2>
+                <p>
+                {% for form_error in form_errors %}
+                    {{ form_error }}<br>
+                {% endfor %}
+                </p>
+                <br>
+            {% endif %}
+        {% endblock errors %}
+
+        {% block date_picker %}
+        <form method="post">
+        {% csrf_token %}
+            <h3>
+                <span class="label-8rem">{{ date_picker_label }}</span>
+                <span class="dropdown inline-dropdown-addition">
+                    <span class="drop-button">
+                        {{ day }}
+                    </span>
+                    <div class="dropdown-content">
+                        {% for choice in day_choices %}
+                            {% if choice == day %}
+                                <input type="submit" value="{{ choice }}" name="day" disabled
+                                       style="cursor: default; color: var(--inputDisabledColor); text-align: right;">
+                            {% else %}
+                                <input type="submit" value="{{ choice }}" name="day" style="text-align: right;">
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </span>
+            </h3>
+        </form>
+        {% endblock date_picker %}
+
+        {% block alt_date_picker %}
+        <form method="post">
+        {% csrf_token %}
+            <h3>
+                <span class="label-8rem">{{ alt_date_picker_label }}</span>
+                <span class="dropdown inline-dropdown-addition">
+                    <span class="drop-button">
+                        {{ alt_day }}
+                    </span>
+                    <span class="dropdown-content">
+                        {% for choice in alt_day_choices %}
+                            {% if choice == alt_day %}
+                                <input type="submit" value="{{ choice }}" name="alt_day" disabled
+                                       style="cursor: default; color: var(--inputDisabledColor); text-align: right;">
+                            {% else %}
+                                <input type="submit" value="{{ choice }}" name="alt_day" style="text-align: right;">
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </span>
+            </h3>
+        </form>
+        {% endblock alt_date_picker %}
+
+        {% block time_picker %}
+        <form method="post">
+        {% csrf_token %}
+            <h3>
+                <span class="label-8rem">{{ time_picker_label }}</span>
+                <span class="dropdown inline-dropdown-addition">
+                    <span class="drop-button">
+                        {{ time }}
+                    </span>
+                    <span class="dropdown-content">
+                        {% for choice in time_choices %}
+                            {% if choice == time %}
+                                <input type="submit" value="{{ choice }}" name="time" disabled
+                                       style="cursor: default; color: var(--inputDisabledColor); text-align: right;">
+                            {% else %}
+                                <input type="submit" value="{{ choice }}" name="time" style="text-align: right;">
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </span>
+            </h3>
+        </form>
+        {% endblock time_picker %}
+
+        {% block alt_time_picker %}
+        <form method="post">
+        {% csrf_token %}
+            <h3>
+                <span class="label-8rem">{{ alt_time_picker_label }}</span>
+                <span class="dropdown inline-dropdown-addition">
+                    <span class="drop-button">
+                        {{ alt_time }}
+                    </span>
+                    <span class="dropdown-content">
+                        {% for choice in alt_time_choices %}
+                            {% if choice == alt_time %}
+                                <input type="submit" value="{{ choice }}" name="alt_time" disabled
+                                       style="cursor: default; color: var(--inputDisabledColor); text-align: right;">
+                            {% else %}
+                                <input type="submit" value="{{ choice }}" name="alt_time" style="text-align: right;">
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </span>
+            </h3>
+        </form>
+        {% endblock alt_time_picker %}
+
         Body content
-    {% endblock %}
+    {% endblock content %}
     <hr>
     <div class="row sticky-footer">
         <span class="col-left">

@@ -246,8 +246,7 @@ class ScreeningViewsTests(TestCase):
         color_pair = Screening.color_pair_by_screening_status[screening_status]
         background = make_re_str(color_pair['background'])
         color = make_re_str(color_pair['color'])
-        re_screening = (f'{prefix}'
-                        + f'style="background: {background}; color: {color};')
+        re_screening = (f'{prefix}' + f'style="background: {background}; color: {color};')
         self.assertRegex(content, re_screening)
 
 

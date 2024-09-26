@@ -4,9 +4,10 @@
     --modestStandoutColor: ivory;
     --linkColor: green;
     --inputBackground: forestGreen;
-    --inputDisabledColor: lightGrey;
     --hoverBackground: darkGreen;
     --focusBackgrond: yellowGreen;
+    --inputDisabledColor: lightGrey;
+    --inputDisabledBackground : red;
     --stickyBackground: #00000090;
     --tableBackground: #00000070;
     --modestBackground: #00000070;
@@ -160,6 +161,12 @@ input[type=submit].in-table:hover {
     margin-bottom: 0px;
 }
 
+/* Form styles */
+.label-8rem {
+    display: inline-block;
+    min-width: 8rem;"
+}
+
 /* Screening day scheme grid style */
 .day-schema-border {
     border: var(--screeningBorderWidth) solid var(--screeningBorderColor);
@@ -186,7 +193,7 @@ input[type=submit].in-table:hover {
     border-radius: 1rem;
 }
 
-/* Create a sticky, half-transparant header */
+/* Sticky styles.r */
 .sticky-index {
     position: sticky;
     top: 0;
@@ -411,6 +418,12 @@ span.up {
     color: var(--linkColor);
     text-decoration-line: underline;
     text-decoration-style: dashed;
+}
+
+/* Color of disabled element */
+.disabled-color {
+    cursor: default;
+    color: var(--inputDisabledColor);
 }
 
 /* Disable text selection */
