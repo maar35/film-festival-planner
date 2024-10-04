@@ -24,6 +24,12 @@ class Availabilities(models.Model):
         ]
 
     def __str__(self):
-        dt_fmt = '%Y-%m-%d %H:00'
+        dt_fmt = '%Y-%m-%d %H:%M'
         return (f'{self.fan.name} is available'
                 f' between {self.start_dt.strftime(dt_fmt)} and {self.end_dt.strftime(dt_fmt)}')
+
+    def __eq__(self, other):
+        return (self.fan, self.start_dt, self.end_dt) == (other.fan, other.start_dt, other.end_dt)
+
+    def __hash__(self):
+        return hash((self.fan, self.start_dt, self.end_dt))

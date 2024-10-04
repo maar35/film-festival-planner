@@ -35,23 +35,8 @@
         position: absolute;
     }
 
-    /* TODO: cleanup! */
-    select {
-        font-size: large;
-        background-color: var(--inputBackground);
-        color: var(--modestStandoutColor);
-        padding: 14px 20px;
-        margin: 8px 0 !important;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-    select:hover {
-        background-color: var(--hoverBackground);
-    }
-    select:focus {
-        background-color: var(--focusBackgrond);
-    }
+
+    /* TODO: keep in style sheet only */
 
 </style>
 
@@ -114,6 +99,7 @@
         </span>
     </div>
     <hr>
+
     {% block content %}
         {% block errors %}
             {% if form_errors %}
@@ -127,6 +113,53 @@
             {% endif %}
         {% endblock errors %}
 
+        {% block warnings %}
+            {% if warnings %}
+                <h2 class="warning">Warning</h2>
+                <p>
+                {% for warning in warnings %}
+                    {{ warning }}<br>
+                {% endfor %}
+                </p>
+                <br>
+            {% endif %}
+        {% endblock warnings %}
+
+        {% block log %}
+            {% if log.results %}
+                <h3 class="log-header">{{ log.action }} results</h3>
+                {% for result in log.results %}
+                    <p class="log">{{ result }}</p>
+                {% endfor %}
+                <br>
+            {% endif %}
+        {% endblock log %}
+
+        {% block fan_picker %}
+        <form method="post">
+        {% csrf_token %}
+            <h3>
+                <span class="label-8rem">{{ fan_picker_label }}</span>
+                <span class="dropdown inline-dropdown-addition">
+                    <span class="drop-button">
+                        {{ fan }}
+                    </span>
+                    <span class="dropdown-content">
+                        {% for choice in fan_choices %}
+                            {% if choice.name == fan %}
+                                <span class="disabled-input">
+                                    <input type="submit" value="{{ choice }}" name="fan" disabled>
+                                </span>
+                            {% else %}
+                                <input type="submit" value="{{ choice }}" name="fan">
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                </span>
+            </h3>
+        </form>
+        {% endblock fan_picker %}
+
         {% block date_picker %}
         <form method="post">
         {% csrf_token %}
@@ -139,10 +172,13 @@
                     <div class="dropdown-content">
                         {% for choice in day_choices %}
                             {% if choice == day %}
-                                <input type="submit" value="{{ choice }}" name="day" disabled
-                                       style="cursor: default; color: var(--inputDisabledColor); text-align: right;">
+                                <span class="disabled-right-aligned-input">
+                                    <input type="submit" value="{{ choice }}" name="day" disabled>
+                                </span>
                             {% else %}
-                                <input type="submit" value="{{ choice }}" name="day" style="text-align: right;">
+                                <span class="right-aligned-input">
+                                    <input type="submit" value="{{ choice }}" name="day">
+                                </span>
                             {% endif %}
                         {% endfor %}
                     </div>
@@ -163,10 +199,13 @@
                     <span class="dropdown-content">
                         {% for choice in alt_day_choices %}
                             {% if choice == alt_day %}
-                                <input type="submit" value="{{ choice }}" name="alt_day" disabled
-                                       style="cursor: default; color: var(--inputDisabledColor); text-align: right;">
+                                <span class="disabled-right-aligned-input">
+                                    <input type="submit" value="{{ choice }}" name="alt_day" disabled>
+                                </span>
                             {% else %}
-                                <input type="submit" value="{{ choice }}" name="alt_day" style="text-align: right;">
+                                <span class="right-aligned-input">
+                                    <input type="submit" value="{{ choice }}" name="alt_day">
+                                </span>
                             {% endif %}
                         {% endfor %}
                     </span>
@@ -187,10 +226,13 @@
                     <span class="dropdown-content">
                         {% for choice in time_choices %}
                             {% if choice == time %}
-                                <input type="submit" value="{{ choice }}" name="time" disabled
-                                       style="cursor: default; color: var(--inputDisabledColor); text-align: right;">
+                                <span class="disabled-right-aligned-input">
+                                    <input type="submit" value="{{ choice }}" name="time" disabled>
+                                </span>
                             {% else %}
-                                <input type="submit" value="{{ choice }}" name="time" style="text-align: right;">
+                                <span class="right-aligned-input">
+                                    <input type="submit" value="{{ choice }}" name="time">
+                                </span>
                             {% endif %}
                         {% endfor %}
                     </span>
@@ -211,10 +253,13 @@
                     <span class="dropdown-content">
                         {% for choice in alt_time_choices %}
                             {% if choice == alt_time %}
-                                <input type="submit" value="{{ choice }}" name="alt_time" disabled
-                                       style="cursor: default; color: var(--inputDisabledColor); text-align: right;">
+                                <span class="disabled-right-aligned-input">
+                                    <input type="submit" value="{{ choice }}" name="alt_time" disabled>
+                                </span>
                             {% else %}
-                                <input type="submit" value="{{ choice }}" name="alt_time" style="text-align: right;">
+                                <span class="right-aligned-input">
+                                    <input type="submit" value="{{ choice }}" name="alt_time">
+                                </span>
                             {% endif %}
                         {% endfor %}
                     </span>

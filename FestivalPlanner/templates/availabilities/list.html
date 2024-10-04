@@ -15,31 +15,22 @@
 
     <div class="no-select">
         <h3>Add an availability period</h3>
+
         {% block errors %}
             {{ block.super }}
         {% endblock %}
 
-        <form method="post">
-        {% csrf_token %}
-            <h3>
-                <span class="label-8rem">{{ fan_picker_label }}</span>
-                <span class="dropdown inline-dropdown-addition">
-                    <span class="drop-button">
-                        {{ fan }}
-                    </span>
-                    <span class="dropdown-content">
-                        {% for choice in fan_choices %}
-                            {% if choice.name == fan %}
-                                <input type="submit" value="{{ choice }}" name="fan" disabled
-                                       style="cursor: default; color: var(--inputDisabledColor); text-align: right;">
-                            {% else %}
-                                <input type="submit" value="{{ choice }}" name="fan" style="text-align: right;">
-                            {% endif %}
-                        {% endfor %}
-                    </span>
-                </span>
-            </h3>
-        </form>
+        {% block warnings %}
+            {{ block.super }}
+        {% endblock %}
+
+        {% block log %}
+            {{ block.super }}
+        {% endblock log %}
+
+        {% block fan_picker %}
+            {{ block.super }}
+        {% endblock fan_picker %}
 
         {% block date_picker %}
             {{ block.super }}
@@ -59,16 +50,41 @@
 
         <form method="post">
             {% csrf_token %}
-            {% if can_submit %}
-                <input type="submit" value="Add availability period" name="add"/>
+            {% if warnings and confirm %}
+                <span class="disabled-warning-input">
+                    <input type="submit" value="{{ value }}" disabled>
+                </span>
+            {% elif warnings %}
+                <span class="warning-input">
+                    <input type="submit" name="{{ action }}" value="{{ value }}"/>
+                </span>
+            {% elif can_submit and confirm %}
+                <span class="disabled-input">
+                    <input type="submit" value="{{ value }}" disabled>
+                </span>
+            {% elif can_submit %}
+                <input type="submit" name="{{ action }}" value="{{ value }}"/>
             {% else %}
-                <input type="submit" value="Invalid availability period" disabled
-                       style="cursor: default; color: var(--inputDisabledColor); background: var(--inputDisabledBackground);"/>
+                <span class="disabled-error-input">
+                    <input type="submit" value="{{ value }}" disabled>
+                </span>
+            {% endif %}
+
+            {% if confirm %}
+                <br>
+                <br>
+                <h3 class="log-header">Sure?</h3>
+                <input type="submit" name="{{ action }}_canceled" value="No please cancel"
+                       style="width: 25%;"/>
+                <span class="warning-input">
+                    <input type="submit" name="{{ action }}_confirmed" value="Sure"
+                           style="width: 25%;"/>
+                </span>
             {% endif %}
         </form>
         <br>
 
-    {% if availability_rows %}
+    {% if availability_rows or filtered %}
         <h3>Availabilities {{ festival }} </h3>
         <div style="color: {{ festival_color }}">
             {{ festival_start_dt|date:"D Y-m-d H:i" }} - {{ festival_end_dt|date:"D Y-m-d H:i" }}
@@ -79,17 +95,17 @@
                 <tr>
                     <th class="sticky-t-head">Start date</th>
                     <th class="sticky-t-head">End date</th>
-                    <td class="modest-dropdown">
+                    <td class="sticky-modest-drop-t-head">
                         <span class="active-text" style="color: var(--modestStandoutColor);">
                             Fan
                         </span>
-                        <div class="modest-dropdown-content">
+                        <div class="sticky-modest-drop-t-head-content">
                             <table style="min-width: 12rem;">
                                 <tbody>
                                     {% for prop in fan_filter_props %}
                                         <tr><td>
                                             <a href="{{ prop.href_filter }}">
-                                                {{ prop.action }} {{ prop.fan }}
+                                                {{ prop.action }} {{ prop.fan.name }}
                                             </a>
                                         </td></tr>
                                     {% endfor %}
@@ -112,7 +128,7 @@
                             {{ row.end_dt|date:"D Y-m-d H:i" }}
                         {% endifchanged %}
                     </td>
-                    <td>{{ row.fan }}</td>
+                    <td>{{ row.fan.name }}</td>
                 </tr>
             {% endfor %}
             </tbody>

@@ -28,61 +28,6 @@ class FestivalBase(models.Model):
         return f'{self.mnemonic}'
 
 
-def default_festival(today=None):
-    """
-    Return a festival object that will do as a default festival when
-    logging in.
-    :param today: optional date to relate the nearest festival to
-    :return: a festival object
-    """
-    nearest_festival = None
-    if today is None:
-        today = datetime.date.today()
-    coming_festivals = Festival.festivals.filter(end_date__gte=today).order_by('end_date')
-    if len(coming_festivals):
-        return coming_festivals[0]
-    past_festivals = Festival.festivals.filter(end_date__lt=today).order_by('-end_date')
-    if len(past_festivals):
-        return past_festivals[0]
-    return nearest_festival
-
-
-def set_current_festival(session):
-    festival = current_festival(session)
-    switch_festival(session, festival)
-
-
-def current_festival(session):
-    festival_id = session.get('festival')
-    if festival_id is None:
-        return default_festival()
-    festival = Festival.festivals.get(id=festival_id)
-    if festival is None:
-        return default_festival()
-    return festival
-
-
-def switch_festival(session, festival, film_rating_cache=None):
-    session['festival'] = festival.id
-
-
-def rating_action_key(session, tag):
-    return f'rating_action_{current_festival(session).id}_{tag}'
-
-
-def base_dir():
-    if TEST_BASE_DIR:
-        _dir = TEST_BASE_DIR.name
-    else:
-        _dir = os.path.expanduser(f'~/{Config().config["Paths"]["FestivalRootDirectory"]}')
-    return _dir
-
-
-def clean_base_dir():
-    if TEST_BASE_DIR:
-        TEST_BASE_DIR.cleanup()
-
-
 class Festival(models.Model):
     TOMATO = 'tomato'
     RED = 'red'
@@ -137,6 +82,9 @@ class Festival(models.Model):
         edition_str = '' if self.edition is None else f' - {self.edition} edition'
         return f'{self.base} {self.year}{edition_str}'
 
+    def has_date(self, date):
+        return self.start_date <= date <= self.end_date
+
     def festival_base_dir(self):
         return os.path.join(base_dir(), self.base.mnemonic)
 
@@ -175,3 +123,58 @@ class Festival(models.Model):
 
     def attendances_file(self):
         return os.path.join(self.festival_data_dir(), 'attendances.csv')
+
+
+def default_festival(today=None):
+    """
+    Return a festival object that will do as a default festival when
+    logging in.
+    :param today: optional date to relate the nearest festival to
+    :return: a festival object
+    """
+    nearest_festival = None
+    if today is None:
+        today = datetime.date.today()
+    coming_festivals = Festival.festivals.filter(end_date__gte=today).order_by('end_date')
+    if len(coming_festivals):
+        return coming_festivals[0]
+    past_festivals = Festival.festivals.filter(end_date__lt=today).order_by('-end_date')
+    if len(past_festivals):
+        return past_festivals[0]
+    return nearest_festival
+
+
+def set_current_festival(session):
+    festival = current_festival(session)
+    switch_festival(session, festival)
+
+
+def current_festival(session):
+    festival_id = session.get('festival')
+    if festival_id is None:
+        return default_festival()
+    festival = Festival.festivals.get(id=festival_id)
+    if festival is None:
+        return default_festival()
+    return festival
+
+
+def switch_festival(session, festival, film_rating_cache=None):
+    session['festival'] = festival.id
+
+
+def rating_action_key(session, tag):
+    return f'rating_action_{current_festival(session).id}_{tag}'
+
+
+def base_dir():
+    if TEST_BASE_DIR:
+        _dir = TEST_BASE_DIR.name
+    else:
+        _dir = os.path.expanduser(f'~/{Config().config["Paths"]["FestivalRootDirectory"]}')
+    return _dir
+
+
+def clean_base_dir():
+    if TEST_BASE_DIR:
+        TEST_BASE_DIR.cleanup()

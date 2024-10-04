@@ -3,11 +3,19 @@
     --regularColor: silver;
     --modestStandoutColor: ivory;
     --linkColor: green;
+    --warningColor: rgb(255, 142, 0);
     --inputBackground: forestGreen;
     --hoverBackground: darkGreen;
     --focusBackgrond: yellowGreen;
+    --errorBlockColor: tomato;
+    --errorBlockShadowColor: green;
+    --warningBlockColor: var(--warningColor);
+    --warningBlockShadowColor: steelBlue;
     --inputDisabledColor: lightGrey;
     --inputDisabledBackground : red;
+    --errorBackground: red;
+    --warningBackground: var(--warningColor);
+    --warningHoverBackground: tomato;
     --stickyBackground: #00000090;
     --tableBackground: #00000070;
     --modestBackground: #00000070;
@@ -75,9 +83,22 @@ td.with-submit {
     padding: 0 8px;
 }
 
-/* Make the select pop-up widget a bit larger than standard. */
+/* Customize the select widget. */
 select {
-    font-size: large
+    font-size: large;
+    background-color: var(--inputBackground);
+    color: var(--modestStandoutColor);
+    padding: 14px 20px;
+    margin: 8px 0 !important;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+select:hover {
+    background-color: var(--hoverBackground);
+}
+select:focus {
+    background-color: var(--focusBackgrond);
 }
 
 /* Completely customize the submit widget, among other things make it
@@ -135,14 +156,17 @@ input[type=submit].in-table:hover {
 
 /* ----- Class selectors ----- */
 
-/* Style for error reports */
+/* Style for alert reports */
 .error {
-    color: tomato;
-    text-shadow: 4px 4px 3px green;
+    color: var(--errorBlockColor);
+    text-shadow: 4px 4px 3px var(--errorBlockShadowColor);
     margin-bottom: 2px;
 }
-
-/* Style for log items */
+.warning {
+    color: var(--warningBlockColor);
+    text-shadow: 2px 2px 3px var(--warningBlockShadowColor);
+    margin-bottom: 2px;
+}
 .log {
     font-size: small;
     padding-left: 40px;
@@ -214,6 +238,32 @@ input[type=submit].in-table:hover {
     left: 0;
     background-color: var(--stickyBackground);
 }
+.sticky-modest-drop-t-head {
+    position: sticky;
+    top: 14pt;
+    background-color: var(--stickyBackground);
+    display: table-cell;
+    text-align: left;
+    margin: auto;
+    width: auto;
+    height: auto;
+}
+.sticky-modest-drop-t-head:hover {
+    background-color: var(--hoverBackground);
+}
+.sticky-modest-drop-t-head-content {
+    display: none;
+    position: absolute;
+    cursor: default;
+    background-color: black;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    min-width: 200px;
+    padding: 6px 8px;
+    z-index: 2;
+}
+.sticky-modest-drop-t-head:hover .sticky-modest-drop-t-head-content {
+    display: block;
+}
 
 /* Put an element left and one right on the same line */
 .row::after {
@@ -252,54 +302,6 @@ input[type=submit].in-table:hover {
     width: 49%;
     position: absolute;
     right: 1%;
-}
-
-/* Dropdown definitions for cells within a table */
-.inline-dropdown-addition {
-    display: inline !important;
-    padding: 0.5rem;
-    font-size: 1rem
-}
-.cell-dropdown {
-    position: relative;
-    display: table-cell;
-    background-color: var(--inputBackground);
-    text-align: center;
-    margin: auto;
-    width: auto;
-    height: auto;
-}
-.cell-dropdown:hover {
-    background-color: var(--hoverBackground);
-}
-.cell-dropdown-content {
-    display: none;
-    position: absolute;
-    cursor: pointer;
-    background-color: var(--inputBackground);
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    min-width: 200px;
-    padding: 6px 8px;
-    z-index: 1;
-}
-.cell-dropdown-content input {
-    color: var(--modestStandoutColor);
-    background-color: var(--inputBackground);
-    width: 100%;
-    margin: 0px;
-    padding: 4px 16px;
-    text-decoration: none;
-    text-align: left;
-    display: block;
-}
-.cell-dropdown-content input:hover {
-    background-color: var(--hoverBackground)
-}
-.cell-dropdown:hover .cell-dropdown-content {
-    display: block;
-}
-.cell-dropdown:hover .drop-button {
-    background-color: var(--hoverBackground);
 }
 
 /*
@@ -357,7 +359,7 @@ span.up {
     cursor: pointer;
     background-color: var(--inputBackground);
     box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    min-width: 200px;
+    width: auto;
     padding: 6px 8px;
     z-index: 1;
 }
@@ -379,7 +381,7 @@ span.up {
 
 /* Show the dropdown menu on hover */
 .dropdown:hover .dropdown-content {
-    display: block;
+    display: inline-grid;
 }
 
 /* Change the background color of the dropdown button when the dropdown content is shown */
@@ -418,6 +420,114 @@ span.up {
     color: var(--linkColor);
     text-decoration-line: underline;
     text-decoration-style: dashed;
+}
+
+/* Dropdown definitions for cells within a table */
+.inline-dropdown-addition {
+    display: inline !important;
+    padding: 0.5rem;
+    font-size: 1rem
+}
+.cell-dropdown {
+    position: relative;
+    display: table-cell;
+    background-color: var(--inputBackground);
+    text-align: center;
+    margin: auto;
+    width: auto;
+    height: auto;
+}
+.cell-dropdown:hover {
+    background-color: var(--hoverBackground);
+}
+.cell-dropdown-content {
+    display: none;
+    position: absolute;
+    cursor: pointer;
+    background-color: var(--inputBackground);
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    min-width: 200px;
+    padding: 6px 8px;
+    z-index: 1;
+}
+.cell-dropdown-content input {
+    color: var(--modestStandoutColor);
+    background-color: var(--inputBackground);
+    width: 100%;
+    margin: 0px;
+    padding: 4px 16px;
+    text-decoration: none;
+    text-align: left;
+    display: block;
+}
+.cell-dropdown-content input:hover {
+    background-color: var(--hoverBackground)
+}
+.cell-dropdown:hover .cell-dropdown-content {
+    display: block;
+}
+.cell-dropdown:hover .drop-button {
+    background-color: var(--hoverBackground);
+}
+
+/* Descendant combinators for different input states */
+.disabled-input {
+}
+.disabled-input input{
+    cursor: default;
+    color: var(--inputDisabledColor);
+}
+.disabled-input input:hover {
+    background: var(--inputBackground);
+}
+
+.warning-input {
+}
+.warning-input input {
+    background: var(--warningBackground);
+}
+.warning-input input:hover {
+    background: var(--warningHoverBackground);
+}
+.disabled-warning-input {
+}
+.disabled-warning-input input{
+    cursor: default;
+    color: var(--inputDisabledColor);
+    background: var(--warningBackground);
+}
+.disabled-warning-input input:hover {
+    background: var(--warningBackground);
+}
+
+.disabled-error-input {
+}
+.disabled-error-input input{
+    cursor: default;
+    color: var(--inputDisabledColor);
+    background: var(--inputDisabledBackground);
+}
+.disabled-error-input input:hover {
+    background: var(--inputDisabledBackground);
+}
+
+.right-aligned-input {
+}
+.right-aligned-input input {
+    text-align: right;
+}
+.right-aligned-input input:hover {
+    background: var(--hoverBackground);
+}
+.disabled-right-aligned-input {
+}
+.disabled-right-aligned-input input {
+    cursor: default;
+    color: var(--inputDisabledColor);
+    text-align: right;
+}
+.disabled-right-aligned-input input:hover {
+    background: var(--inputBackground);
 }
 
 /* Color of disabled element */

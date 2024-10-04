@@ -12,13 +12,11 @@
             <a href="{% url 'loader:new_screens' %}">Insert new theater data</a>
         </span>
     </span>
-    {% if log %}
-        <h3 class="log-header">{{ log.action }} results</h3>
-        {% for result in log.results %}
-            <p class="log">{{ result }}</p>
-        {% endfor %}
-        <br>
-    {% endif %}
+
+    {% block log %}
+        {{ block.super }}
+    {% endblock log %}
+
     {% if theater_rows %}
         <table>
             <thead>

@@ -28,9 +28,9 @@ class FestivalDay:
         self.festival = None
         self.day_cookie = Cookie(cookie_key)
 
-    def get_date(self, session):
-        day_str = self.day_cookie.get(session)
-        return datetime.date.fromisoformat(day_str)
+    def get_date(self, session, default=None):
+        day_str = self.day_cookie.get(session, default=default)
+        return datetime.date.fromisoformat(day_str or default)
 
     def get_datetime(self, session, time):
         date = self.get_date(session)
@@ -53,18 +53,18 @@ class FestivalDay:
             day_choices.append((day + factor * delta).strftime(self.day_str_format))
         return day_choices
 
-    def check_session(self, session):
+    def check_session(self, session, last=False):
         self.festival = current_festival(session)
         day_str = self.day_cookie.get(session)
         if day_str:
             if day_str < self.festival.start_date.isoformat() or day_str > self.festival.end_date.isoformat():
                 day_str = ''
         if not day_str:
-            day_str = self.alternative_day_str()
+            day_str = self.alternative_day_str(last=last)
             self.day_cookie.set(session, day_str)
         return self.festival
 
-    def alternative_day_str(self):
+    def alternative_day_str(self, last=False):
         try:
             first_screening = (Screening.screenings.filter(film__festival=self.festival).earliest('start_dt'))
             day_str = first_screening.start_dt.date().isoformat()
@@ -159,7 +159,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         new_context = {
             'title': 'Screenings Day Schema',
             'sub_header': 'Visualized screenings of the current festival day',
-            'date_picker_head': 'Festival day',
+            'date_picker_label': 'Festival day',
             'day': current_day_str,
             'day_choices': day_choices,
             'film_title': self.selected_screening.film.title if self.selected_screening else '',
@@ -171,7 +171,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'log': get_log(session),
             'action': ScreeningDetailView.fan_action.get_refreshed_action(session),
         }
-        unset_log(self.request.session)
+        unset_log(session)
         return add_base_context(self.request, super_context | new_context)
 
     def _get_screen_row(self, screen_nr, screen, screenings):
