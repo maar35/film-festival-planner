@@ -107,6 +107,7 @@
 <br>
 {% endif %}
 
+
 {% if screen_rows %}
     <table class="day-schema-border">
         <thead>
@@ -121,6 +122,27 @@
         </tr>
         </thead>
         <tbody>
+        {% for prop in availability_props %}
+        <tr class="day-schema-border">
+            <td class="sticky-left"
+                style="border: var(--screeningBorderWidth) solid var(--screeningBorderColor);">
+            <small>
+            </small>
+            </td>
+            <td class="day-schema-row"
+                style="min-width: {{ row.total_width }}px;">
+            <small>
+                {% for period in prop.periods %}
+                    <span class="day-schema-screening"
+                          style="left: {{ period.left }}px; width: {{ period.width }}px; height: 1rem; border-bottom: 1px solid {{ festival_color }};">
+                        {{ prop.fan }} {{ period.start_dt|date:"H i" }} - {{ period.end_dt|date:"H i" }}
+                    </span>
+                {% endfor %}
+            </small>
+            </td>
+        </tr>
+        {% endfor %}
+
         {% for row in screen_rows %}
         <tr class="day-schema-border"
             style="vertical-align: text-top;">

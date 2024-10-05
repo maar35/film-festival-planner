@@ -9,14 +9,19 @@ from django.views.generic import ListView, FormView
 from authentication.models import FilmFan
 from availabilities.forms.availabilities_forms import AvailabilityForm
 from availabilities.models import Availabilities
-from festival_planner.cookie import Cookie, Filter
+from festival_planner.cookie import Cookie, Filter, FestivalDay
 from festival_planner.tools import add_base_context, wrap_up_form_errors, get_log, unset_log, add_log, initialize_log
 from festivals.models import current_festival
 from films.models import current_fan
-from screenings.views import FestivalDay
 
 DAY_BREAK_TIME = datetime.time(hour=6)
 DAY_START_TIME = datetime.time(hour=8)
+TIME_CHOICES = [
+    DAY_START_TIME.strftime('%H:%M'),
+    '10:00', '12:00', '13:00', '15:00', '18:00', '20:00', '23:00', '00:30',
+    DAY_BREAK_TIME.strftime('%H:%M')
+]
+
 ERRORS_COOKIE = Cookie('form_errors', initial_value=[])
 WARNING_COOKIE = Cookie('warnings', initial_value=[])
 ACTION_COOKIE = Cookie('form_action')
@@ -176,9 +181,6 @@ class AvailabilityListView(LoginRequiredMixin, ListView):
         fan = AvailabilityView.fan_cookie.get(session, default=current_fan(session))
         fan_filter_props = self._get_filter_props()
         filtered = [prop['on'] for prop in fan_filter_props if prop['on']]
-        day_start_str = DAY_START_TIME.strftime('%H:%M')
-        day_break_str = DAY_BREAK_TIME.strftime('%H:%M')
-        time_choices = [day_start_str, '10:00', '12:00', '15:00', '18:00', '20:00', '23:00', '00:30', day_break_str]
         can_submit = self._can_submit(session)
         action = ACTION_COOKIE.get(session, 'get') or 'def'
         new_context = {
@@ -191,13 +193,13 @@ class AvailabilityListView(LoginRequiredMixin, ListView):
             'day_choices': AvailabilityView.start_day.get_festival_days(),
             'time_picker_label': 'Start time:',
             'time': AvailabilityView.start_time.get(session),
-            'time_choices': time_choices,
+            'time_choices': TIME_CHOICES,
             'alt_date_picker_label': 'End date:',
             'alt_day': AvailabilityView.end_day.get_str(session),
             'alt_day_choices': AvailabilityView.end_day.get_festival_days(),
             'alt_time_picker_label': 'End time:',
             'alt_time': AvailabilityView.end_time.get(session),
-            'alt_time_choices': time_choices,
+            'alt_time_choices': TIME_CHOICES,
             'can_submit': can_submit,
             'action': action,
             'value': self.button_text_by_action[action],

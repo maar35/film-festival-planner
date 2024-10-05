@@ -7,70 +7,19 @@ from django.views.generic import ListView, FormView
 from django.views.generic.detail import SingleObjectMixin
 
 from authentication.models import FilmFan
-from festival_planner.cookie import Cookie, Filter
+from availabilities.models import Availabilities
+from availabilities.views import get_festival_dt, DAY_START_TIME, DAY_BREAK_TIME
+from festival_planner.cookie import Cookie, Filter, FestivalDay
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fan_action import FanAction
 from festival_planner.fragment_keeper import ScreeningFragmentKeeper, FRAGMENT_INDICATOR
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
-from festivals.models import current_festival
 from films.models import current_fan, initial, fan_rating, FilmFanFilmRating, minutes_str
 from films.views import FilmDetailView
 from screenings.forms.screening_forms import DummyForm, AttendanceForm
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED
 from theaters.models import Theater
-
-
-class FestivalDay:
-    day_str_format = '%a %Y-%m-%d'
-
-    def __init__(self, cookie_key):
-        self.festival = None
-        self.day_cookie = Cookie(cookie_key)
-
-    def get_date(self, session, default=None):
-        day_str = self.day_cookie.get(session, default=default)
-        return datetime.date.fromisoformat(day_str or default)
-
-    def get_datetime(self, session, time):
-        date = self.get_date(session)
-        return datetime.datetime.combine(date, time)
-
-    def get_str(self, session):
-        date = self.get_date(session)
-        return date.strftime(self.day_str_format)
-
-    def set_str(self, session, day_str, is_choice=False):
-        day_str = day_str.split()[1] if is_choice else day_str
-        self.day_cookie.set(session, day_str)
-
-    def get_festival_days(self):
-        day = self.festival.start_date
-        delta = datetime.timedelta(days=1)
-        all_days = self.festival.end_date - self.festival.start_date + delta
-        day_choices = []
-        for factor in range(all_days.days):
-            day_choices.append((day + factor * delta).strftime(self.day_str_format))
-        return day_choices
-
-    def check_session(self, session, last=False):
-        self.festival = current_festival(session)
-        day_str = self.day_cookie.get(session)
-        if day_str:
-            if day_str < self.festival.start_date.isoformat() or day_str > self.festival.end_date.isoformat():
-                day_str = ''
-        if not day_str:
-            day_str = self.alternative_day_str(last=last)
-            self.day_cookie.set(session, day_str)
-        return self.festival
-
-    def alternative_day_str(self, last=False):
-        try:
-            first_screening = (Screening.screenings.filter(film__festival=self.festival).earliest('start_dt'))
-            day_str = first_screening.start_dt.date().isoformat()
-        except Screening.DoesNotExist:
-            day_str = self.festival.start_date.isoformat()
-        return day_str
 
 
 class DaySchemaView(LoginRequiredMixin, View):
@@ -155,6 +104,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         session = self.request.session
         current_day_str = DaySchemaView.current_day.get_str(session)
         day_choices = DaySchemaView.current_day.get_festival_days()
+        availability_props = self._get_available_fan_props(session)
         selected_screening_props = self._get_selected_screening_props()
         new_context = {
             'title': 'Screenings Day Schema',
@@ -162,12 +112,12 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'date_picker_label': 'Festival day',
             'day': current_day_str,
             'day_choices': day_choices,
+            'availability_props': availability_props,
             'film_title': self.selected_screening.film.title if self.selected_screening else '',
             'screening': self.selected_screening,
+            'total_width': self.hour_count * self.pixels_per_hour,
             'selected_screening_props': selected_screening_props,
             'timescale': self._get_timescale(),
-            'timebox_length': 60,
-            'px_per_hour': self.pixels_per_hour,
             'log': get_log(session),
             'action': ScreeningDetailView.fan_action.get_refreshed_action(session),
         }
@@ -191,11 +141,47 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
     def _get_start_dt(self):
         return DaySchemaView.current_day.get_datetime(self.request.session, self.start_hour)
 
+    def _get_end_dt(self):
+        end_dt = self._get_start_dt() + datetime.timedelta(hours=self.hour_count)
+        return end_dt
+
     def _pixels_from_dt(self, dt):
         start_dt = self._get_start_dt()
         pixel_minutes = (dt - start_dt).total_seconds() / 60
         pixels = self.pixels_per_hour * pixel_minutes / 60
         return pixels
+
+    def _get_available_fan_props(self, session):
+        date = DaySchemaView.current_day.get_date(session)
+        dt_kwargs = {
+            'start_dt__lte': get_festival_dt(date, DAY_BREAK_TIME),
+            'end_dt__gte': get_festival_dt(date, DAY_START_TIME),
+        }
+        availabilities = Availabilities.availabilities.filter(**dt_kwargs)
+        available_fan_dicts = availabilities.values('fan').distinct().order_by('fan__seq_nr')
+        available_fans = [FilmFan.film_fans.get(id=fan_dict['fan']) for fan_dict in available_fan_dicts]
+        fan_availability_props = [self._availability_props(date, availabilities, fan) for fan in available_fans]
+        return fan_availability_props
+
+    def _availability_props(self, date, availabilities, fan):
+        periods = []
+        for availability in availabilities.filter(fan=fan):
+            start_dt = max(availability.start_dt, get_festival_dt(date, DAY_START_TIME))
+            end_dt = min(availability.end_dt, get_festival_dt(date, DAY_BREAK_TIME))
+            end_pixels_dt = min(end_dt, self._get_end_dt())
+            left_pixels = self._pixels_from_dt(start_dt)
+            period = {
+                'start_dt': start_dt,
+                'end_dt': end_dt,
+                'left': left_pixels,
+                'width': self._pixels_from_dt(end_pixels_dt) - left_pixels,
+            }
+            periods.append(period)
+        availability_props = {
+            'fan': fan.name,
+            'periods': periods,
+        }
+        return availability_props
 
     def _screening_prop(self, screening):
         attendants = self.status_getter.get_attendants(screening)
