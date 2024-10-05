@@ -25,7 +25,7 @@ TIME_CHOICES = [
 ERRORS_COOKIE = Cookie('form_errors', initial_value=[])
 WARNING_COOKIE = Cookie('warnings', initial_value=[])
 ACTION_COOKIE = Cookie('form_action')
-DEFAULT_FAN = FilmFan.film_fans.get(name='Maarten')
+DEFAULT_FAN = FilmFan.film_fans.get(seq_nr=1) if FilmFan.film_fans.filter(seq_nr=1) else FilmFan(name='John', seq_nr=1)
 
 
 def get_festival_dt(date, time):
@@ -136,7 +136,7 @@ class AvailabilityListView(LoginRequiredMixin, ListView):
         session = request.session
         try:
             add_log(session, 'Setup list view.')
-        except TypeError:
+        except (TypeError, KeyError):
             initialize_log(session, 'Update availabilities')
 
         # Get festival period from session.

@@ -135,7 +135,7 @@
                 {% for period in prop.periods %}
                     <span class="day-schema-screening"
                           style="left: {{ period.left }}px; width: {{ period.width }}px; height: 1rem; border-bottom: 1px solid {{ festival_color }};">
-                        {{ prop.fan }} {{ period.start_dt|date:"H i" }} - {{ period.end_dt|date:"H i" }}
+                        {{ prop.fan }} {{ period.start_dt|date:"H:i" }} - {{ period.end_dt|date:"H:i" }}
                     </span>
                 {% endfor %}
             </small>
