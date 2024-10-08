@@ -1,0 +1,24 @@
+<form method="post">
+{% csrf_token %}
+    <h3>
+        <span class="label-8rem">{{ label }}</span>
+        <span class="dropdown inline-dropdown-addition">
+            <span class="drop-button">
+                {{ time }}
+            </span>
+            <span class="dropdown-content">
+                {% for choice in choices %}
+                    {% if choice == time %}
+                        <span class="disabled-right-aligned-input">
+                            <input type="submit" value="{{ choice }}" name="{{ name }}" disabled>
+                        </span>
+                    {% else %}
+                        <span class="right-aligned-input">
+                            <input type="submit" value="{{ choice }}" name="{{ name }}">
+                        </span>
+                    {% endif %}
+                {% endfor %}
+            </span>
+        </span>
+    </h3>
+</form>

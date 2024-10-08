@@ -109,7 +109,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         new_context = {
             'title': 'Screenings Day Schema',
             'sub_header': 'Visualized screenings of the current festival day',
-            'date_picker_label': 'Festival day',
+            'day_label': 'Festival day',
             'day': current_day_str,
             'day_choices': day_choices,
             'availability_props': availability_props,
@@ -138,15 +138,15 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         }
         return screen_row
 
-    def _get_start_dt(self):
+    def _get_day_schema_start_dt(self):
         return DaySchemaView.current_day.get_datetime(self.request.session, self.start_hour)
 
-    def _get_end_dt(self):
-        end_dt = self._get_start_dt() + datetime.timedelta(hours=self.hour_count)
+    def _get_day_schema_end_dt(self):
+        end_dt = self._get_day_schema_start_dt() + datetime.timedelta(hours=self.hour_count)
         return end_dt
 
     def _pixels_from_dt(self, dt):
-        start_dt = self._get_start_dt()
+        start_dt = self._get_day_schema_start_dt()
         pixel_minutes = (dt - start_dt).total_seconds() / 60
         pixels = self.pixels_per_hour * pixel_minutes / 60
         return pixels
@@ -168,7 +168,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         for availability in availabilities.filter(fan=fan):
             start_dt = max(availability.start_dt, get_festival_dt(date, DAY_START_TIME))
             end_dt = min(availability.end_dt, get_festival_dt(date, DAY_BREAK_TIME))
-            end_pixels_dt = min(end_dt, self._get_end_dt())
+            end_pixels_dt = min(end_dt, self._get_day_schema_end_dt())
             left_pixels = self._pixels_from_dt(start_dt)
             period = {
                 'start_dt': start_dt,
@@ -223,7 +223,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
     def _get_timescale(self):
         hour_list = []
         delta = datetime.timedelta(hours=1)
-        start_dt = self._get_start_dt()
+        start_dt = self._get_day_schema_start_dt()
         for hour in range(self.hour_count):
             dt = (start_dt + hour * delta)
             props_by_hour = {

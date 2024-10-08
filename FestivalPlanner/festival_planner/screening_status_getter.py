@@ -25,7 +25,7 @@ class ScreeningStatusGetter:
         elif self._has_attended_film(screening):
             status = Screening.ScreeningStatus.ATTENDS_FILM
         else:
-            status = self._get_overlap_status(screening, self.day_screenings)
+            status = self._get_other_status(screening, self.day_screenings)
         return status
 
     @classmethod
@@ -74,7 +74,7 @@ class ScreeningStatusGetter:
     def _fits_availability(self, screening):
         return self.fits_availability_by_screening[screening]
 
-    def _get_overlap_status(self, screening, screenings):
+    def _get_other_status(self, screening, screenings):
         status = Screening.ScreeningStatus.FREE
         overlapping_screenings = []
         no_travel_time_screenings = []

@@ -42,9 +42,7 @@
     <br>
 {% endif %}
 
-{% block date_picker %}
-    {{ block.super }}
-{% endblock %}
+{% include "../includes/date_picker.html" with label=day_label day=day choices=day_choices name="day" %}
 <br>
 
 {% if selected_screening_props %}

@@ -21,6 +21,8 @@ TIME_CHOICES = [
     '10:00', '12:00', '13:00', '15:00', '18:00', '20:00', '23:00', '00:30',
     DAY_BREAK_TIME.strftime('%H:%M')
 ]
+START_TIME_CHOICES = TIME_CHOICES[:-1]
+END_TIME_CHOICES = TIME_CHOICES[1:]
 
 ERRORS_COOKIE = Cookie('form_errors', initial_value=[])
 WARNING_COOKIE = Cookie('warnings', initial_value=[])
@@ -142,7 +144,7 @@ class AvailabilityListView(LoginRequiredMixin, ListView):
         # Get festival period from session.
         self.festival = current_festival(session)
 
-        # Set up the fan filters. TODO: Generalize fan, section and subsection filtering.
+        # Set up the fan filters. TODO: Generalize fan, section and subsection filtering, #393.
         self.filters = []
         self.fan_filters = {}
         for fan in self.fan_list:
@@ -185,21 +187,25 @@ class AvailabilityListView(LoginRequiredMixin, ListView):
         action = ACTION_COOKIE.get(session, 'get') or 'def'
         new_context = {
             'title': self.title,
-            'fan_picker_label': 'Filmfan:',
+
+            'fan_label': 'Filmfan:',
             'fan': fan,
             'fan_choices': self.fan_list,
-            'date_picker_label': 'Start date:',
-            'day': AvailabilityView.start_day.get_str(session),
-            'day_choices': AvailabilityView.start_day.get_festival_days(),
-            'time_picker_label': 'Start time:',
-            'time': AvailabilityView.start_time.get(session),
-            'time_choices': TIME_CHOICES,
-            'alt_date_picker_label': 'End date:',
-            'alt_day': AvailabilityView.end_day.get_str(session),
-            'alt_day_choices': AvailabilityView.end_day.get_festival_days(),
-            'alt_time_picker_label': 'End time:',
-            'alt_time': AvailabilityView.end_time.get(session),
-            'alt_time_choices': TIME_CHOICES,
+
+            'start_day_label': 'Start date:',
+            'start_day': AvailabilityView.start_day.get_str(session),
+            'start_day_choices': AvailabilityView.start_day.get_festival_days(),
+            'start_time_label': 'Start time:',
+            'start_time': AvailabilityView.start_time.get(session),
+            'start_time_choices': START_TIME_CHOICES,
+
+            'end_day_label': 'End day:',
+            'end_day': AvailabilityView.end_day.get_str(session),
+            'end_day_choices': AvailabilityView.end_day.get_festival_days(),
+            'end_time_label': 'End time:',
+            'end_time': AvailabilityView.end_time.get(session),
+            'end_time_choices': END_TIME_CHOICES,
+
             'can_submit': can_submit,
             'action': action,
             'value': self.button_text_by_action[action],
@@ -258,6 +264,7 @@ class AvailabilityListView(LoginRequiredMixin, ListView):
             handle_period_overlaps_existing_period(session)
             return True
         set_info(session, 'add')
+        handle_new_period(session)
         return True
 
     @staticmethod
@@ -296,28 +303,19 @@ def get_new_availability_data(session):
     return fan_name, start_dt, end_dt
 
 
-def get_containing_objects(session):
+def handle_new_period(session, update_db=False, action=None):
     fan_name, start_dt, end_dt = get_new_availability_data(session)
     fan = FilmFan.film_fans.get(name=fan_name)
-    for org_obj in AvailabilityView.delete_queryset:
-        first_remaining_period = Availabilities(fan=fan, start_dt=org_obj.start_dt, end_dt=start_dt)
-        last_remaining_period = Availabilities(fan=fan, start_dt=end_dt, end_dt=org_obj.end_dt)
-        yield org_obj, first_remaining_period, last_remaining_period
-
-
-def handle_period_in_existing_period(session, update_db=False):
-    add_log(session, 'Delete part of existing availability.')
-    for org_obj, first_remaining_obj, last_remaining_obj in get_containing_objects(session):
-        add_log(session, f'"{org_obj}" will be deleted.')
-        add_log(session, f'"{first_remaining_obj}" will be inserted.')
-        add_log(session, f'"{last_remaining_obj}" will be inserted.')
-        if update_db:
-            AvailabilityForm.delete_part_of_availability(session, org_obj,
-                                                         first_remaining_obj,
-                                                         last_remaining_obj)
+    new_obj = Availabilities(fan=fan, start_dt=start_dt, end_dt=end_dt)
+    if update_db:
+        try:
+            AvailabilityForm.add_availability(session, new_obj)
+        except Exception as e:
+            set_error(session, str(e), action)
 
 
 def get_overlapping_objects(session):
+    add_log(session, 'Add availability.')
     fan_name, start_dt, end_dt = get_new_availability_data(session)
     fan = FilmFan.film_fans.get(name=fan_name)
     input_obj = Availabilities(fan=fan, start_dt=start_dt, end_dt=end_dt)
@@ -328,14 +326,41 @@ def get_overlapping_objects(session):
     return AvailabilityView.merge_queryset, new_obj
 
 
-def handle_period_overlaps_existing_period(session, update_db=False):
+def handle_period_overlaps_existing_period(session, update_db=False, action=None):
     add_log(session, 'Merge overlapping periods.')
     merge_objects, new_obj = get_overlapping_objects(session)
     for merge_obj in merge_objects:
         add_log(session, f'"{merge_obj}" will be deleted.')
     add_log(session, f'"{new_obj}" will be inserted.')
     if update_db:
-        AvailabilityForm.merge_availabilities(session, merge_objects, new_obj)
+        try:
+            AvailabilityForm.merge_availabilities(session, merge_objects, new_obj)
+        except Exception as e:
+            set_error(session, str(e), action)
+
+
+def get_containing_objects(session):
+    fan_name, start_dt, end_dt = get_new_availability_data(session)
+    fan = FilmFan.film_fans.get(name=fan_name)
+    for org_obj in AvailabilityView.delete_queryset:
+        first_remaining_period = Availabilities(fan=fan, start_dt=org_obj.start_dt, end_dt=start_dt)
+        last_remaining_period = Availabilities(fan=fan, start_dt=end_dt, end_dt=org_obj.end_dt)
+        yield org_obj, first_remaining_period, last_remaining_period
+
+
+def handle_period_in_existing_period(session, update_db=False, action=None):
+    add_log(session, 'Delete part of existing availability.')
+    for org_obj, first_remaining_obj, last_remaining_obj in get_containing_objects(session):
+        add_log(session, f'"{org_obj}" will be deleted.')
+        add_log(session, f'"{first_remaining_obj}" will be inserted.')
+        add_log(session, f'"{last_remaining_obj}" will be inserted.')
+        if update_db:
+            try:
+                AvailabilityForm.delete_part_of_availability(session, org_obj,
+                                                             first_remaining_obj,
+                                                             last_remaining_obj)
+            except Exception as e:
+                set_error(session, str(e), action)
 
 
 class AvailabilityFormView(LoginRequiredMixin, FormView):
@@ -346,36 +371,31 @@ class AvailabilityFormView(LoginRequiredMixin, FormView):
 
     def form_valid(self, form):
         session = self.request.session
-        post = self.request.POST
-        if 'day' in post:
-            AvailabilityView.start_day.set_str(session, post['day'], is_choice=True)
-        if 'time' in post:
-            AvailabilityView.start_time.set(session, post['time'])
-        if 'alt_day' in post:
-            AvailabilityView.end_day.set_str(session, post['alt_day'], is_choice=True)
-        if 'alt_time' in post:
-            AvailabilityView.end_time.set(session, post['alt_time'])
-        if 'fan' in post:
-            AvailabilityView.fan_cookie.set(session, post['fan'])
-        if 'add' in post:
-            AvailabilityView.confirm = True
-        if 'add_confirmed' in post:
-            fan_name, start_dt, end_dt = get_new_availability_data(session)
-            AvailabilityForm.add_availability(session, fan_name=fan_name, start_dt=start_dt, end_dt=end_dt)
-        if 'add_canceled' in post:
-            add_log(session, 'Add new availability period canceled.')
-        if 'merge' in post:
-            AvailabilityView.confirm = True
-        if 'merge_confirmed' in post:
-            handle_period_overlaps_existing_period(session, update_db=True)
-        if 'merge_canceled' in post:
-            add_log(session, 'Merge of overlapping availabilities canceled.')
-        if 'delete' in post:
-            AvailabilityView.confirm = True
-        if 'delete_confirmed' in post:
-            handle_period_in_existing_period(session, update_db=True)
-        if 'delete_canceled' in post:
-            add_log(session, 'Partly delete of an existing availability canceled.')
+        match self.request.POST:
+            case {'fan': fan}:
+                AvailabilityView.fan_cookie.set(session, fan)
+            case {'start_day': start_day}:
+                AvailabilityView.start_day.set_str(session, start_day, is_choice=True)
+            case {'start_time': start_time}:
+                AvailabilityView.start_time.set(session, start_time)
+            case {'end_day': end_day}:
+                AvailabilityView.end_day.set_str(session, end_day, is_choice=True)
+            case {'end_time': end_time}:
+                AvailabilityView.end_time.set(session, end_time)
+            case {'add': _} | {'merge': _} | {'delete': _}:
+                AvailabilityView.confirm = True
+            case {'add_confirmed': _}:
+                handle_new_period(session, update_db=True, action='add')
+            case {'merge_confirmed': _}:
+                handle_period_overlaps_existing_period(session, update_db=True, action='merge')
+            case {'delete_confirmed': _}:
+                handle_period_in_existing_period(session, update_db=True, action='delete')
+            case {'add_canceled': _}:
+                add_log(session, 'Add new availability period canceled.')
+            case {'merge_canceled': _}:
+                add_log(session, 'Merge of overlapping availabilities canceled.')
+            case {'delete_canceled': _}:
+                add_log(session, 'Partly delete of an existing availability canceled.')
 
         return super().form_valid(form)
 

@@ -28,25 +28,13 @@
             {{ block.super }}
         {% endblock log %}
 
-        {% block fan_picker %}
-            {{ block.super }}
-        {% endblock fan_picker %}
+        {% include "../includes/fan_picker.html" with label=fan_label fan=fan choices=fan_choices name="fan" %}
 
-        {% block date_picker %}
-            {{ block.super }}
-        {% endblock date_picker %}
+        {% include "../includes/date_picker.html" with label=start_day_label day=start_day choices=start_day_choices name="start_day" %}
+        {% include "../includes/time_picker.html" with label=start_time_label time=start_time choices=start_time_choices name="start_time" %}
 
-        {% block time_picker %}
-            {{ block.super }}
-        {% endblock time_picker %}
-
-        {% block alt_date_picker %}
-            {{ block.super }}
-        {% endblock alt_date_picker %}
-
-        {% block alt_time_picker %}
-            {{ block.super }}
-        {% endblock alt_time_picker %}
+        {% include "../includes/date_picker.html" with label=end_day_label day=end_day choices=end_day_choices name="end_day" %}
+        {% include "../includes/time_picker.html" with label=end_time_label time=end_time choices=end_time_choices name="end_time" %}
 
         <form method="post">
             {% csrf_token %}
@@ -77,7 +65,7 @@
                 <input type="submit" name="{{ action }}_canceled" value="No please cancel"
                        style="width: 25%;"/>
                 <span class="warning-input">
-                    <input type="submit" name="{{ action }}_confirmed" value="Sure"
+                    <input type="submit" name="{{ action }}_confirmed" value="Sure, {{ action }}"
                            style="width: 25%;"/>
                 </span>
             {% endif %}
@@ -134,7 +122,10 @@
             </tbody>
         </table>
     {% else %}
-        <p>No availabilities available for this festival</p>
+        <p>No availabilities available for this festival.</p>
+    {% endif %}
+    {% if filtered and not availability_rows %}
+        <p>Availabilities hidden by a filter.</p>
     {% endif %}
     </div>
     <br>
