@@ -1,3 +1,4 @@
+from availabilities.models import Availabilities
 from festival_planner.cookie import Filter
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fragment_keeper import ScreeningFragmentKeeper
@@ -14,6 +15,7 @@ class ScreeningStatusGetter:
         self.attendances_by_screening = self._get_attendances_by_screening()
         self.attends_by_screening = {s: self.attendances_by_screening[s].filter(fan=self.fan) for s in day_screenings}
         self.has_attended_film_by_screening = self._get_has_attended_film_by_screening()
+        self.fits_availability_by_screening = self._get_fits_availability_by_screening()
 
     def get_screening_status(self, screening, attendants):
         if current_fan(self.session) in attendants:
@@ -23,7 +25,7 @@ class ScreeningStatusGetter:
         elif self._has_attended_film(screening):
             status = Screening.ScreeningStatus.ATTENDS_FILM
         else:
-            status = self._get_overlap_status(screening, self.day_screenings)
+            status = self._get_other_status(screening, self.day_screenings)
         return status
 
     @classmethod
@@ -60,7 +62,19 @@ class ScreeningStatusGetter:
         current_fan_attends_other_filmscreening = self.has_attended_film_by_screening[screening]
         return current_fan_attends_other_filmscreening
 
-    def _get_overlap_status(self, screening, screenings):
+    def _get_fits_availability_by_screening(self):
+        manager = Availabilities.availabilities
+        fits_availability_by_screening = {
+            s: manager.filter(
+                fan=self.fan, start_dt__lte=s.start_dt, end_dt__gte=s.end_dt
+            ) for s in self.day_screenings
+        }
+        return fits_availability_by_screening
+
+    def _fits_availability(self, screening):
+        return self.fits_availability_by_screening[screening]
+
+    def _get_other_status(self, screening, screenings):
         status = Screening.ScreeningStatus.FREE
         overlapping_screenings = []
         no_travel_time_screenings = []
@@ -75,6 +89,8 @@ class ScreeningStatusGetter:
             status = Screening.ScreeningStatus.TIME_OVERLAP
         elif no_travel_time_screenings:
             status = Screening.ScreeningStatus.NO_TRAVEL_TIME
+        elif not self._fits_availability(screening):
+            status = Screening.ScreeningStatus.UNAVAILABLE
         return status
 
     def _get_day_props(self, film_screening):

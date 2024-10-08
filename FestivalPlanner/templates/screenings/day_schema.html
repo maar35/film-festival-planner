@@ -9,6 +9,8 @@
     <span class="col-right">
         <a href="{% url 'films:films' %}">Film ratings</a>
         <br>
+        <a href="{% url 'availabilities:list' %}">Availabilities</a>
+        <br>
         <a href="{% url 'theaters:theaters' %}">Theaters</a>
         <br>
         <a href="{% url 'loader:list_action' %}?label=screenings">Load screenings</a>
@@ -19,13 +21,9 @@
     </span>
 </div>
 
-{% if log.results %}
-    <h3 class="log-header">{{ log.action }} results</h3>
-    {% for result in log.results %}
-        <p class="log">{{ result }}</p>
-    {% endfor %}
-    <br>
-{% endif %}
+{% block log %}
+    {{ block.super }}
+{% endblock log %}
 
 <a name="header_screening"></a>
 <div class="no-select">
@@ -44,27 +42,7 @@
     <br>
 {% endif %}
 
-<form method="post">
-{% csrf_token %}
-    <h3>
-        Festival day
-        <span class="dropdown inline-dropdown-addition">
-            <span class="drop-button">
-                {{ day }}
-            </span>
-            <span class="dropdown-content">
-                {% for choice in day_choices %}
-                    {% if choice == day %}
-                        <input type="submit" value="{{ choice }}" name="day" disabled
-                               style="cursor: default; color: var(--inputDisabledColor); text-align: right">
-                    {% else %}
-                        <input type="submit" value="{{ choice }}" name="day" style="text-align: right;">
-                    {% endif %}
-                {% endfor %}
-            </span>
-        </span>
-    </h3>
-</form>
+{% include "../includes/date_picker.html" with label=day_label day=day choices=day_choices name="day" %}
 <br>
 
 {% if selected_screening_props %}
@@ -127,6 +105,7 @@
 <br>
 {% endif %}
 
+
 {% if screen_rows %}
     <table class="day-schema-border">
         <thead>
@@ -141,6 +120,27 @@
         </tr>
         </thead>
         <tbody>
+        {% for prop in availability_props %}
+        <tr class="day-schema-border">
+            <td class="sticky-left"
+                style="border: var(--screeningBorderWidth) solid var(--screeningBorderColor);">
+            <small>
+            </small>
+            </td>
+            <td class="day-schema-row"
+                style="min-width: {{ row.total_width }}px;">
+            <small>
+                {% for period in prop.periods %}
+                    <span class="day-schema-screening"
+                          style="left: {{ period.left }}px; width: {{ period.width }}px; height: 1rem; border-bottom: 1px solid {{ festival_color }};">
+                        {{ prop.fan }} {{ period.start_dt|date:"H:i" }} - {{ period.end_dt|date:"H:i" }}
+                    </span>
+                {% endfor %}
+            </small>
+            </td>
+        </tr>
+        {% endfor %}
+
         {% for row in screen_rows %}
         <tr class="day-schema-border"
             style="vertical-align: text-top;">

@@ -12,12 +12,11 @@
             <a href="{% url 'loader:ratings' %}">Load ratings</a>
         </span>
     </div>
-    {% if log %}
-        <h3 class="log-header">{{ log.action }} results</h3>
-        {% for result in log.results %}
-            <p class="log">{{ result }}</p>
-        {% endfor %}
-    {% endif %}
+
+    {% block log %}
+        {{ block.super }}
+    {% endblock log %}
+
     <br>
     {% if subsection_list %}
         <table>

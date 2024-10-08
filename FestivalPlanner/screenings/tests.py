@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from authentication.models import FilmFan
+from availabilities.models import Availabilities
 from festival_planner import debug_tools
 from festivals.models import FestivalBase, Festival, switch_festival, current_festival
 from films.models import Film
@@ -246,8 +247,7 @@ class ScreeningViewsTests(TestCase):
         color_pair = Screening.color_pair_by_screening_status[screening_status]
         background = make_re_str(color_pair['background'])
         color = make_re_str(color_pair['color'])
-        re_screening = (f'{prefix}'
-                        + f'style="background: {background}; color: {color};')
+        re_screening = (f'{prefix}' + f'style="background: {background}; color: {color};')
         self.assertRegex(content, re_screening)
 
 
@@ -257,11 +257,14 @@ class DaySchemaViewTests(ScreeningViewsTests):
         A screening is found in the day schema of its start date.
         """
         # Arrange.
-        client, _ = self.arrange_get_regular_user_props()
+        client, fan = self.arrange_get_regular_user_props()
         session = client.session
 
         start_dt = datetime.datetime.fromisoformat('2024-08-30 11:15').replace(tzinfo=None)
         _ = self.arrange_create_screening(self.screen_sg, start_dt)
+
+        kwargs = {'fan': fan, 'start_dt': start_dt, 'end_dt': start_dt + datetime.timedelta(hours=8)}
+        Availabilities.availabilities.create(**kwargs)
 
         # Act.
         response = client.get(reverse('screenings:day_schema'))

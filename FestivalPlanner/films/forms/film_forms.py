@@ -11,7 +11,7 @@ from festivals.models import rating_action_key
 from films.models import FilmFanFilmRating, fan_rating_str, FIELD_BY_POST_ATTENDANCE, \
     MANAGER_BY_POST_ATTENDANCE
 
-SEARCH_TEST_VALIDATOR = RegexValidator(r'^[a-z0-9]+$', 'Type only lower case letters and digits')
+SEARCH_TEXT_VALIDATOR = RegexValidator(r'^[a-z0-9]+$', 'Type only lower case letters and digits')
 """
 No spaces allowed (yet) to discourage entering articles while searching and
 sorting is based on sort_title.
@@ -33,7 +33,7 @@ class PickRating(forms.Form):
     search_text = CharField(
         label='Find a title by entering a snippet of it',
         required=False,
-        validators=[SEARCH_TEST_VALIDATOR],
+        validators=[SEARCH_TEXT_VALIDATOR],
         min_length=2,
     )
     film_rating_cache = None

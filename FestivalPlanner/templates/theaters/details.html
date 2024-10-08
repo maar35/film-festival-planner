@@ -14,15 +14,9 @@
             </span>
         </span>
         <br>
-        {% if form_errors %}
-            <h2 class="error">Form Error</h2>
-            <p>
-            {% for form_error in form_errors %}
-                {{ form_error }}<br>
-            {% endfor %}
-            </p>
-            <br>
-        {% endif %}
+        {% block errors %}
+            {{ block.super }}
+        {% endblock %}
         <table>
             <tbody>
                 <tr><th>Theater</th><td>{{ theater.parse_name }}</td></tr>

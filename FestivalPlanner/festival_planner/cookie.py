@@ -1,3 +1,9 @@
+import datetime
+
+from festivals.models import current_festival
+from screenings.models import Screening
+
+
 class Cookie:
     """
     Support basic operations on same-keyed cookies.
@@ -95,3 +101,54 @@ class Filter(Cookie):
         """
         return self._action_by_filtered[self.on(session)]
 
+
+class FestivalDay:
+    day_str_format = '%a %Y-%m-%d'
+
+    def __init__(self, cookie_key):
+        self.festival = None
+        self.day_cookie = Cookie(cookie_key)
+
+    def get_date(self, session, default=None):
+        day_str = self.day_cookie.get(session, default=default)
+        return datetime.date.fromisoformat(day_str or default)
+
+    def get_datetime(self, session, time):
+        date = self.get_date(session)
+        return datetime.datetime.combine(date, time)
+
+    def get_str(self, session):
+        date = self.get_date(session)
+        return date.strftime(self.day_str_format)
+
+    def set_str(self, session, day_str, is_choice=False):
+        day_str = day_str.split()[1] if is_choice else day_str
+        self.day_cookie.set(session, day_str)
+
+    def get_festival_days(self):
+        day = self.festival.start_date
+        delta = datetime.timedelta(days=1)
+        all_days = self.festival.end_date - self.festival.start_date + delta
+        day_choices = []
+        for factor in range(all_days.days):
+            day_choices.append((day + factor * delta).strftime(self.day_str_format))
+        return day_choices
+
+    def check_session(self, session, last=False):
+        self.festival = current_festival(session)
+        day_str = self.day_cookie.get(session)
+        if day_str:
+            if day_str < self.festival.start_date.isoformat() or day_str > self.festival.end_date.isoformat():
+                day_str = ''
+        if not day_str:
+            day_str = self.alternative_day_str(last=last)
+            self.day_cookie.set(session, day_str)
+        return self.festival
+
+    def alternative_day_str(self, last=False):
+        try:
+            first_screening = (Screening.screenings.filter(film__festival=self.festival).earliest('start_dt'))
+            day_str = first_screening.start_dt.date().isoformat()
+        except Screening.DoesNotExist:
+            day_str = self.festival.start_date.isoformat()
+        return day_str

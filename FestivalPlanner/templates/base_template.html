@@ -35,6 +35,9 @@
         position: absolute;
     }
 
+
+    /* TODO: keep in style sheet only */
+
 </style>
 
 <body>
@@ -96,9 +99,44 @@
         </span>
     </div>
     <hr>
+
     {% block content %}
+        {% block errors %}
+            {% if form_errors %}
+                <h2 class="error">Form Error</h2>
+                <p>
+                {% for form_error in form_errors %}
+                    {{ form_error }}<br>
+                {% endfor %}
+                </p>
+                <br>
+            {% endif %}
+        {% endblock errors %}
+
+        {% block warnings %}
+            {% if warnings %}
+                <h2 class="warning">Warning</h2>
+                <p>
+                {% for warning in warnings %}
+                    {{ warning }}<br>
+                {% endfor %}
+                </p>
+                <br>
+            {% endif %}
+        {% endblock warnings %}
+
+        {% block log %}
+            {% if log.results %}
+                <h3 class="log-header">{{ log.action }} results</h3>
+                {% for result in log.results %}
+                    <p class="log">{{ result }}</p>
+                {% endfor %}
+                <br>
+            {% endif %}
+        {% endblock log %}
+
         Body content
-    {% endblock %}
+    {% endblock content %}
     <hr>
     <div class="row sticky-footer">
         <span class="col-left">
