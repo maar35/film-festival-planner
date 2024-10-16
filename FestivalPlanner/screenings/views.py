@@ -15,7 +15,7 @@ from festival_planner.fan_action import FanAction
 from festival_planner.fragment_keeper import ScreeningFragmentKeeper, FRAGMENT_INDICATOR
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
-from films.models import current_fan, initial, fan_rating, FilmFanFilmRating, minutes_str
+from films.models import current_fan, initial, fan_rating, FilmFanFilmRating, minutes_str, FANS_IN_RATINGS_TABLE
 from films.views import FilmDetailView
 from screenings.forms.screening_forms import DummyForm, AttendanceForm
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED
@@ -109,7 +109,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         new_context = {
             'title': 'Screenings Day Schema',
             'sub_header': 'Visualized screenings of the current festival day',
-            'day_label': 'Festival day',
+            'day_label': 'Festival day:',
             'day': current_day_str,
             'day_choices': day_choices,
             'availability_props': availability_props,
@@ -196,10 +196,10 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         day = screening.start_dt.date().isoformat()
         line_2 = f'{screening.start_dt.strftime("%H:%M")} - {screening.end_dt.strftime("%H:%M")}'
         pair_selected = Screening.color_pair_selected_by_screening_status[status]
-        attends_film = status == Screening.ScreeningStatus.ATTENDS_FILM
-        rating_color = pair_selected['background'] if attends_film else pair_selected['color']
         festival_color = screening.film.festival.festival_color
-        film_rating = screening.film.film_rating()
+        rating_str, rating_color = screening.film_rating_str(status)
+        frame_color = pair_selected['color'] if selected else festival_color
+        section_color = screening.film.subsection.section.color if screening.film.subsection else frame_color
         querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
         fragment = ScreeningFragmentKeeper.fragment_code(screening.screen.pk)
         screening_prop = {
@@ -209,10 +209,11 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'left': left_pixels,
             'width': self._pixels_from_dt(screening.end_dt) - left_pixels,
             'pair': pair,
-            'film_rating': film_rating if film_rating in FilmFanFilmRating.interesting_ratings() else '',
+            'film_rating': rating_str,
             'rating_color': rating_color,
             'selected': selected,
-            'frame_color': pair_selected['color'] if selected else festival_color,
+            'frame_color': frame_color,
+            'section_color': section_color,
             'info_pair': pair_selected if selected else pair,
             'info_spot': info_str or 'info',
             'query_string': '' if selected else querystring,
@@ -264,6 +265,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'screening_duration': f'{minutes_str(screening.end_dt - screening.start_dt)}',
             'q_and_a': screening.str_q_and_a(),
             'description': FilmDetailView.get_description(film),
+            'subsection': film.subsection,
             'film_screening_props': self._get_filmscreening_props(),
         }
 
@@ -289,7 +291,7 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
     http_method_names = ['get', 'post']
     fan_action = FanAction('update')
     update_by_attends = {True: 'joins', False: "couldn't come"}
-    fans = FilmFan.film_fans.all()
+    fans = FilmFan.film_fans.filter(name__in=FANS_IN_RATINGS_TABLE)
     object = None
     screening = None
     initial_attendance_by_fan = None

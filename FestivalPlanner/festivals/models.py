@@ -100,7 +100,10 @@ class Festival(models.Model):
     def films_file(self):
         return os.path.join(self.planner_data_dir(), 'films.csv')
 
-    def filminfo_file(self):
+    def filminfo_csv_file(self):
+        return os.path.join(self.planner_data_dir(), 'filminfo.csv')
+
+    def filminfo_yaml_file(self):
         return os.path.join(self.planner_data_dir(), 'filminfo.yml')
 
     def ratings_file(self):

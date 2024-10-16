@@ -3,6 +3,7 @@ import re
 from datetime import timedelta
 from operator import attrgetter, itemgetter
 
+import yaml
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Exists, OuterRef
 from django.http import HttpResponseRedirect
@@ -23,7 +24,7 @@ from festivals.config import Config
 from festivals.models import current_festival
 from films.forms.film_forms import PickRating, UserForm
 from films.models import FilmFanFilmRating, Film, current_fan, get_present_fans, fan_rating_str, \
-    FilmFanFilmVote, fan_rating
+    FilmFanFilmVote, fan_rating, FANS_IN_RATINGS_TABLE
 from sections.models import Subsection, Section
 
 CONSTANTS_CONFIG = Config().config['Constants']
@@ -327,7 +328,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
     def _read_film_descriptions(self, session):
         if not get_log(session):
             initialize_log(session, action='Read descriptions')
-        film_info_file = self.festival.filminfo_file()
+        film_info_file = self.festival.filminfo_csv_file()
         try:
             with open(film_info_file, 'r', newline='') as csvfile:
                 object_reader = csv.reader(csvfile, dialect=CSV_DIALECT)
@@ -593,7 +594,6 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
                 film_pk, rating_value = submitted_name.strip(self.submit_name_prefix).split('_')
                 film = Film.films.get(id=film_pk)
                 PickRating.update_rating(session, film, current_fan(session), rating_value)
-
                 return HttpResponseRedirect(reverse('films:details', args=(film_pk,)))
             else:
                 self.unexpected_error = "Can't identify submit widget."
@@ -606,7 +606,8 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         film = self.object
         session = self.request.session
         fan_rows = []
-        fans = FilmFan.film_fans.all()
+        active_fan_names = FANS_IN_RATINGS_TABLE
+        fans = FilmFan.film_fans.filter(name__in=active_fan_names)
         logged_in_fan = current_fan(session)
         for fan in fans:
             choices = get_fan_choices(self.submit_name_prefix, film, fan, logged_in_fan, self.submit_names)
@@ -621,10 +622,11 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         new_context = {
             'title': 'Film Rating Results',
             'description': self.get_description(film),
+            'metadata': self._get_metadata(film),
             'fragment': FilmFragmentKeeper.fragment_code(film.film_id),
             'film_in_cache': in_cache,
             'no_cache': in_cache is None,
-            'display_all_query': self.get_query_string_to_display_all(session),
+            'display_all_query': in_cache is None or self.get_query_string_to_display_all(session),
             'fan_rows': fan_rows,
             'film_title': film.title,
             'film_screening_props': self._get_film_screening_props(),
@@ -635,7 +637,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
 
     @staticmethod
     def get_description(film):
-        film_info_file = film.festival.filminfo_file()
+        film_info_file = film.festival.filminfo_csv_file()
         try:
             with open(film_info_file, 'r', newline='') as csvfile:
                 object_reader = csv.reader(csvfile, dialect=CSV_DIALECT)
@@ -643,8 +645,23 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         except FileNotFoundError:
             description = None
         else:
-            description = descriptions[0].strip() or None
+            try:
+                description = descriptions[0].strip() or None
+            except IndexError as e:
+                description = None
         return description
+
+    @classmethod
+    def _get_metadata(cls, film):
+        filminfo_yaml_file = film.festival.filminfo_yaml_file()
+        with open(filminfo_yaml_file, 'r') as stream:
+            cls.metadata_by_film_id = yaml.safe_load(stream)
+        try:
+            film_data = cls.metadata_by_film_id[film.film_id]
+        except KeyError:
+            film_data = {}
+        metadata = [{'key': k, 'value': v} for k, v in film_data.items()]
+        return metadata
 
     def film_is_in_cache(self, session):
         """
