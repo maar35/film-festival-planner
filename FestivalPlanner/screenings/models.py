@@ -73,6 +73,8 @@ class Screening(models.Model):
         ScreeningStatus.NO_TRAVEL_TIME: color_pair('white', 'blue'),
         ScreeningStatus.NEEDS_TICKETS: color_pair('white', 'blue'),
     }
+    interesting_rating_color_attends_film_background = 'blue'
+    uninteresting_rating_color = 'grey'
 
     # Define the fields.
     film = models.ForeignKey(Film, on_delete=models.CASCADE)
@@ -147,11 +149,11 @@ class Screening(models.Model):
             color = regular_color
         elif rating_is_interesting:
             if attends_film:
-                color = 'blue'
+                color = Screening.interesting_rating_color_attends_film_background
             else:
                 color = regular_color
         else:
-            color = 'grey'
+            color = Screening.uninteresting_rating_color
         return film_rating_str, color
 
 

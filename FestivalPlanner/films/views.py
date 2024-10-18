@@ -647,7 +647,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         else:
             try:
                 description = descriptions[0].strip() or None
-            except IndexError as e:
+            except IndexError:
                 description = None
         return description
 

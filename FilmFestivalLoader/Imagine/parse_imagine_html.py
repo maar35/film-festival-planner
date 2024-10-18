@@ -19,7 +19,6 @@ from Shared.web_tools import UrlFile
 DOWNLOAD_WORKS = True       # Python html reader gets "certificate not found", used curl instead.
 FILE_BY_URL = {}
 ALWAYS_DOWNLOAD = False
-Q_AND_A_SCREENING_KEYS = []
 
 FESTIVAL = 'Imagine'
 FESTIVAL_YEAR = 2024
@@ -56,15 +55,16 @@ def main():
 
 
 def write_url_map_file():
-    dialect = csv.unix_dialect
-    dialect.delimiter = ';'
-    dialect.quotechar = '"'
-    dialect.doublequote = True
-    dialect.quoting = csv.QUOTE_MINIMAL
-    rows = [[url, file] for url, file in FILE_BY_URL.items()]
-    with open(URL_MAP_FILE, 'w', newline='') as csvfile:
-        csv_writer = csv.writer(csvfile, dialect=dialect)
-        csv_writer.writerows(rows)
+    if not DOWNLOAD_WORKS:
+        dialect = csv.unix_dialect
+        dialect.delimiter = ';'
+        dialect.quotechar = '"'
+        dialect.doublequote = True
+        dialect.quoting = csv.QUOTE_MINIMAL
+        rows = [[url, file] for url, file in FILE_BY_URL.items()]
+        with open(URL_MAP_FILE, 'w', newline='') as csvfile:
+            csv_writer = csv.writer(csvfile, dialect=dialect)
+            csv_writer.writerows(rows)
 
 
 def parse_imagine_sites(festival_data):
@@ -359,7 +359,7 @@ class FilmPageParser(HtmlPageParser):
     def set_article(self):
         descr_threshold = 512
         if self.article_paragraphs:
-            self.description = self.article_paragraphs[0]
+            self.description = self.description or self.article_paragraphs[0]
             if len(self.description) > descr_threshold:
                 self.description = self.description[:descr_threshold] + '…'
             self.article = '\n\n'.join(self.article_paragraphs)
@@ -372,8 +372,9 @@ class FilmPageParser(HtmlPageParser):
             self.article += f'\n\n{metadata}'
 
     def add_film_info(self):
-        if self.description and self.article:
-            film_info = FilmInfo(self.film.film_id, self.description, self.article,
+        if self.description:
+            article = self.article or self.description
+            film_info = FilmInfo(self.film.film_id, self.description, article,
                                  metadata=self.film_property_by_label)
             self.festival_data.filminfos.append(film_info)
 
@@ -501,6 +502,7 @@ class LocationSplitter:
 
 
 class QaScreeningKey:
+    q_and_a_screening_keys = []
     manual_keys = {
         (21, 118, datetime.datetime.fromisoformat('2024-10-25 16:40:00')),
         (44, 51, datetime.datetime.fromisoformat('2024-10-26 21:40:00')),
@@ -519,11 +521,11 @@ class QaScreeningKey:
                 f'- screen id: {self.screen.screen_id}')
 
     def add(self):
-        Q_AND_A_SCREENING_KEYS.append(self)
+        self.q_and_a_screening_keys.append(self)
 
     @classmethod
     def update_q_and_a_screenings(cls, festival_data):
-        auto_keys = {(k.film.film_id, k.screen.screen_id, k.start_dt) for k in Q_AND_A_SCREENING_KEYS}
+        auto_keys = {(k.film.film_id, k.screen.screen_id, k.start_dt) for k in cls.q_and_a_screening_keys}
         rhs_list = auto_keys | cls.manual_keys
         for screening in festival_data.screenings:
             lhs = (screening.film.film_id, screening.screen.screen_id, screening.start_datetime)
