@@ -7,6 +7,7 @@ from sections.models import Subsection
 MINUTES_STR = "'"
 UNRATED_STR = '-'
 FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
+MIN_ALARM_RATING_DIFF = 3
 
 
 class Film(models.Model):
@@ -39,15 +40,6 @@ class Film(models.Model):
 
     def duration_str(self):
         return ':'.join(f'{self.duration}'.split(':')[:2])
-
-    def film_rating(self):
-        """ The highest rating represents all ratings of a film"""
-        film_rating = FilmFanFilmRating.film_ratings.filter(film=self).order_by('-rating').first()
-        if film_rating:
-            rating = film_rating.rating
-        else:
-            rating = FilmFanFilmRating.Rating.UNRATED
-        return rating
 
 
 class FilmFanFilmRating(models.Model):

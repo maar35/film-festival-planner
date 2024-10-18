@@ -7,6 +7,7 @@ declare -r files="
     screenings.csv
     sections.csv
     subsections.csv
+    filminfo.csv
     filminfo.xml
     filminfo.yml
 "

@@ -39,7 +39,7 @@ film_file_format = file_keeper.film_file_format
 
 # Files.
 filmdata_file = os.path.join(plandata_dir, 'filmdata.csv')
-filminfo_file = os.path.join(plandata_dir, 'filminfo.xml')
+filminfo_xml_file = os.path.join(plandata_dir, 'filminfo.xml')
 az_screenshot_file = os.path.join(webdata_dir, 'az-screencopies.txt')
 
 # URL information.

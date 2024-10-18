@@ -29,6 +29,9 @@
         <li>Reviewer: {% if film.reviewer %} {{ film.reviewer }} {% else %} - {% endif %}</li>
         <li>Medium category: {{ film.medium_category }}</li>
         <li>Rating count: {{ film.filmfanfilmrating_set.count }}</li>
+        {% for item in metadata %}
+            <li>{{ item.key }}: {{ item.value }}</li>
+        {% endfor %}
     </ul>
     <br>
     <form method="post">

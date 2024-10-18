@@ -13,6 +13,8 @@ import re
 import xml.etree.ElementTree as Tree
 from enum import Enum, auto
 
+import yaml
+
 from Shared.application_tools import config, pr_info
 
 INTERFACE_DIR = os.path.expanduser(f"~/{config()['Paths']['LoaderSharedDirectory']}")
@@ -54,8 +56,9 @@ def write_lists(festival_data, write_film_list, write_other_lists):
 
     if write_other_lists:
         festival_data.write_film_ids()
+        festival_data.write_csv_filminfo()
+        festival_data.write_xml_filminfo()
         festival_data.write_yaml_filminfo()
-        festival_data.write_filminfo()
         festival_data.write_new_cities()
         festival_data.write_new_theaters()
         festival_data.write_new_screens()
@@ -463,8 +466,9 @@ class FestivalData:
         self.set_csv_dialect()
         self.films_file = os.path.join(plandata_dir, 'films.csv')
         self.filmids_file = os.path.join(plandata_dir, 'filmids.txt')
+        self.filminfo_csv_file = os.path.join(plandata_dir, 'filminfo.csv')
         self.filminfo_yaml_file = os.path.join(plandata_dir, 'filminfo.yml')
-        self.filminfo_file = os.path.join(plandata_dir, 'filminfo.xml')
+        self.filminfo_xml_file = os.path.join(plandata_dir, 'filminfo.xml')
         self.sections_file = os.path.join(plandata_dir, 'sections.csv')
         self.subsections_file = os.path.join(plandata_dir, 'subsections.csv')
         self.subsections_file = os.path.join(plandata_dir, 'subsections.csv')
@@ -677,7 +681,7 @@ class FestivalData:
                 section = Section(section_id, name, color)
                 self.section_by_name[name] = section
                 self.section_by_id[section_id] = section
-        except OSError:
+        except (OSError, IndexError):
             pass
 
         try:
@@ -697,7 +701,7 @@ class FestivalData:
                 url = record[4]
                 section = self.section_by_id[section_id]
                 self.subsection_by_name[name] = Subsection(subsection_id, section, name, url, description)
-        except OSError:
+        except (OSError, IndexError):
             pass
 
         try:
@@ -830,22 +834,26 @@ class FestivalData:
             pr_info(f'Done writing {film_id_count} records to {self.filmids_file}.')
 
     def write_yaml_filminfo(self):
+        metadata_dict = {i.film_id: i.metadata for i in self.filminfos if self.film_can_go_to_planner(i.film_id)}
+        with open(self.filminfo_yaml_file, 'w') as stream:
+            yaml.dump(metadata_dict, stream, encoding='utf-8', indent=4)
+        pr_info(f'Done writing {len(metadata_dict)} objects to {self.filminfo_yaml_file}.')
+
+    def write_csv_filminfo(self):
         data = [i for i in self.filminfos if self.film_can_go_to_planner(i.film_id)]
-        # with open(self.filminfo_yaml_file, 'w') as stream:
-        #     yaml.dump(data, stream, indent=4)
         rows = sorted([[
             i.film_id,
             i.description,
             i.metadata['Reviewer'] if 'Reviewer' in i.metadata else ''
         ] for i in data], key=lambda row: row[0])
-        with open(self.filminfo_yaml_file, 'w') as csvfile:
+        with open(self.filminfo_csv_file, 'w') as csvfile:
             csv_writer = csv.writer(csvfile, self.dialect)
             csv_writer.writerows(rows)
-        pr_info(f'Done writing {len(data)} objects to {self.filminfo_yaml_file}')
+        pr_info(f'Done writing {len(data)} records to {self.filminfo_csv_file}.')
 
-    def write_filminfo(self):
+    def write_xml_filminfo(self):
         info_count = 0
-        filminfos = Tree.Element('FilmInfos')
+        film_infos = Tree.Element('FilmInfos')
         for filminfo in [i for i in self.filminfos if self.film_can_go_to_planner(i.film_id)]:
             info_count += 1
             id = str(filminfo.film_id)
@@ -853,7 +861,7 @@ class FestivalData:
             if filminfo.metadata:
                 article += f'\n\n{filminfo.format_metadata()}'
             descr = filminfo.description
-            info = Tree.SubElement(filminfos, 'FilmInfo',
+            info = Tree.SubElement(film_infos, 'FilmInfo',
                                    FilmId=id,
                                    FilmArticle=article,
                                    FilmDescription=descr,
@@ -869,9 +877,9 @@ class FestivalData:
                                     Title=screened_film.title,
                                     Description=screened_film.description,
                                     ScreenedFilmType=screened_film.screened_film_type.name)
-        tree = Tree.ElementTree(filminfos)
-        tree.write(self.filminfo_file, encoding='utf-8', xml_declaration=True)
-        pr_info(f"Done writing {info_count} records to {self.filminfo_file}.")
+        tree = Tree.ElementTree(film_infos)
+        tree.write(self.filminfo_xml_file, encoding='utf-8', xml_declaration=True)
+        pr_info(f"Done writing {info_count} objects to {self.filminfo_xml_file}.")
 
     def write_sections(self):
         with open(self.sections_file, 'w') as f:
@@ -891,14 +899,14 @@ class FestivalData:
         with open(self.new_cities_file, 'w') as f:
             for city in new_cities:
                 f.write(repr(city))
-        pr_info(f'Done writing {len(new_cities)} records to {self.new_cities_file}')
+        pr_info(f'Done writing {len(new_cities)} records to {self.new_cities_file}.')
 
     def write_new_theaters(self):
         new_theaters = [theater for theater in self.theater_by_location.values() if theater.new]
         with open(self.new_theaters_file, 'w') as f:
             for theater in new_theaters:
                 f.write(repr(theater))
-        pr_info(f'Done writing {len(new_theaters)} records to {self.new_theaters_file}')
+        pr_info(f'Done writing {len(new_theaters)} records to {self.new_theaters_file}.')
 
     def write_new_screens(self):
         new_screens = [screen for screen in self.screen_by_location.values() if screen.new]

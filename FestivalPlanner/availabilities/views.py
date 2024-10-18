@@ -18,7 +18,7 @@ DAY_BREAK_TIME = datetime.time(hour=6)
 DAY_START_TIME = datetime.time(hour=8)
 TIME_CHOICES = [
     DAY_START_TIME.strftime('%H:%M'),
-    '10:00', '12:00', '13:00', '15:00', '18:00', '20:00', '23:00', '00:30',
+    '10:00', '11:00', '12:00', '13:00', '15:00', '18:00', '20:00', '23:00', '00:30',
     DAY_BREAK_TIME.strftime('%H:%M')
 ]
 START_TIME_CHOICES = TIME_CHOICES[:-1]

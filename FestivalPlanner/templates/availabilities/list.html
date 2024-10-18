@@ -4,15 +4,16 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-    <h2 class="row col-left-h2">Availabilities overview</h2>
-    <span class="row">
-        <span class="col-right">
-            <a href="{% url 'screenings:day_schema' %}">Day schema</a>
-            <br>
-            <a href="{% url 'films:films' %}">Ratings</a>
-        </span>
+<h2 class="row col-left-h2">Availabilities overview</h2>
+<span class="row">
+    <span class="col-right">
+        <a href="{% url 'screenings:day_schema' %}">Day schema</a>
+        <br>
+        <a href="{% url 'films:films' %}">Ratings</a>
     </span>
+</span>
 
+{% if user_is_admin %}
     <div class="no-select">
         <h3>Add an availability period</h3>
 
@@ -129,4 +130,8 @@
     {% endif %}
     </div>
     <br>
+{% else %}
+    <h2 class="error">Not allowed</h2>
+    <p>Only an admin fan can maintain availabilities.</p>
+{% endif %}
 {% endblock %}}

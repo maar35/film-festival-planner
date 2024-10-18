@@ -49,13 +49,15 @@
 <div>
     {% with props=selected_screening_props %}
     <h3>
-        Selected screening
+        <span class="label-8rem">
+            Selected:
+        </span>
         <span class="modest-dropdown inline-dropdown-addition">
-            <span class="active-text" style="color: {{ festival_color }}">
+            <span class="active-text" style="color: var(--modestStandoutColor);">
                 {{ props.selected_screening }}
             </span>
             <span class="modest-dropdown-content"
-                  style="min-width:42rem; margin-left: 12rem; background-color: black; cursor: default;">
+                  style="min-width:42rem; margin-left: 12rem; background: black; cursor: default;">
                 <table>
                     <tbody>
                     <tr>
@@ -87,6 +89,12 @@
                         <td>{% if props.q_and_a %} {{ props.q_and_a }} {% else %} - {% endif %}</td>
                     </tr>
                     <tr>
+                        <th>Film subsection</th>
+                        <td style="background: {{ props.subsection.section.color }}; color: var(--modestStandoutColor);">
+                            {% if props.subsection %} {{ props.subsection.name }} {% else %} - {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
                         <th>Film description</th>
                         <td>{% if props.description %} {{ props.description }} {% else %} - {% endif %}</td>
                     </tr>
@@ -106,7 +114,7 @@
 {% endif %}
 
 
-{% if screen_rows %}
+{% if screen_rows or availability_props %}
     <table class="day-schema-border">
         <thead>
         <tr class="sticky-t-head" >
@@ -154,7 +162,7 @@
                 {% for prop in row.screening_props %}
                     {% with info=prop.info_pair %}
                     <span class="day-schema-screening"
-                          style="background: {{ prop.pair.background }}; color: {{ prop.pair.color }}; left: {{ prop.left }}px; width: {{ prop.width }}px; border: 1px solid {{ prop.frame_color }};">
+                          style="background: {{ prop.pair.background }}; color: {{ prop.pair.color }}; left: {{ prop.left }}px; width: {{ prop.width }}px; border: 1px solid {{ prop.frame_color }}; border-right: 1px solid {{ prop.section_color }};">
                         <a style="color: {{ prop.pair.color }};" href="{% url 'screenings:details' prop.screening.id %}">
                             {{ prop.line_1 }}
                         </a>

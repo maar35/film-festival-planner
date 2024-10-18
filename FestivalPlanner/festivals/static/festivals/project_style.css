@@ -330,7 +330,7 @@ span.up {
 .dropdown {
     position: relative;
     display: block;
-    background-color: var(--inputBackground);
+    background: var(--inputBackground);
     text-align: center;
     margin: auto;
     width: auto;
@@ -344,7 +344,7 @@ span.up {
 .drop-button {
     position: relative;
     color: var(--modestStandoutColor);
-    background-color: transparent;
+    background: transparent;
     margin: auto;
     padding: 2px;
     font-size: 16px;
@@ -393,12 +393,11 @@ span.up {
 .modest-dropdown {
     position: relative;
     display: table-cell;
-    background-color: var(--modestBackground);
+    background: var(--modestBackground);
     text-align: left;
     margin: auto;
     width: auto;
     height: auto;
-
 }
 .modest-dropdown:hover {
     background-color: var(--hoverBackground);

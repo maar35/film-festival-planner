@@ -4,7 +4,7 @@ from django.db import models
 
 from authentication.models import FilmFan
 from festivals.config import Config
-from films.models import Film
+from films.models import Film, FilmFanFilmRating, MIN_ALARM_RATING_DIFF
 from theaters.models import Screen
 
 CONSTANTS_CONFIG = Config().config['Constants']
@@ -73,6 +73,8 @@ class Screening(models.Model):
         ScreeningStatus.NO_TRAVEL_TIME: color_pair('white', 'blue'),
         ScreeningStatus.NEEDS_TICKETS: color_pair('white', 'blue'),
     }
+    interesting_rating_color_attends_film_background = 'blue'
+    uninteresting_rating_color = 'grey'
 
     # Define the fields.
     film = models.ForeignKey(Film, on_delete=models.CASCADE)
@@ -124,6 +126,35 @@ class Screening(models.Model):
         same_theater = self.screen.theater == other_screening.screen.theater
         travel_time = WALK_TIME_SAME_THEATER if same_theater else TRAVEL_TIME_OTHER_THEATER
         return travel_time
+
+    def film_rating_str(self, status):
+        """ The highest rating represents all ratings of a film """
+        def _rating_as_int(rating):
+            if rating:
+                return rating.rating
+            return FilmFanFilmRating.Rating.UNRATED
+
+        ordered_ratings = FilmFanFilmRating.film_ratings.filter(film=self.film).order_by('rating')
+        min_rating = _rating_as_int(ordered_ratings.first())
+        max_rating = _rating_as_int(ordered_ratings.last())
+        film_rating_str = str(max_rating)
+        if min_rating != FilmFanFilmRating.Rating.INDECISIVE and max_rating - min_rating >= MIN_ALARM_RATING_DIFF:
+            film_rating_str += '?'
+
+        attends_film = status == self.ScreeningStatus.ATTENDS_FILM
+        attends = status == self.ScreeningStatus.ATTENDS
+        rating_is_interesting = max_rating in FilmFanFilmRating.interesting_ratings()
+        regular_color = self.color_pair_selected_by_screening_status[status]['color']
+        if attends:
+            color = regular_color
+        elif rating_is_interesting:
+            if attends_film:
+                color = Screening.interesting_rating_color_attends_film_background
+            else:
+                color = regular_color
+        else:
+            color = Screening.uninteresting_rating_color
+        return film_rating_str, color
 
 
 class Attendance(models.Model):
