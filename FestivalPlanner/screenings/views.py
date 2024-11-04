@@ -185,7 +185,6 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
 
     def _screening_prop(self, screening):
         attendants = self.status_getter.get_attendants(screening)
-        info_str = f'{"Q " if screening.q_and_a else ""}{self._attendants_str(attendants)}'
         status, pair = self._screening_color_pair(screening, attendants)
 
         selected = screening == self.selected_screening
@@ -197,7 +196,8 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         line_2 = f'{screening.start_dt.strftime("%H:%M")} - {screening.end_dt.strftime("%H:%M")}'
         pair_selected = Screening.color_pair_selected_by_screening_status[status]
         festival_color = screening.film.festival.festival_color
-        rating_str, rating_color = screening.film_rating_str(status)
+        fans_rating_str, film_rating_str, rating_color = screening.film_rating_str(status)
+        info_str = f'{"Q " if screening.q_and_a else ""}{fans_rating_str}'
         frame_color = pair_selected['color'] if selected else festival_color
         section_color = screening.film.subsection.section.color if screening.film.subsection else frame_color
         querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
@@ -209,7 +209,8 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'left': left_pixels,
             'width': self._pixels_from_dt(screening.end_dt) - left_pixels,
             'pair': pair,
-            'film_rating': rating_str,
+            'fan_ratings': fans_rating_str,
+            'film_rating': film_rating_str,
             'rating_color': rating_color,
             'selected': selected,
             'frame_color': frame_color,
@@ -347,3 +348,12 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
     def _get_filmscreening_props(self):
         session = self.request.session
         return ScreeningStatusGetter.get_filmscreening_props(session, self.screening.film)
+
+
+class ScreeningCalendarView(LoginRequiredMixin, ListView):
+    template_name = 'screenings/calendar.html'
+    http_methods = ['get']
+    context_object_name = 'attended_screen_rows'
+
+    def get_queryset(self):
+        fan = current_fan()

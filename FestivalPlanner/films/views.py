@@ -114,7 +114,7 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
 
     @staticmethod
     def start_position_of_text(film, text):
-        re_search_text = re.compile(f'{text}')
+        re_search_text = re.compile(f'{text.lower()}')
         m = re_search_text.search(film.sort_title)
         return m.start() if m else None
 

@@ -106,27 +106,6 @@ class FileKeeper:
         return os.path.join(self.webdata_dir, f'{prefix}_{postfix}')
 
 
-class ScreeningKey:
-
-    def __init__(self, screening):
-        self.screen = screening.screen
-        self.start_dt = screening.start_datetime
-        self.end_dt = screening.end_datetime
-
-    def __str__(self):
-        return "{} {}-{} in {}".format(
-            self.start_dt.date().isoformat(),
-            self.start_dt.time().isoformat(timespec='minutes'),
-            self.end_dt.time().isoformat(timespec='minutes'),
-            self.screen)
-
-    def __eq__(self, other):
-        return hash(self) == hash(other)
-
-    def __hash__(self):
-        return hash((self.screen, self.start_dt, self.end_dt))
-
-
 class BaseHtmlPageParser(HTMLParser):
 
     class StateStack:

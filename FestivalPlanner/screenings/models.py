@@ -135,12 +135,18 @@ class Screening(models.Model):
             return FilmFanFilmRating.Rating.UNRATED
 
         ordered_ratings = FilmFanFilmRating.film_ratings.filter(film=self.film).order_by('rating')
+
+        # Get a summary of fans and their ratings.
+        fans_rating_str = ''.join([r.str_fan_rating() for r in ordered_ratings])
+
+        # Get the representative rating.
         min_rating = _rating_as_int(ordered_ratings.first())
         max_rating = _rating_as_int(ordered_ratings.last())
         film_rating_str = str(max_rating)
         if min_rating != FilmFanFilmRating.Rating.INDECISIVE and max_rating - min_rating >= MIN_ALARM_RATING_DIFF:
             film_rating_str += '?'
 
+        # decide the color.
         attends_film = status == self.ScreeningStatus.ATTENDS_FILM
         attends = status == self.ScreeningStatus.ATTENDS
         rating_is_interesting = max_rating in FilmFanFilmRating.interesting_ratings()
@@ -154,7 +160,8 @@ class Screening(models.Model):
                 color = regular_color
         else:
             color = Screening.uninteresting_rating_color
-        return film_rating_str, color
+
+        return fans_rating_str, film_rating_str, color
 
 
 class Attendance(models.Model):
