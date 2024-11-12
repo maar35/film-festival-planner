@@ -26,6 +26,7 @@ FESTIVAL = 'IDFA'
 FESTIVAL_CITY = 'Amsterdam'
 FESTIVAL_YEAR = 2024
 
+HARDCODED_FILM_URLS = True
 DEBUGGING = True
 ALWAYS_DOWNLOAD = False
 DISPLAY_SCREENING = True
@@ -64,31 +65,34 @@ def main():
     COUNTER.start('films not added')
     COUNTER.start('parsing failed')
     COUNTER.start('az-counters')
-    # COUNTER.start('sections')
-    # COUNTER.start('pathways')
-    # COUNTER.start('sections with css data')
-    # COUNTER.start('corrected urls')
-    # COUNTER.start('improper dates')
-    # COUNTER.start('improper times')
-    # COUNTER.start('filminfo update')
-    # COUNTER.start('filminfo extended')
+
+    # Counters that weren't active when hardcoding film URLs.
+    COUNTER.start('sections')
+    COUNTER.start('pathways')
+    COUNTER.start('sections with css data')
+    COUNTER.start('corrected urls')
+    COUNTER.start('improper dates')
+    COUNTER.start('improper times')
+    COUNTER.start('filminfo update')
+    COUNTER.start('filminfo extended')
 
     # Try parsing the websites.
     try_parse_festival_sites(parse_idfa_sites, festival_data, ERROR_COLLECTOR, DEBUG_RECORDER, FESTIVAL, COUNTER)
 
 
 def parse_idfa_sites(festival_data):
-    comment(f'Parsing {FESTIVAL} {FESTIVAL_YEAR} pages.')
-    parse_from_hardcoded_urls(festival_data)
+    if HARDCODED_FILM_URLS:
+        comment(f'Parsing {FESTIVAL} {FESTIVAL_YEAR} pages.')
+        parse_from_hardcoded_urls(festival_data)
+    else:
+        comment('Trying new AZ pege(s)')
+        load_az_pages(festival_data)
 
-    # comment('Trying new AZ pege(s)')
-    # load_az_pages(festival_data)
-    #
-    # comment('Parsing section pages.')
-    # get_films_from_section(festival_data)
-    #
-    # comment('Parsing film pages')
-    # FilmDetailsReader(festival_data).get_film_details()
+        comment('Parsing section pages.')
+        get_films_from_section(festival_data)
+
+        comment('Parsing film pages')
+        FilmDetailsReader(festival_data).get_film_details()
 
     comment(f'Done parsing {FESTIVAL} {FESTIVAL_YEAR} pages.')
     report_missing_films()
@@ -1274,12 +1278,13 @@ class IdfaScreening(Screening):
     re_num_screen = re.compile(r'^(?P<theater>.*?)\s+(?P<number>\d+)$')
     re_colon_screen = re.compile(r'^(?P<theater>.*?):\s+(?P<room>.+)$')
 
-    def __init__(self, film, screen, start_datetime, end_datetime, qa='', extra='', audience=None, combi_url=None):
+    def __init__(self, film, screen, start_datetime, end_datetime, qa='', extra='', audience=None,
+                 combi_url=None, combi_title=None):
         super().__init__(film, screen, start_datetime, end_datetime, qa, extra, audience)
         self.in_combi = None
 
-        # Support potential usable code.
-        self.combi_title = None
+        # Support potentially usable code.
+        self.combi_title = combi_title
         self.combi_url = combi_url
 
     @classmethod

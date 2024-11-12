@@ -936,18 +936,18 @@ class CalendarDumper(BaseDumper):
 
     def object_row(self, obj):
         dt_fmt = '%d-%m-%Y %H:%M'
+        screening = obj['screening']
         return [
-            f"{obj['screening'].film.title} - {obj['screening'].screen}",
-            obj['screening'].screen.theater.parse_name,
-            obj['screening'].start_dt.strftime(dt_fmt),
-            obj['screening'].end_dt.strftime(dt_fmt),
-            obj['screening'].film.url,
+            f"{screening.film.title} - {screening.screen}",
+            screening.screen.theater.parse_name,
+            screening.start_dt.strftime(dt_fmt),
+            screening.end_dt.strftime(dt_fmt),
+            screening.film.url,
             self._get_notes(obj),
         ]
 
     @staticmethod
     def _get_notes(obj):
-        # TODO: add description, fan ratings, Q&A (see screening details)
         separator = '|'
         status = Screening.ScreeningStatus.ATTENDS
         screening = obj['screening']

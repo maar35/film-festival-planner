@@ -654,12 +654,16 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
     @classmethod
     def _get_metadata(cls, film):
         filminfo_yaml_file = film.festival.filminfo_yaml_file()
-        with open(filminfo_yaml_file, 'r') as stream:
-            cls.metadata_by_film_id = yaml.safe_load(stream)
         try:
-            film_data = cls.metadata_by_film_id[film.film_id]
-        except KeyError:
+            with open(filminfo_yaml_file, 'r') as stream:
+                cls.metadata_by_film_id = yaml.safe_load(stream)
+        except FileNotFoundError:
             film_data = {}
+        else:
+            try:
+                film_data = cls.metadata_by_film_id[film.film_id]
+            except KeyError:
+                film_data = {}
         metadata = [{'key': k, 'value': v} for k, v in film_data.items()]
         return metadata
 
