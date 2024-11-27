@@ -11,7 +11,7 @@ from festivals.models import rating_action_key
 from films.models import FilmFanFilmRating, fan_rating_str, FIELD_BY_POST_ATTENDANCE, \
     MANAGER_BY_POST_ATTENDANCE
 
-SEARCH_TEXT_VALIDATOR = RegexValidator(r'^[a-z0-9]+$', 'Type only lower case letters and digits')
+SEARCH_TEXT_VALIDATOR = RegexValidator(r'^\w+$', 'Type letters and digits only')
 """
 No spaces allowed (yet) to discourage entering articles while searching and
 sorting is based on sort_title.

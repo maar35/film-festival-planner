@@ -75,8 +75,10 @@ def parse_imagine_sites(festival_data):
 def get_films(festival_data):
     az_url = IMAGINE_HOSTNAME + AZ_URL_PATH
     url_file = UrlFile(az_url, AZ_FILE, ERROR_COLLECTOR, DEBUG_RECORDER, byte_count=100)
+    comment_at_download = f'Downloading AZ page from {az_url}.'
     az_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD)
     if az_html is not None:
+        comment(f'Downloaded AZ page, encoding={url_file.encoding}')
         AzPageParser(festival_data).feed(az_html)
 
 

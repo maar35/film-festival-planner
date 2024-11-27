@@ -11,8 +11,8 @@ from festival_planner.tools import initialize_log, add_log, CSV_DIALECT
 from festivals.config import Config
 from festivals.models import Festival, FestivalBase
 from films.forms.film_forms import PickRating
-from films.models import Film, FilmFanFilmRating
-from films.views import FilmsView
+from films.models import Film, FilmFanFilmRating, minutes_str
+from films.views import FilmsView, FilmDetailView
 from screenings.models import Screening, Attendance
 from sections.models import Section, Subsection
 from theaters.models import Theater, theaters_path, City, cities_path, Screen, screens_path, cities_cache_path, \
@@ -925,6 +925,42 @@ class ScreenDumper(BaseDumper):
             screen.abbreviation,
             screen.address_type,
         ]
+
+
+class CalendarDumper(BaseDumper):
+    manager = None
+    header = ['title', 'location', 'start_time', 'end_time', 'url', 'notes']
+
+    def __init__(self, session):
+        super().__init__(session, 'calendar', self.manager, header=self.header)
+
+    def object_row(self, obj):
+        dt_fmt = '%d-%m-%Y %H:%M'
+        screening = obj['screening']
+        return [
+            f"{screening.film.title} - {screening.screen}",
+            screening.screen.theater.parse_name,
+            screening.start_dt.strftime(dt_fmt),
+            screening.end_dt.strftime(dt_fmt),
+            screening.film.url,
+            self._get_notes(obj),
+        ]
+
+    @staticmethod
+    def _get_notes(obj):
+        separator = '|'
+        status = Screening.ScreeningStatus.ATTENDS
+        screening = obj['screening']
+        fans_rating_str, film_rating_str, color = screening.film_rating_str(status)
+        notes = [
+            f"Film duration: {minutes_str(screening.film.duration)}",
+            f"Screening duration: {minutes_str(screening.end_dt - screening.start_dt)}",
+            f"Attendants: {obj['attendants']}",
+            f"Ratings: {fans_rating_str} ({film_rating_str})",
+            '',
+            FilmDetailView.get_description(screening.film),
+        ]
+        return separator.join(notes)
 
 
 class CityBackupDumper(CityDumper):

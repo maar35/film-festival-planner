@@ -114,7 +114,7 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
 
     @staticmethod
     def start_position_of_text(film, text):
-        re_search_text = re.compile(f'{text}')
+        re_search_text = re.compile(f'{text.lower()}')
         m = re_search_text.search(film.sort_title)
         return m.start() if m else None
 
@@ -164,7 +164,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
     highest_rating = FilmFanFilmRating.Rating.values[-1]
     eligible_ratings = FilmFanFilmRating.Rating.values[LOWEST_PLANNABLE_RATING:]
     short_threshold = timedelta(minutes=MAX_SHORT_MINUTES)
-    fan_list = get_present_fans()
     fragment_keeper = None
     logged_in_fan = None
     festival = None
@@ -181,6 +180,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
         self.festival_feature_films = None
         self.section_list = Section.sections.all()
         self.subsection_list = Subsection.subsections.all()
+        self.fan_list = get_present_fans()
 
     def setup(self, request, *args, **kwargs):
         pr_debug('start', with_time=True)
@@ -654,12 +654,16 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
     @classmethod
     def _get_metadata(cls, film):
         filminfo_yaml_file = film.festival.filminfo_yaml_file()
-        with open(filminfo_yaml_file, 'r') as stream:
-            cls.metadata_by_film_id = yaml.safe_load(stream)
         try:
-            film_data = cls.metadata_by_film_id[film.film_id]
-        except KeyError:
+            with open(filminfo_yaml_file, 'r') as stream:
+                cls.metadata_by_film_id = yaml.safe_load(stream)
+        except FileNotFoundError:
             film_data = {}
+        else:
+            try:
+                film_data = cls.metadata_by_film_id[film.film_id]
+            except KeyError:
+                film_data = {}
         metadata = [{'key': k, 'value': v} for k, v in film_data.items()]
         return metadata
 

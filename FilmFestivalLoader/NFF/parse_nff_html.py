@@ -15,9 +15,8 @@ from enum import Enum, auto
 from html.parser import HTMLParser
 
 from Shared.application_tools import DebugRecorder, ErrorCollector, Counter, comment
-from Shared.parse_tools import ScreeningKey, FileKeeper, try_parse_festival_sites, HtmlPageParser
-from Shared.planner_interface import UnicodeMapper, Film, Screening, FestivalData, FilmInfo
-# from Shared.web_tools import get_charset
+from Shared.parse_tools import FileKeeper, try_parse_festival_sites, HtmlPageParser
+from Shared.planner_interface import UnicodeMapper, Film, Screening, FestivalData, FilmInfo, ScreeningKey
 from Shared.web_tools import get_encoding_from_file, iri_slug_to_url, UrlFile
 
 festival = 'NFF'

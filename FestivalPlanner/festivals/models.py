@@ -127,6 +127,9 @@ class Festival(models.Model):
     def attendances_file(self):
         return os.path.join(self.festival_data_dir(), 'attendances.csv')
 
+    def agenda_file(self):
+        return os.path.join(self.festival_data_dir(), 'calendar.csv')
+
 
 def default_festival(today=None):
     """

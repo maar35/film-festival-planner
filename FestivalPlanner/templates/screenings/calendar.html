@@ -1,0 +1,63 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+<h2 class="row col-left-h2">{{ sub_header }}</h2>
+<div class="row">
+    <span class="col-right">
+        <a href="{% url 'screenings:day_schema' %}">Day schema</a>
+        <br>
+        <a href="{% url 'films:films' %}">Ratings</a>
+    </span>
+</div>
+
+{% block log %}
+    {{ block.super }}
+{% endblock log %}
+
+<br>
+<form method='post'>
+    {% csrf_token %}
+    <input type="submit"  name="agenda" value="Create {{ screening_count }} calendar items">
+</form>
+
+<br>
+{% if attended_screening_rows %}
+    <table>
+        <thead>
+            <tr>
+                <th>Start date</th>
+                <th>Start time</th>
+                <th>End time</th>
+                <th>Screen</th>
+                <th>Film title</th>
+                <th>Attendants</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in attended_screening_rows %}
+            <tr>
+                {% with screening=row.screening %}
+                    <td>
+                    {% ifchanged screening.start_dt.date %}
+                        {{ screening.start_dt.date | date:"D j M Y" }}
+                    {% endifchanged %}
+                    </td>
+                    <td>{{ screening.start_dt | date:"H:i" }}</td>
+                    <td>{{ screening.end_dt | date:"H:i" }}</td>
+                    <td>{{ screening.screen.parse_name }}</td>
+                    <td>{{ screening.film.title }}</td>
+                    <td>{{ row.attendants }}</td>
+                {% endwith %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>{{current_fan}} attends no screenings (yet).</p>
+{% endif %}
+<br>
+
+{% endblock %}

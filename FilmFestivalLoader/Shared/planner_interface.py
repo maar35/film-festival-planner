@@ -435,6 +435,38 @@ class Screening:
     def is_public(self):
         return self.audience == self.audience_type_public
 
+    def coincides(self, other_screening):
+        return ScreeningKey(other_screening) == ScreeningKey(self)
+
+    def is_part_of(self, other_screening):
+        ok = self.screen.screen_id == other_screening.screen.screen_id
+        if ok:
+            ok = other_screening.start_datetime <= self.start_datetime
+        if ok:
+            ok = other_screening.end_datetime >= self.end_datetime
+        return ok
+
+
+class ScreeningKey:
+
+    def __init__(self, screening):
+        self.screen = screening.screen
+        self.start_dt = screening.start_datetime
+        self.end_dt = screening.end_datetime
+
+    def __str__(self):
+        return "{} {}-{} in {}".format(
+            self.start_dt.date().isoformat(),
+            self.start_dt.time().isoformat(timespec='minutes'),
+            self.end_dt.time().isoformat(timespec='minutes'),
+            self.screen)
+
+    def __eq__(self, other):
+        return hash(self) == hash(other)
+
+    def __hash__(self):
+        return hash((self.screen, self.start_dt, self.end_dt))
+
 
 class FestivalData:
     curr_city_id = None
@@ -808,8 +840,8 @@ class FestivalData:
     def screening_can_go_to_planner(self, screening):
         return screening.is_public() and not screening.film.is_part_of_combination(self)
 
-    def film_can_go_to_planner(self, filmid):
-        return len([s for s in self.screenings if s.film.film_id == filmid and self.screening_can_go_to_planner(s)]) > 0
+    def film_can_go_to_planner(self, film_id):
+        return len([s for s in self.screenings if s.film.film_id == film_id and self.screening_can_go_to_planner(s)]) > 0
 
     def write_films(self):
         public_films = [f for f in self.films if self.film_can_go_to_planner(f.film_id)]

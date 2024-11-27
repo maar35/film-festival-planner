@@ -18,7 +18,7 @@ from festival_planner.cache import FilmRatingCache
 from festival_planner.cookie import Filter
 from festivals.models import current_festival, FestivalBase, Festival
 from festivals.tests import create_festival
-from films import views
+from films import views, models
 from films.forms.film_forms import PickRating
 from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR
 from films.views import FilmsView, FilmDetailView, MAX_SHORT_MINUTES, BaseFilmsFormView, FilmsListView
@@ -377,6 +377,9 @@ class ViewsTestCase(TestCase):
         self.regular_fan, self.regular_user, self.regular_credentials = \
             set_up_user_with_fan('paul', 'mull-kintyre', seq_nr=1942)
 
+        # Cleanup the fans who appear in the rating views.
+        models.FANS_IN_RATINGS_TABLE[0:] = []
+
     def tearDown(self):
         super().tearDown()
         _ = self.client.post(reverse('authentication:logout'))
@@ -498,13 +501,12 @@ class ResultsViewsTests(ViewsTestCase):
         fan = self.regular_fan
         _ = self.get_regular_fan_request()
         saved_film = create_film(film_id=6001, title='New Adventures', minutes=115)
-        films_response = self.client.get(reverse('films:films'))    # Initialize cache.
+        models.FANS_IN_RATINGS_TABLE.append(self.regular_fan.name)
 
         # Act.
         get_response = self.client.get(reverse('films:details', args=[saved_film.pk]))
 
         # Assert.
-        self.assertEqual(films_response.status_code, HTTPStatus.OK)
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
         self.assertContains(get_response, saved_film.title)
         self.assert_fan_row(fan, UNRATED_STR, get_response)
@@ -521,14 +523,13 @@ class ResultsViewsTests(ViewsTestCase):
         saved_film = create_film(film_id=6002, title='A Few More Adventures', minutes=116)
         rating_value = 8
         FilmFanFilmRating.film_ratings.create(film=saved_film, film_fan=fan, rating=rating_value)
-
-        films_response = self.client.get(reverse('films:films'))    # Initialize cache.
+        models.FANS_IN_RATINGS_TABLE.append(self.regular_fan.name)
+        models.FANS_IN_RATINGS_TABLE.append(self.admin_fan.name)
 
         # Act.
         get_response = self.client.get(reverse('films:details', args=[saved_film.pk]))
 
         # Assert.
-        self.assertEqual(films_response.status_code, HTTPStatus.OK)
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
         self.assertContains(get_response, saved_film.title)
         self.assert_fan_row(fan, str(rating_value), get_response)

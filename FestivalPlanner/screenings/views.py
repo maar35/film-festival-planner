@@ -15,9 +15,10 @@ from festival_planner.fan_action import FanAction
 from festival_planner.fragment_keeper import ScreeningFragmentKeeper, FRAGMENT_INDICATOR
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
-from films.models import current_fan, initial, fan_rating, FilmFanFilmRating, minutes_str, FANS_IN_RATINGS_TABLE
+from festivals.models import current_festival
+from films.models import current_fan, initial, fan_rating, minutes_str, FANS_IN_RATINGS_TABLE
 from films.views import FilmDetailView
-from screenings.forms.screening_forms import DummyForm, AttendanceForm
+from screenings.forms.screening_forms import DummyForm, AttendanceForm, dump_calendar_items
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED
 from theaters.models import Theater
 
@@ -185,7 +186,6 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
 
     def _screening_prop(self, screening):
         attendants = self.status_getter.get_attendants(screening)
-        info_str = f'{"Q " if screening.q_and_a else ""}{self._attendants_str(attendants)}'
         status, pair = self._screening_color_pair(screening, attendants)
 
         selected = screening == self.selected_screening
@@ -197,7 +197,8 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         line_2 = f'{screening.start_dt.strftime("%H:%M")} - {screening.end_dt.strftime("%H:%M")}'
         pair_selected = Screening.color_pair_selected_by_screening_status[status]
         festival_color = screening.film.festival.festival_color
-        rating_str, rating_color = screening.film_rating_str(status)
+        fans_rating_str, film_rating_str, rating_color = screening.film_rating_str(status)
+        info_str = f'{"Q " if screening.q_and_a else ""}{fans_rating_str}'
         frame_color = pair_selected['color'] if selected else festival_color
         section_color = screening.film.subsection.section.color if screening.film.subsection else frame_color
         querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
@@ -209,7 +210,8 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'left': left_pixels,
             'width': self._pixels_from_dt(screening.end_dt) - left_pixels,
             'pair': pair,
-            'film_rating': rating_str,
+            'fan_ratings': fans_rating_str,
+            'film_rating': film_rating_str,
             'rating_color': rating_color,
             'selected': selected,
             'frame_color': frame_color,
@@ -347,3 +349,73 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
     def _get_filmscreening_props(self):
         session = self.request.session
         return ScreeningStatusGetter.get_filmscreening_props(session, self.screening.film)
+
+
+class ScreeningCalendarView(LoginRequiredMixin, View):
+    template_name = 'screenings/calendar.html'
+    calendar_item_rows = None
+
+    @staticmethod
+    def get(request, *args, **kwargs):
+        view = ScreeningCalendarListView.as_view()
+        return view(request, *args, **kwargs)
+
+    @staticmethod
+    def post(request, *args, **kwargs):
+        view = ScreeningCalendarFormView.as_view()
+        return view(request, *args, **kwargs)
+
+
+class ScreeningCalendarListView(LoginRequiredMixin, ListView):
+    template_name = ScreeningCalendarView.template_name
+    http_method_names = ['get']
+    context_object_name = 'attended_screening_rows'
+
+    def get_queryset(self):
+        manager = Attendance.attendances
+        session = self.request.session
+        fan = current_fan(session)
+        festival = current_festival(session)
+        attendances = manager.filter(fan=fan, screening__film__festival=festival).order_by('screening__start_dt')
+        attended_screenings = [self._get_attendance_row(attendance) for attendance in attendances]
+        self.queryset = attended_screenings
+        return attended_screenings
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        super_context = super().get_context_data(**kwargs)
+        session = self.request.session
+        ScreeningCalendarView.calendar_item_rows = self.queryset
+        new_context = {
+            'title': 'Calendar Items',
+            'sub_header': 'Prepare calendar items from attended screenings',
+            'screening_count': len(self.queryset),
+            'log': get_log(session)
+        }
+        unset_log(session)
+        return add_base_context(self.request, super_context | new_context)
+
+    @staticmethod
+    def _get_attendance_row(attendance):
+        screening = attendance.screening
+        attendants = Attendance.attendances.filter(screening=screening)
+        attendance_row = {
+            'screening': screening,
+            'attendants': ', '.join([attendant.fan.name for attendant in attendants]),
+        }
+        return attendance_row
+
+
+class ScreeningCalendarFormView(LoginRequiredMixin, FormView):
+    template_name = ScreeningCalendarView.template_name
+    form_class = DummyForm
+    http_method_names = ['post']
+
+    def form_valid(self, form):
+        post = self.request.POST
+        if 'agenda' in post:
+            session = self.request.session
+            dump_calendar_items(session, ScreeningCalendarView.calendar_item_rows)
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse('screenings:calendar')

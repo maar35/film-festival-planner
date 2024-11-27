@@ -1,16 +1,22 @@
 from django import forms
 from django.db import transaction
 
-from festival_planner.tools import add_log
+from festival_planner.tools import add_log, initialize_log
+from festivals.models import current_festival
+from loader.forms.loader_forms import CalendarDumper
 from screenings.models import Attendance
+
+
+def dump_calendar_items(session, attended_screening_rows):
+    initialize_log(session, 'Dump calendar')
+    add_log(session, f'Dumping {len(attended_screening_rows) if attended_screening_rows else 0} calendar items.')
+    festival = current_festival(session)
+    if CalendarDumper(session).dump_objects(festival.agenda_file(), objects=attended_screening_rows):
+        add_log(session, 'Please adapt and run script MoviesToAgenda.scpt in the Tools directory.')
 
 
 class DummyForm(forms.Form):
     dummy_field = forms.SlugField(required=False)
-
-
-def log_add(session, e):
-    pass
 
 
 class AttendanceForm(forms.Form):
