@@ -86,3 +86,4 @@ repeat with calendarInfo in calendarInfoList
 	display dialog theDialogText buttons {"OK"} default button 1
 end repeat
 
+
