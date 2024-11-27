@@ -5,7 +5,7 @@ property initialMaxDate : date "zondag 31 december 1899 om 00:00:00"
 property maartenInfo : {cal:"Film", eventsAdded:0, minDate:initialMinDate, maxDate:initialMaxDate}
 property adrienneInfo : {cal:"IFFR Adrienne", eventsAdded:0, minDate:initialMinDate, maxDate:initialMaxDate}
 property manfredInfo : {cal:"IFFR Manfred", eventsAdded:0, minDate:initialMinDate, maxDate:initialMaxDate}
-property calendarInfoList : {adrienneInfo}
+property calendarInfoList : {maartenInfo}
 
 repeat with calendarInfo in calendarInfoList
 	set the eventsAdded of calendarInfo to 0

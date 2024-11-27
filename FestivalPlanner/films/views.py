@@ -164,7 +164,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
     highest_rating = FilmFanFilmRating.Rating.values[-1]
     eligible_ratings = FilmFanFilmRating.Rating.values[LOWEST_PLANNABLE_RATING:]
     short_threshold = timedelta(minutes=MAX_SHORT_MINUTES)
-    fan_list = get_present_fans()
     fragment_keeper = None
     logged_in_fan = None
     festival = None
@@ -181,6 +180,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
         self.festival_feature_films = None
         self.section_list = Section.sections.all()
         self.subsection_list = Subsection.subsections.all()
+        self.fan_list = get_present_fans()
 
     def setup(self, request, *args, **kwargs):
         pr_debug('start', with_time=True)

@@ -692,7 +692,6 @@ class ShoppingCartPageParser(HtmlPageParser):
             if details_html is not None:
                 theater_screen_parser = TheaterScreenPageParser(self.festival_data, self.film, url)
                 theater_screen_parser.feed(details_html)
-                self.print_debug(f'@@ after reading {url}', f'{theater_screen_parser.current_screen=}')
                 self.current_screen = theater_screen_parser.current_screen
 
     def handle_starttag(self, tag, attrs):

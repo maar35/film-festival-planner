@@ -12,7 +12,7 @@ import unittest
 from unittest import skip
 
 from IFFR.parse_iffr_html import IffrData
-from Shared.planner_interface import ScreenedFilmType, ScreenedFilm, Screen
+from Shared.planner_interface import Screen, ScreenedFilmType, ScreenedFilm
 from Shared.web_tools import fix_json
 from Tests.AuxiliaryClasses.test_film import BaseFilmTestCase
 

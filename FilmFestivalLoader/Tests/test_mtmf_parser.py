@@ -1,9 +1,7 @@
-import datetime
 import unittest
 from unittest import TestCase
 
 from MTMF.parse_mtmf_html import FilmPageParser, MtmfData, FilmUrlFinder
-from Shared.planner_interface import FilmInfo
 from Tests.AuxiliaryClasses.test_film import BaseFilmTestCase
 
 
