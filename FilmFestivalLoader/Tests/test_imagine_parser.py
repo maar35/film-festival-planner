@@ -4,20 +4,20 @@ import datetime
 import unittest
 
 from Imagine.parse_imagine_html import ImagineData, AzPageParser, FilmPageParser
-from Shared.application_tools import DebugRecorder
-from Shared.parse_tools import FileKeeper
 from Shared.planner_interface import Film
-
-# Initialize globals.
-file_keeper = FileKeeper('Imagine', 2022)
-debug_file = file_keeper.debug_file
-debug_recorder = DebugRecorder(debug_file)
+from Tests.AuxiliaryClasses.test_film import BaseTestCase
 
 
-class ImagineAzParserTestCase(unittest.TestCase):
+class BaseImagineTestCase(BaseTestCase):
     def setUp(self):
-        festival_data = ImagineData(file_keeper.plandata_dir)
-        self.parser = AzPageParser(festival_data)
+        super().setUp()
+        self.festival_data = ImagineData(self.file_keeper.plandata_dir)
+
+
+class ImagineAzParserTestCase(BaseImagineTestCase):
+    def setUp(self):
+        super().setUp()
+        self.parser = AzPageParser(self.festival_data)
 
     def test_get_duration(self):
         # Arranged in setUp().
@@ -39,15 +39,43 @@ class ImagineAzParserTestCase(unittest.TestCase):
         expected_subs = 'Engels ondertiteld'
         self.assertEqual(expected_subs, subs)
 
+    def test_get_title_and_qa(self):
+        """
+        The data found in IN_TITLE state can be parsed into a title and a Q&A indicator.
+        """
+        # Arrange.
+        data = 'The Menu + Q&A'
 
-class ImagineFilmPageParserTestCase(unittest.TestCase):
+        # Act.
+        title = self.parser.get_title(data)
+
+        # Assert.
+        self.assertEqual(title, 'The Menu')
+        self.assertEqual(self.parser.qa, 'Q&A')
+
+    def test_get_title(self):
+        """
+        The data found in IN_TITLE state can be parsed into a title without Q&A indicator.
+        """
+        # Arrange.
+        data = 'Things to Come: Human Augmentation'
+
+        # Act.
+        title = self.parser.get_title(data)
+
+        # Assert.
+        self.assertEqual(title, data)
+        self.assertEqual(self.parser.qa, '')
+
+
+class ImagineFilmPageParserTestCase(BaseImagineTestCase):
     def setUp(self):
-        festival_data = ImagineData(file_keeper.plandata_dir)
-        url = min(festival_data.film_id_by_url.keys())
+        super().setUp()
+        url = 'https://www.imaginefilmfestival.nl/film/the-menu/'
         film = Film(1, 1, 'The Big Deal', url)
         film.duration = datetime.timedelta(minutes=90)
         film.medium_category = 'films'
-        self.parser = FilmPageParser(festival_data, film)
+        self.parser = FilmPageParser(self.festival_data, film)
 
     def test_set_article(self):
         # Arrange.
