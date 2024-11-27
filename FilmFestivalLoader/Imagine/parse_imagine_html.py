@@ -538,8 +538,8 @@ class QaScreeningKey:
 
 
 class ImagineData(FestivalData):
-    def __init__(self, plandata_dir):
-        super().__init__(FESTIVAL_CITY, plandata_dir)
+    def __init__(self, plandata_dir, common_data_dir=None):
+        super().__init__(FESTIVAL_CITY, plandata_dir, common_data_dir=common_data_dir)
 
     def film_key(self, film, url):
         return url
