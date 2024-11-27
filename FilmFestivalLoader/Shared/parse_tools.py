@@ -5,6 +5,7 @@ Created on Fri Oct 7 22:24:00 2022
 
 @author: maartenroos
 """
+import datetime
 import inspect
 import os
 from html.parser import HTMLParser
@@ -201,6 +202,13 @@ class HtmlPageParser(BaseHtmlPageParser):
         self.article_paragraphs = []
         self.article_paragraph = ''
         self.article = None
+
+    @staticmethod
+    def get_screening_date_times(start_date, start_time, end_time):
+        end_date = start_date if end_time > start_time else start_date + datetime.timedelta(days=1)
+        start_dt = datetime.datetime.combine(start_date, start_time)
+        end_dt = datetime.datetime.combine(end_date, end_time)
+        return start_dt, end_dt
 
     def add_screening_from_fields(self, film, screen, start_dt, end_dt, qa='', subtitles='', extra='',
                                   audience='', sold_out=None, program=None, display=True):

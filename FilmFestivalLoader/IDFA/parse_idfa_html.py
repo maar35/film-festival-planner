@@ -558,9 +558,7 @@ class FilmEnumeratedPageParser(HtmlPageParser):
         data = self.screening_times_str
         start_time = datetime.time(int(data[:2]), int(data[3:5]))   # 14.00–15.28
         end_time = datetime.time(int(data[6:8]), int(data[9:]))
-        end_date = start_date if end_time > start_time else start_date + datetime.timedelta(days=1)
-        start_dt = datetime.datetime.combine(start_date, start_time)
-        end_dt = datetime.datetime.combine(end_date, end_time)
+        start_dt, end_dt = self.get_screening_date_times(start_date, start_time, end_time)
 
         # Set film duration if applicable.
         if not self.film.duration.total_seconds():
@@ -1077,9 +1075,7 @@ class FilmPageParser(HtmlPageParser):
             return False
         else:
             start_date = self.start_date
-            end_date = start_date if end_time > start_time else start_date + datetime.timedelta(days=1)
-            self.start_dt = datetime.datetime.combine(start_date, start_time)
-            self.end_dt = datetime.datetime.combine(end_date, end_time)
+            self.start_dt, self.end_dt = self.get_screening_date_times(start_date, start_time, end_time)
         return True
 
     def get_idfa_screen(self, data):

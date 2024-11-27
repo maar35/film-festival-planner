@@ -411,7 +411,6 @@ class ScreeningCalendarFormView(LoginRequiredMixin, FormView):
     http_method_names = ['post']
 
     def form_valid(self, form):
-        pr_debug(f'{self.request.POST=}')
         post = self.request.POST
         if 'agenda' in post:
             session = self.request.session

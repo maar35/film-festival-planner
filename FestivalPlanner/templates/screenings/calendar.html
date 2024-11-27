@@ -39,16 +39,18 @@
         <tbody>
         {% for row in attended_screening_rows %}
             <tr>
-                <td>
-                {% ifchanged row.screening.start_dt.date %}
-                    {{ row.screening.start_dt.date | date:"D j M Y" }}
-                {% endifchanged %}
-                </td>
-                <td>{{ row.screening.start_dt | date:"H:i" }}</td>
-                <td>{{ row.screening.end_dt | date:"H:i" }}</td>
-                <td>{{ row.screening.screen.parse_name }}</td>
-                <td>{{ row.screening.film.title }}</td>
-                <td>{{ row.attendants }}</td>
+                {% with screening=row.screening %}
+                    <td>
+                    {% ifchanged screening.start_dt.date %}
+                        {{ screening.start_dt.date | date:"D j M Y" }}
+                    {% endifchanged %}
+                    </td>
+                    <td>{{ screening.start_dt | date:"H:i" }}</td>
+                    <td>{{ screening.end_dt | date:"H:i" }}</td>
+                    <td>{{ screening.screen.parse_name }}</td>
+                    <td>{{ screening.film.title }}</td>
+                    <td>{{ row.attendants }}</td>
+                {% endwith %}
             </tr>
         {% endfor %}
         </tbody>
