@@ -70,8 +70,8 @@ class ErrorCollector:
     def add(self, err, msg):
         frame = inspect.currentframe().f_back
         lineno = frame.f_lineno
-        caller = frame.f_code.co_name if frame.f_code is not None else 'code'
-        error = f"{datetime.now()} - ERROR {err} in {caller} line {lineno} - {msg}"
+        caller = frame.f_code.co_qualname if frame.f_code is not None else 'code'
+        error = f"{datetime.now()} - ERROR {err} in {caller}, line {lineno} - {msg}"
         print(error)
         self.errors.append(error)
 

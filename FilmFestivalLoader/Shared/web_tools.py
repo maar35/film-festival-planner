@@ -38,6 +38,12 @@ def get_netloc(url):
     return urlunparse([obj.scheme, obj.netloc, '', '', '', ''])
 
 
+def paths_eq(url, other_url):
+    url_path = urlparse(url)[2]     # <scheme>://<netloc>/<path>;<params>?<query>#<fragment>
+    other_path = urlparse(other_url)[2]
+    return iripath_to_uripath(url_path) == iripath_to_uripath(other_path)
+
+
 def get_encoding_from_url(url, debug_recorder, byte_count=DEFAULT_BYTE_COUNT, timeout=DEFAULT_TIMEOUT):
     request = UrlReader.get_request(url)
     with urlopen(request, timeout=timeout) as response:
@@ -98,25 +104,29 @@ class UrlFile:
     default_byte_count = DEFAULT_BYTE_COUNT
     default_encoding = DEFAULT_ENCODING
 
-    def __init__(self, url, path, error_collector, debug_recorder, byte_count=None):
+    def __init__(self, url, path, error_collector, debug_recorder, byte_count=None, reraise_codes=None):
         self.url = url
         self.path = path
         self.error_collector = error_collector
         self.debug_recorder = debug_recorder
-        self.byte_count = byte_count if byte_count is not None else self.default_byte_count
+        self.byte_count = byte_count or self.default_byte_count
+        self.reraise_codes = reraise_codes or []
         self.encoding = None
         try:
             self.set_encoding()
         except HTTPError as e:
-            self.error_collector.add(str(e), f'{self.url}')
-            self.encoding = self.default_encoding
+            if e.code in self.reraise_codes:
+                raise e
+            else:
+                self.error_collector.add(str(e), f'{self.url}')
+                self.encoding = self.default_encoding
 
     def get_text(self, comment_at_download=None, always_download=False):
         if not always_download and os.path.isfile(self.path):
             with open(self.path, 'r', encoding=self.encoding) as f:
                 html_text = f.read()
         else:
-            if comment_at_download is not None:
+            if comment_at_download:
                 print(comment_at_download)
             reader = UrlReader(self.error_collector)
             html_text = reader.load_url(self.url, target_file=self.path, encoding=self.encoding)
