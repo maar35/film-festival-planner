@@ -33,14 +33,16 @@
             <tbody>
             {% for row in subsection_rows %}
                 <tr>
-                    <td><a href="{{ row.url }}">{{ row.name }}</a></td>
-                    <td style="color:{{ row.section.color }}; text-align: right;">
-                        {% if row.films_count %} {{ row.films_count }} {% else %} - {% endif %}
-                    </td>
-                    <td>{{ row.description }}</td>
-                    <td style="color:{{ row.section.color }}">{{ row.section.name }}</td>
-                    <td style="color:{{ row.section.color }}">{{ row.section.section_id }}</td>
-                    <td style="color:{{ row.section.color }}">{{ row.section.color }}</td>
+                    {% with section=row.section color=row.section.color %}
+                        <td><a href="{{ row.url }}">{{ row.name }}</a></td>
+                        <td style="color:{{ color }}; text-align: right;">
+                            {% if row.films_count %} {{ row.films_count }} {% else %} - {% endif %}
+                        </td>
+                        <td>{{ row.description }}</td>
+                        <td style="color:{{ color }}">{{ section.name }}</td>
+                        <td style="color:{{ color }}">{{ section.section_id }}</td>
+                        <td style="color:{{ color }}">{{ color }}</td>
+                    {% endwith %}
                 </tr>
             {% endfor %}
             </tbody>

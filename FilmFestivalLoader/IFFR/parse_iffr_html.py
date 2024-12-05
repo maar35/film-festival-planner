@@ -72,7 +72,7 @@ def setup_counters():
     COUNTER.start('film urls in az')
     COUNTER.start('no description')
     COUNTER.start('subsections with films')
-    COUNTER.start('404 urls')
+    COUNTER.start('not found urls')
     COUNTER.start('films')
     COUNTER.start('screenings')
     COUNTER.start('articles')
@@ -171,11 +171,13 @@ def get_subsection_details(festival_data):
 def get_subsection_page_details(festival_data, subsection, page_number):
     paged_file = FILE_KEEPER.paged_numbered_webdata_file('subsection', subsection.subsection_id, page_number)
     paged_url = f'{subsection.url}/page/{page_number}'
+    not_found = 404
 
     try:
-        url_file = UrlFile(paged_url, paged_file, ERROR_COLLECTOR, DEBUG_RECORDER, byte_count=300, reraise_codes=[404])
+        url_file = UrlFile(paged_url, paged_file, ERROR_COLLECTOR, DEBUG_RECORDER,
+                           byte_count=300, reraise_codes=[not_found])
     except HTTPError as e:
-        COUNTER.increase('404 urls')
+        COUNTER.increase('not found urls')
         return False
 
     comment_at_download = f'Downloading {subsection.name} page: {subsection.url}, encoding: {url_file.encoding}'
@@ -387,15 +389,13 @@ class AzPageParser(HtmlPageParser):
 
 
 class SubsectionPageParser(HtmlPageParser):
-    class SubsectionsParseState(Enum):
+    class SubsectionParseState(Enum):
         IDLE = auto()
-        IN_SUBSECTION_DESCRIPTION = auto()
         AWAITING_HEADER = auto()
         AWAITING_LINK = auto()
         IN_TITLE = auto()
         AWAITING_FILM_DESCRIPTION = auto()
         IN_FILM_DESCRIPTION = auto()
-        IN_NEXT_PAGE = auto()
         DONE = auto()
 
     def __init__(self, festival_data, subsection):
@@ -408,7 +408,7 @@ class SubsectionPageParser(HtmlPageParser):
         self.film_description = None
         self.film_count = 0
         self.print_debug(self.bar, f'Analysing SUBSECTION {self.subsection.name}')
-        self.state_stack = self.StateStack(self.print_debug, self.SubsectionsParseState.IDLE)
+        self.state_stack = self.StateStack(self.print_debug, self.SubsectionParseState.IDLE)
 
     def init_film(self):
         self.film_url = None
@@ -452,7 +452,7 @@ class SubsectionPageParser(HtmlPageParser):
         super().handle_starttag(tag, attrs)
 
         stack = self.state_stack
-        state = self.SubsectionsParseState
+        state = self.SubsectionParseState
         match [stack.state(), tag, attrs]:
             case [state.IDLE, 'meta', a] if a and a[0][1] == 'og:description':
                 self.update_subsection(a[1][1])
@@ -471,10 +471,10 @@ class SubsectionPageParser(HtmlPageParser):
         super().handle_data(data)
 
         match self.state_stack.state():
-            case self.SubsectionsParseState.IN_TITLE:
+            case self.SubsectionParseState.IN_TITLE:
                 self.film_title = data.strip()
-                self.state_stack.change(self.SubsectionsParseState.AWAITING_FILM_DESCRIPTION)
-            case self.SubsectionsParseState.IN_FILM_DESCRIPTION:
+                self.state_stack.change(self.SubsectionParseState.AWAITING_FILM_DESCRIPTION)
+            case self.SubsectionParseState.IN_FILM_DESCRIPTION:
                 self.film_description = data
                 self.add_film()
                 self.state_stack.pop()
@@ -766,7 +766,7 @@ class FilmInfoPageParser(ScreeningParser):
         # Initialize the state stack.
         self.state_stack = self.StateStack(self.print_debug, self.FilmInfoParseState.IDLE)
 
-        # Get the film info of the current film. Its unique existence is guaranteed in TODO ??AzPageParser.
+        # Get the film info of the current film. Its unique existence is guaranteed in SubsectionPageParser.
         self.film_info = self.film.film_info(self.festival_data)
         self.description = self.film_info.description
 
@@ -883,12 +883,10 @@ class FilmInfoPageParser(ScreeningParser):
             # Properties part.
             case [state.IN_ARTICLE, 'div', a] if a and a[0][1] == 'detail-list':
                 stack.change(state.DONE_ARTICLE)
-                DEBUG_RECORDER.add(f'in DONE ARTICLE: {str(stack)}')
                 stack.push(state.AWAITING_PROPERTIES)
             case [state.AWAITING_PROPERTIES, 'dl', _]:
                 stack.change(state.IN_PROPERTIES)
             case [state.IN_PROPERTIES, 'dt', _]:
-                DEBUG_RECORDER.add(f'in IN PROPERTIES: {str(stack)}')
                 stack.push(state.IN_PROPERTY_KEY)
             case [state.IN_PROPERTIES, 'dd', _]:
                 stack.push(state.IN_PROPERTY_VALUE)
@@ -899,6 +897,7 @@ class FilmInfoPageParser(ScreeningParser):
             # Reached sentinel in unexpected state.
             case [s, 'aside', _] if s != state.DONE:
                 COUNTER.increase('unexpected sentinel')
+                DEBUG_RECORDER.add(f'State stack when encountering sentinel:\n{str(stack)}')
                 stack.change(state.DONE)
 
         # # Combination part.
@@ -948,7 +947,6 @@ class FilmInfoPageParser(ScreeningParser):
             case [state.IN_PROPERTY_VALUE, 'dd']:
                 stack.pop()
             case [state.IN_PROPERTIES, 'dl']:
-                DEBUG_RECORDER.add(f'after IN PROPERTIES: {str(stack)}')
                 stack.pop()
 
     def handle_data(self, data):

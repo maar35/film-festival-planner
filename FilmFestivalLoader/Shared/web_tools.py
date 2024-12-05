@@ -21,10 +21,6 @@ DEFAULT_ENCODING = 'ascii'
 DEFAULT_TIMEOUT = 10
 
 
-def iripath_to_uripath(path):
-    return quote(path)
-
-
 def iri_slug_to_url(host, slug):
     host_obj = urlparse(host)
     slug_obj = urlparse(slug)
@@ -34,14 +30,20 @@ def iri_slug_to_url(host, slug):
 
 
 def get_netloc(url):
-    obj = urlparse(url)
+    obj = urlparse(url)   # <scheme>://<netloc>/<path>;<params>?<query>#<fragment>
     return urlunparse([obj.scheme, obj.netloc, '', '', '', ''])
 
 
-def paths_eq(url, other_url):
-    url_path = urlparse(url)[2]     # <scheme>://<netloc>/<path>;<params>?<query>#<fragment>
-    other_path = urlparse(other_url)[2]
-    return iripath_to_uripath(url_path) == iripath_to_uripath(other_path)
+def paths_eq(url, other_url, encoding=None):
+    url_path = urlparse(url).path
+    other_path = urlparse(other_url).path
+    uri = safe_quote(url_path, encoding=encoding).lower()
+    other_uri = safe_quote(other_path, encoding=encoding).lower()
+    return uri == other_uri
+
+
+def safe_quote(string, encoding=None):
+    return string if '%' in string else quote(string, encoding=encoding)
 
 
 def get_encoding_from_url(url, debug_recorder, byte_count=DEFAULT_BYTE_COUNT, timeout=DEFAULT_TIMEOUT):
