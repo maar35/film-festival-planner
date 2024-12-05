@@ -21,10 +21,6 @@ DEFAULT_ENCODING = 'ascii'
 DEFAULT_TIMEOUT = 10
 
 
-def iripath_to_uripath(path):
-    return quote(path)
-
-
 def iri_slug_to_url(host, slug):
     host_obj = urlparse(host)
     slug_obj = urlparse(slug)
@@ -34,8 +30,20 @@ def iri_slug_to_url(host, slug):
 
 
 def get_netloc(url):
-    obj = urlparse(url)
+    obj = urlparse(url)   # <scheme>://<netloc>/<path>;<params>?<query>#<fragment>
     return urlunparse([obj.scheme, obj.netloc, '', '', '', ''])
+
+
+def paths_eq(url, other_url, encoding=None):
+    url_path = urlparse(url).path
+    other_path = urlparse(other_url).path
+    uri = safe_quote(url_path, encoding=encoding).lower()
+    other_uri = safe_quote(other_path, encoding=encoding).lower()
+    return uri == other_uri
+
+
+def safe_quote(string, encoding=None):
+    return string if '%' in string else quote(string, encoding=encoding)
 
 
 def get_encoding_from_url(url, debug_recorder, byte_count=DEFAULT_BYTE_COUNT, timeout=DEFAULT_TIMEOUT):
@@ -98,25 +106,29 @@ class UrlFile:
     default_byte_count = DEFAULT_BYTE_COUNT
     default_encoding = DEFAULT_ENCODING
 
-    def __init__(self, url, path, error_collector, debug_recorder, byte_count=None):
+    def __init__(self, url, path, error_collector, debug_recorder, byte_count=None, reraise_codes=None):
         self.url = url
         self.path = path
         self.error_collector = error_collector
         self.debug_recorder = debug_recorder
-        self.byte_count = byte_count if byte_count is not None else self.default_byte_count
+        self.byte_count = byte_count or self.default_byte_count
+        self.reraise_codes = reraise_codes or []
         self.encoding = None
         try:
             self.set_encoding()
         except HTTPError as e:
-            self.error_collector.add(str(e), f'{self.url}')
-            self.encoding = self.default_encoding
+            if e.code in self.reraise_codes:
+                raise e
+            else:
+                self.error_collector.add(str(e), f'{self.url}')
+                self.encoding = self.default_encoding
 
     def get_text(self, comment_at_download=None, always_download=False):
         if not always_download and os.path.isfile(self.path):
             with open(self.path, 'r', encoding=self.encoding) as f:
                 html_text = f.read()
         else:
-            if comment_at_download is not None:
+            if comment_at_download:
                 print(comment_at_download)
             reader = UrlReader(self.error_collector)
             html_text = reader.load_url(self.url, target_file=self.path, encoding=self.encoding)

@@ -106,6 +106,10 @@ class FileKeeper:
         postfix = self.generic_numbered_file_format.format(webdata_id)
         return os.path.join(self.webdata_dir, f'{prefix}_{postfix}')
 
+    def paged_numbered_webdata_file(self, prefix, webdata_id, page_number):
+        path = f'{prefix}_{webdata_id:03}_{page_number:02}.html'
+        return os.path.join(self.webdata_dir, path)
+
 
 class BaseHtmlPageParser(HTMLParser):
 

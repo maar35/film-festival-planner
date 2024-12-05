@@ -18,11 +18,12 @@
     {% endblock log %}
 
     <br>
-    {% if subsection_list %}
+    {% if subsection_rows %}
         <table>
             <thead>
                 <tr>
                     <th>Subsection</th>
+                    <th style="text-align: right;">#Films</th>
                     <th>Description</th>
                     <th>Section</th>
                     <th>ID</th>
@@ -30,13 +31,18 @@
                 </tr>
             </thead>
             <tbody>
-            {% for subsection in subsection_list %}
+            {% for row in subsection_rows %}
                 <tr>
-                    <td><a href="{{ subsection.url }}">{{ subsection.name }}</a></td>
-                    <td>{{ subsection.description }}</td>
-                    <td style="color:{{ subsection.section.color }}">{{ subsection.section.name }}</td>
-                    <td style="color:{{ subsection.section.color }}">{{ subsection.section.section_id }}</td>
-                    <td style="color:{{ subsection.section.color }}">{{ subsection.section.color }}</td>
+                    {% with section=row.section color=row.section.color %}
+                        <td><a href="{{ row.url }}">{{ row.name }}</a></td>
+                        <td style="color:{{ color }}; text-align: right;">
+                            {% if row.films_count %} {{ row.films_count }} {% else %} - {% endif %}
+                        </td>
+                        <td>{{ row.description }}</td>
+                        <td style="color:{{ color }}">{{ section.name }}</td>
+                        <td style="color:{{ color }}">{{ section.section_id }}</td>
+                        <td style="color:{{ color }}">{{ color }}</td>
+                    {% endwith %}
                 </tr>
             {% endfor %}
             </tbody>

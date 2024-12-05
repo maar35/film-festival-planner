@@ -25,6 +25,7 @@ from festivals.models import current_festival
 from films.forms.film_forms import PickRating, UserForm
 from films.models import FilmFanFilmRating, Film, current_fan, get_present_fans, fan_rating_str, \
     FilmFanFilmVote, fan_rating, FANS_IN_RATINGS_TABLE
+from screenings.models import Attendance
 from sections.models import Subsection, Section
 
 CONSTANTS_CONFIG = Config().config['Constants']
@@ -499,7 +500,7 @@ class VotesListView(LoginRequiredMixin, ListView):
         VotesView.unexpected_errors = []
 
         # Read the films that were attended.
-        self.set_attended_films()
+        self._set_attended_films()
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -525,23 +526,12 @@ class VotesListView(LoginRequiredMixin, ListView):
         context = add_base_context(self.request, super_context | new_context)
         return context
 
-    def set_attended_films(self):
-        screening_info_file = self.festival.screening_info_file()
-        self.attended_films = []
-        try:
-            with open(screening_info_file, 'r', newline='') as csvfile:
-                _ = csvfile.__next__()  # skip header
-                screening_info_reader = csv.reader(csvfile, dialect=CSV_DIALECT)
-                film_id_index = 5
-                attended_index = 8
-                tickets_bought_index = 9
-                for row in screening_info_reader:
-                    if row[attended_index].split(',')[0] == 'WAAR' and row[tickets_bought_index] == 'WAAR':
-                        film = self.get_film(row[film_id_index])
-                        if film:
-                            self.attended_films.append(film)
-        except (FileNotFoundError, IndexError) as e:
-            VotesView.unexpected_errors.append(e)
+    def _set_attended_films(self):
+        festival = self.festival
+        fan = self.logged_in_fan
+        manager = Attendance.attendances
+        attendances = manager.filter(screening__film__festival=festival, fan=fan)
+        self.attended_films = list({a.screening.film for a in attendances})
 
     def get_film(self, film_id):
         try:
