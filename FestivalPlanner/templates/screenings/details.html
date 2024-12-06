@@ -1,4 +1,4 @@
-{% extends "base_filmscreenings_template.html" %}
+{% extends "base_template.html" %}
 
 {% block title %}{{ title }}{% endblock %}
 {% block header %}{{ title }}{% endblock %}
@@ -58,8 +58,5 @@
 <input type="submit" value="Submit attendances">
 </form>
 <br>
-{% block filmscreenings %}
-    {{ block.super }}
-{% endblock filmscreenings %}
-
+{% include "../includes/film_screenings.html" with film_screening_props=film_screening_props %}
 {% endblock %}

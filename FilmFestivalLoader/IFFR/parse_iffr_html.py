@@ -13,7 +13,7 @@ from Shared.planner_interface import FilmInfo, Screening, ScreenedFilmType, Fest
     get_screen_from_parse_name, link_screened_film, ScreeningKey
 from Shared.web_tools import UrlFile, iri_slug_to_url, fix_json, paths_eq
 
-ALWAYS_DOWNLOAD = False
+ALWAYS_DOWNLOAD = True
 DEBUGGING = True
 DISPLAY_ADDED_SCREENING = True
 COMBINATION_TITLE_BY_ABBREVIATION = {
