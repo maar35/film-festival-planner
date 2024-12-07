@@ -33,7 +33,7 @@ class DaySchemaView(LoginRequiredMixin, View):
 
     def dispatch(self, request, *args, **kwargs):
         self.current_day.day_cookie.handle_get_request(request)
-        self.screening_cookie.handle_get_request(request)
+        ScreeningStatusGetter.screening_cookie.handle_get_request(request)
         return super().dispatch(request, *args, **kwargs)
 
     @staticmethod
@@ -45,13 +45,6 @@ class DaySchemaView(LoginRequiredMixin, View):
     def post(request, *args, **kwargs):
         view = DaySchemaFormView.as_view()
         return view(request, *args, **kwargs)
-
-    @classmethod
-    def get_selected_screening(cls, session):
-        screening_pk_str = cls.screening_cookie.get(session)
-        screening_pk = int(screening_pk_str) if screening_pk_str else None
-        selected_screening = Screening.screenings.get(pk=screening_pk) if screening_pk else None
-        return selected_screening
 
 
 class DaySchemaListView(LoginRequiredMixin, ListView):
@@ -80,7 +73,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         super().setup(request, *args, **kwargs)
         self.festival = DaySchemaView.current_day.check_session(request.session)
         current_date = DaySchemaView.current_day.get_date(request.session)
-        self.selected_screening = DaySchemaView.get_selected_screening(request.session)
+        self.selected_screening = ScreeningStatusGetter.get_selected_screening(request.session)
         self.day_screenings = Screening.screenings.filter(film__festival=self.festival, start_dt__date=current_date)
         self.status_getter = ScreeningStatusGetter(request.session, self.day_screenings)
         self.fragment_keeper = ScreeningFragmentKeeper('pk')

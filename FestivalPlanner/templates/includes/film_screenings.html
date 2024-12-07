@@ -6,6 +6,7 @@
         <th>Screening</th>
         <th>Status</th>
         <th>Attendants</th>
+        <th>Available</th>
         <th>Q&A</th>
     </tr>
     </thead>
@@ -25,6 +26,7 @@
             {{ prop.status.label }}
         </td>
         <td>{% if prop.attendants %} {{ prop.attendants }} {% else %} - {% endif %}</td>
+        <td>{% if prop.available_fans %} {{ prop.available_fans }} {% else %} - {% endif %}</td>
         <td>{% if prop.q_and_a %} {{ prop.q_and_a }} {% else %} - {% endif %}</td>
     </tr>
     {% endfor %}

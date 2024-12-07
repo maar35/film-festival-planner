@@ -4,8 +4,11 @@
 import datetime
 import re
 from enum import Enum, auto
+from ftplib import FTP
 from typing import Dict
 from urllib.error import HTTPError
+
+import pysftp
 
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Config, Counter
 from Shared.parse_tools import FileKeeper, try_parse_festival_sites, HtmlPageParser
@@ -98,6 +101,9 @@ def parse_iffr_sites(festival_data):
     :param festival_data: planner_interface.festival_data object.
     :return: None
     """
+    # comment('Trying FTP!')
+    # try_ftp()
+
     comment('Parsing AZ pages.')
     get_films(festival_data)
 
@@ -115,6 +121,35 @@ def parse_iffr_sites(festival_data):
 
     # comment('Constructing combinations from screening data')
     # set_combinations_from_screening_data(festival_data)
+
+
+def try_ftp():
+    host = 'iffr.com'
+    path = 'nl/iffr/2025/films'
+    user = 'guest'  # 'anonymous'
+    timeout = 15
+
+    ftp_kwargs = {
+        'host': host,
+        'user': user,
+        'passwd': 'guest',
+        'timeout': timeout,
+    }
+    # print(f'@@ Starting ftp on {host}')
+    # with FTP(**ftp_kwargs) as ftp:
+    #     print(f'@@ Logged in, cwd to {path}')
+    #     ftp.cwd('nl/iffr/2025/films')
+    #     print(f'@@ ')
+    #     ftp.dir()
+
+    print(f'@@ Starting sftp on {host}')
+    with pysftp.Connection(host, username=user, private_key='guest') as sftp:
+        print(f'@@ Logged in, cd to {path}')
+        with sftp.cd(path):
+            print(f'@@ Listing "."')
+            d = sftp.listdir('.')
+    print(f'@@ Done.')
+    print(f'{d=}')
 
 
 def get_films(festival_data):

@@ -576,6 +576,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
 
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
+        ScreeningStatusGetter.screening_cookie.handle_get_request(request)
 
         if request.method == 'POST':
             submitted_name = list(request.POST.keys())[-1]
@@ -595,6 +596,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         super_context = super().get_context_data(**kwargs)
         film = self.object
         session = self.request.session
+        selected_screening = ScreeningStatusGetter.get_selected_screening(session)
         fan_rows = []
         active_fan_names = FANS_IN_RATINGS_TABLE
         fans = FilmFan.film_fans.filter(name__in=active_fan_names)
@@ -620,6 +622,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
             'fan_rows': fan_rows,
             'film_title': film.title,
             'film_screening_props': self._get_film_screening_props(),
+            'screening': selected_screening,
             'unexpected_error': self.unexpected_error,
         }
         context = add_base_context(self.request, super_context | new_context)

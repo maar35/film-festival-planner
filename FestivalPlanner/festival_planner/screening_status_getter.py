@@ -1,13 +1,15 @@
 from availabilities.models import Availabilities
-from festival_planner.cookie import Filter
+from festival_planner.cookie import Filter, Cookie
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fragment_keeper import ScreeningFragmentKeeper
 from festivals.models import current_festival
-from films.models import current_fan, fan_rating_str
+from films.models import current_fan, fan_rating_str, get_present_fans
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED
 
 
 class ScreeningStatusGetter:
+    screening_cookie = Cookie('screening')
+
     def __init__(self, session, day_screenings):
         self.session = session
         self.day_screenings = day_screenings
@@ -15,7 +17,7 @@ class ScreeningStatusGetter:
         self.attendances_by_screening = self._get_attendances_by_screening()
         self.attends_by_screening = {s: self.attendances_by_screening[s].filter(fan=self.fan) for s in day_screenings}
         self.has_attended_film_by_screening = self._get_has_attended_film_by_screening()
-        self.fits_availability_by_screening = self._get_fits_availability_by_screening()
+        self.available_by_screening_by_fan = self._get_availability_by_screening_by_fan()
 
     def get_screening_status(self, screening, attendants):
         if current_fan(self.session) in attendants:
@@ -27,6 +29,13 @@ class ScreeningStatusGetter:
         else:
             status = self._get_other_status(screening, self.day_screenings)
         return status
+
+    @classmethod
+    def get_selected_screening(cls, session):
+        screening_pk_str = cls.screening_cookie.get(session)
+        screening_pk = int(screening_pk_str) if screening_pk_str else None
+        selected_screening = Screening.screenings.get(pk=screening_pk) if screening_pk else None
+        return selected_screening
 
     @classmethod
     def get_filmscreening_props(cls, session, film):
@@ -62,17 +71,31 @@ class ScreeningStatusGetter:
         current_fan_attends_other_filmscreening = self.has_attended_film_by_screening[screening]
         return current_fan_attends_other_filmscreening
 
-    def _get_fits_availability_by_screening(self):
+    def _get_availability_by_screening_by_fan(self):
         manager = Availabilities.availabilities
-        fits_availability_by_screening = {
-            s: manager.filter(
-                fan=self.fan, start_dt__lte=s.start_dt, end_dt__gte=s.end_dt
-            ) for s in self.day_screenings
-        }
-        return fits_availability_by_screening
+        availability_by_screening_by_fan = {}
+        for fan in get_present_fans():
+            availability_by_screening_by_fan[fan] = {
+                s: manager.filter(
+                    fan=fan, start_dt__lte=s.start_dt, end_dt__gte=s.end_dt
+                ) for s in self.day_screenings
+            }
+        return availability_by_screening_by_fan
 
     def _fits_availability(self, screening):
-        return self.fits_availability_by_screening[screening]
+        return self.available_by_screening_by_fan[self.fan][screening]
+
+    def _available_fans(self, screening):
+        available_fans = []
+        for fan in get_present_fans():
+            try:
+                available = self.available_by_screening_by_fan[fan][screening]
+            except KeyError:
+                pass
+            else:
+                if available:
+                    available_fans.append(fan)
+        return available_fans
 
     def _get_other_status(self, screening, screenings):
         status = Screening.ScreeningStatus.FREE
@@ -97,6 +120,7 @@ class ScreeningStatusGetter:
         attendants = self.get_attendants(film_screening)
         ratings = [f'{fan.initial()}{fan_rating_str(fan, film_screening.film)}' for fan in attendants]
         status = self.get_screening_status(film_screening, attendants)
+        available_fans = self._available_fans(film_screening)
         day = film_screening.start_dt.date().isoformat()
         day_props = {
             'film_screening': film_screening,
@@ -105,6 +129,7 @@ class ScreeningStatusGetter:
             'pair_selected': COLOR_PAIR_SELECTED,
             'pair': Screening.color_pair_by_screening_status[status],
             'attendants': ', '.join([attendant.name for attendant in attendants]),
+            'available_fans': ', '.join([fan.name for fan in available_fans]),
             'ratings': ', '.join(ratings),
             'q_and_a': film_screening.str_q_and_a(),
             'query_string': Filter.get_querystring(**{'day': day, 'screening': film_screening.pk}),
