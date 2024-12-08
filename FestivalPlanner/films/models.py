@@ -1,7 +1,7 @@
 from django.db import models
 
 from authentication.models import FilmFan
-from festivals.models import Festival
+from festivals.models import Festival, current_festival
 from sections.models import Subsection
 
 MINUTES_STR = "'"
@@ -149,7 +149,21 @@ def initial(fan, session):
     return '' if fan == current_fan(session) else fan.initial()
 
 
-def get_present_fans():
+def get_present_fans(session):
+    fan_names_by_festival_base = {
+        'IFFR': ['Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk'],
+        'MTMF': ['Maarten', 'Adrienne'],
+        'NNF': [],
+        'Imagine': ['Maarten', 'Adrienne'],
+        'IDFA': ['Maarten', 'Adrienne'],
+    }
+    festival = current_festival(session)
+    base = festival.base.mnemonic
+    fan_names = fan_names_by_festival_base[base]
+    return FilmFan.film_fans.filter(name__in=fan_names)
+
+
+def get_judging_fans():
     return FilmFan.film_fans.filter(name__in=FANS_IN_RATINGS_TABLE)
 
 

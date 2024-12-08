@@ -1,4 +1,4 @@
-{% extends "base_filmscreenings_template.html" %}
+{% extends "base_template.html" %}
 
 {% block title %}{{ title }}{% endblock %}
 {% block header %}{{ title }}{% endblock %}
@@ -100,10 +100,8 @@
                     </tr>
                     </tbody>
                 </table>
-                {% with film_screening_props=props.film_screening_props film_title=props.selected_screening.film.title %}
-                    {% block filmscreenings %}
-                        {{ block.super }}
-                    {% endblock filmscreenings %}
+                {% with film_screening_props=props.film_screening_props %}
+                    {% include "../includes/film_screenings.html" with film_screening_props=film_screening_props %}
                 {% endwith %}
             </span>
         </span>

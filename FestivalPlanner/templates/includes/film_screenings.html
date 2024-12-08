@@ -1,6 +1,3 @@
-{% extends "base_template.html" %}
-
-{% block filmscreenings %}
 <br>
 <h3>All screenings of <span style="color: {{ festival_color }};">{{ film_title }}</span></h3>
 <table style="min-width: 30%">
@@ -9,6 +6,7 @@
         <th>Screening</th>
         <th>Status</th>
         <th>Attendants</th>
+        <th>Available</th>
         <th>Q&A</th>
     </tr>
     </thead>
@@ -28,10 +26,10 @@
             {{ prop.status.label }}
         </td>
         <td>{% if prop.attendants %} {{ prop.attendants }} {% else %} - {% endif %}</td>
+        <td>{% if prop.available_fans %} {{ prop.available_fans }} {% else %} - {% endif %}</td>
         <td>{% if prop.q_and_a %} {{ prop.q_and_a }} {% else %} - {% endif %}</td>
     </tr>
     {% endfor %}
     </tbody>
 </table>
 <br>
-{% endblock %}
