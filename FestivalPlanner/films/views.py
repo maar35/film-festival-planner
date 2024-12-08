@@ -23,7 +23,7 @@ from festival_planner.tools import add_base_context, unset_log, wrap_up_form_err
 from festivals.config import Config
 from festivals.models import current_festival
 from films.forms.film_forms import PickRating, UserForm
-from films.models import FilmFanFilmRating, Film, current_fan, get_present_fans, fan_rating_str, \
+from films.models import FilmFanFilmRating, Film, current_fan, get_judging_fans, fan_rating_str, \
     FilmFanFilmVote, fan_rating, FANS_IN_RATINGS_TABLE
 from screenings.models import Attendance
 from sections.models import Subsection, Section
@@ -181,7 +181,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
         self.festival_feature_films = None
         self.section_list = Section.sections.all()
         self.subsection_list = Subsection.subsections.all()
-        self.fan_list = get_present_fans()
+        self.fan_list = get_judging_fans()
 
     def setup(self, request, *args, **kwargs):
         pr_debug('start', with_time=True)
@@ -486,7 +486,7 @@ class VotesListView(LoginRequiredMixin, ListView):
     http_method_names = ['get']
     title = 'Film Votes List'
     class_tag = 'vote'
-    fan_list = get_present_fans()
+    fan_list = get_judging_fans()
     fragment_keeper = None
     attended_films = []
     logged_in_fan = None
@@ -576,7 +576,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
 
     def dispatch(self, request, *args, **kwargs):
         response = super().dispatch(request, *args, **kwargs)
-        ScreeningStatusGetter.screening_cookie.handle_get_request(request)
+        ScreeningStatusGetter.handle_screening_get_request(request)
 
         if request.method == 'POST':
             submitted_name = list(request.POST.keys())[-1]
@@ -596,10 +596,9 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         super_context = super().get_context_data(**kwargs)
         film = self.object
         session = self.request.session
-        selected_screening = ScreeningStatusGetter.get_selected_screening(session)
+        selected_screening = ScreeningStatusGetter.get_selected_screening(self.request)
         fan_rows = []
-        active_fan_names = FANS_IN_RATINGS_TABLE
-        fans = FilmFan.film_fans.filter(name__in=active_fan_names)
+        fans = get_judging_fans()
         logged_in_fan = current_fan(session)
         for fan in fans:
             choices = get_fan_choices(self.submit_name_prefix, film, fan, logged_in_fan, self.submit_names)
@@ -698,7 +697,7 @@ class ReviewersView(ListView):
     context_object_name = 'reviewer_rows'
     http_method_names = ['get']
     title = 'Reviewers Statistics'
-    fan_list = get_present_fans()
+    fan_list = get_judging_fans()
     judged_filter = Filter('not judged', filtered=True, action_true='Display all')
     reviewed_films = None
     total_film_count = None

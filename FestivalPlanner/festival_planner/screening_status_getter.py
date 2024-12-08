@@ -31,18 +31,23 @@ class ScreeningStatusGetter:
         return status
 
     @classmethod
-    def get_selected_screening(cls, session):
-        screening_pk_str = cls.screening_cookie.get(session)
+    def get_selected_screening(cls, request):
+        cls.handle_screening_get_request(request)
+        screening_pk_str = cls.screening_cookie.get(request.session)
         screening_pk = int(screening_pk_str) if screening_pk_str else None
         selected_screening = Screening.screenings.get(pk=screening_pk) if screening_pk else None
         return selected_screening
+
+    @classmethod
+    def handle_screening_get_request(cls, request):
+        cls.screening_cookie.handle_get_request(request)
 
     @classmethod
     def get_filmscreening_props(cls, session, film):
         pr_debug('start', with_time=True)
         festival = current_festival(session)
         festival_screenings = Screening.screenings.filter(film__festival=festival)
-        filmscreenings = festival_screenings.filter(film=film)
+        filmscreenings = festival_screenings.filter(film=film).order_by('start_dt')
         dates = filmscreenings.dates('start_dt', 'day')
         film_screenings_props = []
         for date in dates:
@@ -74,7 +79,7 @@ class ScreeningStatusGetter:
     def _get_availability_by_screening_by_fan(self):
         manager = Availabilities.availabilities
         availability_by_screening_by_fan = {}
-        for fan in get_present_fans():
+        for fan in get_present_fans(self.session):
             availability_by_screening_by_fan[fan] = {
                 s: manager.filter(
                     fan=fan, start_dt__lte=s.start_dt, end_dt__gte=s.end_dt
@@ -87,7 +92,7 @@ class ScreeningStatusGetter:
 
     def _available_fans(self, screening):
         available_fans = []
-        for fan in get_present_fans():
+        for fan in get_present_fans(self.session):
             try:
                 available = self.available_by_screening_by_fan[fan][screening]
             except KeyError:

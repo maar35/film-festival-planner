@@ -16,7 +16,7 @@ from festival_planner.fragment_keeper import ScreeningFragmentKeeper, FRAGMENT_I
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
 from festivals.models import current_festival
-from films.models import current_fan, initial, fan_rating, minutes_str, FANS_IN_RATINGS_TABLE
+from films.models import current_fan, initial, fan_rating, minutes_str, get_present_fans
 from films.views import FilmDetailView
 from screenings.forms.screening_forms import DummyForm, AttendanceForm, dump_calendar_items
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED
@@ -29,11 +29,10 @@ class DaySchemaView(LoginRequiredMixin, View):
     """
     template_name = 'screenings/day_schema.html'
     current_day = FestivalDay('day')
-    screening_cookie = Cookie('screening')
 
     def dispatch(self, request, *args, **kwargs):
         self.current_day.day_cookie.handle_get_request(request)
-        ScreeningStatusGetter.screening_cookie.handle_get_request(request)
+        ScreeningStatusGetter.handle_screening_get_request(request)
         return super().dispatch(request, *args, **kwargs)
 
     @staticmethod
@@ -73,7 +72,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         super().setup(request, *args, **kwargs)
         self.festival = DaySchemaView.current_day.check_session(request.session)
         current_date = DaySchemaView.current_day.get_date(request.session)
-        self.selected_screening = ScreeningStatusGetter.get_selected_screening(request.session)
+        self.selected_screening = ScreeningStatusGetter.get_selected_screening(request)
         self.day_screenings = Screening.screenings.filter(film__festival=self.festival, start_dt__date=current_date)
         self.status_getter = ScreeningStatusGetter(request.session, self.day_screenings)
         self.fragment_keeper = ScreeningFragmentKeeper('pk')
@@ -286,7 +285,7 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
     http_method_names = ['get', 'post']
     fan_action = FanAction('update')
     update_by_attends = {True: 'joins', False: "couldn't come"}
-    fans = FilmFan.film_fans.filter(name__in=FANS_IN_RATINGS_TABLE)
+    fans = None
     object = None
     screening = None
     initial_attendance_by_fan = None
@@ -294,6 +293,7 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
         initialize_log(request.session, 'Update attendances')
+        self.fans = get_present_fans(self.request.session)
         self.screening = self.get_object()
         manager = Attendance.attendances
         self.initial_attendance_by_fan = {f: bool(manager.filter(screening=self.screening, fan=f)) for f in self.fans}
