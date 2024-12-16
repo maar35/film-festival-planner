@@ -9,17 +9,17 @@ from django.views.generic.detail import SingleObjectMixin
 from authentication.models import FilmFan
 from availabilities.models import Availabilities
 from availabilities.views import get_festival_dt, DAY_START_TIME, DAY_BREAK_TIME
-from festival_planner.cookie import Cookie, Filter, FestivalDay
+from festival_planner.cookie import Filter, FestivalDay
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fan_action import FanAction
 from festival_planner.fragment_keeper import ScreeningFragmentKeeper, FRAGMENT_INDICATOR
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
 from festivals.models import current_festival
-from films.models import current_fan, initial, fan_rating, minutes_str, get_present_fans
+from films.models import current_fan, initial, fan_rating, minutes_str, get_present_fans, Film, FilmFanFilmRating
 from films.views import FilmDetailView
-from screenings.forms.screening_forms import DummyForm, AttendanceForm, dump_calendar_items
-from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED
+from screenings.forms.screening_forms import DummyForm, AttendanceForm, dump_calendar_items, PlannerForm
+from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, film_rating_strings
 from theaters.models import Theater
 
 
@@ -78,6 +78,12 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         self.fragment_keeper = ScreeningFragmentKeeper('pk')
         pr_debug('done', with_time=True)
 
+    def dispatch(self, request, *args, **kwargs):
+        cookie = DaySchemaView.current_day.day_cookie
+        cookie.handle_get_request(request)
+        DaySchemaView.current_day.set_str(request.session, cookie.get(request.session))
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         pr_debug('start', with_time=True)
         screenings_by_screen = {}
@@ -93,9 +99,15 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         return screen_rows
 
     def get_context_data(self, **kwargs):
+        def next_festival_day(choices, days):
+            next_date = current_day.get_date(session) + datetime.timedelta(days=days)
+            within_festival = next_date.strftime(FestivalDay.day_str_format) in choices
+            return next_date.strftime(FestivalDay.date_str_format) if within_festival else None
+
         super_context = super().get_context_data(**kwargs)
         session = self.request.session
-        current_day_str = DaySchemaView.current_day.get_str(session)
+        current_day = DaySchemaView.current_day
+        current_day_str = current_day.get_str(session)
         day_choices = DaySchemaView.current_day.get_festival_days()
         availability_props = self._get_available_fan_props(session)
         selected_screening_props = self._get_selected_screening_props()
@@ -105,6 +117,10 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'day_label': 'Festival day:',
             'day': current_day_str,
             'day_choices': day_choices,
+            'prev_day': next_festival_day(day_choices, days=-1),
+            'next_day': next_festival_day(day_choices, days=1),
+            'first_day': day_choices[0].split()[1],
+            'last_day': day_choices[-1].split()[1],
             'availability_props': availability_props,
             'film_title': self.selected_screening.film.title if self.selected_screening else '',
             'screening': self.selected_screening,
@@ -189,7 +205,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         line_2 = f'{screening.start_dt.strftime("%H:%M")} - {screening.end_dt.strftime("%H:%M")}'
         pair_selected = Screening.color_pair_selected_by_screening_status[status]
         festival_color = screening.film.festival.festival_color
-        fans_rating_str, film_rating_str, rating_color = screening.film_rating_str(status)
+        fans_rating_str, film_rating_str, rating_color = screening.film_rating_data(status)
         info_str = f'{"Q " if screening.q_and_a else ""}{fans_rating_str}'
         frame_color = pair_selected['color'] if selected else festival_color
         section_color = screening.film.subsection.section.color if screening.film.subsection else frame_color
@@ -203,6 +219,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'width': self._pixels_from_dt(screening.end_dt) - left_pixels,
             'pair': pair,
             'fan_ratings': fans_rating_str,
+            'auto_planned': "𝛑" if screening.auto_planned else "",
             'film_rating': film_rating_str,
             'rating_color': rating_color,
             'selected': selected,
@@ -342,6 +359,102 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
     def _get_filmscreening_props(self):
         session = self.request.session
         return ScreeningStatusGetter.get_filmscreening_props(session, self.screening.film)
+
+
+class PlannerView(LoginRequiredMixin, View):
+    template_name = 'screenings/planner.html'
+    eligible_films = None
+    festival = None
+
+    @staticmethod
+    def get(request, *args, **kwargs):
+        view = PlannerListView.as_view()
+        return view(request, *args, **kwargs)
+
+    @staticmethod
+    def post(request, *args, **kwargs):
+        view = PlannerFormView.as_view()
+        return view(request, *args, **kwargs)
+
+
+class PlannerListView(LoginRequiredMixin, ListView):
+    template_name = PlannerView.template_name
+    http_method_names = ['get']
+    context_object_name = 'planned_screening_rows'
+
+    def __init__(self):
+        super().__init__()
+        self.planned_screening_count = None
+
+    def setup(self, request, *args, **kwargs):
+        pr_debug('start', with_time=True)
+        super().setup(request, *args, **kwargs)
+        PlannerView.festival = current_festival(request.session)
+        PlannerView.eligible_films = self._get_eligible_films()
+        pr_debug('done', with_time=True)
+
+    def get_queryset(self):
+        pr_debug('start', with_time=True)
+        get_row = self._get_planned_screening_row
+        films = PlannerView.eligible_films
+        eligible_screenings = PlannerForm.get_eligible_screenings(films, auto_planned=True).order_by('start_dt')
+        planned_screening_rows = [get_row(s) for s in eligible_screenings if s.auto_planned]
+        self.planned_screening_count = len(planned_screening_rows)
+        pr_debug('done', with_time=True)
+        return planned_screening_rows
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        super_context = super().get_context_data(**kwargs)
+        session = self.request.session
+        new_context = {
+            'title': 'Screenings Planner',
+            'sub_header': 'Hit the button and plan your films automatically',
+            'eligible_film_count': len(PlannerView.eligible_films),
+            'planned_screening_count': self.planned_screening_count,
+            'log': get_log(session),
+        }
+        unset_log(session)
+        return add_base_context(self.request, super_context | new_context)
+
+    @classmethod
+    def _get_eligible_films(cls):
+        manager = Film.films
+        festival_films = manager.filter(festival=PlannerView.festival)
+        eligible_ratings = FilmFanFilmRating.get_eligible_ratings()
+        eligible_films = festival_films.filter(filmfanfilmrating__rating__in=eligible_ratings).distinct()
+        return eligible_films
+
+    @staticmethod
+    def _get_planned_screening_row(screening):
+        fans_rating_str, film_rating_str, _ = film_rating_strings(screening)
+        planned_screening_row = {
+            'start_dt': screening.start_dt,
+            'end_dt': screening.end_dt,
+            'screen_name': screening.screen.parse_name,
+            'film': screening.film,
+            'fan_ratings_str': fans_rating_str,
+            'film_rating_str': film_rating_str,
+        }
+        return planned_screening_row
+
+
+class PlannerFormView(LoginRequiredMixin, FormView):
+    template_name = PlannerView.template_name
+    form_class = DummyForm
+    http_method_names = ['post']
+
+    def form_valid(self, form):
+        post = self.request.POST
+        if 'plan' in post:
+            session = self.request.session
+            _ = PlannerForm.auto_plan_screenings(session, PlannerView.eligible_films)
+        elif 'undo' in post:
+            session = self.request.session
+            PlannerForm.undo_auto_planning(session, PlannerView.festival)
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse('screenings:planner')
 
 
 class ScreeningCalendarView(LoginRequiredMixin, View):

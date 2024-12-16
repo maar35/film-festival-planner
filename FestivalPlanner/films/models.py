@@ -1,6 +1,7 @@
 from django.db import models
 
 from authentication.models import FilmFan
+from festivals.config import Config
 from festivals.models import Festival, current_festival
 from sections.models import Subsection
 
@@ -8,6 +9,7 @@ MINUTES_STR = "'"
 UNRATED_STR = '-'
 FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
 MIN_ALARM_RATING_DIFF = 3
+LOWEST_PLANNABLE_RATING = Config().config['Constants']['LowestPlannableRating']
 
 
 class Film(models.Model):
@@ -40,6 +42,32 @@ class Film(models.Model):
 
     def duration_str(self):
         return ':'.join(f'{self.duration}'.split(':')[:2])
+
+    def rating_strings(self):
+        """ The highest rating represents all ratings of a film """
+
+        def _rating_as_int(rating):
+            if rating:
+                return rating.rating
+            return FilmFanFilmRating.Rating.UNRATED
+
+        ordered_ratings = FilmFanFilmRating.film_ratings.filter(film=self).order_by('rating')
+
+        # Get a summary of fans and their ratings.
+        fans_rating_str = ''.join([r.str_fan_rating() for r in ordered_ratings])
+
+        # Get the representative rating.
+        min_rating = _rating_as_int(ordered_ratings.first())
+        max_rating = _rating_as_int(ordered_ratings.last())
+        film_rating_str = str(max_rating)
+        if min_rating != FilmFanFilmRating.Rating.INDECISIVE and max_rating - min_rating >= MIN_ALARM_RATING_DIFF:
+            film_rating_str += '?'
+
+        return fans_rating_str, film_rating_str, max_rating
+
+    def rating_string(self):
+        film_rating_str = self.rating_strings()[1]
+        return film_rating_str
 
 
 class FilmFanFilmRating(models.Model):
@@ -77,13 +105,12 @@ class FilmFanFilmRating(models.Model):
         return f"{self.film} - {self.str_fan_rating()}"
 
     @classmethod
-    def super_ratings(cls):
-        # TODO: Be consequent: have either the list below or [LOWEST_PLANNABLE_RATING:]
-        return [cls.Rating.GOOD, cls.Rating.VERY_GOOD, cls.Rating.EXCELLENT]
+    def get_eligible_ratings(cls):
+        return cls.Rating.values[LOWEST_PLANNABLE_RATING:]
 
     @classmethod
-    def interesting_ratings(cls):
-        return [cls.Rating.UNRATED] + cls.super_ratings()
+    def get_interesting_ratings(cls):
+        return [cls.Rating.UNRATED] + cls.get_eligible_ratings()
 
     def str_fan_rating(self):
         return f'{self.film_fan.initial()}{self.rating}'

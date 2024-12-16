@@ -1,0 +1,71 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+<h2 class="row col-left-h2">{{ sub_header }}</h2>
+<div class="row">
+    <span class="col-right">
+        <a href="{% url 'screenings:day_schema' %}">Day schema</a>
+        <br>
+        <a href="{% url 'films:films' %}">Ratings</a>
+    </span>
+</div>
+
+{% block log %}
+    {{ block.super }}
+{% endblock log %}
+
+<p>
+    {{ eligible_film_count }} eligible films
+    {% if planned_screening_count %}
+        <br>{{ planned_screening_count }} screenings planned
+    {% endif %}
+</p>
+<form method='post'>
+    {% csrf_token %}
+    <input type="submit"  name="plan" value="Plan screenings">
+    <br>
+    <span class="warning-input">
+        <input type="submit" name="undo" value="Undo planning"/>
+    </span>
+</form>
+<br>
+{% if planned_screening_rows %}
+    <table>
+        <thead>
+            <tr>
+                <th>Start date</th>
+                <th>Start time</th>
+                <th>End time</th>
+                <th>Screen</th>
+                <th>Film title</th>
+                <th>Fan ratings</th>
+                <th style="text-align: center;">Representative rating</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in planned_screening_rows %}
+            <tr>
+                <td>
+                {% ifchanged row.start_dt.date %}
+                    {{ row.start_dt.date | date:"D j M Y" }}
+                {% endifchanged %}
+                </td>
+                <td>{{ row.start_dt | date:"H:i" }}</td>
+                <td>{{ row.end_dt | date:"H:i" }}</td>
+                <td>{{ row.screen_name }}</td>
+                <td>{{ row.film.title }}</td>
+                <td>{{ row.fan_ratings_str }}</td>
+                <td style="text-align: center;">{{ row.film_rating_str }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <p>{{current_fan}} has no screenings planned (yet).</p>
+{% endif %}
+<br>
+
+{% endblock %}

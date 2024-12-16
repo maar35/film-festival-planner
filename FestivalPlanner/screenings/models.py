@@ -85,6 +85,7 @@ class Screening(models.Model):
                                             related_name='combined_screening')
     subtitles = models.CharField(max_length=24)
     q_and_a = models.BooleanField()
+    auto_planned = models.BooleanField(default=False)
 
     # Define a manager.
     screenings = models.Manager()
@@ -127,29 +128,18 @@ class Screening(models.Model):
         travel_time = WALK_TIME_SAME_THEATER if same_theater else TRAVEL_TIME_OTHER_THEATER
         return travel_time
 
-    def film_rating_str(self, status):
-        """ The highest rating represents all ratings of a film """
-        def _rating_as_int(rating):
-            if rating:
-                return rating.rating
-            return FilmFanFilmRating.Rating.UNRATED
-
-        ordered_ratings = FilmFanFilmRating.film_ratings.filter(film=self.film).order_by('rating')
-
-        # Get a summary of fans and their ratings.
-        fans_rating_str = ''.join([r.str_fan_rating() for r in ordered_ratings])
-
-        # Get the representative rating.
-        min_rating = _rating_as_int(ordered_ratings.first())
-        max_rating = _rating_as_int(ordered_ratings.last())
-        film_rating_str = str(max_rating)
-        if min_rating != FilmFanFilmRating.Rating.INDECISIVE and max_rating - min_rating >= MIN_ALARM_RATING_DIFF:
-            film_rating_str += '?'
+    def film_rating_data(self, status):
+        """
+        Return compact rating per fan, representative film rating string
+        and the color indicating whether the rating is interesting.
+        """
+        # Get the fan ratings string and the representative film rating string.
+        fan_ratings_str, film_rating_str, max_rating = film_rating_strings(self)
 
         # decide the color.
         attends_film = status == self.ScreeningStatus.ATTENDS_FILM
         attends = status == self.ScreeningStatus.ATTENDS
-        rating_is_interesting = max_rating in FilmFanFilmRating.interesting_ratings()
+        rating_is_interesting = max_rating in FilmFanFilmRating.get_interesting_ratings()
         regular_color = self.color_pair_selected_by_screening_status[status]['color']
         if attends:
             color = regular_color
@@ -161,7 +151,7 @@ class Screening(models.Model):
         else:
             color = Screening.uninteresting_rating_color
 
-        return fans_rating_str, film_rating_str, color
+        return fan_ratings_str, film_rating_str, color
 
 
 class Attendance(models.Model):
@@ -187,3 +177,8 @@ class Attendance(models.Model):
         day = self.screening.str_day()
         start_time = self.screening.str_start_time()
         return f'{self.fan} attends {title} on {day} at {start_time}'
+
+
+def film_rating_strings(screening):
+    return screening.film.rating_strings()
+

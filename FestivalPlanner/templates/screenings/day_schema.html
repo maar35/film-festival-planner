@@ -13,6 +13,8 @@
         <br>
         <a href="{% url 'theaters:theaters' %}">Theaters</a>
         <br>
+        <a href="{% url 'screenings:planner' %}">Planner</a>
+        <br>
         <a href="{% url 'loader:list_action' %}?label=screenings">Load screenings</a>
         <br>
         <a href="{% url 'loader:list_action' %}?label=attendances">Load attendances</a>
@@ -43,7 +45,6 @@
 {% endif %}
 
 {% include "../includes/date_picker.html" with label=day_label day=day choices=day_choices name="day" %}
-<br>
 
 {% if selected_screening_props %}
 <div>
@@ -165,7 +166,7 @@
                             {{ prop.line_1 }}
                         </a>
                         <br>
-                        <span style="color: {{ prop.rating_color }}">{{ prop.film_rating }}</span>
+                        <span style="color: {{ prop.rating_color }}">{{ prop.auto_planned }}{{ prop.film_rating }}</span>
                         <span class="day-schema-screening-info"
                               style="background: {{ info.background }}; color: {{ info.color }};">
                             <a style="color: {{ info.color }}" href="{% url 'screenings:day_schema' %}{{ prop.query_string }}{{ prop.fragment }}">{{ prop.info_spot }}</a>

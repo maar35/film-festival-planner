@@ -30,7 +30,6 @@ from sections.models import Subsection, Section
 
 CONSTANTS_CONFIG = Config().config['Constants']
 MAX_SHORT_MINUTES = CONSTANTS_CONFIG['MaxShortMinutes']
-LOWEST_PLANNABLE_RATING = CONSTANTS_CONFIG['LowestPlannableRating']
 
 
 class IndexView(TemplateView):
@@ -163,7 +162,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
     title = 'Film Rating List'
     class_tag = 'rating'
     highest_rating = FilmFanFilmRating.Rating.values[-1]
-    eligible_ratings = FilmFanFilmRating.Rating.values[LOWEST_PLANNABLE_RATING:]
+    eligible_ratings = FilmFanFilmRating.get_eligible_ratings()
     short_threshold = timedelta(minutes=MAX_SHORT_MINUTES)
     fragment_keeper = None
     logged_in_fan = None
