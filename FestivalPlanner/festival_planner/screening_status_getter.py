@@ -1,3 +1,4 @@
+from authentication.models import FilmFan
 from availabilities.models import Availabilities
 from festival_planner.cookie import Filter, Cookie
 from festival_planner.debug_tools import pr_debug
@@ -18,6 +19,11 @@ class ScreeningStatusGetter:
         self.attends_by_screening = {s: self.attendances_by_screening[s].filter(fan=self.fan) for s in day_screenings}
         self.has_attended_film_by_screening = self._get_has_attended_film_by_screening()
         self.available_by_screening_by_fan = self._get_availability_by_screening_by_fan()
+
+    def update_attendances_by_screening(self, screening):
+        self.attendances_by_screening[screening] = Attendance.attendances.filter(screening=screening)
+        self.attends_by_screening[screening] = True
+        self.has_attended_film_by_screening = self._get_has_attended_film_by_screening()
 
     def get_screening_status(self, screening, attendants):
         if current_fan(self.session) in attendants:

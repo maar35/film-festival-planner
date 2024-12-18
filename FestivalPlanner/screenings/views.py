@@ -18,7 +18,8 @@ from festival_planner.tools import add_base_context, get_log, unset_log, initial
 from festivals.models import current_festival
 from films.models import current_fan, initial, fan_rating, minutes_str, get_present_fans, Film, FilmFanFilmRating
 from films.views import FilmDetailView
-from screenings.forms.screening_forms import DummyForm, AttendanceForm, dump_calendar_items, PlannerForm
+from screenings.forms.screening_forms import DummyForm, AttendanceForm, PlannerForm, \
+    ScreeningCalendarForm
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, film_rating_strings
 from theaters.models import Theater
 
@@ -389,6 +390,7 @@ class PlannerListView(LoginRequiredMixin, ListView):
     def setup(self, request, *args, **kwargs):
         pr_debug('start', with_time=True)
         super().setup(request, *args, **kwargs)
+        # PlannerForm.form_errors = []
         PlannerView.festival = current_festival(request.session)
         PlannerView.eligible_films = self._get_eligible_films()
         pr_debug('done', with_time=True)
@@ -411,6 +413,7 @@ class PlannerListView(LoginRequiredMixin, ListView):
             'sub_header': 'Hit the button and plan your films automatically',
             'eligible_film_count': len(PlannerView.eligible_films),
             'planned_screening_count': self.planned_screening_count,
+            'form_errors': PlannerForm.form_errors,
             'log': get_log(session),
         }
         unset_log(session)
@@ -421,7 +424,8 @@ class PlannerListView(LoginRequiredMixin, ListView):
         manager = Film.films
         festival_films = manager.filter(festival=PlannerView.festival)
         eligible_ratings = FilmFanFilmRating.get_eligible_ratings()
-        eligible_films = festival_films.filter(filmfanfilmrating__rating__in=eligible_ratings).distinct()
+        rating_films = festival_films.filter(filmfanfilmrating__rating__in=eligible_ratings).distinct()
+        eligible_films = [f for f in rating_films if manager.filter(screening__film=f).exists()]
         return eligible_films
 
     @staticmethod
@@ -440,7 +444,7 @@ class PlannerListView(LoginRequiredMixin, ListView):
 
 class PlannerFormView(LoginRequiredMixin, FormView):
     template_name = PlannerView.template_name
-    form_class = DummyForm
+    form_class = PlannerForm
     http_method_names = ['post']
 
     def form_valid(self, form):
@@ -513,14 +517,14 @@ class ScreeningCalendarListView(LoginRequiredMixin, ListView):
 
 class ScreeningCalendarFormView(LoginRequiredMixin, FormView):
     template_name = ScreeningCalendarView.template_name
-    form_class = DummyForm
+    form_class = ScreeningCalendarForm
     http_method_names = ['post']
 
     def form_valid(self, form):
         post = self.request.POST
         if 'agenda' in post:
             session = self.request.session
-            dump_calendar_items(session, ScreeningCalendarView.calendar_item_rows)
+            self.form_class.dump_calendar_items(session, ScreeningCalendarView.calendar_item_rows)
         return super().form_valid(form)
 
     def get_success_url(self):

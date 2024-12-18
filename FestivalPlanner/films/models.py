@@ -10,6 +10,13 @@ UNRATED_STR = '-'
 FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
 MIN_ALARM_RATING_DIFF = 3
 LOWEST_PLANNABLE_RATING = Config().config['Constants']['LowestPlannableRating']
+FAN_NAMES_BY_FESTIVAL_BASE = {
+    'IFFR': ['Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk'],
+    'MTMF': ['Maarten', 'Adrienne', 'Manfred'],
+    'NNF': [],
+    'Imagine': ['Maarten', 'Adrienne'],
+    'IDFA': ['Maarten', 'Adrienne'],
+}
 
 
 class Film(models.Model):
@@ -177,16 +184,9 @@ def initial(fan, session):
 
 
 def get_present_fans(session):
-    fan_names_by_festival_base = {
-        'IFFR': ['Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk'],
-        'MTMF': ['Maarten', 'Adrienne'],
-        'NNF': [],
-        'Imagine': ['Maarten', 'Adrienne'],
-        'IDFA': ['Maarten', 'Adrienne'],
-    }
     festival = current_festival(session)
     base = festival.base.mnemonic
-    fan_names = fan_names_by_festival_base[base]
+    fan_names = FAN_NAMES_BY_FESTIVAL_BASE[base]
     return FilmFan.film_fans.filter(name__in=fan_names)
 
 
