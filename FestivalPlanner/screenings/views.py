@@ -454,7 +454,7 @@ class PlannerFormView(LoginRequiredMixin, FormView):
             _ = PlannerForm.auto_plan_screenings(session, PlannerView.eligible_films)
         elif 'undo' in post:
             session = self.request.session
-            PlannerForm.undo_auto_planning(session, PlannerView.festival)
+            _ = PlannerForm.undo_auto_planning(session, PlannerView.festival)
         return super().form_valid(form)
 
     def get_success_url(self):

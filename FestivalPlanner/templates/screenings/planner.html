@@ -12,16 +12,21 @@
         <a href="{% url 'films:films' %}">Ratings</a>
     </span>
 </div>
+
+{% if form_errors or log.results %}
+    <a href="#list">To planned screenings list</a>
+    <br>
+{% endif %}
+
 {% block errors %}
     {{ block.super }}
 {% endblock errors %}
 
 {% block log %}
-    <a href="#list">To planned screenings list</a>
-    <br>
     {{ block.super }}
 {% endblock log %}
 
+<a name="list"></a>
 <p>
     {{ eligible_film_count }} eligible films
     {% if planned_screening_count %}
@@ -51,7 +56,6 @@
             </tr>
         </thead>
         <tbody>
-        <a name="list"></a>
         {% for row in planned_screening_rows %}
             <tr>
                 <td>
