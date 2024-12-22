@@ -4,7 +4,7 @@ from django.db import models
 
 from authentication.models import FilmFan
 from festivals.config import Config
-from films.models import Film, FilmFanFilmRating, MIN_ALARM_RATING_DIFF
+from films.models import Film, FilmFanFilmRating
 from theaters.models import Screen
 
 CONSTANTS_CONFIG = Config().config['Constants']
@@ -128,13 +128,32 @@ class Screening(models.Model):
         travel_time = WALK_TIME_SAME_THEATER if same_theater else TRAVEL_TIME_OTHER_THEATER
         return travel_time
 
+    def attendants_str(self):
+        attendances = Attendance.attendances.filter(screening=self)
+        return ', '.join(attendance.fan.name for attendance in attendances)
+
+    def attendants_abbr(self):
+        attendances = Attendance.attendances.filter(screening=self)
+        return ', '.join(attendance.fan.initial() for attendance in attendances)
+
+    def attending_friends(self, fan):
+        friend_attendances = Attendance.attendances.filter(screening=self).exclude(fan=fan)
+        attending_friends = [a.fan for a in friend_attendances]
+        return attending_friends
+
+    def filmscreening_count(self):
+        return len(filmscreenings(self.film))
+
+    def film_rating_strings(self):
+        return self.film.rating_strings()
+
     def film_rating_data(self, status):
         """
         Return compact rating per fan, representative film rating string
         and the color indicating whether the rating is interesting.
         """
         # Get the fan ratings string and the representative film rating string.
-        fan_ratings_str, film_rating_str, max_rating = film_rating_strings(self)
+        fan_ratings_str, film_rating_str, max_rating = self.film_rating_strings()
 
         # decide the color.
         attends_film = status == self.ScreeningStatus.ATTENDS_FILM
@@ -179,6 +198,5 @@ class Attendance(models.Model):
         return f'{self.fan} attends {title} on {day} at {start_time}'
 
 
-def film_rating_strings(screening):
-    return screening.film.rating_strings()
-
+def filmscreenings(film):
+    return Screening.screenings.filter(film=film)

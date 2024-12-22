@@ -20,7 +20,7 @@ from films.models import current_fan, initial, fan_rating, minutes_str, get_pres
 from films.views import FilmDetailView
 from screenings.forms.screening_forms import DummyForm, AttendanceForm, PlannerForm, \
     ScreeningCalendarForm
-from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, film_rating_strings
+from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, filmscreenings
 from theaters.models import Theater
 
 
@@ -208,6 +208,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         festival_color = screening.film.festival.festival_color
         fans_rating_str, film_rating_str, rating_color = screening.film_rating_data(status)
         info_str = f'{"Q " if screening.q_and_a else ""}{fans_rating_str}'
+        info_str += f'{"-" + screening.attendants_abbr() if screening.attendants_abbr() else ""}'
         frame_color = pair_selected['color'] if selected else festival_color
         section_color = screening.film.subsection.section.color if screening.film.subsection else frame_color
         querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
@@ -364,8 +365,8 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
 
 class PlannerView(LoginRequiredMixin, View):
     template_name = 'screenings/planner.html'
-    eligible_films = None
     festival = None
+    eligible_films = None
 
     @staticmethod
     def get(request, *args, **kwargs):
@@ -386,11 +387,11 @@ class PlannerListView(LoginRequiredMixin, ListView):
     def __init__(self):
         super().__init__()
         self.planned_screening_count = None
+        self.sorted_eligible_screenings = None
 
     def setup(self, request, *args, **kwargs):
         pr_debug('start', with_time=True)
         super().setup(request, *args, **kwargs)
-        # PlannerForm.form_errors = []
         PlannerView.festival = current_festival(request.session)
         PlannerView.eligible_films = self._get_eligible_films()
         pr_debug('done', with_time=True)
@@ -402,6 +403,7 @@ class PlannerListView(LoginRequiredMixin, ListView):
         eligible_screenings = PlannerForm.get_eligible_screenings(films, auto_planned=True).order_by('start_dt')
         planned_screening_rows = [get_row(s) for s in eligible_screenings if s.auto_planned]
         self.planned_screening_count = len(planned_screening_rows)
+        self.sorted_eligible_screenings = self._get_sorted_screenings(films)
         pr_debug('done', with_time=True)
         return planned_screening_rows
 
@@ -413,6 +415,8 @@ class PlannerListView(LoginRequiredMixin, ListView):
             'sub_header': 'Hit the button and plan your films automatically',
             'eligible_film_count': len(PlannerView.eligible_films),
             'planned_screening_count': self.planned_screening_count,
+            'eligible_screening_count': len(self.sorted_eligible_screenings),
+            'eligible_screenings': self.sorted_eligible_screenings,
             'form_errors': PlannerForm.form_errors,
             'log': get_log(session),
         }
@@ -430,16 +434,28 @@ class PlannerListView(LoginRequiredMixin, ListView):
 
     @staticmethod
     def _get_planned_screening_row(screening):
-        fans_rating_str, film_rating_str, _ = film_rating_strings(screening)
+        fans_rating_str, film_rating_str, _ = screening.film_rating_strings()
         planned_screening_row = {
             'start_dt': screening.start_dt,
             'end_dt': screening.end_dt,
-            'screen_name': screening.screen.parse_name,
+            'screen_name': str(screening.screen),
             'film': screening.film,
+            'filmscreening_count': filmscreenings(screening.film).count(),
+            'attendants': screening.attendants_str(),
             'fan_ratings_str': fans_rating_str,
             'film_rating_str': film_rating_str,
         }
         return planned_screening_row
+
+    def _get_sorted_screenings(self, films):
+        kwargs = {
+            'film__in': films,
+            'screen__theater__priority': Theater.Priority.HIGH,
+        }
+        screenings = Screening.screenings.filter(**kwargs)
+        fan = current_fan(self.request.session)
+        sorted_screenings = PlannerForm.get_sorted_eligible_screenings(screenings, fan)
+        return sorted_screenings
 
 
 class PlannerFormView(LoginRequiredMixin, FormView):
@@ -507,10 +523,8 @@ class ScreeningCalendarListView(LoginRequiredMixin, ListView):
     @staticmethod
     def _get_attendance_row(attendance):
         screening = attendance.screening
-        attendants = Attendance.attendances.filter(screening=screening)
         attendance_row = {
             'screening': screening,
-            'attendants': ', '.join([attendant.fan.name for attendant in attendants]),
         }
         return attendance_row
 

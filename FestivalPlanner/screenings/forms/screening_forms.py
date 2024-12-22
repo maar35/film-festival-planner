@@ -1,22 +1,46 @@
-import datetime
 import inspect
-from operator import itemgetter
+from operator import attrgetter
 
 from django import forms
 from django.db import transaction
 
-from festival_planner.debug_tools import debug, pr_debug
+from festival_planner.debug_tools import pr_debug
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_log, initialize_log
 from festivals.models import current_festival
 from films.models import FilmFanFilmRating, current_fan
 from loader.forms.loader_forms import CalendarDumper
-from screenings.models import Attendance, Screening
+from screenings.models import Attendance, Screening, filmscreenings
 from theaters.models import Theater
 
 
 class DummyForm(forms.Form):
     dummy_field = forms.SlugField(required=False)
+
+
+class PlannerSortKeyKeeper:
+    reverse_by_attr_name = {
+        'rating': True,
+        'attending_friend_count': True,
+        'filmscreening_count': False,
+        'start_dt': True,
+    }
+
+    def __init__(self, screening, attending_friends):
+        self.screening = screening
+        self.rating = screening.film.rating_string()
+        self.attending_friend_count = len(attending_friends)
+        self.filmscreening_count = filmscreenings(screening.film).count()   # TODO: consider availability.
+        self.start_dt = screening.start_dt
+
+    def __repr__(self):
+        return f'{__name__} object from {str(self.screening)}, {self.attending_friend_count=}'
+
+    @classmethod
+    def get_sorted_screenings(cls, sort_keys):
+        for attr_name, reverse in reversed(cls.reverse_by_attr_name.items()):
+            sort_keys.sort(key=attrgetter(attr_name), reverse=reverse)
+        return [sort_key.screening for sort_key in sort_keys]
 
 
 class PlannerForm(DummyForm):
@@ -144,6 +168,15 @@ class PlannerForm(DummyForm):
         return eligible_screenings
 
     @classmethod
+    def get_sorted_eligible_screenings(cls, screenings, fan=None):
+        sort_keys = []
+        for screening in screenings:
+            attending_friends = screening.attending_friends(fan) if fan else cls.getter.get_attending_friends(screening)
+            sort_keys.append(PlannerSortKeyKeeper(screening, attending_friends))
+        sorted_screenings = PlannerSortKeyKeeper.get_sorted_screenings(sort_keys)
+        return sorted_screenings
+
+    @classmethod
     def _set_screening_status_getter(cls, session):
         festival = current_festival(session)
         cls.festival_screenings = Screening.screenings.filter(film__festival=festival)
@@ -151,22 +184,8 @@ class PlannerForm(DummyForm):
         cls.getter = ScreeningStatusGetter(session, cls.festival_screenings)
 
     @classmethod
-    def _get_sorted_eligible_screenings(cls, screenings):
-        getter = cls.getter
-        try:
-            tuple_list = []
-            for screening in screenings:
-                attendants = [fan for fan in getter.get_attendants(screening) if fan != getter.fan]
-                tuple_list.append((screening, len(attendants), screening.start_dt))
-            sorted_screenings = [s for s, a, d in sorted(tuple_list, key=itemgetter(1, 2), reverse=True)]
-        except Exception as e:
-            cls._add_error([f'{e}'])
-            raise e
-        return sorted_screenings
-
-    @classmethod
     def _plan_rating_screenings(cls, rating, eligible_screenings, films, indent):
-        sorted_eligible_screenings = cls._get_sorted_eligible_screenings(eligible_screenings)
+        sorted_eligible_screenings = cls.get_sorted_eligible_screenings(eligible_screenings)
         indent += 1
         for eligible_screening in sorted_eligible_screenings:
             if cls._screening_is_plannable(eligible_screening, films):

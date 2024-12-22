@@ -29,6 +29,8 @@
 <a name="list"></a>
 <p>
     {{ eligible_film_count }} eligible films
+    <br>
+    {{ eligible_screening_count }} eligible screenings
     {% if planned_screening_count %}
         <br>{{ planned_screening_count }} screenings planned
     {% endif %}
@@ -43,6 +45,7 @@
 </form>
 <br>
 {% if planned_screening_rows %}
+    <h3>Planned screenings</h3>
     <table>
         <thead>
             <tr>
@@ -51,6 +54,8 @@
                 <th>End time</th>
                 <th>Screen</th>
                 <th>Film title</th>
+                <th style="text-align: center;">#Filmscreenings</th>
+                <th>Attendants</th>
                 <th>Fan ratings</th>
                 <th style="text-align: center;">Representative rating</th>
             </tr>
@@ -67,6 +72,8 @@
                 <td>{{ row.end_dt | date:"H:i" }}</td>
                 <td>{{ row.screen_name }}</td>
                 <td>{{ row.film.title }}</td>
+                <td style="text-align: center;">{{ row.filmscreening_count }}</td>
+                <td>{{ row.attendants }}</td>
                 <td>{{ row.fan_ratings_str }}</td>
                 <td style="text-align: center;">{{ row.film_rating_str }}</td>
             </tr>
@@ -77,5 +84,31 @@
     <p>{{current_fan}} has no screenings planned (yet).</p>
 {% endif %}
 <br>
+
+<h3>Eligible screenings</h3>
+<table>
+    <thead>
+    <tr>
+        <th>Screening</th>
+        <th>Film rating</th>
+        <th>Attendants</th>
+        <th>#Filmscreenings</th>
+        <th>Start time</th>
+        <th>Auto planned</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for screening in eligible_screenings %}
+    <tr>
+        <td>{{ screening }}</td>
+        <td>{{ screening.film.rating_string }}</td>
+        <td>{{ screening.attendants_str }}</td>
+        <td>{{ screening.filmscreening_count }}</td>
+        <td>{{ screening.start_dt | date:"Y-m-d H:i" }}</td>
+        <td>{{ screening.auto_planned }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
 
 {% endblock %}
