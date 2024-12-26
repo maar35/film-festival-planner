@@ -1,3 +1,4 @@
+import heapq
 import inspect
 from operator import attrgetter
 
@@ -8,9 +9,9 @@ from festival_planner.debug_tools import pr_debug
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_log, initialize_log
 from festivals.models import current_festival
-from films.models import FilmFanFilmRating, current_fan
+from films.models import FilmFanFilmRating, current_fan, get_rating_as_int
 from loader.forms.loader_forms import CalendarDumper
-from screenings.models import Attendance, Screening, filmscreenings
+from screenings.models import Attendance, Screening, get_available_filmscreenings
 from theaters.models import Theater
 
 
@@ -20,17 +21,23 @@ class DummyForm(forms.Form):
 
 class PlannerSortKeyKeeper:
     reverse_by_attr_name = {
-        'rating': True,
+        'highest_rating': True,
+        'second_highest_rating': True,
         'attending_friend_count': True,
+        'q_and_a': True,
         'filmscreening_count': False,
+        'duration': False,
         'start_dt': True,
     }
 
-    def __init__(self, screening, attending_friends):
+    def __init__(self, screening, fan, attending_friends):
         self.screening = screening
-        self.rating = screening.film.rating_string()
+        film = screening.film
+        self.highest_rating, self.second_highest_rating = self.get_highest_ratings(film)
         self.attending_friend_count = len(attending_friends)
-        self.filmscreening_count = filmscreenings(screening.film).count()   # TODO: consider availability.
+        self.q_and_a = screening.q_and_a
+        self.filmscreening_count = len(get_available_filmscreenings(film, fan))
+        self.duration = screening.duration()
         self.start_dt = screening.start_dt
 
     def __repr__(self):
@@ -41,6 +48,14 @@ class PlannerSortKeyKeeper:
         for attr_name, reverse in reversed(cls.reverse_by_attr_name.items()):
             sort_keys.sort(key=attrgetter(attr_name), reverse=reverse)
         return [sort_key.screening for sort_key in sort_keys]
+
+    @staticmethod
+    def get_highest_ratings(film):
+        film_ratings = FilmFanFilmRating.film_ratings.filter(film=film)
+        highest_two = heapq.nlargest(2, film_ratings)
+        highest_rating = get_rating_as_int(highest_two[0] if highest_two else None)
+        second_rating = get_rating_as_int(highest_two[1] if len(highest_two) > 1 else highest_rating)
+        return highest_rating, second_rating
 
 
 class PlannerForm(DummyForm):
@@ -172,7 +187,8 @@ class PlannerForm(DummyForm):
         sort_keys = []
         for screening in screenings:
             attending_friends = screening.attending_friends(fan) if fan else cls.getter.get_attending_friends(screening)
-            sort_keys.append(PlannerSortKeyKeeper(screening, attending_friends))
+            fan = fan or current_fan(cls.session)
+            sort_keys.append(PlannerSortKeyKeeper(screening, fan, attending_friends))
         sorted_screenings = PlannerSortKeyKeeper.get_sorted_screenings(sort_keys)
         return sorted_screenings
 
@@ -216,9 +232,10 @@ class PlannerForm(DummyForm):
     @classmethod
     def _screening_is_plannable(cls, screening, films):
         plannable = False
-        status = cls._get_screening_status(screening)
-        if cls._status_ok(status):
-            plannable = cls._still_valid(screening, films) and cls._no_overlap(screening)
+        if cls.getter.fits_availability(screening):
+            status = cls._get_screening_status(screening)
+            if cls._status_ok(status):
+                plannable = cls._still_valid(screening, films) and cls._no_overlap(screening)
         return plannable
 
     @classmethod

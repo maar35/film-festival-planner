@@ -51,12 +51,12 @@ class Film(models.Model):
         return ':'.join(f'{self.duration}'.split(':')[:2])
 
     def rating_strings(self):
-        """ The highest rating represents all ratings of a film """
-
-        def _rating_as_int(rating):
-            if rating:
-                return rating.rating
-            return FilmFanFilmRating.Rating.UNRATED
+        """
+        Returns a string of fan initials with their ratings, the representative
+        rating of the film, and the maximum rating of the film.
+        The representative rating string is the highest rating, with a question
+        mark added when the lowest rating significantly differs.
+        """
 
         ordered_ratings = FilmFanFilmRating.film_ratings.filter(film=self).order_by('rating')
 
@@ -64,8 +64,8 @@ class Film(models.Model):
         fans_rating_str = ''.join([r.str_fan_rating() for r in ordered_ratings])
 
         # Get the representative rating.
-        min_rating = _rating_as_int(ordered_ratings.first())
-        max_rating = _rating_as_int(ordered_ratings.last())
+        min_rating = get_rating_as_int(ordered_ratings.first())
+        max_rating = get_rating_as_int(ordered_ratings.last())
         film_rating_str = str(max_rating)
         if min_rating != FilmFanFilmRating.Rating.INDECISIVE and max_rating - min_rating >= MIN_ALARM_RATING_DIFF:
             film_rating_str += '?'
@@ -110,6 +110,12 @@ class FilmFanFilmRating(models.Model):
 
     def __str__(self):
         return f"{self.film} - {self.str_fan_rating()}"
+
+    def __int__(self):
+        return self.rating
+
+    def __lt__(self, other):
+        return self.rating < other.rating
 
     @classmethod
     def get_eligible_ratings(cls):
@@ -194,6 +200,12 @@ def get_judging_fans():
     return FilmFan.film_fans.filter(name__in=FANS_IN_RATINGS_TABLE)
 
 
+def get_rating_as_int(rating):
+    if rating:
+        return int(rating)
+    return FilmFanFilmRating.Rating.UNRATED
+
+
 def get_rating_name(rating_value):
     choices = FilmFanFilmRating.Rating.choices
     try:
@@ -205,10 +217,9 @@ def get_rating_name(rating_value):
 
 def fan_rating(fan, film, manager=None):
     manager = manager or FilmFanFilmRating.film_ratings
-    try:
-        rating = manager.get(film=film, film_fan=fan)
-    except (KeyError, FilmFanFilmRating.DoesNotExist, FilmFanFilmVote.DoesNotExist):
-        rating = None
+    kwargs = {'film': film, 'film_fan': fan}
+    ratings = manager.filter(**kwargs)
+    rating = ratings.get(**kwargs) if ratings.exists() else None
     return rating
 
 

@@ -3,8 +3,9 @@ import datetime
 from django.db import models
 
 from authentication.models import FilmFan
+from availabilities.models import Availabilities
 from festivals.config import Config
-from films.models import Film, FilmFanFilmRating
+from films.models import Film, FilmFanFilmRating, fan_rating
 from theaters.models import Screen
 
 CONSTANTS_CONFIG = Config().config['Constants']
@@ -118,6 +119,9 @@ class Screening(models.Model):
     def str_q_and_a(self):
         return 'Yes!' if self.q_and_a else None
 
+    def duration(self):
+        return self.end_dt - self.start_dt
+
     def overlaps(self, other_screening, use_travel_time=False):
         travel_time = self.get_travel_time(other_screening) if use_travel_time else datetime.timedelta(0)
         ok = other_screening.start_dt <= self.end_dt + travel_time and other_screening.end_dt >= self.start_dt - travel_time
@@ -128,6 +132,17 @@ class Screening(models.Model):
         travel_time = WALK_TIME_SAME_THEATER if same_theater else TRAVEL_TIME_OTHER_THEATER
         return travel_time
 
+    def available_by_fan(self, fan):
+        manager = Availabilities.availabilities
+        availabilities = manager.filter(fan=fan, start_dt__lte=self.start_dt, end_dt__gte=self.end_dt)
+        return availabilities or False
+
+    def get_available_fans(self):
+        manager = Availabilities.availabilities
+        kwargs = {'start_dt__lte': self.start_dt, 'end_dt__gte': self.end_dt}
+        available_fans = [availability.fan for availability in manager.filter(**kwargs)]
+        return available_fans
+
     def attendants_str(self):
         attendances = Attendance.attendances.filter(screening=self)
         return ', '.join(attendance.fan.name for attendance in attendances)
@@ -135,6 +150,11 @@ class Screening(models.Model):
     def attendants_abbr(self):
         attendances = Attendance.attendances.filter(screening=self)
         return ', '.join(attendance.fan.initial() for attendance in attendances)
+
+    def attending_fans(self):
+        attendances = Attendance.attendances.filter(screening=self)
+        fans = [attendance.fan for attendance in attendances]
+        return fans
 
     def attending_friends(self, fan):
         friend_attendances = Attendance.attendances.filter(screening=self).exclude(fan=fan)
@@ -144,16 +164,13 @@ class Screening(models.Model):
     def filmscreening_count(self):
         return len(filmscreenings(self.film))
 
-    def film_rating_strings(self):
-        return self.film.rating_strings()
-
     def film_rating_data(self, status):
         """
         Return compact rating per fan, representative film rating string
         and the color indicating whether the rating is interesting.
         """
         # Get the fan ratings string and the representative film rating string.
-        fan_ratings_str, film_rating_str, max_rating = self.film_rating_strings()
+        fan_ratings_str, film_rating_str, max_rating = film_rating_strings(self)
 
         # decide the color.
         attends_film = status == self.ScreeningStatus.ATTENDS_FILM
@@ -198,5 +215,29 @@ class Attendance(models.Model):
         return f'{self.fan} attends {title} on {day} at {start_time}'
 
 
+def film_rating_strings(screening, current_fan=None):
+    return screening.film.rating_strings()
+
+
+def get_fan_props_str(screening, current_fan):
+    fans = [current_fan] + list(FilmFan.film_fans.exclude(id=current_fan.id).order_by('name'))
+    initials = []
+    for fan in fans:
+        attending = Attendance.attendances.filter(fan=fan, screening=screening).exists()
+        initial = fan.initial() if attending else fan.initial().lower()
+        rating = fan_rating(fan, screening.film)
+        if rating:
+            initial += str(rating.rating)
+        if attending or rating:
+            initials.append(initial)
+    return ''.join(initials)
+
+
 def filmscreenings(film):
     return Screening.screenings.filter(film=film)
+
+
+def get_available_filmscreenings(film, fan):
+    screenings = filmscreenings(film)
+    available_filmscreenings = [s for s in screenings if s.available_by_fan(fan)]
+    return available_filmscreenings

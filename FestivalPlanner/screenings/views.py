@@ -19,9 +19,12 @@ from festivals.models import current_festival
 from films.models import current_fan, initial, fan_rating, minutes_str, get_present_fans, Film, FilmFanFilmRating
 from films.views import FilmDetailView
 from screenings.forms.screening_forms import DummyForm, AttendanceForm, PlannerForm, \
-    ScreeningCalendarForm
-from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, filmscreenings
+    ScreeningCalendarForm, PlannerSortKeyKeeper
+from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, filmscreenings, \
+    get_available_filmscreenings, get_fan_props_str
 from theaters.models import Theater
+
+AUTO_PLANNED_INDICATOR = "𝛑"
 
 
 class DaySchemaView(LoginRequiredMixin, View):
@@ -206,9 +209,9 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         line_2 = f'{screening.start_dt.strftime("%H:%M")} - {screening.end_dt.strftime("%H:%M")}'
         pair_selected = Screening.color_pair_selected_by_screening_status[status]
         festival_color = screening.film.festival.festival_color
-        fans_rating_str, film_rating_str, rating_color = screening.film_rating_data(status)
-        info_str = f'{"Q " if screening.q_and_a else ""}{fans_rating_str}'
-        info_str += f'{"-" + screening.attendants_abbr() if screening.attendants_abbr() else ""}'
+        _, film_rating_str, rating_color = screening.film_rating_data(status)
+        fan = current_fan(self.request.session)
+        info_str = ("Q " if screening.q_and_a else "") + get_fan_props_str(screening, fan)
         frame_color = pair_selected['color'] if selected else festival_color
         section_color = screening.film.subsection.section.color if screening.film.subsection else frame_color
         querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
@@ -220,8 +223,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'left': left_pixels,
             'width': self._pixels_from_dt(screening.end_dt) - left_pixels,
             'pair': pair,
-            'fan_ratings': fans_rating_str,
-            'auto_planned': "𝛑" if screening.auto_planned else "",
+            'auto_planned': AUTO_PLANNED_INDICATOR if screening.auto_planned else "",
             'film_rating': film_rating_str,
             'rating_color': rating_color,
             'selected': selected,
@@ -383,6 +385,7 @@ class PlannerListView(LoginRequiredMixin, ListView):
     template_name = PlannerView.template_name
     http_method_names = ['get']
     context_object_name = 'planned_screening_rows'
+    fan = None
 
     def __init__(self):
         super().__init__()
@@ -394,17 +397,24 @@ class PlannerListView(LoginRequiredMixin, ListView):
         super().setup(request, *args, **kwargs)
         PlannerView.festival = current_festival(request.session)
         PlannerView.eligible_films = self._get_eligible_films()
+        self.fan = current_fan(request.session)
         pr_debug('done', with_time=True)
 
     def get_queryset(self):
         pr_debug('start', with_time=True)
+
+        # Get the planned screening rows.
         get_row = self._get_planned_screening_row
         films = PlannerView.eligible_films
         eligible_screenings = PlannerForm.get_eligible_screenings(films, auto_planned=True).order_by('start_dt')
         planned_screening_rows = [get_row(s) for s in eligible_screenings if s.auto_planned]
+
+        # Derive extra information for use in context.
         self.planned_screening_count = len(planned_screening_rows)
-        self.sorted_eligible_screenings = self._get_sorted_screenings(films)
+        sorted_screenings = self._get_sorted_screenings(films)
+        self.sorted_eligible_screenings = [self._get_sorted_screening_row(s) for s in sorted_screenings]
         pr_debug('done', with_time=True)
+
         return planned_screening_rows
 
     def get_context_data(self, *, object_list=None, **kwargs):
@@ -416,7 +426,7 @@ class PlannerListView(LoginRequiredMixin, ListView):
             'eligible_film_count': len(PlannerView.eligible_films),
             'planned_screening_count': self.planned_screening_count,
             'eligible_screening_count': len(self.sorted_eligible_screenings),
-            'eligible_screenings': self.sorted_eligible_screenings,
+            'eligible_screening_rows': self.sorted_eligible_screenings,
             'form_errors': PlannerForm.form_errors,
             'log': get_log(session),
         }
@@ -432,20 +442,46 @@ class PlannerListView(LoginRequiredMixin, ListView):
         eligible_films = [f for f in rating_films if manager.filter(screening__film=f).exists()]
         return eligible_films
 
-    @staticmethod
-    def _get_planned_screening_row(screening):
-        fans_rating_str, film_rating_str, _ = screening.film_rating_strings()
+    # @staticmethod
+    def _get_planned_screening_row(self, screening):
+        film = screening.film
+        fans_rating_str, film_rating_str, _ = screening.film.rating_strings()
         planned_screening_row = {
             'start_dt': screening.start_dt,
             'end_dt': screening.end_dt,
             'screen_name': str(screening.screen),
-            'film': screening.film,
-            'filmscreening_count': filmscreenings(screening.film).count(),
+            'film': film,
+            'filmscreening_count': filmscreenings(film).count(),
+            'available_filmscreening_count': len(get_available_filmscreenings(film, self.fan)),
             'attendants': screening.attendants_str(),
             'fan_ratings_str': fans_rating_str,
             'film_rating_str': film_rating_str,
         }
         return planned_screening_row
+
+    # @staticmethod
+    def _get_sorted_screening_row(self, screening):
+        film = screening.film
+        day = screening.start_dt.date().isoformat()
+        querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
+        fragment = ScreeningFragmentKeeper.fragment_code(screening.screen.pk)
+        highest_rating, second_highest_rating = PlannerSortKeyKeeper.get_highest_ratings(film)
+        eligible_screening_row = {
+            'screening': screening,
+            'query_string': querystring,
+            'fragment': fragment,
+            'available_fans_str': ', '.join([fan.name for fan in screening.get_available_fans()]),
+            'highest_rating': highest_rating,
+            'second_highest_rating': second_highest_rating,
+            'q_and_a': screening.q_and_a,
+            'attendants_str': screening.attendants_str(),
+            'available_filmscreening_count': len(get_available_filmscreenings(film, self.fan)),
+            'duration': screening.duration(),
+            'start_dt': screening.start_dt,
+            'auto_planned': screening.auto_planned,
+            'auto_planned_indicator': AUTO_PLANNED_INDICATOR,
+        }
+        return eligible_screening_row
 
     def _get_sorted_screenings(self, films):
         kwargs = {

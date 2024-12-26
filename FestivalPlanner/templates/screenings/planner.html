@@ -14,9 +14,11 @@
 </div>
 
 {% if form_errors or log.results %}
-    <a href="#list">To planned screenings list</a>
+    <a href="#planned">To planned screenings list</a>
     <br>
 {% endif %}
+<a href="#sorted">To sorted eligible screenings</a>
+<br>
 
 {% block errors %}
     {{ block.super }}
@@ -26,7 +28,7 @@
     {{ block.super }}
 {% endblock log %}
 
-<a name="list"></a>
+<a name="planned"></a>
 <p>
     {{ eligible_film_count }} eligible films
     <br>
@@ -55,6 +57,7 @@
                 <th>Screen</th>
                 <th>Film title</th>
                 <th style="text-align: center;">#Filmscreenings</th>
+                <th style="text-align: center;">#Available Filmscreenings</th>
                 <th>Attendants</th>
                 <th>Fan ratings</th>
                 <th style="text-align: center;">Representative rating</th>
@@ -73,6 +76,7 @@
                 <td>{{ row.screen_name }}</td>
                 <td>{{ row.film.title }}</td>
                 <td style="text-align: center;">{{ row.filmscreening_count }}</td>
+                <td style="text-align: center;">{{ row.available_filmscreening_count }}</td>
                 <td>{{ row.attendants }}</td>
                 <td>{{ row.fan_ratings_str }}</td>
                 <td style="text-align: center;">{{ row.film_rating_str }}</td>
@@ -84,28 +88,39 @@
     <p>{{current_fan}} has no screenings planned (yet).</p>
 {% endif %}
 <br>
-
-<h3>Eligible screenings</h3>
+<a name="sorted"></a>
+<br>
+<h3>Sorted eligible screenings</h3>
 <table>
     <thead>
     <tr>
         <th>Screening</th>
-        <th>Film rating</th>
+        <th>Available</th>
+        <th style="text-align: center;">Highest film ratings</th>
         <th>Attendants</th>
-        <th>#Filmscreenings</th>
+        <th style="text-align: center;">Q&A</th>
+        <th style="text-align: center;">#Available Filmscreenings</th>
+        <th>Duration</th>
         <th>Start time</th>
-        <th>Auto planned</th>
+        <th style="text-align: center;">Auto planned</th>
     </tr>
     </thead>
     <tbody>
-    {% for screening in eligible_screenings %}
+    {% for row in eligible_screening_rows %}
     <tr>
-        <td>{{ screening }}</td>
-        <td>{{ screening.film.rating_string }}</td>
-        <td>{{ screening.attendants_str }}</td>
-        <td>{{ screening.filmscreening_count }}</td>
-        <td>{{ screening.start_dt | date:"Y-m-d H:i" }}</td>
-        <td>{{ screening.auto_planned }}</td>
+        <td>
+            <a href="{% url 'screenings:day_schema' %}{{ row.query_string }}{{ row.fragment }}">
+                {{ row.screening }}
+            </a>
+        </td>
+        <td>{{ row.available_fans_str }}</td>
+        <td style="text-align: center;">{{ row.highest_rating }}, {{ row.second_highest_rating }}</td>
+        <td>{{ row.attendants_str }}</td>
+        <td style="text-align: center;">{{ row.q_and_a | yesno:"Q&A,-"}}</td>
+        <td style="text-align: center;">{{ row.available_filmscreening_count }}</td>
+        <td>{{ row.duration }}</td>
+        <td>{{ row.start_dt | date:"Y-m-d H:i" }}</td>
+        <td style="text-align: center;">{{ row.auto_planned | yesno:"𝛑,-"}}</td>
     </tr>
     {% endfor %}
     </tbody>
