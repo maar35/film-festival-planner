@@ -399,7 +399,7 @@ class SubsectionPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, subsection):
-        HtmlPageParser.__init__(self, festival_data, DEBUG_RECORDER, 'SEC', debugging=DEBUGGING)
+        super().__init__(festival_data, DEBUG_RECORDER, 'SEC', debugging=DEBUGGING)
         self.festival_data = festival_data
         self.subsection = subsection
         self.film = None
@@ -435,14 +435,14 @@ class SubsectionPageParser(HtmlPageParser):
             self.festival_data.films.append(self.film)
             COUNTER.increase('films')
 
-        # Add film info.
-        self.description = self.film_description
-        self.description or COUNTER.increase('no description')
-        self.add_film_info()
+            # Add film info.
+            self.description = self.film_description
+            self.description or COUNTER.increase('no description')
+            self.add_film_info()
 
-        # Reset film variables.
-        self.film_count += 1
-        self.init_film()
+            # Reset film variables.
+            self.film_count += 1
+            self.init_film()
 
     def add_film_info(self):
         film_info = FilmInfo(self.film.film_id, self.description, '')
