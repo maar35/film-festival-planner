@@ -688,6 +688,12 @@ class ScreeningLoader(SimpleLoader):
             combination_program = Film.films.filter(festival=self.festival,
                                                     film_id=combination_id
                                                     ).first()
+        try:
+            existing_screening = Screening.screenings.get(film=film, screen=screen, start_dt=start_dt)
+        except Screening.DoesNotExist:
+            auto_planned = False
+        else:
+            auto_planned = existing_screening.auto_planned
 
         if not film or not screen:
             yield None
@@ -700,6 +706,7 @@ class ScreeningLoader(SimpleLoader):
             'combination_program': combination_program or None,
             'subtitles': subtitles,
             'q_and_a': q_and_a,
+            'auto_planned': auto_planned,
         }
         yield value_by_field
 
@@ -951,7 +958,7 @@ class CalendarDumper(BaseDumper):
         separator = '|'
         status = Screening.ScreeningStatus.ATTENDS
         screening = obj['screening']
-        fans_rating_str, film_rating_str, color = screening.film_rating_str(status)
+        fans_rating_str, film_rating_str, color = screening.film_rating_data(status)
         notes = [
             f"Film duration: {minutes_str(screening.film.duration)}",
             f"Screening duration: {minutes_str(screening.end_dt - screening.start_dt)}",

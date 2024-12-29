@@ -7,6 +7,7 @@ from films.models import current_fan, get_user_fan
 
 RE_APP_NAME = re.compile(r'([a-z])([A-Z])')
 REPL_APP_NAME = r'\1 \2'
+INDENT_STRING = 3 * '_'
 
 
 def application_name():
@@ -25,11 +26,11 @@ def initialize_log(session, action='Load'):
     session['log'] = {'results': [], 'action': action}
 
 
-def add_log(session, text):
+def add_log(session, text, indent=0):
     """
     Add text to the results of the log cookie.
     """
-    session['log']['results'].append(text)
+    session['log']['results'].append(f'{INDENT_STRING * indent}{text}')
 
 
 def get_log(session):

@@ -3,8 +3,9 @@ import datetime
 from django.db import models
 
 from authentication.models import FilmFan
+from availabilities.models import Availabilities
 from festivals.config import Config
-from films.models import Film, FilmFanFilmRating, MIN_ALARM_RATING_DIFF
+from films.models import Film, FilmFanFilmRating, fan_rating
 from theaters.models import Screen
 
 CONSTANTS_CONFIG = Config().config['Constants']
@@ -85,6 +86,7 @@ class Screening(models.Model):
                                             related_name='combined_screening')
     subtitles = models.CharField(max_length=24)
     q_and_a = models.BooleanField()
+    auto_planned = models.BooleanField(default=False)
 
     # Define a manager.
     screenings = models.Manager()
@@ -117,6 +119,9 @@ class Screening(models.Model):
     def str_q_and_a(self):
         return 'Yes!' if self.q_and_a else None
 
+    def duration(self):
+        return self.end_dt - self.start_dt
+
     def overlaps(self, other_screening, use_travel_time=False):
         travel_time = self.get_travel_time(other_screening) if use_travel_time else datetime.timedelta(0)
         ok = other_screening.start_dt <= self.end_dt + travel_time and other_screening.end_dt >= self.start_dt - travel_time
@@ -127,29 +132,50 @@ class Screening(models.Model):
         travel_time = WALK_TIME_SAME_THEATER if same_theater else TRAVEL_TIME_OTHER_THEATER
         return travel_time
 
-    def film_rating_str(self, status):
-        """ The highest rating represents all ratings of a film """
-        def _rating_as_int(rating):
-            if rating:
-                return rating.rating
-            return FilmFanFilmRating.Rating.UNRATED
+    def available_by_fan(self, fan):
+        manager = Availabilities.availabilities
+        availabilities = manager.filter(fan=fan, start_dt__lte=self.start_dt, end_dt__gte=self.end_dt)
+        return availabilities or False
 
-        ordered_ratings = FilmFanFilmRating.film_ratings.filter(film=self.film).order_by('rating')
+    def get_available_fans(self):
+        manager = Availabilities.availabilities
+        kwargs = {'start_dt__lte': self.start_dt, 'end_dt__gte': self.end_dt}
+        available_fans = [availability.fan for availability in manager.filter(**kwargs)]
+        return available_fans
 
-        # Get a summary of fans and their ratings.
-        fans_rating_str = ''.join([r.str_fan_rating() for r in ordered_ratings])
+    def attendants_str(self):
+        attendances = Attendance.attendances.filter(screening=self)
+        return ', '.join(attendance.fan.name for attendance in attendances)
 
-        # Get the representative rating.
-        min_rating = _rating_as_int(ordered_ratings.first())
-        max_rating = _rating_as_int(ordered_ratings.last())
-        film_rating_str = str(max_rating)
-        if min_rating != FilmFanFilmRating.Rating.INDECISIVE and max_rating - min_rating >= MIN_ALARM_RATING_DIFF:
-            film_rating_str += '?'
+    def attendants_abbr(self):
+        attendances = Attendance.attendances.filter(screening=self)
+        return ', '.join(attendance.fan.initial() for attendance in attendances)
+
+    def attending_fans(self):
+        attendances = Attendance.attendances.filter(screening=self)
+        fans = [attendance.fan for attendance in attendances]
+        return fans
+
+    def attending_friends(self, fan):
+        friend_attendances = Attendance.attendances.filter(screening=self).exclude(fan=fan)
+        attending_friends = [a.fan for a in friend_attendances]
+        return attending_friends
+
+    def filmscreening_count(self):
+        return len(filmscreenings(self.film))
+
+    def film_rating_data(self, status):
+        """
+        Return compact rating per fan, representative film rating string
+        and the color indicating whether the rating is interesting.
+        """
+        # Get the fan ratings string and the representative film rating string.
+        fan_ratings_str, film_rating_str, max_rating = film_rating_strings(self)
 
         # decide the color.
         attends_film = status == self.ScreeningStatus.ATTENDS_FILM
         attends = status == self.ScreeningStatus.ATTENDS
-        rating_is_interesting = max_rating in FilmFanFilmRating.interesting_ratings()
+        rating_is_interesting = max_rating in FilmFanFilmRating.get_interesting_ratings()
         regular_color = self.color_pair_selected_by_screening_status[status]['color']
         if attends:
             color = regular_color
@@ -161,7 +187,7 @@ class Screening(models.Model):
         else:
             color = Screening.uninteresting_rating_color
 
-        return fans_rating_str, film_rating_str, color
+        return fan_ratings_str, film_rating_str, color
 
 
 class Attendance(models.Model):
@@ -187,3 +213,31 @@ class Attendance(models.Model):
         day = self.screening.str_day()
         start_time = self.screening.str_start_time()
         return f'{self.fan} attends {title} on {day} at {start_time}'
+
+
+def film_rating_strings(screening, current_fan=None):
+    return screening.film.rating_strings()
+
+
+def get_fan_props_str(screening, current_fan):
+    fans = [current_fan] + list(FilmFan.film_fans.exclude(id=current_fan.id).order_by('name'))
+    initials = []
+    for fan in fans:
+        attending = Attendance.attendances.filter(fan=fan, screening=screening).exists()
+        initial = fan.initial() if attending else fan.initial().lower()
+        rating = fan_rating(fan, screening.film)
+        if rating:
+            initial += str(rating.rating)
+        if attending or rating:
+            initials.append(initial)
+    return ''.join(initials)
+
+
+def filmscreenings(film):
+    return Screening.screenings.filter(film=film)
+
+
+def get_available_filmscreenings(film, fan):
+    screenings = filmscreenings(film)
+    available_filmscreenings = [s for s in screenings if s.available_by_fan(fan)]
+    return available_filmscreenings

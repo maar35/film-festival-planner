@@ -8,9 +8,11 @@
 <h2 class="row col-left-h2">Screening of <span style="color: {{ festival_color }};">{{ screening.film }}</span></h2>
 <div class="row">
     <span class="col-right">
-        <a href="{% url 'screenings:day_schema' %}">Back to day schema</a>
+        <a href="{% url 'screenings:day_schema' %}">Day schema</a>
         <br>
         <a href="{% url 'films:films' %}">Ratings</a>
+        <br>
+        <a href="{% url 'screenings:planner' %}">Planner</a>
     </span>
 </div>
 <div style="text-align: center;">

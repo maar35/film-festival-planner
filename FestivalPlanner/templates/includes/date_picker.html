@@ -20,5 +20,11 @@
                 {% endfor %}
             </div>
         </span>
+        <span style="margin: 1rem; font-size: 1rem;">
+            <span style="margin: 0.5rem;">{% if first_day %} <a href="{% url 'screenings:day_schema' %}?day={{ first_day }}">First</a> {% endif %}</span>
+            <span style="margin: 0.5rem;">{% if prev_day %} <a href="{% url 'screenings:day_schema' %}?day={{ prev_day }}">Previous</a> {% endif %}</span>
+            <span style="margin: 0.5rem;">{% if next_day %} <a href="{% url 'screenings:day_schema' %}?day={{ next_day }}">Next</a> {% endif %}</span>
+            <span style="margin: 0.5rem;">{% if last_day %} <a href="{% url 'screenings:day_schema' %}?day={{ last_day }}">Last</a> {% endif %}</span>
+        </span>
     </h3>
 </form>

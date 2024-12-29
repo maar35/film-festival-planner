@@ -49,7 +49,7 @@
                     <td>{{ screening.end_dt | date:"H:i" }}</td>
                     <td>{{ screening.screen.parse_name }}</td>
                     <td>{{ screening.film.title }}</td>
-                    <td>{{ row.attendants }}</td>
+                    <td>{{ screening.attendants_str }}</td>
                 {% endwith %}
             </tr>
         {% endfor %}

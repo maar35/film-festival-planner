@@ -1,4 +1,3 @@
-from availabilities.models import Availabilities
 from festival_planner.cookie import Filter, Cookie
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fragment_keeper import ScreeningFragmentKeeper
@@ -19,11 +18,18 @@ class ScreeningStatusGetter:
         self.has_attended_film_by_screening = self._get_has_attended_film_by_screening()
         self.available_by_screening_by_fan = self._get_availability_by_screening_by_fan()
 
+    def update_attendances_by_screening(self, screening):
+        self.attendances_by_screening[screening] = Attendance.attendances.filter(screening=screening)
+        self.attends_by_screening[screening] = True
+        self.has_attended_film_by_screening = self._get_has_attended_film_by_screening()
+
     def get_screening_status(self, screening, attendants):
         if current_fan(self.session) in attendants:
             status = Screening.ScreeningStatus.ATTENDS
         elif attendants:
             status = Screening.ScreeningStatus.FRIEND_ATTENDS
+        elif not self.fits_availability(screening):
+            status = Screening.ScreeningStatus.UNAVAILABLE
         elif self._has_attended_film(screening):
             status = Screening.ScreeningStatus.ATTENDS_FILM
         else:
@@ -58,10 +64,25 @@ class ScreeningStatusGetter:
         pr_debug('done', with_time=True)
         return film_screenings_props
 
+    def fits_availability(self, screening):
+        try:
+            fits = self.available_by_screening_by_fan[self.fan][screening]
+        except KeyError:
+            fits = False
+        return fits
+
     def get_attendants(self, screening):
         attendances = self.attendances_by_screening[screening]
         attendants = [attendance.fan for attendance in attendances]
         return attendants
+
+    def get_attendants_str(self, screening):
+        attendants = self.get_attendants(screening)
+        return ', '.join([attendant.name for attendant in attendants])
+
+    def get_attending_friends(self, screening):
+        attendants = self.get_attendants(screening)
+        return [fan for fan in attendants if fan != self.fan]
 
     def _get_attendances_by_screening(self):
         attendances_by_screening = {s: Attendance.attendances.filter(screening=s) for s in self.day_screenings}
@@ -77,29 +98,17 @@ class ScreeningStatusGetter:
         return current_fan_attends_other_filmscreening
 
     def _get_availability_by_screening_by_fan(self):
-        manager = Availabilities.availabilities
         availability_by_screening_by_fan = {}
         for fan in get_present_fans(self.session):
-            availability_by_screening_by_fan[fan] = {
-                s: manager.filter(
-                    fan=fan, start_dt__lte=s.start_dt, end_dt__gte=s.end_dt
-                ) for s in self.day_screenings
-            }
+            availability_by_screening_by_fan[fan] =\
+                {s: s.available_by_fan(fan) for s in self.day_screenings}
         return availability_by_screening_by_fan
-
-    def _fits_availability(self, screening):
-        return self.available_by_screening_by_fan[self.fan][screening]
 
     def _available_fans(self, screening):
         available_fans = []
-        for fan in get_present_fans(self.session):
-            try:
-                available = self.available_by_screening_by_fan[fan][screening]
-            except KeyError:
-                pass
-            else:
-                if available:
-                    available_fans.append(fan)
+        for fan, available_by_screening in self.available_by_screening_by_fan.items():
+            if available_by_screening[screening]:
+                available_fans.append(fan)
         return available_fans
 
     def _get_other_status(self, screening, screenings):
@@ -117,8 +126,6 @@ class ScreeningStatusGetter:
             status = Screening.ScreeningStatus.TIME_OVERLAP
         elif no_travel_time_screenings:
             status = Screening.ScreeningStatus.NO_TRAVEL_TIME
-        elif not self._fits_availability(screening):
-            status = Screening.ScreeningStatus.UNAVAILABLE
         return status
 
     def _get_day_props(self, film_screening):

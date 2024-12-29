@@ -1,6 +1,7 @@
 from django.db import models
 
 from authentication.models import FilmFan
+from festivals.config import Config
 from festivals.models import Festival, current_festival
 from sections.models import Subsection
 
@@ -8,6 +9,14 @@ MINUTES_STR = "'"
 UNRATED_STR = '-'
 FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
 MIN_ALARM_RATING_DIFF = 3
+LOWEST_PLANNABLE_RATING = Config().config['Constants']['LowestPlannableRating']
+FAN_NAMES_BY_FESTIVAL_BASE = {
+    'IFFR': ['Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk'],
+    'MTMF': ['Maarten', 'Adrienne', 'Manfred'],
+    'NNF': [],
+    'Imagine': ['Maarten', 'Adrienne'],
+    'IDFA': ['Maarten', 'Adrienne'],
+}
 
 
 class Film(models.Model):
@@ -40,6 +49,32 @@ class Film(models.Model):
 
     def duration_str(self):
         return ':'.join(f'{self.duration}'.split(':')[:2])
+
+    def rating_strings(self):
+        """
+        Returns a string of fan initials with their ratings, the representative
+        rating of the film, and the maximum rating of the film.
+        The representative rating string is the highest rating, with a question
+        mark added when the lowest rating significantly differs.
+        """
+
+        ordered_ratings = FilmFanFilmRating.film_ratings.filter(film=self).order_by('rating')
+
+        # Get a summary of fans and their ratings.
+        fans_rating_str = ''.join([r.str_fan_rating() for r in ordered_ratings])
+
+        # Get the representative rating.
+        min_rating = get_rating_as_int(ordered_ratings.first())
+        max_rating = get_rating_as_int(ordered_ratings.last())
+        film_rating_str = str(max_rating)
+        if min_rating != FilmFanFilmRating.Rating.INDECISIVE and max_rating - min_rating >= MIN_ALARM_RATING_DIFF:
+            film_rating_str += '?'
+
+        return fans_rating_str, film_rating_str, max_rating
+
+    def rating_string(self):
+        film_rating_str = self.rating_strings()[1]
+        return film_rating_str
 
 
 class FilmFanFilmRating(models.Model):
@@ -76,14 +111,19 @@ class FilmFanFilmRating(models.Model):
     def __str__(self):
         return f"{self.film} - {self.str_fan_rating()}"
 
-    @classmethod
-    def super_ratings(cls):
-        # TODO: Be consequent: have either the list below or [LOWEST_PLANNABLE_RATING:]
-        return [cls.Rating.GOOD, cls.Rating.VERY_GOOD, cls.Rating.EXCELLENT]
+    def __int__(self):
+        return self.rating
+
+    def __lt__(self, other):
+        return self.rating < other.rating
 
     @classmethod
-    def interesting_ratings(cls):
-        return [cls.Rating.UNRATED] + cls.super_ratings()
+    def get_eligible_ratings(cls):
+        return cls.Rating.values[LOWEST_PLANNABLE_RATING:]
+
+    @classmethod
+    def get_interesting_ratings(cls):
+        return [cls.Rating.UNRATED] + cls.get_eligible_ratings()
 
     def str_fan_rating(self):
         return f'{self.film_fan.initial()}{self.rating}'
@@ -150,21 +190,20 @@ def initial(fan, session):
 
 
 def get_present_fans(session):
-    fan_names_by_festival_base = {
-        'IFFR': ['Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk'],
-        'MTMF': ['Maarten', 'Adrienne'],
-        'NNF': [],
-        'Imagine': ['Maarten', 'Adrienne'],
-        'IDFA': ['Maarten', 'Adrienne'],
-    }
     festival = current_festival(session)
     base = festival.base.mnemonic
-    fan_names = fan_names_by_festival_base[base]
+    fan_names = FAN_NAMES_BY_FESTIVAL_BASE[base]
     return FilmFan.film_fans.filter(name__in=fan_names)
 
 
 def get_judging_fans():
     return FilmFan.film_fans.filter(name__in=FANS_IN_RATINGS_TABLE)
+
+
+def get_rating_as_int(rating):
+    if rating:
+        return int(rating)
+    return FilmFanFilmRating.Rating.UNRATED
 
 
 def get_rating_name(rating_value):
@@ -178,10 +217,9 @@ def get_rating_name(rating_value):
 
 def fan_rating(fan, film, manager=None):
     manager = manager or FilmFanFilmRating.film_ratings
-    try:
-        rating = manager.get(film=film, film_fan=fan)
-    except (KeyError, FilmFanFilmRating.DoesNotExist, FilmFanFilmVote.DoesNotExist):
-        rating = None
+    kwargs = {'film': film, 'film_fan': fan}
+    ratings = manager.filter(**kwargs)
+    rating = ratings.get(**kwargs) if ratings.exists() else None
     return rating
 
 

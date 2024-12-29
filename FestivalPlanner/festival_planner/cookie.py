@@ -104,6 +104,7 @@ class Filter(Cookie):
 
 class FestivalDay:
     day_str_format = '%a %Y-%m-%d'
+    date_str_format = day_str_format.split()[1]
 
     def __init__(self, cookie_key):
         self.festival = None
