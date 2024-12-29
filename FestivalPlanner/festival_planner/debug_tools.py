@@ -24,3 +24,29 @@ def pr_debug(message, with_time=False):
     if with_time:
         message = f'{datetime.now():%Y-%m-%d %H:%M:%S.%f}  {message}'
     print(f'@@ {debug(frame=inspect.currentframe().f_back)} {message}')
+
+
+class ExceptionTracer:
+    def __init__(self):
+        self.errors = []
+
+    def add_error(self, errors):
+        def pr_trace():
+            try:
+                frame_infos = inspect.trace()
+                for info in frame_infos:
+                    self.errors.append(f'{info.filename} line {info.lineno} in {info.function}')
+                    self.errors.extend(info.code_context)
+                    skip_line()
+            finally:
+                del frame_infos
+
+        def skip_line():
+            self.errors.append('')
+
+        self.errors.extend(errors)
+        skip_line()
+        pr_trace()
+
+    def get_errors(self):
+        return self.errors

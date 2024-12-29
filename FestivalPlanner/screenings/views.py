@@ -427,7 +427,7 @@ class PlannerListView(LoginRequiredMixin, ListView):
             'planned_screening_count': self.planned_screening_count,
             'eligible_screening_count': len(self.sorted_eligible_screenings),
             'eligible_screening_rows': self.sorted_eligible_screenings,
-            'form_errors': PlannerForm.form_errors,
+            'form_errors': PlannerForm.tracer.get_errors() if PlannerForm.tracer else [],
             'log': get_log(session),
         }
         unset_log(session)

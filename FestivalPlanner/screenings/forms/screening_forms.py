@@ -1,15 +1,14 @@
 import heapq
-import inspect
 from operator import attrgetter
 
 from django import forms
 from django.db import transaction
 
-from festival_planner.debug_tools import pr_debug
+from festival_planner.debug_tools import pr_debug, ExceptionTracer
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_log, initialize_log
 from festivals.models import current_festival
-from films.models import FilmFanFilmRating, current_fan, get_rating_as_int
+from films.models import FilmFanFilmRating, current_fan, get_rating_as_int, fan_rating
 from loader.forms.loader_forms import CalendarDumper
 from screenings.models import Attendance, Screening, get_available_filmscreenings
 from theaters.models import Theater
@@ -58,23 +57,86 @@ class PlannerSortKeyKeeper:
         return highest_rating, second_rating
 
 
-class PlannerForm(DummyForm):
-    form_errors = None
-    festival_screenings = None
-    getter = None
-    eligible_films_count_by_rating = None
-    planned_screenings_count = None
-    planned_screenings_count_by_rating = None
-    session = None
+class PlannerReporter:
+    def __init__(self, session, action):
+        self.session = session
+        self.highest_rating_by_film = {}
+        self.film_count_by_rating = {}
+        self.screening_count_by_rating = {}
+        self.planned_screenings_by_rating = {}
+        self.not_planned_films_by_rating = {}
+        self.planned_film_count_by_rating = {}
+        initialize_log(session, action)
+        self.indent = 0
+        self.ratings = sorted(FilmFanFilmRating.get_eligible_ratings(), reverse=True)
+        for rating in self.ratings:
+            self.film_count_by_rating[rating] = 0
+            self.screening_count_by_rating[rating] = 0
+            self.planned_screenings_by_rating[rating] = []
 
-    # TODO: Protect against fan-switching!
+    def set_film_dicts(self, films):
+        self.highest_rating_by_film = {f: self._get_highest_rating(f) for f in films}
+        for film in films:
+            rating = self.highest_rating_by_film[film]
+            self.film_count_by_rating[rating] += 1
+
+    def set_screening_count_by_rating(self, screenings):
+        for screening in screenings:
+            self.screening_count_by_rating[self.highest_rating_by_film[screening.film]] += 1
+
+    def report(self, not_planned_films):
+        self._set_not_planned_films_by_rating(not_planned_films)
+        for rating in self.ratings:
+            with_rating_str = f'with rating {int(rating)}'
+            film_count = self.film_count_by_rating[rating]
+            self._add_log(f'{film_count} films {with_rating_str}')
+            if film_count:
+                planned_screenings = self.planned_screenings_by_rating[rating]
+                self.indent += 1
+                self._add_log(f'{self.screening_count_by_rating[rating]} screenings {with_rating_str}')
+                self.indent += 1
+                for screening in planned_screenings:
+                    self._add_log(f'Planning {screening}')
+                self.indent -= 1
+                if len(planned_screenings) == film_count:
+                    self._add_log(f'All {film_count} films planned')
+                else:
+                    self._add_log(f'{len(planned_screenings)} screenings planned {with_rating_str}')
+                    self._add_log(f'Not planned:')
+                    self.indent += 1
+                    for film in self.not_planned_films_by_rating[rating]:
+                        self._add_log(f'{film}')
+                self.indent -= 1
+
+    @staticmethod
+    def _get_highest_rating(film):
+        highest_rating, _ = PlannerSortKeyKeeper.get_highest_ratings(film)
+        return highest_rating
+
+    def _set_not_planned_films_by_rating(self, not_planned_films):
+        self.not_planned_films_by_rating = {rating: [] for rating in self.ratings}
+        for film in not_planned_films:
+            rating = self.highest_rating_by_film[film]
+            self.not_planned_films_by_rating[rating].append(film)
+
+    def _add_log(self, text):
+        add_log(self.session, text, indent=self.indent)
+
+
+class PlannerForm(DummyForm):
+    tracer = None
+    getter = None
+    reporter = None
+    festival_screenings = None
+    planned_screenings_count = None
+    session = None
 
     @classmethod
     def auto_plan_screenings(cls, session, eligible_films):
         pr_debug('start', with_time=True)
         cls.session = session
-        cls.form_errors = []
-        initialize_log(session, 'Plan screenings')
+        cls.tracer = ExceptionTracer()
+        cls.reporter = PlannerReporter(session, 'Plan screenings')
 
         # Check existence of already planned screenings.
         auto_planned = Screening.screenings.filter(film__in=eligible_films, auto_planned=True)
@@ -84,59 +146,24 @@ class PlannerForm(DummyForm):
             return False
 
         # Initialize planning.
-        indent = 0
         cls._set_screening_status_getter(session)
-        sorted_ratings = sorted(FilmFanFilmRating.get_eligible_ratings(), reverse=True)
-        ratings = [str(r) for r in sorted_ratings]
-        ratings.extend([f'{r}?' for r in sorted_ratings])
+        cls.reporter.set_film_dicts(eligible_films)
         add_log(session, f'Planning {len(eligible_films) if eligible_films else "0"} films')
-        add_log(session, f'Ratings considered are {", ".join(ratings)}')
         transaction_committed = True
-        cls.eligible_films_count_by_rating = {}
         cls.planned_screenings_count = 0
-        cls.planned_screenings_count_by_rating = {}
 
-        # Plan the best screening for this fan for this festival.
+        # Plan the best screenings for this fan for this festival.
         try:
             with transaction.atomic():
-                for rating in ratings:
-                    # Get the screenings to be considered for planning films with this rating.
-                    rating_films = [f for f in eligible_films if f.rating_string() == str(rating)]
-                    cls.eligible_films_count_by_rating[rating] = len(rating_films)
-                    add_log(session, f'{len(rating_films)} films with rating {rating}')
-                    if not rating_films:
-                        continue
-                    rating_screenings = cls.get_eligible_screenings(rating_films)
-
-                    # Plan films with this rating.
-                    indent += 1
-                    add_log(session, f'{rating_screenings.count()} screenings with rating {rating}', indent=indent)
-                    cls._plan_rating_screenings(rating, rating_screenings, rating_films, indent)
-
-                    if cls.planned_screenings_count_by_rating[rating]:
-                        # Report the results of the planning.
-                        planned_screenings_count = cls.planned_screenings_count_by_rating[rating]
-                        text = f'{planned_screenings_count} screenings planned with rating {rating}'
-                        add_log(session, text, indent=indent)
-
-                        # Check whether there are eligible films with this rating left unplanned.
-                        if rating_films:
-                            text = f'{len(rating_films)} films with rating {rating} not planned:'
-                            add_log(session, text, indent=indent)
-                            indent += 1
-                            for not_planned_film in rating_films:
-                                add_log(session, f'{str(not_planned_film)}', indent=indent)
-                            indent -= 1
-                        else:
-                            film_count = cls.eligible_films_count_by_rating[rating]
-                            add_log(session, f'All {film_count} films planned', indent=indent)
-
-                    indent -= 1
+                eligible_screenings = cls.get_eligible_screenings(eligible_films)
+                cls.reporter.set_screening_count_by_rating(eligible_screenings)
+                cls._plan_rating_screenings(eligible_screenings, eligible_films)
         except Exception as e:
             cls._log_error(e, f'{cls.planned_screenings_count} updates rolled back')
             transaction_committed = False
-            cls.planned_screenings_count = 0
+            return transaction_committed
 
+        cls.reporter.report(eligible_films)
         add_log(session, f'{cls.planned_screenings_count} screenings planned')
         pr_debug('done', with_time=True)
         return transaction_committed
@@ -144,7 +171,7 @@ class PlannerForm(DummyForm):
     @classmethod
     def undo_auto_planning(cls, session, festival):
         transaction_committed = True
-        cls.form_errors = []
+        cls.tracer = ExceptionTracer()
         initialize_log(session, 'Undo automatic planning')
         manager = Screening.screenings
         fan = current_fan(session)
@@ -200,13 +227,14 @@ class PlannerForm(DummyForm):
         cls.getter = ScreeningStatusGetter(session, cls.festival_screenings)
 
     @classmethod
-    def _plan_rating_screenings(cls, rating, eligible_screenings, films, indent):
+    def _plan_rating_screenings(cls, eligible_screenings, films):
         sorted_eligible_screenings = cls.get_sorted_eligible_screenings(eligible_screenings)
-        indent += 1
         for eligible_screening in sorted_eligible_screenings:
             if cls._screening_is_plannable(eligible_screening, films):
+                rating, _ = PlannerSortKeyKeeper.get_highest_ratings(eligible_screening.film)
+
                 # Update the screening.
-                add_log(cls.session, f'Planning {eligible_screening} with film rating {rating}', indent=indent)
+                cls.reporter.planned_screenings_by_rating[rating].append(eligible_screening)
                 eligible_screening.auto_planned = True
                 AttendanceForm.update_attendance(eligible_screening, cls.getter.fan)
                 eligible_screening.save()
@@ -218,11 +246,6 @@ class PlannerForm(DummyForm):
 
                 # Update statistics.
                 cls.planned_screenings_count += 1
-                try:
-                    cls.planned_screenings_count_by_rating[rating] += 1
-                except KeyError:
-                    cls.planned_screenings_count_by_rating[rating] = 1
-        indent -= 1
 
     @classmethod
     def _get_screening_status(cls, screening):
@@ -236,7 +259,7 @@ class PlannerForm(DummyForm):
             status = cls._get_screening_status(screening)
             if cls._status_ok(status):
                 plannable = cls._still_valid(screening, films) and cls._no_overlap(screening)
-        return plannable
+            return plannable
 
     @classmethod
     def _status_ok(cls, status):
@@ -262,27 +285,8 @@ class PlannerForm(DummyForm):
         return overlaps_attended
 
     @classmethod
-    def _add_error(cls, errors):
-        def pr_trace(frm):
-            try:
-                frame_infos = inspect.trace()
-                for info in frame_infos:
-                    cls.form_errors.append(f'{info.filename} line {info.lineno} in {info.function}')
-                    cls.form_errors.extend(info.code_context)
-                    skip_line()
-            finally:
-                del frm
-
-        def skip_line():
-            cls.form_errors.append('')
-
-        cls.form_errors.extend(errors)
-        skip_line()
-        pr_trace(inspect.currentframe())
-
-    @classmethod
     def _log_error(cls, error, msg):
-        cls._add_error([f'{error}', f'{msg}'])
+        cls.tracer.add_error([f'{error}', f'{msg}'])
         add_log(cls.session, f'ERROR {error}, {msg}')
 
 
