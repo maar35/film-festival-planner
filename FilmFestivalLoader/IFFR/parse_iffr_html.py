@@ -16,7 +16,7 @@ from Shared.planner_interface import FilmInfo, Screening, ScreenedFilmType, Fest
     get_screen_from_parse_name, link_screened_film, ScreeningKey
 from Shared.web_tools import UrlFile, iri_slug_to_url, fix_json, paths_eq
 
-ALWAYS_DOWNLOAD = True
+ALWAYS_DOWNLOAD = False
 DEBUGGING = True
 DISPLAY_ADDED_SCREENING = True
 COMBINATION_TITLE_BY_ABBREVIATION = {
@@ -434,7 +434,7 @@ class SubsectionPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, subsection):
-        HtmlPageParser.__init__(self, festival_data, DEBUG_RECORDER, 'SEC', debugging=DEBUGGING)
+        super().__init__(festival_data, DEBUG_RECORDER, 'SEC', debugging=DEBUGGING)
         self.festival_data = festival_data
         self.subsection = subsection
         self.film = None
@@ -470,14 +470,14 @@ class SubsectionPageParser(HtmlPageParser):
             self.festival_data.films.append(self.film)
             COUNTER.increase('films')
 
-        # Add film info.
-        self.description = self.film_description
-        self.description or COUNTER.increase('no description')
-        self.add_film_info()
+            # Add film info.
+            self.description = self.film_description
+            self.description or COUNTER.increase('no description')
+            self.add_film_info()
 
-        # Reset film variables.
-        self.film_count += 1
-        self.init_film()
+            # Reset film variables.
+            self.film_count += 1
+            self.init_film()
 
     def add_film_info(self):
         film_info = FilmInfo(self.film.film_id, self.description, '')
@@ -880,9 +880,9 @@ class FilmInfoPageParser(ScreeningParser):
             self.set_combination()
 
     def update_film_duration(self):
-        if self.film_property_by_label:
+        try:
             minutes = self.film_property_by_label['Lengte'].rstrip('"')     # 100"
-        else:
+        except KeyError:
             minutes = 0
         self.film.duration = datetime.timedelta(minutes=int(minutes))
 
@@ -904,7 +904,7 @@ class FilmInfoPageParser(ScreeningParser):
                 stack.push(state.IN_REVIEWER)
 
             # Screenings part.
-            case [state.IN_ARTICLE, 'div', a] if a and a[0] == ('id', 'vertoningen'):
+            case [state.IN_ARTICLE | state.DONE_ARTICLE, 'div', a] if a and a[0] == ('id', 'vertoningen'):
                 stack.change(state.DONE_ARTICLE)
                 stack.push(state.AWAITING_SCREENINGS)
             case [state.AWAITING_SCREENINGS, 'ul', _]:
