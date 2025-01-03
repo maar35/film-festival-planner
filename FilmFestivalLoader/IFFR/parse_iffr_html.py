@@ -880,11 +880,17 @@ class FilmInfoPageParser(ScreeningParser):
             self.set_combination()
 
     def update_film_duration(self):
-        if self.film_property_by_label:
+        try:
             minutes = self.film_property_by_label['Lengte'].rstrip('"')     # 100"
-        else:
+        except KeyError:
             minutes = 0
         self.film.duration = datetime.timedelta(minutes=int(minutes))
+
+        # if self.film_property_by_label:
+        #     minutes = self.film_property_by_label['Lengte'].rstrip('"')     # 100"
+        # else:
+        #     minutes = 0
+        # self.film.duration = datetime.timedelta(minutes=int(minutes))
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -904,7 +910,7 @@ class FilmInfoPageParser(ScreeningParser):
                 stack.push(state.IN_REVIEWER)
 
             # Screenings part.
-            case [state.IN_ARTICLE, 'div', a] if a and a[0] == ('id', 'vertoningen'):
+            case [state.IN_ARTICLE | state.DONE_ARTICLE, 'div', a] if a and a[0] == ('id', 'vertoningen'):
                 stack.change(state.DONE_ARTICLE)
                 stack.push(state.AWAITING_SCREENINGS)
             case [state.AWAITING_SCREENINGS, 'ul', _]:
