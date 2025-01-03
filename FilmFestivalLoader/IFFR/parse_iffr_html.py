@@ -16,7 +16,7 @@ from Shared.planner_interface import FilmInfo, Screening, ScreenedFilmType, Fest
     get_screen_from_parse_name, link_screened_film, ScreeningKey
 from Shared.web_tools import UrlFile, iri_slug_to_url, fix_json, paths_eq
 
-ALWAYS_DOWNLOAD = True
+ALWAYS_DOWNLOAD = False
 DEBUGGING = True
 DISPLAY_ADDED_SCREENING = True
 COMBINATION_TITLE_BY_ABBREVIATION = {
@@ -885,12 +885,6 @@ class FilmInfoPageParser(ScreeningParser):
         except KeyError:
             minutes = 0
         self.film.duration = datetime.timedelta(minutes=int(minutes))
-
-        # if self.film_property_by_label:
-        #     minutes = self.film_property_by_label['Lengte'].rstrip('"')     # 100"
-        # else:
-        #     minutes = 0
-        # self.film.duration = datetime.timedelta(minutes=int(minutes))
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
