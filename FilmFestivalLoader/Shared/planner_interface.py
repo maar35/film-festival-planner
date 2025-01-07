@@ -831,6 +831,42 @@ class FestivalData:
                 for s in s_filtered:
                     print_screening(sf, s)
 
+    def create_yaml_object(self):
+        def can_go(film_info):
+            return self.film_can_go_to_planner(film_info.film_id)
+
+        # Get metadata per film id.
+        metadata_dict = {i.film_id: i.metadata for i in self.filminfos if can_go(i)}
+
+        # Get combination films per film id.
+        combi_dict = {}
+        combi_by_id = {i.film_id: i.combination_films for i in self.filminfos if can_go(i)}
+        for film_id, combi_films in combi_by_id.items():
+            combi_dict_list = [{
+                'film_id': combi_film.film_id,
+                'title': combi_film.title,
+            } for combi_film in combi_films]
+            combi_dict[film_id] = combi_dict_list
+
+        # Get screened films per film id.
+        screened_dict = {}
+        screened_by_id = {i.film_id: i.screened_films for i in self.filminfos if can_go(i)}
+        for film_id, screened_films in screened_by_id.items():
+            screened_dict_list = [{
+                'film_id': screened_film.film_id,
+                'title': screened_film.title,
+                } for screened_film in screened_films]
+            screened_dict[film_id] = screened_dict_list
+
+        # Create the YAML object.
+        yaml_object = {
+            'metadata': metadata_dict,
+            'screened_films': screened_dict,
+            'combinations': combi_dict,
+        }
+
+        return yaml_object
+
     def sort_films(self):
         seq_nr = 0
         for film in sorted(self.films):
@@ -866,10 +902,10 @@ class FestivalData:
             pr_info(f'Done writing {film_id_count} records to {self.filmids_file}.')
 
     def write_yaml_filminfo(self):
-        metadata_dict = {i.film_id: i.metadata for i in self.filminfos if self.film_can_go_to_planner(i.film_id)}
+        yaml_object = self.create_yaml_object()
         with open(self.filminfo_yaml_file, 'w') as stream:
-            yaml.dump(metadata_dict, stream, encoding='utf-8', indent=4)
-        pr_info(f'Done writing {len(metadata_dict)} objects to {self.filminfo_yaml_file}.')
+            yaml.dump(yaml_object, stream, encoding='utf-8', indent=4)
+        pr_info(f'Done writing {len(yaml_object)} objects to {self.filminfo_yaml_file}.')
 
     def write_csv_filminfo(self):
         data = [i for i in self.filminfos if self.film_can_go_to_planner(i.film_id)]

@@ -4,7 +4,6 @@
 import datetime
 import re
 from enum import Enum, auto
-from ftplib import FTP
 from typing import Dict
 from urllib.error import HTTPError
 
@@ -81,17 +80,17 @@ def setup_counters():
     COUNTER.start('articles')
     COUNTER.start('metadata')
     COUNTER.start('unexpected sentinel')
+    for screened_film_type in ScreenedFilmType:
+        COUNTER.start(screened_film_type.name)
+    COUNTER.start('combinations from screenings')
+    # COUNTER.start('shorts')
     # COUNTER.start('CombinedProgram')
     # COUNTER.start('OtherProgram')
     # COUNTER.start('feature films')
-    # COUNTER.start('shorts')
     # COUNTER.start('duplicate events')
     # COUNTER.start('combination events')
     # COUNTER.start('public')
     # COUNTER.start('industry')
-    # COUNTER.start('combinations from screenings')
-    # for screened_film_type in ScreenedFilmType:
-    #     COUNTER.start(screened_film_type.name)
     # COUNTER.start('wrong_title')
 
 
@@ -110,9 +109,6 @@ def parse_iffr_sites(festival_data):
     comment('Parsing subsection pages.')
     get_subsection_details(festival_data)
 
-    # comment('Parsing combination programs.')
-    # get_combination_programs(festival_data)
-
     comment('Parsing events.')
     get_events(festival_data)
 
@@ -121,35 +117,6 @@ def parse_iffr_sites(festival_data):
 
     # comment('Constructing combinations from screening data')
     # set_combinations_from_screening_data(festival_data)
-
-
-def try_ftp():
-    host = 'iffr.com'
-    path = 'nl/iffr/2025/films'
-    user = 'guest'  # 'anonymous'
-    timeout = 15
-
-    ftp_kwargs = {
-        'host': host,
-        'user': user,
-        'passwd': 'guest',
-        'timeout': timeout,
-    }
-    # print(f'@@ Starting ftp on {host}')
-    # with FTP(**ftp_kwargs) as ftp:
-    #     print(f'@@ Logged in, cwd to {path}')
-    #     ftp.cwd('nl/iffr/2025/films')
-    #     print(f'@@ ')
-    #     ftp.dir()
-
-    print(f'@@ Starting sftp on {host}')
-    with pysftp.Connection(host, username=user, private_key='guest') as sftp:
-        print(f'@@ Logged in, cd to {path}')
-        with sftp.cd(path):
-            print(f'@@ Listing "."')
-            d = sftp.listdir('.')
-    print(f'@@ Done.')
-    print(f'{d=}')
 
 
 def get_films(festival_data):
@@ -162,10 +129,6 @@ def get_films(festival_data):
     if az_html is not None:
         comment(f'Analysing AZ page, encoding={url_file.encoding}')
         AzPageParser(festival_data).feed(az_html)
-
-
-def get_combination_programs(festival_data):
-    get_film_details(festival_data, Film.category_combinations, 'combination')
 
 
 def get_events(festival_data):
@@ -190,6 +153,7 @@ def get_film_details(festival_data, category, category_name, always_download=ALW
         if film_html is not None:
             print(f'Analysing html file {film.film_id} of {category_name} {film.title}')
             FilmInfoPageParser(festival_data, film, url_file.encoding).feed(film_html)
+    FilmInfoPageParser.set_combinations(festival_data)
 
 
 def get_subsection_details(festival_data):
@@ -770,13 +734,11 @@ class FilmInfoPageParser(ScreeningParser):
         IN_PROPERTIES = auto()
         IN_PROPERTY_KEY = auto()
         IN_PROPERTY_VALUE = auto()
-        # IN_SCREENED_FILM_LIST = auto()
-        # AWAITING_SCREENED_FILM_LINK = auto()
-        # IN_SCREENED_FILM_LINK = auto()
         DONE = auto()
 
     debugging = DEBUGGING
     re_reviewer = re.compile(r'–\s(?P<reviewer>[^–0-9]+?)$')
+    can_go_by_screening = None
 
     def __init__(self, festival_data, film, charset):
         ScreeningParser.__init__(self, festival_data, 'FI', self.debugging)
@@ -885,6 +847,32 @@ class FilmInfoPageParser(ScreeningParser):
         except KeyError:
             minutes = 0
         self.film.duration = datetime.timedelta(minutes=int(minutes))
+
+    @classmethod
+    def set_combinations(cls, festival_data):
+        combi_list = [s for s in festival_data.screenings if s.film_is_combi()]
+        screened_list = [s for s in festival_data.screenings if s.film.medium_category == 'films']
+
+        cls.can_go_by_screening = {}
+        is_combi_by_film = {}
+        for screening in combi_list:
+            main_film = screening.film
+            coinciding_screenings = [s for s in screened_list if s.coincides(screening)]
+
+            # Maintain ability of screenings to go to the planner.
+            if coinciding_screenings:
+                cls.can_go_by_screening |= {s: False for s in coinciding_screenings}
+
+            # Link main films and screened films.
+            if coinciding_screenings and main_film not in is_combi_by_film:
+                is_combi_by_film[main_film] = True
+                main_film_info = main_film.film_info(festival_data)
+                screened_film_type = ScreenedFilmType.PART_OF_COMBINATION_PROGRAM   # screening.screened_film_type
+                screened_films = [s.film for s in coinciding_screenings]
+                for film in screened_films:
+                    link_screened_film(festival_data, film, main_film, main_film_info, screened_film_type)
+                COUNTER.increase('combinations from screenings')
+                COUNTER.increase(screened_film_type.name)
 
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
@@ -1014,21 +1002,33 @@ class IffrScreening(Screening):
 
     def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience,
                  screened_film_type=None, sold_out=None):
-        Screening.__init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience, sold_out=sold_out)
+        super().__init__(film, screen, start_datetime, end_datetime, qa, extra, audience, sold_out=sold_out)
         self.screened_film_type = screened_film_type
         self.sold_out = sold_out
+
+    def film_is_combi(self):
+        return self.film.medium_category == 'events'
 
 
 class IffrData(FestivalData):
 
     def __init__(self, planner_data_dir):
         super().__init__(FESTIVAL_CITY, planner_data_dir)
+        self.combination_by_url = {}
 
     def film_key(self, title, url):
         return url
 
-    def film_can_go_to_planner(self, filmid):
+    def film_can_go_to_planner(self, film_id):
         return True
+
+    def screening_can_go_to_planner(self, screening):
+        can_go = screening.is_public()
+
+        if can_go and FilmInfoPageParser.can_go_by_screening:
+            can_go = screening not in FilmInfoPageParser.can_go_by_screening
+
+        return can_go
 
 
 if __name__ == "__main__":

@@ -5,75 +5,98 @@
 {% block festival %} <a href="{% url 'festivals:index' %}?next={% url 'films:films' %}">{{ festival }}</a> {% endblock %}
 
 {% block content %}
-    <h2 class="row col-left-h2"><a href="{{ film.url }}">{{ film.title }}</a></h2>
-    <div class="row">
-        <span class="col-right">
-            {% if film_in_cache %}
-                <a href="{% url 'films:films' %}{{ fragment }}">Ratings of {{ film.title }}</a>
-            {% elif no_cache %}
-                Film not directly addressable in uninitialized film list
-            {% else %}
-                Film is hidden in ratings list <a href="{% url 'films:films' %}{{ display_all_query }}{{ fragment }}">Clear filters</a>
-            {% endif %}
-            <br>
-            <a href="{% url 'films:films' %}">Ratings</a>
-            <br>
-            <a href="{% url 'screenings:day_schema' %}">Day schema</a>
-            <br>
-            <a href="{% url 'screenings:planner' %}">Planner</a>
-        </span>
-    </div>
-    <ul>
-        <li>Film#: {{ film.film_id }}</li>
-        <li>Duration: {{ film.duration }}</li>
-        <li>Subsection: {% if film.subsection %} {{ film.subsection.name }} {% else %} - {% endif %}</li>
-        <li>Description: {% if description %} {{ description }} {% else %} - {% endif %}</li>
-        <li>Reviewer: {% if film.reviewer %} {{ film.reviewer }} {% else %} - {% endif %}</li>
-        <li>Medium category: {{ film.medium_category }}</li>
-        <li>Rating count: {{ film.filmfanfilmrating_set.count }}</li>
-        {% for item in metadata %}
-            <li>{{ item.key }}: {{ item.value }}</li>
-        {% endfor %}
-    </ul>
-    <br>
-    <form method="post">
-    {% csrf_token %}
-    <table>
-        <thead>
-            <tr>
-                <th>Film fan</th>
-                <th>Rating</th>
-                <th>Meaning</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for fan_row in fan_rows %}
-            <tr>
-                <td>
-                    {{ fan_row.fan.name }}
+<h2 class="row col-left-h2"><a href="{{ film.url }}">{{ film.title }}</a></h2>
+<div class="row">
+    <span class="col-right">
+        {% if film_in_cache %}
+            <a href="{% url 'films:films' %}{{ fragment }}">Ratings of {{ film.title }}</a>
+        {% elif no_cache %}
+            Film not directly addressable in uninitialized film list
+        {% else %}
+            Film is hidden in ratings list <a href="{% url 'films:films' %}{{ display_all_query }}{{ fragment }}">Clear filters</a>
+        {% endif %}
+        <br>
+        <a href="{% url 'films:films' %}">Film ratings</a>
+        <br>
+        <a href="{% url 'screenings:day_schema' %}">Day schema</a>
+        <br>
+        <a href="{% url 'screenings:planner' %}">Planner</a>
+    </span>
+</div>
+
+{% if screened_films %}
+<h3>Screened films</h3>
+<ul>
+    {% for screened_film in screened_films %}
+    <li><a href="{% url 'films:details' screened_film.id %}">{{ screened_film }}</a> - {{ screened_film.rating_string }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+{% if combination_films %}
+<h3>Screened as part of combination program</h3>
+<ul>
+    {% for combination_film in combination_films %}
+    <li><a href="{% url 'films:details' combination_film.id %}">{{ combination_film.title }}</a></li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+<h3>Film details</h3>
+<ul>
+    <li>Film#: {{ film.film_id }}</li>
+    <li>Duration: {{ film.duration }}</li>
+    <li>Subsection: {% if film.subsection %} {{ film.subsection.name }} {% else %} - {% endif %}</li>
+    <li>Description: {% if description %} {{ description }} {% else %} - {% endif %}</li>
+    <li>Reviewer: {% if film.reviewer %} {{ film.reviewer }} {% else %} - {% endif %}</li>
+    <li>Medium category: {{ film.medium_category }}</li>
+    <li>Rating count: {{ film.filmfanfilmrating_set.count }}</li>
+    {% for item in metadata %}
+        <li>{{ item.key }}: {{ item.value }}</li>
+    {% endfor %}
+</ul>
+<br>
+
+<h3>Fan ratings</h3>
+<form method="post">
+{% csrf_token %}
+<table>
+    <thead>
+        <tr>
+            <th>Film fan</th>
+            <th>Rating</th>
+            <th>Meaning</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for fan_row in fan_rows %}
+        <tr>
+            <td>
+                {{ fan_row.fan.name }}
+            </td>
+            {% if fan_row.fan == current_fan %}
+                <td class="dropdown">
+                    <span class="drop-button">
+                        {{ fan_row.rating_str }}
+                    </span>
+                    <div class="dropdown-content">
+                        {% for choice in fan_row.choices %}
+                            <input type="submit" value="{{ choice.value | stringformat:'2d' }}  {{ choice.rating_name }}" name="{{ choice.submit_name }}">
+                        {% endfor %}
+                    </div>
                 </td>
-                {% if fan_row.fan == current_fan %}
-                    <td class="dropdown">
-                        <span class="drop-button">
-                            {{ fan_row.rating_str }}
-                        </span>
-                        <div class="dropdown-content">
-                            {% for choice in fan_row.choices %}
-                                <input type="submit" value="{{ choice.value | stringformat:'2d' }}  {{ choice.rating_name }}" name="{{ choice.submit_name }}">
-                            {% endfor %}
-                        </div>
-                    </td>
-                {% else %}
-                    <td style="text-align: center">
-                    {{ fan_row.rating_str }}
-                    </td>
-                    {% endif %}
-                <td>{{ fan_row.rating_label }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    </form>
-    <br>
-    {% include "../includes/film_screenings.html" with film_screening_props=film_screening_props %}
+            {% else %}
+                <td style="text-align: center">
+                {{ fan_row.rating_str }}
+                </td>
+                {% endif %}
+            <td>{{ fan_row.rating_label }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</form>
+<br>
+
+{% include "../includes/film_screenings.html" with film_screening_props=film_screening_props %}
 {% endblock %}
