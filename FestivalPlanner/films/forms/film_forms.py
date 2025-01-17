@@ -6,8 +6,9 @@ from django.core.validators import RegexValidator
 from django.forms import CharField
 
 from authentication.models import FilmFan
+from festival_planner.cache import FilmRatingCache
 from festival_planner.fan_action import RatingAction
-from festivals.models import rating_action_key
+from festivals.models import rating_action_key, current_festival
 from films.models import FilmFanFilmRating, fan_rating_str, FIELD_BY_POST_ATTENDANCE, \
     MANAGER_BY_POST_ATTENDANCE
 
@@ -64,6 +65,13 @@ class PickRating(forms.Form):
         # Update cache if applicable.
         if not post_attendance and cls.film_rating_cache:
             cls.film_rating_cache.update_festival_caches(session, film, fan, rating_value)
+
+    @classmethod
+    def invalidate_festival_caches(cls, session, errors=None):
+        errors = errors or []
+        if not PickRating.film_rating_cache:
+            PickRating.film_rating_cache = FilmRatingCache(session, errors)
+        PickRating.film_rating_cache.invalidate_festival_caches(current_festival(session))
 
 
 class RatingForm(forms.Form):

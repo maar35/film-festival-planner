@@ -2,6 +2,7 @@ import os
 from operator import attrgetter
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import MultipleObjectsReturned
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
@@ -158,6 +159,8 @@ class NewTheaterDataListView(ListView):
             _ = manager.get(**kwargs)
         except cls.DoesNotExist:
             exists = False
+        except MultipleObjectsReturned:
+            exists = True       # TODO: handle better! (prevent the situation?)
         color = self.color_by_exists[exists]
         return color
 
@@ -330,8 +333,8 @@ class RatingsLoaderView(LoginRequiredMixin, ListView):
     """
     template_name = 'loader/ratings.html'
     http_method_names = ['get', 'post']
-    object_list = None
     context_object_name = 'festival_items'
+    object_list = None
     unexpected_error = ''
 
     def __init__(self, **kwargs):
@@ -346,7 +349,7 @@ class RatingsLoaderView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         self.object_list = self.get_queryset()
         context = add_base_context(self.request, super().get_context_data(**kwargs))
-        context['title'] = 'Load Ratings'
+        context['title'] = 'Load Films and Ratings'
         context['unexpected_error'] = self.unexpected_error
         context['form'] = RatingLoaderForm()
         return context
@@ -368,9 +371,9 @@ class RatingsLoaderView(LoginRequiredMixin, ListView):
                     festival = Festival.festivals.get(pk=festival_id)
                     session = request.session
                     switch_festival(session, festival)
-                    rating_dumpfile = self._ratings_dumpfile(festival)
+                    rating_cachefile = festival.ratings_cache()
                     rating_queryset = self._ratings_queryset(festival)
-                    form.load_rating_data(session, festival, rating_queryset, rating_dumpfile, import_mode=import_mode)
+                    form.load_rating_data(session, festival, rating_queryset, rating_cachefile, import_mode=import_mode)
                     return HttpResponseRedirect(reverse('films:films'))
                 else:
                     self.unexpected_error = "Can't identify submit widget."
@@ -384,7 +387,7 @@ class RatingsLoaderView(LoginRequiredMixin, ListView):
             'color': festival.festival_color,
             'film_count_on_file': file_record_count(festival.films_file(), has_header=True),
             'film_count': Film.films.filter(festival=festival).count,
-            'rating_count_on_file': file_record_count(self._ratings_dumpfile(festival), has_header=True),
+            'rating_count_on_file': file_record_count(festival.ratings_file(), has_header=True),
             'rating_count': self._ratings_queryset(festival).count,
         }
         return festival_row
@@ -393,10 +396,6 @@ class RatingsLoaderView(LoginRequiredMixin, ListView):
     def _ratings_queryset(festival):
         ratings_queryset = FilmFanFilmRating.film_ratings.filter(film__festival=festival)
         return ratings_queryset
-
-    @staticmethod
-    def _ratings_dumpfile(festival):
-        return festival.ratings_cache()
 
 
 class BaseListActionListView(LoginRequiredMixin, ListView):

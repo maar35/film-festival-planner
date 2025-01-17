@@ -9,7 +9,9 @@ MINUTES_STR = "'"
 UNRATED_STR = '-'
 FANS_IN_RATINGS_TABLE = ['Maarten', 'Adrienne']
 MIN_ALARM_RATING_DIFF = 3
-LOWEST_PLANNABLE_RATING = Config().config['Constants']['LowestPlannableRating']
+constants = Config().config['Constants']
+LOWEST_PLANNABLE_RATING = constants['LowestPlannableRating']
+HIGHEST_NOT_PLANNABLE_RATING = constants['HighestNotPlannableRating']
 FAN_NAMES_BY_FESTIVAL_BASE = {
     'IFFR': ['Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk'],
     'MTMF': ['Maarten', 'Adrienne', 'Manfred'],
@@ -127,6 +129,10 @@ class FilmFanFilmRating(models.Model):
 
     def str_fan_rating(self):
         return f'{self.film_fan.initial()}{self.rating}'
+
+    @classmethod
+    def get_not_plannable_ratings(cls):
+        return cls.Rating.values[:HIGHEST_NOT_PLANNABLE_RATING]
 
 
 class FilmFanFilmVote(models.Model):

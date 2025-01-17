@@ -343,7 +343,7 @@ class Screen:
         self.theater = theater
         self.name = name
         self.abbr = abbr
-        self.type = screen_type
+        self.type = screen_type if name else 'OnLine'
         self.new = new
 
     def __str__(self):
@@ -353,8 +353,8 @@ class Screen:
         text = ';'.join([
             str(self.screen_id),
             str(self.theater.theater_id),
-            self.name,
-            self.abbr,
+            self.name or 'ONLINE',
+            self.abbr or 'ol',
             str(self.screen_type_nr(self.type))
         ])
         return f'{text}\n'

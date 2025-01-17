@@ -7,8 +7,6 @@ from enum import Enum, auto
 from typing import Dict
 from urllib.error import HTTPError
 
-import pysftp
-
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Config, Counter
 from Shared.parse_tools import FileKeeper, try_parse_festival_sites, HtmlPageParser
 from Shared.planner_interface import FilmInfo, Screening, ScreenedFilmType, FestivalData, Film, \
@@ -25,10 +23,10 @@ COMBINATION_TITLE_BY_ABBREVIATION = {
 }
 COMBINATION_EVENT_TITLES = ['Babyfilmclub']
 DUPLICATE_EVENTS_TITLES_BY_MAIN = {
-    'Head South': ['Opening Night 2024: Head South'],
-    'La Luna': ['Closing Night: La Luna (film only)', 'Closing Night: La Luna & Party'],
-    'How to Have Sex': ['IFFR x EUR: How to Have Sex'],
-    'Blackbird Blackbird Blackberry': ['IFFR Young Selectors: Blackbird Blackbird Blackberry'],
+    'Fabula': ['Opening Night: Fabula', 'Opening Night: Fabula + Party'],
+    'This City Is a Battlefield': [
+        'Closing Night: This City is a Battlefield',
+        'Closing Night: This City is a Battlefield + Party'],
 }
 REVIEWER_BY_ALIAS = {
     'Cristina Kolozsváry-Kiss': 'Cristina Kolozsváry-Kiss',
@@ -83,6 +81,7 @@ def setup_counters():
     for screened_film_type in ScreenedFilmType:
         COUNTER.start(screened_film_type.name)
     COUNTER.start('combinations from screenings')
+
     # COUNTER.start('shorts')
     # COUNTER.start('CombinedProgram')
     # COUNTER.start('OtherProgram')
@@ -179,7 +178,7 @@ def get_subsection_page_details(festival_data, subsection, page_number):
         COUNTER.increase('not found urls')
         return False
 
-    comment_at_download = f'Downloading {subsection.name} page: {subsection.url}, encoding: {url_file.encoding}'
+    comment_at_download = f'Downloading {subsection.name} page: {paged_url}, encoding: {url_file.encoding}'
     subsection_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=comment_at_download)
     film_count = 0
     if subsection_html is not None:
@@ -430,12 +429,13 @@ class SubsectionPageParser(HtmlPageParser):
         else:
             self.film.medium_category = self.film_url.split('/')[6]
             self.film.subsection = self.subsection
-            print(f'Adding FILM: {self.film_title} {self.film.medium_category}')
+            print(f'Adding FILM: {self.film_title} - {self.film.medium_category}')
+            DEBUG_RECORDER.add(f'Adding FILM: {self.film_title} - {self.film.medium_category}')
             self.festival_data.films.append(self.film)
             COUNTER.increase('films')
 
             # Add film info.
-            self.description = self.film_description
+            self.description = self.film_description or ''
             self.description or COUNTER.increase('no description')
             self.add_film_info()
 
@@ -463,6 +463,13 @@ class SubsectionPageParser(HtmlPageParser):
                 stack.change(state.IN_TITLE)
             case [state.AWAITING_FILM_DESCRIPTION, 'p', _]:
                 stack.change(state.IN_FILM_DESCRIPTION)
+            case [state.AWAITING_FILM_DESCRIPTION, 'h3', _]:
+                self.add_film()
+                stack.pop()
+                stack.push(state.AWAITING_LINK)
+            case [state.AWAITING_FILM_DESCRIPTION, 'div', a] if a and a[0][1] == 'footer-menu':
+                self.add_film()
+                stack.change(state.DONE)
             case [state.AWAITING_HEADER | state.IDLE, 'div', a] if a and a[0][1] == 'footer-menu':
                 stack.change(state.DONE)
 
@@ -648,7 +655,11 @@ class ScreeningParser(HtmlPageParser):
         one_room_theaters = ['SKVR Centrum', 'V2', 'BRUTUS', 'Frank Taal Galerie', 'OX.Space', 'OX.Space',
                              'Secret locations', 'HAKA-gebouw', 'JOEY RAMONE', 'Oude Luxor',
                              'Station Rotterdam Centraal', 'Depot Boijmans Van Beuningen']
-        if location in one_room_theaters:
+        if not location:
+            # TODO: fix bug that registered online theater isn't recognized.
+            theater_parse_name = 'Video on demand'
+            screen_abbreviation = 'online'
+        elif location in one_room_theaters:
             theater_parse_name = location
         elif location.startswith('de Doelen') or location.startswith('De Doelen'):
             theater_parse_name = 'de Doelen'
@@ -727,8 +738,12 @@ class FilmInfoPageParser(ScreeningParser):
         AWAITING_SCREENINGS = auto()
         IN_SCREENINGS = auto()
         IN_TIMES = auto()
+        MORE_TIMES = auto()
+        IN_SCREENED_FILMS = auto()
         AWAITING_LOCATION = auto()
         IN_LOCATION = auto()
+        AWAITING_SCREENING_PROP = auto()
+        IN_SCREENING_PROP = auto()
         AWAITING_PROPERTIES = auto()
         DONE_ARTICLE = auto()
         IN_PROPERTIES = auto()
@@ -746,6 +761,7 @@ class FilmInfoPageParser(ScreeningParser):
         self.film = film
         self.reviewer = None
         self.start_dt_str = None
+        self.end_dt_str = None
         self.screening_times_str = None
         self.location = None
         self.charset = charset
@@ -767,8 +783,25 @@ class FilmInfoPageParser(ScreeningParser):
         self.film_info = self.film.film_info(self.festival_data)
         self.description = self.film_info.description
 
+        # Store known title languages.
+        # TODO: Make this actually work!
+        language_by_title = {
+            "L’abbaglio": 'it',
+            "L’amour ouf": 'fr',
+            "L’arbre de l’authenticité": 'fr',
+            "L’oro del Reno": 'it',
+            "La Chambre de Mariana": 'fr',
+            "La gran historia de la filosofía occidental": 'es',
+            "La guitarra flamenca de Yerai Cortés": 'es',
+            "La nott’e’l giorno": 'it',
+            "A Phu and His Wife": 'vn',
+            "Une Langue Universelle": 'fr',
+        }
+        Film.language_by_title |= language_by_title
+
     def init_screening_data(self):
         self.start_dt_str = None
+        self.end_dt_str = None
         self.screening_times_str = None
         self.location = None
 
@@ -795,6 +828,10 @@ class FilmInfoPageParser(ScreeningParser):
             m = self.re_reviewer.match(data)
             if m:
                 self.reviewer = m.group('reviewer')
+            else:
+                DEBUG_RECORDER.add(f'{self.film.title}: geen reviewer gevonden in {data}')
+        else:
+            DEBUG_RECORDER.add(f'{self.film.title}: {self.film.medium_category=}')
         return reviewer
 
     def add_iffr_screening(self):
@@ -803,9 +840,7 @@ class FilmInfoPageParser(ScreeningParser):
 
         # calculate the times.
         start_dt = datetime.datetime.fromisoformat(self.start_dt_str)          # 2025-01-30 10:00
-        end_time_str = self.screening_times_str[-5:]    # Donderdag 30 januari 2025 | 10.00 - 23.30
-        end_time = datetime.time.fromisoformat(end_time_str)
-        end_dt = datetime.datetime.combine(start_dt.date(), end_time)
+        end_dt = self._get_end_dt(start_dt)
 
         # Get the screen.
         screen = get_screen_from_parse_name(self.festival_data, self.location, ScreeningParser.split_location)
@@ -814,12 +849,43 @@ class FilmInfoPageParser(ScreeningParser):
         q_and_a = ''
         iffr_screening = IffrScreening(self.film, screen, start_dt, end_dt, q_and_a,
                                        '', Screening.audience_type_public)
+        self.screening = iffr_screening
 
         # Add the screening to the festival data.
         self.add_screening(iffr_screening, display=DISPLAY_ADDED_SCREENING)
 
         COUNTER.increase('screenings')
         self.init_screening_data()
+
+    @staticmethod
+    def _same_day(data):
+        components = data.split()
+        same_day = None
+        match len(components):
+            case 8:     # Maandag 3 februari 2025 | 19.30 - 21.34
+                same_day = True
+            case 6:     # Zaterdag 8 februari 2025 | 22.00
+                same_day = False
+            case _:
+                raise ValueError('Unexpected screening time format')
+        return same_day
+
+    def _get_end_dt(self, start_dt):
+        """
+        Get end time from the applicable of these two formats:
+            Donderdag 30 januari 2025 | 10.00 - 23.30
+            Zaterdag 8 februari 2025 | 22.00 - Zondag 9 februari 2025 | 00.04
+        """
+        if self.end_dt_str:
+            end_dt = datetime.datetime.fromisoformat(self.end_dt_str)       # 2025-02-09 00:04
+        else:
+            end_time_str = self.screening_times_str[-5:]
+            end_time = datetime.time.fromisoformat(end_time_str.replace('.', ':'))
+            start_time = start_dt.time()
+            start_date = start_dt.date()
+            end_date = start_date if end_time >= start_time else start_date + datetime.timedelta(days=1)
+            end_dt = datetime.datetime.combine(end_date, end_time)
+        return end_dt
 
     def finish_film_info(self):
         # Update film duration.
@@ -874,6 +940,14 @@ class FilmInfoPageParser(ScreeningParser):
                 COUNTER.increase('combinations from screenings')
                 COUNTER.increase(screened_film_type.name)
 
+    def set_screening_prop(self, data):
+        if 'QA' in data:
+            self.screening.q_and_a = data
+        elif 'ondertiteld' in data:
+            self.screening.subtitles = data
+        elif 'Press' in data:
+            self.screening.audience = 'industry'
+
     def handle_starttag(self, tag, attrs):
         HtmlPageParser.handle_starttag(self, tag, attrs)
 
@@ -890,21 +964,11 @@ class FilmInfoPageParser(ScreeningParser):
                 stack.push(state.IN_EMPHASIS)
             case [state.IN_PARAGRAPH, 'em', _]:
                 stack.push(state.IN_REVIEWER)
-
-            # Screenings part.
-            case [state.IN_ARTICLE | state.DONE_ARTICLE, 'div', a] if a and a[0] == ('id', 'vertoningen'):
+            case [state.IN_ARTICLE, 'div', a] if a and a[0] == ('data-component', 'trigger-warning'):
                 stack.change(state.DONE_ARTICLE)
-                stack.push(state.AWAITING_SCREENINGS)
-            case [state.AWAITING_SCREENINGS, 'ul', _]:
-                stack.change(state.IN_SCREENINGS)
-            case [state.IN_SCREENINGS, 'time', a] if a and a[0][0] == 'datetime':
-                self.start_dt_str = a[0][1]
-                stack.push(state.IN_TIMES)
-            case [state.AWAITING_LOCATION, 'span', _]:
-                stack.change(state.IN_LOCATION)
 
             # Properties part.
-            case [state.IN_ARTICLE, 'div', a] if a and a[0][1] == 'detail-list':
+            case [state.IN_ARTICLE | state.DONE_ARTICLE, 'div', a] if a and a[0][1] == 'detail-list':
                 stack.change(state.DONE_ARTICLE)
                 stack.push(state.AWAITING_PROPERTIES)
             case [state.AWAITING_PROPERTIES, 'dl', _]:
@@ -917,27 +981,36 @@ class FilmInfoPageParser(ScreeningParser):
                 self.finish_film_info()
                 stack.change(state.DONE)
 
+            # Screenings part.
+            case [state.IN_ARTICLE | state.DONE_ARTICLE, 'div', a] if a and a[0] == ('id', 'vertoningen'):
+                stack.change(state.DONE_ARTICLE)
+                stack.push(state.AWAITING_SCREENINGS)
+            case [state.AWAITING_SCREENINGS, 'ul', _]:
+                stack.change(state.IN_SCREENINGS)
+            case [state.IN_SCREENINGS, 'time', a] if a and a[0][0] == 'datetime':
+                self.start_dt_str = a[0][1]
+                stack.push(state.IN_TIMES)
+            case [state.MORE_TIMES, 'time', a] if a and a[0][0] == 'datetime':
+                self.end_dt_str = a[0][1]
+                stack.change(state.AWAITING_LOCATION)
+            case [state.AWAITING_LOCATION, 'span', _]:
+                stack.change(state.IN_LOCATION)
+            case [state.AWAITING_SCREENING_PROP, 'div', a] if a and a[0][1] == 'flex flex-col gap-1 shrink-0':
+                stack.pop()
+                DEBUG_RECORDER.add(f'{str(stack)}')
+
+            # Screened films part.
+            case [state.IN_SCREENINGS | state.AWAITING_SCREENING_PROP, 'ul', _]:
+                stack.push(state.IN_SCREENED_FILMS)
+            case [state.IN_ARTICLE | state.DONE_ARTICLE, 'div', a] if a and a[0] == ('data-component', 'film-composition'):
+                stack.change(state.DONE_ARTICLE)
+                """ TODO: parse screened films """
+
             # Reached sentinel in unexpected state.
             case [s, 'aside', _] if s != state.DONE:
                 COUNTER.increase('unexpected sentinel')
                 DEBUG_RECORDER.add(f'State stack when encountering sentinel:\n{str(stack)}')
                 stack.change(state.DONE)
-
-        # # Combination part.
-        # elif self.state_stack.state_is(self.FilmInfoParseState.AWAITING_SCREENED_FILM_LINK):
-        #     if tag == 'a' and len(attrs) > 1 and attrs[0][1] == 'favourite-link':
-        #         screened_film_slug = attrs[1][1]
-        #         self.screened_film_slugs.append(screened_film_slug)
-        #         self.state_stack.change(self.FilmInfoParseState.IN_SCREENED_FILM_LINK)
-        #     elif tag == 'section':
-        #         self.finish_film_info()
-        #         self.state_stack.change(self.FilmInfoParseState.DONE)
-        #
-        # # Screening part.
-        # else:
-        #     self.handle_screening_starttag(tag, attrs, self.state_stack,
-        #                                    self.ScreeningParseState.IN_SCREENINGS,
-        #                                    self.FilmInfoParseState.AWAITING_SCREENED_FILM_LINK)
 
     def handle_endtag(self, tag):
         HtmlPageParser.handle_endtag(self, tag)
@@ -960,8 +1033,14 @@ class FilmInfoPageParser(ScreeningParser):
                 stack.change(state.AWAITING_LOCATION)
             case [state.IN_LOCATION, 'span']:
                 self.add_iffr_screening()
-                stack.pop()
+                stack.change(state.AWAITING_SCREENING_PROP)
+            case [state.AWAITING_SCREENING_PROP, 'svg']:
+                stack.change(state.IN_SCREENING_PROP)
             case [state.IN_SCREENINGS, 'ul']:
+                stack.pop()
+
+            # Screened films part.
+            case [state.IN_SCREENED_FILMS, 'ul']:
                 stack.pop()
 
             # Properties part.
@@ -987,9 +1066,16 @@ class FilmInfoPageParser(ScreeningParser):
 
             # Screenings part.
             case state.IN_TIMES:
-                self.screening_times_str = data
+                if self._same_day(data):
+                    self.screening_times_str = data
+                else:
+                    stack.change(state.MORE_TIMES)
             case state.IN_LOCATION:
-                self.location = data
+                self.location = data or None
+            case state.IN_SCREENING_PROP:
+                self.set_screening_prop(data.strip())
+                if data.strip():
+                    stack.change(state.AWAITING_SCREENING_PROP)
 
             # Properties part.
             case state.IN_PROPERTY_KEY:

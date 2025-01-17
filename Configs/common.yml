@@ -1,6 +1,7 @@
 Constants:
     MaxShortMinutes: 40
     LowestPlannableRating: 8
+    HighestNotPlannableRating: 2
     WalkMinutesSameTheater: 15
     TravelMinutesOtherTheater: 40
 

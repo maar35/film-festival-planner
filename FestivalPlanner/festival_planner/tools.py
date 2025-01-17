@@ -30,6 +30,10 @@ def add_log(session, text, indent=0):
     """
     Add text to the results of the log cookie.
     """
+    if 'log' not in session:
+        initialize_log(session, 'Uninitialized log')
+    if 'results' not in session['log']:
+        initialize_log(session, 'Uninitialized log results')
     session['log']['results'].append(f'{INDENT_STRING * indent}{text}')
 
 

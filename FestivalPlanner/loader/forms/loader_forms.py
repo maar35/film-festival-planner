@@ -41,19 +41,17 @@ class RatingLoaderForm(Form):
     )
 
     @staticmethod
-    def load_rating_data(session, festival, rating_queryset, rating_dumpfile, import_mode=False):
+    def load_rating_data(session, festival, rating_queryset, rating_cachefile, import_mode=False):
         initialize_log(session)
         import_mode or add_log(session, 'No ratings will be loaded.')
 
         # Invalidate the cache associated with the current festival.
-        if not PickRating.film_rating_cache:
-            PickRating.film_rating_cache = FilmRatingCache(session, FilmsView.unexpected_errors)
-        PickRating.film_rating_cache.invalidate_festival_caches(festival)
+        PickRating.invalidate_festival_caches(session, FilmsView.unexpected_errors)
 
         # Save ratings if the import mode flag is set and all ratings
         # are replaced.
         if import_mode:
-            _ = RatingDumper(session).dump_objects(rating_dumpfile, rating_queryset)
+            _ = RatingDumper(session).dump_objects(rating_cachefile, rating_queryset)
 
         # Load films and, if applicable, ratings.
         if FilmLoader(session, festival).load_objects():
@@ -1086,6 +1084,7 @@ class RatingDumper(BaseDumper):
 
     def __init__(self, session):
         super().__init__(session, 'rating', self.manager, self.header)
+        PickRating.invalidate_festival_caches(session)
 
     def object_row(self, rating):
         return [rating.film.film_id, rating.film_fan.name, rating.rating]

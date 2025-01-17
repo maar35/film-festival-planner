@@ -660,13 +660,16 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         except FileNotFoundError:
             pass
         else:
-            combi_dict = yaml_object['combinations']
-            combination_films_by_film_id = {i: l for i, l in combi_dict.items()}
-            screened_dict = yaml_object['screened_films']
-            screened_films_by_film_id = {i: l for i, l in screened_dict.items()}
-            metadata_dict = yaml_object['metadata']
-            metadata_by_film_id = {i: metadata for i, metadata in metadata_dict.items()}
             try:
+                """
+                TODO: Read this information for as much as reasonable festivals.
+                """
+                combi_dict = yaml_object['combinations']
+                combination_films_by_film_id = {i: l for i, l in combi_dict.items()}
+                screened_dict = yaml_object['screened_films']
+                screened_films_by_film_id = {i: l for i, l in screened_dict.items()}
+                metadata_dict = yaml_object['metadata']
+                metadata_by_film_id = {i: metadata for i, metadata in metadata_dict.items()}
                 combi_data = combination_films_by_film_id[film.film_id]
                 screened_data = screened_films_by_film_id[film.film_id]
                 film_metadata = metadata_by_film_id[film.film_id]

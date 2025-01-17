@@ -21,8 +21,8 @@ class DummyForm(forms.Form):
 class PlannerSortKeyKeeper:
     reverse_by_attr_name = {
         'highest_rating': True,
-        'second_highest_rating': True,
         'attending_friend_count': True,
+        'second_highest_rating': True,
         'q_and_a': True,
         'filmscreening_count': False,
         'duration': False,
@@ -33,6 +33,9 @@ class PlannerSortKeyKeeper:
         self.screening = screening
         film = screening.film
         self.highest_rating, self.second_highest_rating = self.get_highest_ratings(film)
+        if self.second_highest_rating in FilmFanFilmRating.get_not_plannable_ratings():
+            pr_debug(f'{screening.film.title}: not plannable rating {self.second_highest_rating}')
+            self.highest_rating = self.second_highest_rating
         self.attending_friend_count = len(attending_friends)
         self.q_and_a = screening.q_and_a
         self.filmscreening_count = len(get_available_filmscreenings(film, fan))
