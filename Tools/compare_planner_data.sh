@@ -12,12 +12,15 @@ declare -r files="
     filminfo.yml
 "
 declare -r film_file=films.csv
+declare -r screening_file=screenings.csv
 declare -r tools_dir=~/Projects/FilmFestivalPlanner/Tools/
 
 for file in $files;
     do echo $file
     if [ $file = $film_file ]; then
         $tools_dir/diff_films.sh . $comp_dir
+    elif [ $file = $screening_file ]; then
+        $tools_dir/diff_screenings.sh . $comp_dir
     else
         diff $file $comp_dir
     fi

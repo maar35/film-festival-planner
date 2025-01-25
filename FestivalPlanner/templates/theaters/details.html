@@ -53,6 +53,7 @@
                 <th class="sticky-t-head">Screen</th>
                 <th class="sticky-t-head">PK</th>
                 <th class="sticky-t-head">ID</th>
+                <th class="sticky-t-head">Type</th>
                 <th class="sticky-t-head">Base abbreviation</th>
                 <th class="sticky-t-head">Abbreviation</th>
             </tr>
@@ -63,6 +64,7 @@
                     <td>{{ item.screen.parse_name }}</td>
                     <td>{{ item.screen.pk }}</td>
                     <td>{{ item.screen.screen_id }}</td>
+                    <td>{{ item.address_type }}</td>
                     <td>{{ item.form_field.screen_abbreviation }}</td>
                     <td>{{ theater.abbreviation }}{{ item.screen.abbreviation }}</td>
                 </tr>

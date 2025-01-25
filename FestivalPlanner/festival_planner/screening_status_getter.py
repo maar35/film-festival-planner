@@ -41,7 +41,11 @@ class ScreeningStatusGetter:
         cls.handle_screening_get_request(request)
         screening_pk_str = cls.screening_cookie.get(request.session)
         screening_pk = int(screening_pk_str) if screening_pk_str else None
-        selected_screening = Screening.screenings.get(pk=screening_pk) if screening_pk else None
+        try:
+            selected_screening = Screening.screenings.get(pk=screening_pk) if screening_pk else None
+        except Screening.DoesNotExist:
+            cls.screening_cookie.remove(request.session)
+            selected_screening = None
         return selected_screening
 
     @classmethod

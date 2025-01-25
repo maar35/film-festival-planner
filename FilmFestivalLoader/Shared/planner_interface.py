@@ -353,8 +353,8 @@ class Screen:
         text = ';'.join([
             str(self.screen_id),
             str(self.theater.theater_id),
-            self.name or 'ONLINE',
-            self.abbr or 'ol',
+            self.name,
+            self.abbr,
             str(self.screen_type_nr(self.type))
         ])
         return f'{text}\n'
@@ -659,7 +659,7 @@ class FestivalData:
             self.curr_screen_id += 1
             screen_id = self.curr_screen_id
             abbr = (screen_abbreviation or screen_parse_name).replace(' ', '').lower()
-            screen_type = 'OnDemand' if abbr.startswith('ondemand')\
+            screen_type = 'OnDemand' if 'ondemand' in abbr or 'on demand' in screen_parse_name\
                 else 'OnLine' if abbr.startswith('online')\
                 else 'Physical'
             if verbose:
