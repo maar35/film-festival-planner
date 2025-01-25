@@ -99,5 +99,7 @@
 </form>
 <br>
 
-{% include "../includes/film_screenings.html" with film_screening_props=film_screening_props %}
+{% for item in film_screening_props_list %}
+    {% include "../includes/film_screenings.html" with film_title=item.title film_screening_props=item.props %}
+{% endfor %}
 {% endblock %}
