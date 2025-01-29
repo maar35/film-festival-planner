@@ -104,7 +104,7 @@ class TheaterDetailView(DetailView):
             screen_items.append({
                 'screen': screen,
                 'form_field': form,
-                'address_type': [c[1] for c in Screen.ScreenAddressType.choices if c[0]==screen.address_type][0],
+                'address_type': [c[1] for c in Screen.ScreenAddressType.choices if c[0] == screen.address_type][0],
             })
 
         return screen_items

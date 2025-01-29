@@ -2,7 +2,6 @@ import os
 from operator import attrgetter
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import MultipleObjectsReturned
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
@@ -159,8 +158,6 @@ class NewTheaterDataListView(ListView):
             _ = manager.get(**kwargs)
         except cls.DoesNotExist:
             exists = False
-        except MultipleObjectsReturned:
-            exists = True       # TODO: handle better! (prevent the situation?)
         color = self.color_by_exists[exists]
         return color
 

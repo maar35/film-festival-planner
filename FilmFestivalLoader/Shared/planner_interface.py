@@ -199,7 +199,7 @@ class Film:
         else:
             if title[i] == "'":
                 i += 1
-            first = title[0:i]
+            first = title[:i]
             rest = title[i:].lstrip()
         if not self.articles_by_language[self.title_language].is_article(first):
             return title
@@ -835,28 +835,25 @@ class FestivalData:
         def can_go(film_info):
             return self.film_can_go_to_planner(film_info.film_id)
 
+        def get_info_dict(list_attr):
+            info_dict = {}
+            list_by_id = {i.film_id: getattr(i, list_attr) for i in self.filminfos if can_go(i)}
+            for film_id, listed_films in list_by_id.items():
+                info_dict_list = [{
+                    'film_id': listed_film.film_id,
+                    'title': listed_film.title,
+                } for listed_film in listed_films]
+                info_dict[film_id] = info_dict_list
+            return info_dict
+
         # Get metadata per film id.
         metadata_dict = {i.film_id: i.metadata for i in self.filminfos if can_go(i)}
 
         # Get combination films per film id.
-        combi_dict = {}
-        combi_by_id = {i.film_id: i.combination_films for i in self.filminfos if can_go(i)}
-        for film_id, combi_films in combi_by_id.items():
-            combi_dict_list = [{
-                'film_id': combi_film.film_id,
-                'title': combi_film.title,
-            } for combi_film in combi_films]
-            combi_dict[film_id] = combi_dict_list
+        combi_dict = get_info_dict('combination_films')
 
         # Get screened films per film id.
-        screened_dict = {}
-        screened_by_id = {i.film_id: i.screened_films for i in self.filminfos if can_go(i)}
-        for film_id, screened_films in screened_by_id.items():
-            screened_dict_list = [{
-                'film_id': screened_film.film_id,
-                'title': screened_film.title,
-                } for screened_film in screened_films]
-            screened_dict[film_id] = screened_dict_list
+        screened_dict = get_info_dict('screened_films')
 
         # Create the YAML object.
         yaml_object = {

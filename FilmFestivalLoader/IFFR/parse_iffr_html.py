@@ -15,6 +15,7 @@ from Shared.web_tools import UrlFile, iri_slug_to_url, fix_json, paths_eq
 ALWAYS_DOWNLOAD = False
 DEBUGGING = True
 DISPLAY_ADDED_SCREENING = True
+MAX_PAGES = 42
 COMBINATION_FILM_TITLES = ['Videoclub']
 REVIEWER_BY_ALIAS = {
     '­Callum McLean': 'Callum McLean',
@@ -29,8 +30,43 @@ REVIEWER_BY_ALIAS = {
     'Tim Leyendekke': 'Tim Leyendekker',
     'Vanja Kakudjercic': 'Vanja Kaludjercic',
 }
-REVIEWER_MAX_LENGTH = 44
-MAX_PAGES = 42
+
+# Store known title languages.
+LANGUAGE_BY_TITLE = {
+    "A Phu and His Wife": 'vn',
+    "Das Geheimnis der Marquise": 'de',
+    "Das Ornament des verliebten Herzens": 'de',
+    "De Idylle": 'nl',
+    "Die Ermittlung": 'de',
+    "Die Frauen sind auf natürliche Art schöpferisch – Agnès Varda": 'de',
+    "Die Jagd nach dem Glück": 'de',
+    "Die Liebe ist ein Mythos – Delphine Seyrig": 'de',
+    "Die süße Nummer: Ein friedliches Konsumerlebnis": 'de',
+    "Ein perfektes Paar oder die Unzucht wechselt ihre Haut": 'de',
+    "El striptease de mi abuela": 'es',
+    "L’abbaglio": 'it',
+    "L’amour ouf": 'fr',
+    "L’arbre de l’authenticité": 'fr',
+    "L’oro del Reno": 'it',
+    "La Chambre de Mariana": 'fr',
+    "La Durmiente": 'es',
+    "La era de las plantas con flor": 'es',
+    "La gran historia de la filosofía occidental": 'es',
+    "La guitarra flamenca de Yerai Cortés": 'es',
+    "La nostra habitació": 'es',
+    "La nott’e’l giorno": 'it',
+    "La nott’e’l giorno + Notre Dame de la Croisette": 'it',
+    "La sangre": 'es',
+    "Las manos del hombre": 'es',
+    "Le Comte de Monte-Cristo": 'fr',
+    "Le deuxième acte": 'fr',
+    "le mirage des mains ultra réalistes": 'fr',
+    "Les arènes": 'fr',
+    "Les Rites de Passage": 'fr',
+    "Un gran casino": 'fr',
+    "Una voz en la montaña": 'es',
+    "Une Langue Universelle": 'fr',
+}
 
 FESTIVAL = 'IFFR'
 FESTIVAL_YEAR = 2025
@@ -59,6 +95,9 @@ def main():
     # Set-up counters.
     setup_counters()
 
+    # Take known title languages into account.
+    add_title_languages()
+
     # Try parsing the websites.
     try_parse_festival_sites(parse_iffr_sites, festival_data, ERROR_COLLECTOR, DEBUG_RECORDER, FESTIVAL, COUNTER)
 
@@ -78,7 +117,10 @@ def setup_counters():
         COUNTER.start(screened_film_type.name)
     COUNTER.start('combinations from screenings')
     COUNTER.start('no location')
-    COUNTER.start('still no location')
+
+
+def add_title_languages():
+    Film.language_by_title |= LANGUAGE_BY_TITLE
 
 
 def parse_iffr_sites(festival_data):
@@ -87,9 +129,6 @@ def parse_iffr_sites(festival_data):
     :param festival_data: planner_interface.festival_data object.
     :return: None
     """
-    # comment('Trying FTP!')
-    # try_ftp()
-
     comment('Parsing AZ pages.')
     get_films(festival_data)
 
@@ -101,9 +140,6 @@ def parse_iffr_sites(festival_data):
 
     comment('Parsing regular film pages.')
     get_regular_films(festival_data)
-
-    # comment('Constructing combinations from screening data')
-    # set_combinations_from_screening_data(festival_data)
 
 
 def get_films(festival_data):
@@ -214,7 +250,7 @@ class AzPageParser(HtmlPageParser):
     film_id_by_title = {}
 
     def __init__(self, festival_data):
-        HtmlPageParser.__init__(self, festival_data, DEBUG_RECORDER, 'AZ', debugging=DEBUGGING)
+        super().__init__(festival_data, DEBUG_RECORDER, 'AZ', debugging=DEBUGGING)
         self.config = Config().config
         self.max_short_duration = datetime.timedelta(minutes=self.config['Constants']['MaxShortMinutes'])
         self.film = None
@@ -523,22 +559,6 @@ class FilmInfoPageParser(HtmlPageParser):
         self.film_info = self.film.film_info(self.festival_data)
         self.description = self.film_info.description
 
-        # Store known title languages.
-        # TODO: Make this actually work!
-        language_by_title = {
-            "L’abbaglio": 'it',
-            "L’amour ouf": 'fr',
-            "L’arbre de l’authenticité": 'fr',
-            "L’oro del Reno": 'it',
-            "La Chambre de Mariana": 'fr',
-            "La gran historia de la filosofía occidental": 'es',
-            "La guitarra flamenca de Yerai Cortés": 'es',
-            "La nott’e’l giorno": 'it',
-            "A Phu and His Wife": 'vn',
-            "Une Langue Universelle": 'fr',
-        }
-        Film.language_by_title |= language_by_title
-
     def init_screening_data(self):
         self.start_dt_str = None
         self.end_dt_str = None
@@ -553,9 +573,7 @@ class FilmInfoPageParser(HtmlPageParser):
                 if self.reviewer in REVIEWER_BY_ALIAS:
                     self.reviewer = REVIEWER_BY_ALIAS[self.reviewer]
             else:
-                DEBUG_RECORDER.add(f'{self.film.title}: geen reviewer gevonden in {data}')
-        else:
-            DEBUG_RECORDER.add(f'{self.film.title}: {self.film.medium_category=}')
+                DEBUG_RECORDER.add(f'{self.film.title}: No reviewer found in {data}')
 
     def add_iffr_screening(self):
         # Update film duration.
@@ -566,8 +584,6 @@ class FilmInfoPageParser(HtmlPageParser):
         end_dt = self._get_end_dt(start_dt)
 
         # Get the screen.
-        if not self.location:
-            COUNTER.increase('still no location')
         location = self.location or self.vod_screen
         screen = get_screen_from_parse_name(self.festival_data, location, self.split_location)
 
@@ -627,19 +643,14 @@ class FilmInfoPageParser(HtmlPageParser):
         return same_day
 
     def _get_end_dt(self, start_dt):
-        """
-        Get end time from the applicable of these two formats:
-            Donderdag 30 januari 2025 | 10.00 - 23.30
-            Zaterdag 8 februari 2025 | 22.00 - Zondag 9 februari 2025 | 00.04
-        """
         if self.end_dt_str:
-            end_dt = datetime.datetime.fromisoformat(self.end_dt_str)       # 2025-02-09 00:04
+            """ End datetime found in 'time' tag 'datetime' attribute """
+            end_dt = datetime.datetime.fromisoformat(self.end_dt_str)   # 2025-02-09 00:04
         else:
-            end_time_str = self.screening_times_str[-5:]
+            """ End time in same day as start time """
+            end_time_str = self.screening_times_str[-5:]    # Donderdag 30 januari 2025 | 10.00 - 23.30
             end_time = datetime.time.fromisoformat(end_time_str.replace('.', ':'))
-            start_time = start_dt.time()
-            start_date = start_dt.date()
-            end_date = start_date if end_time >= start_time else start_date + datetime.timedelta(days=1)
+            end_date = start_dt.date()
             end_dt = datetime.datetime.combine(end_date, end_time)
         return end_dt
 
@@ -765,7 +776,6 @@ class FilmInfoPageParser(HtmlPageParser):
                 stack.push(state.IN_SCREENED_FILMS)
             case [state.IN_ARTICLE | state.DONE_ARTICLE, 'div', a] if a and a[0] == ('data-component', 'film-composition'):
                 stack.change(state.DONE_ARTICLE)
-                """ TODO: parse screened films """
 
             # Reached sentinel in unexpected state.
             case [s, 'aside', _] if s != state.DONE:
@@ -798,7 +808,6 @@ class FilmInfoPageParser(HtmlPageParser):
                 stack.change(state.IN_SCREENING_PROP)
             case [state.AWAITING_SCREENING_PROP, 'li']:
                 stack.pop()
-                DEBUG_RECORDER.add(f'State stack after pop() end tag "li" from AWAITING_SCREENING_PROP:\n{str(stack)}')
             case [state.IN_SCREENINGS, 'ul']:
                 stack.pop()
 

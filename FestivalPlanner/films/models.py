@@ -13,7 +13,7 @@ constants = Config().config['Constants']
 LOWEST_PLANNABLE_RATING = constants['LowestPlannableRating']
 HIGHEST_NOT_PLANNABLE_RATING = constants['HighestNotPlannableRating']
 FAN_NAMES_BY_FESTIVAL_BASE = {
-    'IFFR': ['Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk'],
+    'IFFR': ['Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk', 'Martin'],
     'MTMF': ['Maarten', 'Adrienne', 'Manfred'],
     'NNF': [],
     'Imagine': ['Maarten', 'Adrienne'],

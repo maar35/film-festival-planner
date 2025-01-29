@@ -116,9 +116,10 @@ class Screen(models.Model):
     """
     Screen, used to display a film on.
     """
-    # Define screen address types as to indicate on location, on demand,
-    # etc.
     class ScreenAddressType(models.IntegerChoices):
+        """
+            Define screen address types as to indicate on location, on demand, physical.
+        """
         PHYSICAL = 3
         ONDEMAND = 2
         ONLINE = 1
