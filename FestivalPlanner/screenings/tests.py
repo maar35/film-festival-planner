@@ -9,7 +9,7 @@ from authentication.models import FilmFan
 from availabilities.models import Availabilities
 from festival_planner import debug_tools
 from festivals.models import FestivalBase, Festival, switch_festival, current_festival
-from films.models import Film
+from films.models import Film, FAN_NAMES_BY_FESTIVAL_BASE
 from films.tests import create_film, ViewsTestCase, get_decoded_content
 from screenings.models import Screening, Attendance
 from theaters.models import Theater, Screen, City
@@ -218,6 +218,7 @@ class ScreeningViewsTests(TestCase):
         self.assertIs(logged_in, True)
 
         switch_festival(session, self.festival)
+        FAN_NAMES_BY_FESTIVAL_BASE[self.festival.base.mnemonic] = [fan_name]
 
         return client, fan
 
@@ -334,6 +335,9 @@ class DetailsViewTest(ScreeningViewsTests):
         start_dt_2 = datetime.datetime.fromisoformat('2024-08-31 11:30').replace(tzinfo=None)
         screening_2 = self.arrange_create_screening(self.screen_b, start_dt_2)
 
+        kwargs = {'fan': fan, 'start_dt': start_dt_1, 'end_dt': start_dt_2 + datetime.timedelta(hours=8)}
+        Availabilities.availabilities.create(**kwargs)
+
         _ = Attendance.attendances.create(fan=fan, screening=screening_1)
 
         # Act.
@@ -368,5 +372,6 @@ class DetailsViewTest(ScreeningViewsTests):
         self.assertEqual(Screening.screenings.count(), 1)
         self.assertContains(response, f'<li>Screen: {screening.screen}</li>')
         self.assertContains(response, f'<li>Time: Sat 31 Aug 11:30 - 13:24</li>')
-        self.assertContains(response, f'<li>Film: <a href="/films/{film.pk}/details/"> {film.title}</a></li>')
+        film_list_item = f'<li>Film details: <a href="/films/{film.pk}/details/">{film.title} details</a></li>'
+        self.assertContains(response, film_list_item)
         self.assertContains(response, '<li>Film description: None</li>')

@@ -1,6 +1,6 @@
 from django.db import models
 
-INITIAL_MAARTEN = 'Ⓜ'
+INITIAL_BY_FAN = {'Maarten': 'Ⓜ', 'Martin': 'H'}
 
 
 class FilmFan(models.Model):
@@ -20,7 +20,7 @@ class FilmFan(models.Model):
         return f'{self.name}'
 
     def initial(self):
-        return INITIAL_MAARTEN if self == me() else self.name[:1]
+        return INITIAL_BY_FAN[self.name] if self.name in INITIAL_BY_FAN else self.name[:1]
 
     def switch_current(self, session):
         session['fan_name'] = self.name

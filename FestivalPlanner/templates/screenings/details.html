@@ -10,7 +10,7 @@
     <span class="col-right">
         <a href="{% url 'screenings:day_schema' %}">Day schema</a>
         <br>
-        <a href="{% url 'films:films' %}">Ratings</a>
+        <a href="{% url 'films:films' %}">Film ratings</a>
         <br>
         <a href="{% url 'screenings:planner' %}">Planner</a>
     </span>
@@ -22,13 +22,14 @@
 <ul>
     <li>Screen: {{ screening.screen }}</li>
     <li>Time: {{ screening.start_dt|date:"D j M H:i" }} - {{ screening.end_dt|date:"H:i" }}</li>
-    <li>Film: <a href="{% url 'films:details' screening.film.id %}"> {{ screening.film.title }}</a></li>
+    <li>Film details: <a href="{% url 'films:details' screening.film.id %}">{{ screening.film.title }} details</a></li>
+    <li>Film website: <a href="{{ screening.film.url }}">{{ screening.film.title }}</a></li>
     <li>Film description: {{ film_description }}</li>
     <li>Screening duration: {{ duration }} ({{ minutes }})</li>
     <li>Subtitles: {% if screening.subtitles %} {{ screening.subtitles }} {% else %} - {% endif %}</li>
     <li>Q&A: {% if screening.q_and_a %} {{ screening.q_and_a }} {% else %} - {% endif %}</li>
     <li>Combination program: {% if screening.combination_program %} {{ screening.combination_program }} {% else %} - {% endif %}</li>
-    <li>Screening#: {{ screening.id }}</li>
+    <li>Screening ID: {{ screening.id }}</li>
 </ul>
 <br>
 <h3>Screening attendances</h3>

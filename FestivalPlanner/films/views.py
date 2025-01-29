@@ -24,7 +24,7 @@ from festivals.config import Config
 from festivals.models import current_festival
 from films.forms.film_forms import PickRating, UserForm
 from films.models import FilmFanFilmRating, Film, current_fan, get_judging_fans, fan_rating_str, \
-    FilmFanFilmVote, fan_rating, FANS_IN_RATINGS_TABLE
+    FilmFanFilmVote, fan_rating
 from screenings.models import Attendance
 from sections.models import Subsection, Section
 
@@ -594,11 +594,16 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         super_context = super().get_context_data(**kwargs)
         film = self.object
+        metadata, combi_data, screened_data = self._get_film_info(film)
         session = self.request.session
+        festival = current_festival(session)
+        combi_films = [Film.films.get(film_id=d['film_id'], festival=festival) for d in combi_data]
+        screened_films = [Film.films.get(film_id=d['film_id'], festival=festival) for d in screened_data]
         selected_screening = ScreeningStatusGetter.get_selected_screening(self.request)
-        fan_rows = []
+        films_for_screenings = combi_films or [film]
         fans = get_judging_fans()
         logged_in_fan = current_fan(session)
+        fan_rows = []
         for fan in fans:
             choices = get_fan_choices(self.submit_name_prefix, film, fan, logged_in_fan, self.submit_names)
             rating = FilmFanFilmRating.film_ratings.filter(film=film, film_fan=fan).first()
@@ -612,14 +617,16 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         new_context = {
             'title': 'Film Rating Results',
             'description': self.get_description(film),
-            'metadata': self._get_metadata(film),
+            'screened_films': screened_films,
+            'combination_films': combi_films,
+            'metadata': metadata,
             'fragment': FilmFragmentKeeper.fragment_code(film.film_id),
             'film_in_cache': in_cache,
             'no_cache': in_cache is None,
             'display_all_query': in_cache is None or self.get_query_string_to_display_all(session),
             'fan_rows': fan_rows,
             'film_title': film.title,
-            'film_screening_props': self._get_film_screening_props(),
+            'film_screening_props_list': self._get_film_screening_props_list(session, films_for_screenings),
             'screening': selected_screening,
             'unexpected_error': self.unexpected_error,
         }
@@ -642,21 +649,38 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
                 description = None
         return description
 
-    @classmethod
-    def _get_metadata(cls, film):
+    @staticmethod
+    def _get_film_info(film):
+        combi_data = []
+        screened_data = []
+        film_metadata = {}
         filminfo_yaml_file = film.festival.filminfo_yaml_file()
         try:
             with open(filminfo_yaml_file, 'r') as stream:
-                cls.metadata_by_film_id = yaml.safe_load(stream)
+                yaml_object = yaml.safe_load(stream)
         except FileNotFoundError:
-            film_data = {}
+            pass
         else:
             try:
-                film_data = cls.metadata_by_film_id[film.film_id]
+                """
+                TODO: Read this information for as much as reasonable festivals.
+                """
+                combi_dict = yaml_object['combinations']
+                combination_films_by_film_id = {i: l for i, l in combi_dict.items()}
+                screened_dict = yaml_object['screened_films']
+                screened_films_by_film_id = {i: l for i, l in screened_dict.items()}
+                metadata_dict = yaml_object['metadata']
+                metadata_by_film_id = {i: metadata for i, metadata in metadata_dict.items()}
+                combi_data = combination_films_by_film_id[film.film_id]
+                screened_data = screened_films_by_film_id[film.film_id]
+                film_metadata = metadata_by_film_id[film.film_id]
             except KeyError:
-                film_data = {}
-        metadata = [{'key': k, 'value': v} for k, v in film_data.items()]
-        return metadata
+                combi_data = []
+                screened_data = []
+                film_metadata = {}
+        metadata = [{'key': k, 'value': v} for k, v in film_metadata.items()]
+        film_info = metadata, combi_data, screened_data
+        return film_info
 
     def film_is_in_cache(self, session):
         """
@@ -680,11 +704,17 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         display_all_query = Filter.get_display_query_from_keys(filter_keys)
         return display_all_query
 
-    def _get_film_screening_props(self):
-        session = self.request.session
-        film = self.object
-        film_screening_props = ScreeningStatusGetter.get_filmscreening_props(session, film)
-        return film_screening_props
+    @staticmethod
+    def _get_film_screening_props_list(session, films):
+        film_screening_props_list = []
+        for film in films:
+            film_screening_props = ScreeningStatusGetter.get_filmscreening_props(session, film)
+            film_screening_props_item = {
+                'props': film_screening_props,
+                'title': film.title,
+            }
+            film_screening_props_list.append(film_screening_props_item)
+        return film_screening_props_list
 
 
 class ReviewersView(ListView):

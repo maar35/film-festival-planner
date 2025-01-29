@@ -5,3 +5,4 @@ fr: d' l' la le les un une
 it:il l' la le un una
 nl:de een het
 pt:a o um uma
+vn:cái Nó

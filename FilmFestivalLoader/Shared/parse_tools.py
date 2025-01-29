@@ -151,6 +151,9 @@ class BaseHtmlPageParser(HTMLParser):
         def state_in(self, states):
             return self.stack[-1] in states
 
+        def is_at_bottom(self):
+            return len(self.stack) == 1
+
     def __init__(self, debug_recorder, debug_prefix, debugging=False):
         HTMLParser.__init__(self)
         self.debug_recorder = debug_recorder

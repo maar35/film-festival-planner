@@ -561,6 +561,7 @@ class ScreeningCalendarListView(LoginRequiredMixin, ListView):
         screening = attendance.screening
         attendance_row = {
             'screening': screening,
+            'attendants': screening.attendants_str(),
         }
         return attendance_row
 

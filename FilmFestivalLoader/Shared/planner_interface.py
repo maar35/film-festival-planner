@@ -199,7 +199,7 @@ class Film:
         else:
             if title[i] == "'":
                 i += 1
-            first = title[0:i]
+            first = title[:i]
             rest = title[i:].lstrip()
         if not self.articles_by_language[self.title_language].is_article(first):
             return title
@@ -343,7 +343,7 @@ class Screen:
         self.theater = theater
         self.name = name
         self.abbr = abbr
-        self.type = screen_type
+        self.type = screen_type if name else 'OnLine'
         self.new = new
 
     def __str__(self):
@@ -659,7 +659,7 @@ class FestivalData:
             self.curr_screen_id += 1
             screen_id = self.curr_screen_id
             abbr = (screen_abbreviation or screen_parse_name).replace(' ', '').lower()
-            screen_type = 'OnDemand' if abbr.startswith('ondemand')\
+            screen_type = 'OnDemand' if 'ondemand' in abbr or 'on demand' in screen_parse_name\
                 else 'OnLine' if abbr.startswith('online')\
                 else 'Physical'
             if verbose:
@@ -831,6 +831,39 @@ class FestivalData:
                 for s in s_filtered:
                     print_screening(sf, s)
 
+    def create_yaml_object(self):
+        def can_go(film_info):
+            return self.film_can_go_to_planner(film_info.film_id)
+
+        def get_info_dict(list_attr):
+            info_dict = {}
+            list_by_id = {i.film_id: getattr(i, list_attr) for i in self.filminfos if can_go(i)}
+            for film_id, listed_films in list_by_id.items():
+                info_dict_list = [{
+                    'film_id': listed_film.film_id,
+                    'title': listed_film.title,
+                } for listed_film in listed_films]
+                info_dict[film_id] = info_dict_list
+            return info_dict
+
+        # Get metadata per film id.
+        metadata_dict = {i.film_id: i.metadata for i in self.filminfos if can_go(i)}
+
+        # Get combination films per film id.
+        combi_dict = get_info_dict('combination_films')
+
+        # Get screened films per film id.
+        screened_dict = get_info_dict('screened_films')
+
+        # Create the YAML object.
+        yaml_object = {
+            'metadata': metadata_dict,
+            'screened_films': screened_dict,
+            'combinations': combi_dict,
+        }
+
+        return yaml_object
+
     def sort_films(self):
         seq_nr = 0
         for film in sorted(self.films):
@@ -866,10 +899,10 @@ class FestivalData:
             pr_info(f'Done writing {film_id_count} records to {self.filmids_file}.')
 
     def write_yaml_filminfo(self):
-        metadata_dict = {i.film_id: i.metadata for i in self.filminfos if self.film_can_go_to_planner(i.film_id)}
+        yaml_object = self.create_yaml_object()
         with open(self.filminfo_yaml_file, 'w') as stream:
-            yaml.dump(metadata_dict, stream, encoding='utf-8', indent=4)
-        pr_info(f'Done writing {len(metadata_dict)} objects to {self.filminfo_yaml_file}.')
+            yaml.dump(yaml_object, stream, encoding='utf-8', indent=4)
+        pr_info(f'Done writing {len(yaml_object)} objects to {self.filminfo_yaml_file}.')
 
     def write_csv_filminfo(self):
         data = [i for i in self.filminfos if self.film_can_go_to_planner(i.film_id)]

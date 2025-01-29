@@ -8,7 +8,7 @@ from festival_planner.debug_tools import pr_debug, ExceptionTracer
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_log, initialize_log
 from festivals.models import current_festival
-from films.models import FilmFanFilmRating, current_fan, get_rating_as_int, fan_rating
+from films.models import FilmFanFilmRating, current_fan, get_rating_as_int
 from loader.forms.loader_forms import CalendarDumper
 from screenings.models import Attendance, Screening, get_available_filmscreenings
 from theaters.models import Theater
@@ -21,8 +21,8 @@ class DummyForm(forms.Form):
 class PlannerSortKeyKeeper:
     reverse_by_attr_name = {
         'highest_rating': True,
-        'second_highest_rating': True,
         'attending_friend_count': True,
+        'second_highest_rating': True,
         'q_and_a': True,
         'filmscreening_count': False,
         'duration': False,
@@ -33,6 +33,8 @@ class PlannerSortKeyKeeper:
         self.screening = screening
         film = screening.film
         self.highest_rating, self.second_highest_rating = self.get_highest_ratings(film)
+        if self.second_highest_rating in FilmFanFilmRating.get_not_plannable_ratings():
+            self.highest_rating = self.second_highest_rating
         self.attending_friend_count = len(attending_friends)
         self.q_and_a = screening.q_and_a
         self.filmscreening_count = len(get_available_filmscreenings(film, fan))
