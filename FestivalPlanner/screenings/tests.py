@@ -9,10 +9,15 @@ from authentication.models import FilmFan
 from availabilities.models import Availabilities
 from festival_planner import debug_tools
 from festivals.models import FestivalBase, Festival, switch_festival, current_festival
-from films.models import Film, FAN_NAMES_BY_FESTIVAL_BASE
+from films.models import Film, FAN_NAMES_BY_FESTIVAL_BASE, LOWEST_PLANNABLE_RATING, FilmFanFilmRating, set_current_fan
 from films.tests import create_film, ViewsTestCase, get_decoded_content
+from films.views import MAX_SHORT_MINUTES
 from screenings.models import Screening, Attendance
 from theaters.models import Theater, Screen, City
+
+
+def arrange_get_datetime(dt_string):
+    return datetime.datetime.fromisoformat(dt_string).replace(tzinfo=None)
 
 
 def arrange_screening_attributes():
@@ -47,7 +52,7 @@ class ScreeningModelTests(TestCase):
         Screenings can not have the same film, screen and start time.
         """
         # Arrange.
-        start_dt = datetime.datetime.fromisoformat('2022-10-31 20:00').replace(tzinfo=None)
+        start_dt = arrange_get_datetime('2022-10-31 20:00')
         screening_kwargs = {
             'film': self.film,
             'screen': self.screen,
@@ -72,7 +77,7 @@ class ScreeningModelTests(TestCase):
         -- THIS IS NOT DESIRABLE --
         """
         # Arrange.
-        end_dt = datetime.datetime.fromisoformat('2024-02-06 23:14').replace(tzinfo=None)
+        end_dt = arrange_get_datetime('2024-02-06 23:14')
         screening_kwargs = {
             'film': self.film,
             'screen': self.screen,
@@ -140,7 +145,7 @@ class AttendanceModelTests(TestCase):
         self.assertRegex(string, r'Tue 30 Nov')
 
 
-class ScreeningViewsTests(TestCase):
+class ScreeningViewsTests(ViewsTestCase):
 
     def setUp(self):
         super().setUp()
@@ -204,30 +209,26 @@ class ScreeningViewsTests(TestCase):
         }
         self.screen_b = Screen.screens.create(**screen_kwargs)
 
-    def arrange_get_regular_user_props(self):
-        views_testcase = ViewsTestCase()
-        views_testcase.setUp()
-        client = views_testcase.client
-        session = client.session
-
-        regular_credentials = views_testcase.regular_credentials
-        request = views_testcase.get_regular_fan_request()
-        fan_name = request.session['fan_name']
-        fan = FilmFan.film_fans.get(name=fan_name)
-        logged_in = views_testcase.login(regular_credentials)
+    def arrange_regular_user_props(self):
+        fan = self.regular_fan
+        logged_in = self.login(self.regular_credentials)
         self.assertIs(logged_in, True)
 
-        switch_festival(session, self.festival)
-        FAN_NAMES_BY_FESTIVAL_BASE[self.festival.base.mnemonic] = [fan_name]
+        request = self.get_regular_fan_request()
+        set_current_fan(request)
 
-        return client, fan
+        switch_festival(self.session, self.festival)
+        FAN_NAMES_BY_FESTIVAL_BASE[self.festival.base.mnemonic] = [fan.name]
 
-    def arrange_create_screening(self, screen, start_dt):
+        return fan
+
+    def arrange_create_screening(self, screen, start_dt, film=None):
+        film = film or self.film
         screening_kwargs = {
-            'film': self.film,
+            'film': film,
             'screen': screen,
             'start_dt': start_dt,
-            'end_dt': start_dt + self.film.duration,
+            'end_dt': start_dt + film.duration,
             'subtitles': 'it, en',
             'q_and_a': True,
         }
@@ -258,20 +259,19 @@ class DaySchemaViewTests(ScreeningViewsTests):
         A screening is found in the day schema of its start date.
         """
         # Arrange.
-        client, fan = self.arrange_get_regular_user_props()
-        session = client.session
+        fan = self.arrange_regular_user_props()
 
-        start_dt = datetime.datetime.fromisoformat('2024-08-30 11:15').replace(tzinfo=None)
+        start_dt = arrange_get_datetime('2024-08-30 11:15')
         _ = self.arrange_create_screening(self.screen_sg, start_dt)
 
         kwargs = {'fan': fan, 'start_dt': start_dt, 'end_dt': start_dt + datetime.timedelta(hours=8)}
         Availabilities.availabilities.create(**kwargs)
 
         # Act.
-        response = client.get(reverse('screenings:day_schema'))
+        response = self.client.get(reverse('screenings:day_schema'))
 
         # Assert.
-        self.assertEqual(current_festival(session), self.festival)
+        self.assertEqual(current_festival(self.session), self.festival)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(Screening.screenings.count(), 1)
         self.assert_screening_status(response, Screening.ScreeningStatus.FREE)
@@ -281,19 +281,18 @@ class DaySchemaViewTests(ScreeningViewsTests):
         An attended screening has the correct colors in the day schema.
         """
         # Arrange.
-        client, fan = self.arrange_get_regular_user_props()
-        session = client.session
+        fan = self.arrange_regular_user_props()
 
-        start_dt = datetime.datetime.fromisoformat('2024-08-31 11:30').replace(tzinfo=None)
+        start_dt = arrange_get_datetime('2024-08-31 11:30')
         screening = self.arrange_create_screening(self.screen_b, start_dt)
 
         _ = Attendance.attendances.create(fan=fan, screening=screening)
 
         # Act.
-        response = client.get(reverse('screenings:day_schema'))
+        response = self.client.get(reverse('screenings:day_schema'))
 
         # Assert.
-        self.assertEqual(current_festival(session), self.festival)
+        self.assertEqual(current_festival(self.session), self.festival)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(Screening.screenings.count(), 1)
         self.assert_screening_status(response, Screening.ScreeningStatus.ATTENDS)
@@ -305,19 +304,18 @@ class DetailsViewTest(ScreeningViewsTests):
         An attended screening is correctly displayed in the screening details view.
         """
         # Arrange.
-        client, fan = self.arrange_get_regular_user_props()
-        session = client.session
+        fan = self.arrange_regular_user_props()
 
-        start_dt = datetime.datetime.fromisoformat('2024-08-30 11:15').replace(tzinfo=None)
+        start_dt = arrange_get_datetime('2024-08-30 11:15')
         screening = self.arrange_create_screening(self.screen_sg, start_dt)
 
         _ = Attendance.attendances.create(fan=fan, screening=screening)
 
         # Act.
-        response = client.get(reverse('screenings:details', args=[screening.pk]))
+        response = self.client.get(reverse('screenings:details', args=[screening.pk]))
 
         # Assert.
-        self.assertEqual(current_festival(session), self.festival)
+        self.assertEqual(current_festival(self.session), self.festival)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(Screening.screenings.count(), 1)
         self.assert_screening_status(response, Screening.ScreeningStatus.ATTENDS, view='details')
@@ -327,12 +325,11 @@ class DetailsViewTest(ScreeningViewsTests):
         If a screening is attended, other screenings of the same film are marked 'attends film'.
         """
         # Arrange.
-        client, fan = self.arrange_get_regular_user_props()
-        session = client.session
+        fan = self.arrange_regular_user_props()
 
-        start_dt_1 = datetime.datetime.fromisoformat('2024-08-30 11:15').replace(tzinfo=None)
+        start_dt_1 = arrange_get_datetime('2024-08-30 11:15')
         screening_1 = self.arrange_create_screening(self.screen_sg, start_dt_1)
-        start_dt_2 = datetime.datetime.fromisoformat('2024-08-31 11:30').replace(tzinfo=None)
+        start_dt_2 = arrange_get_datetime('2024-08-31 11:30')
         screening_2 = self.arrange_create_screening(self.screen_b, start_dt_2)
 
         kwargs = {'fan': fan, 'start_dt': start_dt_1, 'end_dt': start_dt_2 + datetime.timedelta(hours=8)}
@@ -341,10 +338,10 @@ class DetailsViewTest(ScreeningViewsTests):
         _ = Attendance.attendances.create(fan=fan, screening=screening_1)
 
         # Act.
-        response = client.get(reverse('screenings:details', args=[screening_2.pk]))
+        response = self.client.get(reverse('screenings:details', args=[screening_2.pk]))
 
         # Assert.
-        self.assertEqual(current_festival(session), self.festival)
+        self.assertEqual(current_festival(self.session), self.festival)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(Screening.screenings.count(), 2)
         self.assert_screening_status(response, Screening.ScreeningStatus.ATTENDS_FILM, view='details')
@@ -354,20 +351,19 @@ class DetailsViewTest(ScreeningViewsTests):
         Details in the details view correspond with the screening.
         """
         # Arrange.
-        client, fan = self.arrange_get_regular_user_props()
-        session = client.session
+        fan = self.arrange_regular_user_props()
 
-        start_dt = datetime.datetime.fromisoformat('2024-08-31 11:30').replace(tzinfo=None)
+        start_dt = arrange_get_datetime('2024-08-31 11:30')
         screening = self.arrange_create_screening(self.screen_b, start_dt)
         film = screening.film
 
         _ = Attendance.attendances.create(fan=fan, screening=screening)
 
         # Act.
-        response = client.get(reverse('screenings:details', args=[screening.pk]))
+        response = self.client.get(reverse('screenings:details', args=[screening.pk]))
 
         # Assert.
-        self.assertEqual(current_festival(session), self.festival)
+        self.assertEqual(current_festival(self.session), self.festival)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(Screening.screenings.count(), 1)
         self.assertContains(response, f'<li>Screen: {screening.screen}</li>')
@@ -375,3 +371,106 @@ class DetailsViewTest(ScreeningViewsTests):
         film_list_item = f'<li>Film details: <a href="/films/{film.pk}/details/">{film.title} details</a></li>'
         self.assertContains(response, film_list_item)
         self.assertContains(response, '<li>Film description: None</li>')
+
+
+class PlannerViewTests(ScreeningViewsTests):
+    def setUp(self):
+        super().setUp()
+
+        film_kwargs = {
+            'festival': self.festival,
+            'film_id': 8,
+            'seq_nr': 16,
+            'sort_title': 'portraits in life and death',
+            'title': 'Portraits in Life and Death',
+            'duration': datetime.timedelta(minutes=MAX_SHORT_MINUTES + 1),
+            'medium_category': 'events',
+            'url': 'https://edition.cnn.com/2024/04/18/style/venice-biennale-2024-what-to-see/index.html'
+        }
+        self.film_2 = Film.films.create(**film_kwargs)
+
+    @staticmethod
+    def arrange_get_film_rating(film, fan, rating):
+        kwargs = {
+            'film': film,
+            'film_fan': fan,
+            'rating': rating,
+        }
+        film_rating = FilmFanFilmRating.film_ratings.create(**kwargs)
+        return film_rating
+
+    @staticmethod
+    def arrange_get_screening_kwargs(film, screen, start_dt):
+        screening_kwargs = {
+            'film': film,
+            'screen': screen,
+            'start_dt': start_dt,
+        }
+        return screening_kwargs
+
+    def arrange_good_and_bad_screening(self, fan, set_availability=False):
+        good_rating = LOWEST_PLANNABLE_RATING
+        start_dt_good = arrange_get_datetime('2024-02-08 11:30')
+        self.good_film = self.film
+        self.good_film_rating = self.arrange_get_film_rating(self.good_film, fan, good_rating)
+        self.good_screening_kwargs = self.arrange_get_screening_kwargs(self.good_film, self.screen_b, start_dt_good)
+        self.good_screening = self.arrange_create_screening(**self.good_screening_kwargs)
+
+        bad_rating = LOWEST_PLANNABLE_RATING - 1
+        start_dt_bad = arrange_get_datetime('2024-02-08 23:14')
+        self.bad_film = self.film_2
+        self.bad_rating = self.arrange_get_film_rating(self.bad_film, fan, bad_rating)
+        self.bad_screening_kwargs = self.arrange_get_screening_kwargs(self.bad_film, self.screen_sg, start_dt_bad)
+        self.bad_screening = self.arrange_create_screening(**self.bad_screening_kwargs)
+
+        if set_availability:
+            start_dt = arrange_get_datetime('2024-02-08 09:30')
+            end_dt = arrange_get_datetime('2024-02-09 21:00')
+            Availabilities.availabilities.create(fan=fan, start_dt=start_dt, end_dt=end_dt)
+
+    def test_only_eligible_rating_can_be_planned(self):
+        """
+        A screening of a film with eligible rating will be listed in the Planner View.
+        """
+        # Arrange.
+        fan = self.arrange_regular_user_props()
+        self.arrange_good_and_bad_screening(fan)
+
+        # Act.
+        response = self.client.get(reverse('screenings:planner'))
+
+        # Assert.
+        self.assertGreaterEqual(self.good_film_rating.rating, LOWEST_PLANNABLE_RATING)
+        self.assertLess(self.bad_rating.rating, LOWEST_PLANNABLE_RATING)
+        self.assertEqual(Screening.screenings.count(), 2)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertContains(response, self.good_film.title)
+        self.assertNotContains(response, self.bad_film.title)
+
+    def test_only_eligible_rating_is_planned(self):
+        """
+        A screening will be marked as auto-planned when planned.
+        """
+        # Arrange.
+        fan = self.arrange_regular_user_props()
+        self.arrange_good_and_bad_screening(fan, set_availability=True)
+
+        get_response = self.client.get(reverse('screenings:planner'))
+
+        # Act.
+        post_data = {'plan': ['Plan screenings']}
+        post_response = self.client.post(reverse('screenings:planner'), data=post_data)
+        self.good_screening = Screening.screenings.get(**self.good_screening_kwargs)
+        self.bad_screening = Screening.screenings.get(**self.bad_screening_kwargs)
+
+        # Assert.
+        self.assertGreaterEqual(self.good_film_rating.rating, LOWEST_PLANNABLE_RATING)
+        self.assertLess(self.bad_rating.rating, LOWEST_PLANNABLE_RATING)
+        self.assertEqual(Screening.screenings.count(), 2)
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        redirect_response = self.client.get(post_response.url)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        self.assertEqual(Screening.screenings.filter(auto_planned=True).count(), 1)
+        self.assertFalse(self.bad_screening.auto_planned)
+        self.assertTrue(self.good_screening.auto_planned)
