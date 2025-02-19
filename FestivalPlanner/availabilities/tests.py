@@ -81,7 +81,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
         A screening is found in the day schema of its start date, but our fan is unavailable.
         """
         # Arrange.
-        _ = self.arrange_regular_user_props()
+        self.arrange_regular_user_props()
 
         start_dt = datetime.datetime.fromisoformat('2024-08-30 11:15').replace(tzinfo=None)
         _ = self.arrange_create_screening(self.screen_sg, start_dt)
