@@ -19,7 +19,8 @@ class AvailabilitiesModelTests(TestCase):
         # Arrange.
         screening_view_tests = ScreeningViewsTests()
         screening_view_tests.setUp()
-        client, _ = screening_view_tests.arrange_get_regular_user_props()
+        _ = screening_view_tests.arrange_regular_user_props()
+        client = screening_view_tests.client
 
         fan = FilmFan.film_fans.create(name='Jimmie', is_admin=False, seq_nr=3)
 
@@ -56,8 +57,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
         A screening is found in the day schema of its start date.
         """
         # Arrange.
-        client, fan = self.arrange_get_regular_user_props()
-        session = client.session
+        fan = self.arrange_regular_user_props()
 
         start_dt = datetime.datetime.fromisoformat('2024-08-30 11:15').replace(tzinfo=None)
         _ = self.arrange_create_screening(self.screen_sg, start_dt)
@@ -67,10 +67,10 @@ class DaySchemaViewTests(ScreeningViewsTests):
         Availabilities.availabilities.create(**availability_kwargs)
 
         # Act.
-        response = client.get(reverse('screenings:day_schema'))
+        response = self.client.get(reverse('screenings:day_schema'))
 
         # Assert.
-        self.assertEqual(current_festival(session), self.festival)
+        self.assertEqual(current_festival(self.session), self.festival)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(Screening.screenings.count(), 1)
         self.assert_screening_status(response, Screening.ScreeningStatus.FREE)
@@ -81,17 +81,16 @@ class DaySchemaViewTests(ScreeningViewsTests):
         A screening is found in the day schema of its start date, but our fan is unavailable.
         """
         # Arrange.
-        client, fan = self.arrange_get_regular_user_props()
-        session = client.session
+        _ = self.arrange_regular_user_props()
 
         start_dt = datetime.datetime.fromisoformat('2024-08-30 11:15').replace(tzinfo=None)
         _ = self.arrange_create_screening(self.screen_sg, start_dt)
 
         # Act.
-        response = client.get(reverse('screenings:day_schema'))
+        response = self.client.get(reverse('screenings:day_schema'))
 
         # Assert.
-        self.assertEqual(current_festival(session), self.festival)
+        self.assertEqual(current_festival(self.session), self.festival)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(Screening.screenings.count(), 1)
         self.assert_screening_status(response, Screening.ScreeningStatus.UNAVAILABLE)
@@ -101,8 +100,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
         Availability is displayed in the day schema till day-break-time.
         """
         # Arrange.
-        client, fan = self.arrange_get_regular_user_props()
-        session = client.session
+        fan = self.arrange_regular_user_props()
 
         start_dt = datetime.datetime.fromisoformat('2024-08-30 20:45').replace(tzinfo=None)
         _ = self.arrange_create_screening(self.screen_sg, start_dt)
@@ -112,10 +110,10 @@ class DaySchemaViewTests(ScreeningViewsTests):
         Availabilities.availabilities.create(**availability_kwargs)
 
         # Act.
-        response = client.get(reverse('screenings:day_schema'))
+        response = self.client.get(reverse('screenings:day_schema'))
 
         # Assert.
-        self.assertEqual(current_festival(session), self.festival)
+        self.assertEqual(current_festival(self.session), self.festival)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(Screening.screenings.count(), 1)
         self.assert_screening_status(response, Screening.ScreeningStatus.FREE)
