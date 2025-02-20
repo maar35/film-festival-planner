@@ -253,18 +253,25 @@ class ScreeningViewsTests(ViewsTestCase):
 
 
 class DaySchemaViewTests(ScreeningViewsTests):
+    def arrange_create_std_screening(self):
+
+        start_dt = arrange_get_datetime('2024-08-30 11:15')
+        screening = self.arrange_create_screening(self.screen_sg, start_dt)
+        return screening
+
     def test_screening_in_day_schema(self):
         """
         A screening is found in the day schema of its start date.
         """
         # Arrange.
         self.arrange_regular_user_props()
+        screening = self.arrange_create_std_screening()
 
-        start_dt = arrange_get_datetime('2024-08-30 11:15')
-        _ = self.arrange_create_screening(self.screen_sg, start_dt)
-
-        kwargs = {'fan': self.fan, 'start_dt': start_dt, 'end_dt': start_dt + datetime.timedelta(hours=8)}
-        Availabilities.availabilities.create(**kwargs)
+        Availabilities.availabilities.create(
+            fan=self.fan,
+            start_dt=screening.start_dt,
+            end_dt=screening.start_dt + datetime.timedelta(hours=8),
+        )
 
         # Act.
         response = self.client.get(reverse('screenings:day_schema'))
@@ -286,17 +293,15 @@ class DaySchemaViewTests(ScreeningViewsTests):
             film_fan=self.fan,
             rating=FilmFanFilmRating.Rating.MEDIOCRE,
         )
-        dull_colorr = Screening.uninteresting_rating_color
-
-        start_dt = arrange_get_datetime('2024-08-30 11:15')
-        _ = self.arrange_create_screening(self.screen_sg, start_dt)
+        dull_color = Screening.uninteresting_rating_color
+        _ = self.arrange_create_std_screening()
 
         # Act.
         response = self.client.get(reverse('screenings:day_schema'))
 
         # Assert.
         self.assertEqual(response.status_code, HTTPStatus.OK)
-        self.assertContains(response, f'"color: {dull_colorr}">{film_rating.rating}<')
+        self.assertContains(response, f'"color: {dull_color}">{film_rating.rating}<')
         self.assertLess(film_rating.rating, LOWEST_PLANNABLE_RATING)
 
     def test_film_section_is_indicated(self):
@@ -305,7 +310,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
         """
         # Arrange.
         self.arrange_regular_user_props()
-        section_color = 'Chartreuse'
+        section_color = 'chartreuse'
         section = Section.sections.create(
             festival=self.festival,
             section_id=27,
@@ -321,9 +326,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
         )
         self.film.subsection = subsection
         self.film.save()
-
-        start_dt = arrange_get_datetime('2024-08-30 11:15')
-        _ = self.arrange_create_screening(self.screen_sg, start_dt)
+        _ = self.arrange_create_std_screening()
 
         # Act.
         response = self.client.get(reverse('screenings:day_schema'))
