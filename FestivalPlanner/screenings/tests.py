@@ -13,6 +13,7 @@ from films.models import Film, FAN_NAMES_BY_FESTIVAL_BASE, LOWEST_PLANNABLE_RATI
 from films.tests import create_film, ViewsTestCase, get_decoded_content
 from films.views import MAX_SHORT_MINUTES
 from screenings.models import Screening, Attendance
+from sections.models import Section, Subsection
 from theaters.models import Theater, Screen, City
 
 
@@ -283,7 +284,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
         film_rating = FilmFanFilmRating.film_ratings.create(
             film=self.film,
             film_fan=self.fan,
-            rating=FilmFanFilmRating.Rating.MEDIOCRE
+            rating=FilmFanFilmRating.Rating.MEDIOCRE,
         )
         dull_colorr = Screening.uninteresting_rating_color
 
@@ -296,6 +297,40 @@ class DaySchemaViewTests(ScreeningViewsTests):
         # Assert.
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertContains(response, f'"color: {dull_colorr}">{film_rating.rating}<')
+        self.assertLess(film_rating.rating, LOWEST_PLANNABLE_RATING)
+
+    def test_film_section_is_indicated(self):
+        """
+        The subsection of the film of a screening is indicated in the day schema by its color.
+        """
+        # Arrange.
+        self.arrange_regular_user_props()
+        section_color = 'Chartreuse'
+        section = Section.sections.create(
+            festival=self.festival,
+            section_id=27,
+            name='Onda olandese',
+            color=section_color,
+        )
+        subsection = Subsection.subsections.create(
+            subsection_id=1,
+            section=section,
+            name='Film per bambini',
+            description='These films always have a young child as the main character.',
+            url='https://en.wikipedia.org/wiki/National_pavilions_at_the_Venice_Biennale',
+        )
+        self.film.subsection = subsection
+        self.film.save()
+
+        start_dt = arrange_get_datetime('2024-08-30 11:15')
+        _ = self.arrange_create_screening(self.screen_sg, start_dt)
+
+        # Act.
+        response = self.client.get(reverse('screenings:day_schema'))
+
+        # Assert.
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertContains(response, f'border-right: 1px solid {section_color};')
 
     def test_attendance(self):
         """
