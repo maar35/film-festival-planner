@@ -13,6 +13,7 @@ from films.models import Film, FAN_NAMES_BY_FESTIVAL_BASE, LOWEST_PLANNABLE_RATI
 from films.tests import create_film, ViewsTestCase, get_decoded_content
 from films.views import MAX_SHORT_MINUTES
 from screenings.models import Screening, Attendance
+from sections.models import Section, Subsection
 from theaters.models import Theater, Screen, City
 
 
@@ -252,18 +253,25 @@ class ScreeningViewsTests(ViewsTestCase):
 
 
 class DaySchemaViewTests(ScreeningViewsTests):
+    def arrange_create_std_screening(self):
+
+        start_dt = arrange_get_datetime('2024-08-30 11:15')
+        screening = self.arrange_create_screening(self.screen_sg, start_dt)
+        return screening
+
     def test_screening_in_day_schema(self):
         """
         A screening is found in the day schema of its start date.
         """
         # Arrange.
         self.arrange_regular_user_props()
+        screening = self.arrange_create_std_screening()
 
-        start_dt = arrange_get_datetime('2024-08-30 11:15')
-        _ = self.arrange_create_screening(self.screen_sg, start_dt)
-
-        kwargs = {'fan': self.fan, 'start_dt': start_dt, 'end_dt': start_dt + datetime.timedelta(hours=8)}
-        Availabilities.availabilities.create(**kwargs)
+        Availabilities.availabilities.create(
+            fan=self.fan,
+            start_dt=screening.start_dt,
+            end_dt=screening.start_dt + datetime.timedelta(hours=8),
+        )
 
         # Act.
         response = self.client.get(reverse('screenings:day_schema'))
@@ -273,6 +281,59 @@ class DaySchemaViewTests(ScreeningViewsTests):
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(Screening.screenings.count(), 1)
         self.assert_screening_status(response, Screening.ScreeningStatus.FREE)
+
+    def test_screening_with_uninteresting_rating_has_dull_color(self):
+        """
+        An uninteresting rating is displayed in grey on its screening in the day schema.
+        """
+        # Arrange.
+        self.arrange_regular_user_props()
+        film_rating = FilmFanFilmRating.film_ratings.create(
+            film=self.film,
+            film_fan=self.fan,
+            rating=FilmFanFilmRating.Rating.MEDIOCRE,
+        )
+        dull_color = Screening.uninteresting_rating_color
+        _ = self.arrange_create_std_screening()
+
+        # Act.
+        response = self.client.get(reverse('screenings:day_schema'))
+
+        # Assert.
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertContains(response, f'"color: {dull_color}">{film_rating.rating}<')
+        self.assertLess(film_rating.rating, LOWEST_PLANNABLE_RATING)
+
+    def test_film_section_is_indicated(self):
+        """
+        The subsection of the film of a screening is indicated in the day schema by its color.
+        """
+        # Arrange.
+        self.arrange_regular_user_props()
+        section_color = 'chartreuse'
+        section = Section.sections.create(
+            festival=self.festival,
+            section_id=27,
+            name='Onda olandese',
+            color=section_color,
+        )
+        subsection = Subsection.subsections.create(
+            subsection_id=1,
+            section=section,
+            name='Film per bambini',
+            description='These films always have a young child as the main character.',
+            url='https://en.wikipedia.org/wiki/National_pavilions_at_the_Venice_Biennale',
+        )
+        self.film.subsection = subsection
+        self.film.save()
+        _ = self.arrange_create_std_screening()
+
+        # Act.
+        response = self.client.get(reverse('screenings:day_schema'))
+
+        # Assert.
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertContains(response, f'border-right: 1px solid {section_color};')
 
     def test_attendance(self):
         """
