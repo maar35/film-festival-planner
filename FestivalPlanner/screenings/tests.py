@@ -274,6 +274,29 @@ class DaySchemaViewTests(ScreeningViewsTests):
         self.assertEqual(Screening.screenings.count(), 1)
         self.assert_screening_status(response, Screening.ScreeningStatus.FREE)
 
+    def test_screening_with_uninteresting_rating_has_dull_color(self):
+        """
+        An uninteresting rating is displayed in grey on its screening in the day schema.
+        """
+        # Arrange.
+        self.arrange_regular_user_props()
+        film_rating = FilmFanFilmRating.film_ratings.create(
+            film=self.film,
+            film_fan=self.fan,
+            rating=FilmFanFilmRating.Rating.MEDIOCRE
+        )
+        dull_colorr = Screening.uninteresting_rating_color
+
+        start_dt = arrange_get_datetime('2024-08-30 11:15')
+        _ = self.arrange_create_screening(self.screen_sg, start_dt)
+
+        # Act.
+        response = self.client.get(reverse('screenings:day_schema'))
+
+        # Assert.
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertContains(response, f'"color: {dull_colorr}">{film_rating.rating}<')
+
     def test_attendance(self):
         """
         An attended screening has the correct colors in the day schema.
