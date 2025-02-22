@@ -101,6 +101,9 @@ class Filter(Cookie):
         """
         return self._action_by_filtered[self.on(session)]
 
+    def label(self, session):
+        return self._action_by_filtered[self.off(session)]
+
 
 class FestivalDay:
     day_str_format = '%a %Y-%m-%d'

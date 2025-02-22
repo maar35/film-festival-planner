@@ -21,7 +21,7 @@ from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_base_context, unset_log, wrap_up_form_errors, application_name, get_log, \
     initialize_log, add_log, CSV_DIALECT
 from festivals.config import Config
-from festivals.models import current_festival
+from festivals.models import current_festival, Festival
 from films.forms.film_forms import PickRating, UserForm
 from films.models import FilmFanFilmRating, Film, current_fan, get_judging_fans, fan_rating_str, \
     FilmFanFilmVote, fan_rating
@@ -728,6 +728,8 @@ class ReviewersView(ListView):
     title = 'Reviewers Statistics'
     fan_list = get_judging_fans()
     judged_filter = Filter('not judged', filtered=True, action_true='Display all')
+    festival_filter = Filter('current festival', filtered=True,
+                             action_true='All festivals', action_false='Current festival')
     reviewed_films = None
     total_film_count = None
     unexpected_errors = []
@@ -737,14 +739,18 @@ class ReviewersView(ListView):
 
         # Apply the filter from url query part.
         self.judged_filter.handle_get_request(request)
+        self.festival_filter.handle_get_request(request)
 
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
-        self.reviewed_films = Film.films.exclude(reviewer=None)
         session = self.request.session
+        festival = current_festival(session)
+        self.reviewed_films = Film.films.exclude(reviewer=None)
+        if self.festival_filter.on(session):
+            self.reviewed_films = self.reviewed_films.filter(festival=festival)
         reviewers = set([film.reviewer for film in self.reviewed_films])
-        reviewer_rows = self.get_reviewer_rows(reviewers)
+        reviewer_rows = self._get_reviewer_rows(reviewers)
         sort_key = 'reviewer' if self.judged_filter.off(session) else 'avg_discrepancy'
         return sorted(reviewer_rows, key=lambda r: r[sort_key])
 
@@ -757,25 +763,30 @@ class ReviewersView(ListView):
             'total_film_count': self.total_film_count,
             'judged_href_filter': self.judged_filter.get_href_filter(session),
             'judged_filter_action': self.judged_filter.action(session),
+            'festival_href_filter': self.festival_filter.get_href_filter(session),
+            'festival_filter_action': self.festival_filter.action(session),
+            'festival_filter_label': self.festival_filter.label(session),
             'unexpected_errors': self.unexpected_errors,
         }
         context = add_base_context(self.request, super_context | new_context)
         return context
 
-    def get_reviewer_rows(self, reviewers):
+    def _get_reviewer_rows(self, reviewers):
+        pr_debug('start', with_time=True)
         reviewer_rows = []
         for reviewer in reviewers:
-            row = self.get_reviewer_row(reviewer)
+            row = self._get_reviewer_row(reviewer)
             if row['display_reviewer']:
                 reviewer_rows.append(row)
+        pr_debug('done', with_time=True)
         return reviewer_rows
 
-    def get_reviewer_row(self, reviewer):
+    def _get_reviewer_row(self, reviewer):
         reviewed_films = [film for film in self.reviewed_films if film.reviewer == reviewer]
         film_count = len(reviewed_films)
         self.total_film_count += film_count
-        fan_judgements, dropdown_rows = self.get_fan_judgements(reviewer)
-        judged_count, avg_discrepancy = self.get_discrepancy_stats(fan_judgements)
+        fan_judgements, dropdown_rows = self._get_fan_judgements(reviewer)
+        judged_count, avg_discrepancy = self._get_discrepancy_stats(fan_judgements)
         display_reviewer = judged_count or self.judged_filter.off(self.request.session)
 
         # Create a reviewer row dictionary.
@@ -790,16 +801,17 @@ class ReviewersView(ListView):
         }
         return reviewer_row
 
-    def get_fan_judgements(self, reviewer):
+    def _get_fan_judgements(self, reviewer):
         fan_judgements = []
         dropdown_rows = []
         for fan in self.fan_list:
+            filter_kwargs = {'film__in': self.reviewed_films, 'film__reviewer': reviewer, 'film_fan': fan}
             ratings = (FilmFanFilmRating.film_ratings
-                       .filter(film__reviewer=reviewer, film_fan=fan)
+                       .filter(**filter_kwargs)
                        .select_related('film'))
             rating_set = set([rating.film for rating in ratings])
             votes = (FilmFanFilmVote.film_votes
-                     .filter(film__reviewer=reviewer, film_fan=fan)
+                     .filter(**filter_kwargs)
                      .select_related('film'))
             vote_set = set([vote.film for vote in votes])
             judge_set = rating_set & vote_set
@@ -812,6 +824,7 @@ class ReviewersView(ListView):
                 discrepancies.append(discrepancy)
                 dropdown_row = {
                     'film': film.title,
+                    'festival': str(film.festival),
                     'fan': fan,
                     'rating': rating.rating,
                     'vote': vote.vote,
@@ -833,7 +846,7 @@ class ReviewersView(ListView):
         return fan_judgements, dropdown_rows
 
     @staticmethod
-    def get_discrepancy_stats(fan_judgements):
+    def _get_discrepancy_stats(fan_judgements):
         discrepancies = [j['discrepancies'] for j in fan_judgements]
         discr_list = []
         for discrepancy in discrepancies:
