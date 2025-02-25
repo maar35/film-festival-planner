@@ -726,13 +726,17 @@ class ReviewersView(ListView):
     context_object_name = 'reviewer_rows'
     http_method_names = ['get']
     title = 'Reviewers Statistics'
-    fan_list = get_judging_fans()
+    fan_list = None
     judged_filter = Filter('not judged', filtered=True, action_true='Display all')
-    festival_filter = Filter('current festival', filtered=True,
+    festival_filter = Filter('other festivals', filtered=True,
                              action_true='All festivals', action_false='Current festival')
     reviewed_films = None
     total_film_count = None
     unexpected_errors = []
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.fan_list = get_judging_fans()
 
     def dispatch(self, request, *args, **kwargs):
         self.total_film_count = 0
