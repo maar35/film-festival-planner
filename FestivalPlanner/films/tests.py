@@ -21,7 +21,7 @@ from festivals.tests import create_festival
 from films import views, models
 from films.forms.film_forms import PickRating
 from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR
-from films.views import FilmsView, FilmDetailView, MAX_SHORT_MINUTES, BaseFilmsFormView, FilmsListView
+from films.views import FilmsView, FilmDetailView, MAX_SHORT_MINUTES, BaseFilmsFormView, FilmsListView, ReviewersView
 from loader.views import RatingDumperView
 from sections.models import Subsection, Section
 from theaters.models import City
@@ -54,18 +54,18 @@ def new_std_festival():
     """
     # Create a city.
     city_kwargs = {'city_id': 14795, 'name': 'Patience', 'country': 'us'}
-    (city, _) = City.cities.get_or_create(**city_kwargs)
+    city, _ = City.cities.get_or_create(**city_kwargs)
 
     # Create a festival base.
     base_kwargs = {'mnemonic': 'PFF', 'name': 'Patience Film Festival', 'home_city': city}
-    (festival_base, _) = FestivalBase.festival_bases.get_or_create(**base_kwargs)
+    festival_base, _ = FestivalBase.festival_bases.get_or_create(**base_kwargs)
 
     # Create a festival.
     start_date = date.fromisoformat('2021-04-02')
-    end_date = date.fromisoformat('2024-04-03')
+    end_date = date.fromisoformat('2021-04-03')
     festival_kwargs = {'base': festival_base, 'year': 2021, 'start_date': start_date,
                        'end_date': end_date}
-    (festival, _) = Festival.festivals.get_or_create(**festival_kwargs)
+    festival, _ = Festival.festivals.get_or_create(**festival_kwargs)
 
     return festival
 
@@ -378,7 +378,7 @@ class ViewsTestCase(TestCase):
             set_up_user_with_fan('paul', 'mull-kintyre', seq_nr=1942)
 
         # Cleanup the fans who appear in the rating views.
-        models.FANS_IN_RATINGS_TABLE[0:] = []
+        models.FANS_IN_RATINGS_TABLE[:] = []
 
     def tearDown(self):
         super().tearDown()
@@ -424,8 +424,13 @@ class ViewsTestCase(TestCase):
         self.assertIs(self.regular_fan.is_admin, False)
         return request
 
+    @staticmethod
+    def arrange_get_querystring(filter_dict):
+        kwargs = {k.get_cookie_key(): Filter.query_by_filtered[v] for k, v in filter_dict.items()}
+        return Filter.get_querystring(**kwargs)
 
-class ResultsViewsTests(ViewsTestCase):
+
+class ResultsViewTests(ViewsTestCase):
 
     def assert_fan_row(self, fan, rating_str, response, fan_is_current=True):
         if fan_is_current:
@@ -590,7 +595,7 @@ class ResultsViewsTests(ViewsTestCase):
         self.assert_fan_row(self.admin_fan, UNRATED_STR, post_response, fan_is_current=False)
 
 
-class FilmListViewsTests(ViewsTestCase):
+class FilmListViewTests(ViewsTestCase):
 
     def setUp(self):
         super().setUp()
@@ -866,8 +871,8 @@ class FilmListViewsTests(ViewsTestCase):
         edge_film = create_film(film_id=270, title='Flashing Edgeward', minutes=MAX_SHORT_MINUTES, festival=festival)
         _ = self.get_regular_fan_request()
         shorts_filter = Filter('shorts')
-        hide_shorts_query = f'?{shorts_filter.get_cookie_key()}={Filter.query_by_filtered[True]}'
-        include_shorts_query = f'?{shorts_filter.get_cookie_key()}={Filter.query_by_filtered[False]}'
+        hide_shorts_query = self.arrange_get_querystring({shorts_filter: True})
+        include_shorts_query = self.arrange_get_querystring({shorts_filter: False})
 
         # Act.
         include_shorts_response = self.client.get(reverse('films:films') + include_shorts_query)
@@ -1045,3 +1050,111 @@ class FilmListViewsTests(ViewsTestCase):
         self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
         self.assertRegex(get_decoded_content(redirect_response), found_films_re)
         self.assertContains(redirect_response, film_4.title)
+
+
+class ReviewersViewTests(ViewsTestCase):
+    def setUp(self):
+        super().setUp()
+        models.FANS_IN_RATINGS_TABLE.append(self.regular_fan.name)
+        models.FANS_IN_RATINGS_TABLE.append(self.admin_fan.name)
+        self.festival_cannes = create_std_festival()
+        self.festival_patient = new_std_festival()
+        self.reviewer_cannes = 'Enrique Burdon'
+        self.reviewer_patient = 'Jimmy Van Gills'
+        self.reviewer_both = 'Carlita Navedo'
+        self.film_cannes_1 = create_film(1, 'A New Way to Wield', 117, festival=self.festival_cannes)
+        self.film_cannes_2 = create_film(3, 'Pericolo nel sud', 98, festival=self.festival_cannes)
+        self.film_patient_1 = create_film(2, 'I Am Not a Hamburger', 201, festival=self.festival_patient)
+        self.film_patient_2 = create_film(4, 'The Great Swan', 124, festival=self.festival_patient)
+
+    @staticmethod
+    def arrange_set_reviewer(film, reviewer):
+        film.reviewer = reviewer
+        film.save()
+
+    def test_toggle_current_festival_or_all(self):
+        """
+        The user can toggle between reviewer's performance over the current festival and over all festivals.
+        """
+        # Arrange.
+        self.arrange_set_reviewer(self.film_cannes_1, self.reviewer_cannes)
+        self.arrange_set_reviewer(self.film_cannes_2, self.reviewer_both)
+        self.arrange_set_reviewer(self.film_patient_1, self.reviewer_patient)
+        self.arrange_set_reviewer(self.film_patient_2, self.reviewer_both)
+
+        _ = self.get_regular_fan_request()
+
+        judged_filter = ReviewersView.judged_filter
+        festival_filter = ReviewersView.festival_filter
+
+        all_reviewers_query = self.arrange_get_querystring({judged_filter: False})    # Display all reviewers
+        get_response = self.client.get(reverse('films:reviewers') + all_reviewers_query)
+
+        # Act.
+        all_festivals_query = self.arrange_get_querystring({festival_filter: False})  # All festivals
+        filter_response = self.client.get(reverse('films:reviewers') + all_festivals_query)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertContains(get_response, 'Current festival: 2 films reviewed')
+        self.assertContains(get_response, f'<td>{self.reviewer_patient}</td>')
+        self.assertContains(get_response, f'<td>{self.reviewer_both}</td>')
+
+        self.assertNotContains(get_response, f'<td>{self.reviewer_cannes}</td>')
+        """ The current festival will be PFF because it's end date is the most recent """
+
+        self.assertEqual(filter_response.status_code, HTTPStatus.OK)
+        self.assertContains(filter_response, 'All festivals: 4 films reviewed')
+        self.assertContains(filter_response, f'<td>{self.reviewer_patient}</td>')
+        self.assertContains(filter_response, f'<td>{self.reviewer_cannes}</td>')
+        self.assertContains(filter_response, f'<td>{self.reviewer_both}</td>')
+
+    def test_can_filter_out_not_judged(self):
+        """
+        The user can toggle between all reviewers and reviewers of fully judged films.
+        """
+        # Arrange.
+        _ = self.get_regular_fan_request()
+        fan = self.regular_fan
+
+        rating = FilmFanFilmRating.Rating
+        FilmFanFilmRating.film_ratings.create(film=self.film_patient_1, film_fan=fan, rating=rating.MEDIOCRE)
+        FilmFanFilmRating.film_ratings.create(film=self.film_patient_2, film_fan=fan, rating=rating.BELOW_MEDIOCRE)
+        FilmFanFilmRating.film_ratings.create(film=self.film_cannes_2, film_fan=fan, rating=rating.VERY_GOOD)
+        FilmFanFilmVote.film_votes.create(film=self.film_cannes_2, film_fan=fan, vote=rating.GOOD)
+
+        self.arrange_set_reviewer(self.film_patient_1, self.reviewer_patient)
+        self.arrange_set_reviewer(self.film_patient_2, self.reviewer_patient)
+        self.arrange_set_reviewer(self.film_cannes_2, self.reviewer_cannes)
+
+        judged_re = r'<th\w+.*?<a href="/films/reviewers/\?not-judged=hide">Hide not judged</a>.*?</th>'
+        compiled_judged_re = re.compile(judged_re, re.DOTALL)
+        all_re = r'<th\w+.*?<a href="/films/reviewers/\?not-judged=display">Display all</a>.*?</th>'
+        compiled_all_re = re.compile(all_re, re.DOTALL)
+
+        judged_filter = ReviewersView.judged_filter
+        festival_filter = ReviewersView.festival_filter
+
+        query_all = self.arrange_get_querystring({judged_filter: False, festival_filter: False})
+        path_all = reverse('films:reviewers') + query_all
+        get_response = self.client.get(path_all)
+
+        judged_query = self.arrange_get_querystring({judged_filter: True})  # Display judged reviewers
+        path_judged = reverse('films:reviewers') + judged_query
+
+        # Act.
+        filter_response = self.client.get(path_judged)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertContains(get_response, 'All festivals: 3 films reviewed')
+        get_content = get_decoded_content(get_response)
+        self.assertRegex(get_content, r'>\s*' + f'{self.reviewer_cannes}' + r'\s*<')
+        self.assertRegex(get_content, r'>\s*' + f'{self.reviewer_patient}' + r'\s*<')
+        self.assertRegex(get_content, compiled_judged_re)
+        self.assertEqual(filter_response.status_code, HTTPStatus.OK)
+        self.assertContains(filter_response, 'All festivals: 3 films reviewed')
+        filter_content = get_decoded_content(filter_response)
+        self.assertRegex(filter_content, r'>\s*' + f'{self.reviewer_cannes}' + r'\s*<')
+        self.assertNotRegex(filter_content, r'>\s*' + f'{self.reviewer_patient}' + r'\s*<')
+        self.assertRegex(filter_content, compiled_all_re)
