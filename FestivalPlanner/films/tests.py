@@ -1099,7 +1099,10 @@ class ReviewersViewTests(ViewsTestCase):
         self.assertContains(get_response, 'Current festival: 2 films reviewed')
         self.assertContains(get_response, f'<td>{self.reviewer_patient}</td>')
         self.assertContains(get_response, f'<td>{self.reviewer_both}</td>')
+
         self.assertNotContains(get_response, f'<td>{self.reviewer_cannes}</td>')
+        """ The current festival will be PFF because it's end date is the most recent """
+
         self.assertEqual(filter_response.status_code, HTTPStatus.OK)
         self.assertContains(filter_response, 'All festivals: 4 films reviewed')
         self.assertContains(filter_response, f'<td>{self.reviewer_patient}</td>')

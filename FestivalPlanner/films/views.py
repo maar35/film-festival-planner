@@ -422,10 +422,9 @@ class FilmsListView(LoginRequiredMixin, ListView):
             session = self.request.session
             section = subsection.section
             section_filter = self.section_filters[section]
-            href_filter = section_filter.get_href_filter(session)
             subsection_filter = self.subsection_filters[subsection]
-            if subsection_filter.on(session):
-                href_filter += subsection_filter.get_href_filter(session, first=False)
+            extra_filters = [subsection_filter] if subsection_filter.on(session) else []
+            href_filter = section_filter.get_href_filter(session, extra_filters=extra_filters)
             section_row = {
                 'section': section,
                 'href_filter': href_filter,
@@ -776,13 +775,11 @@ class ReviewersView(ListView):
         return context
 
     def _get_reviewer_rows(self, reviewers):
-        pr_debug('start', with_time=True)
         reviewer_rows = []
         for reviewer in reviewers:
             row = self._get_reviewer_row(reviewer)
             if row['display_reviewer']:
                 reviewer_rows.append(row)
-        pr_debug('done', with_time=True)
         return reviewer_rows
 
     def _get_reviewer_row(self, reviewer):
@@ -809,16 +806,7 @@ class ReviewersView(ListView):
         fan_judgements = []
         dropdown_rows = []
         for fan in self.fan_list:
-            filter_kwargs = {'film__in': self.reviewed_films, 'film__reviewer': reviewer, 'film_fan': fan}
-            ratings = (FilmFanFilmRating.film_ratings
-                       .filter(**filter_kwargs)
-                       .select_related('film'))
-            rating_set = set([rating.film for rating in ratings])
-            votes = (FilmFanFilmVote.film_votes
-                     .filter(**filter_kwargs)
-                     .select_related('film'))
-            vote_set = set([vote.film for vote in votes])
-            judge_set = rating_set & vote_set
+            judge_set = self._get_fan_judge_set(reviewer, fan)
 
             discrepancies = []
             for film in sorted(judge_set, key=attrgetter('sort_title')):
@@ -858,6 +846,19 @@ class ReviewersView(ListView):
         discrepancy_count = len(discr_list)
         avg_discrepancy = sum(discr_list) / len(discr_list) if discr_list else 0
         return discrepancy_count, avg_discrepancy
+
+    def _get_fan_judge_set(self, reviewer, fan):
+        filter_kwargs = {'film__in': self.reviewed_films, 'film__reviewer': reviewer, 'film_fan': fan}
+        ratings = (FilmFanFilmRating.film_ratings
+                   .filter(**filter_kwargs)
+                   .select_related('film'))
+        rating_set = set([rating.film for rating in ratings])
+        votes = (FilmFanFilmVote.film_votes
+                 .filter(**filter_kwargs)
+                 .select_related('film'))
+        vote_set = set([vote.film for vote in votes])
+        judge_set = rating_set & vote_set
+        return judge_set
 
 
 def film_fan(request):

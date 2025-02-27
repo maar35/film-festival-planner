@@ -72,11 +72,14 @@ class Filter(Cookie):
         query_list = [f'{key}={value}' for key, value in kwargs.items()]
         return '?' + '&'.join(query_list) if query_list else ''
 
-    def get_href_filter(self, session, first=True):
+    def get_href_filter(self, session, extra_filters=None):
         """
-        Shortcut filter query as to use in template variable.
+        Shortcut filter query as to use in template url tag.
         """
-        return f'{"?" if first else "&"}{self.get_cookie_key()}={self.next_query(session)}'
+        filters = [self]
+        filters.extend(extra_filters or [])
+        kwargs = {f.get_cookie_key(): f.next_query(session) for f in filters}
+        return self.get_querystring(**kwargs)
 
     @classmethod
     def get_display_query_from_keys(cls, filter_keys):
