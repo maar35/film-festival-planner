@@ -21,7 +21,6 @@ from Shared.application_tools import config, pr_info
 INTERFACE_DIR = os.path.expanduser(f"~/{config()['Paths']['LoaderSharedDirectory']}")
 COMMON_DATA_DIR = os.path.expanduser(f"~/{config()['Paths']['CommonDataDirectory']}")
 ARTICLES_FILE = os.path.join(INTERFACE_DIR, "articles.txt")
-UNICODE_FILE = os.path.join(INTERFACE_DIR, "unicodemap.txt")
 FILMS_FILE_HEADER = config()['Headers']['FilmsFileHeader']
 
 
