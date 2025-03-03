@@ -874,7 +874,7 @@ class NffData(FestivalData):
         if title in self.url_by_title.keys():
             return self.url_by_title[title]
         lower = title.lower()
-        ascii_string = unicode_mapper.toascii(lower)
+        ascii_string = unicode_mapper.normalize(lower)
         disquoted = re.sub(r'["\']+', '', ascii_string)
         connected = re.sub(r'\W+', '-', disquoted)
         frontstripped = re.sub(r'^\W+', '', connected)

@@ -26,7 +26,7 @@ def test_toascii():
     unicode_string = 'ñé²'
 
     # Act.
-    ascii_string = parse_nff_html.unicode_mapper.toascii(unicode_string)
+    ascii_string = parse_nff_html.unicode_mapper.normalize(unicode_string)
 
     # Assert.
     return ascii_string, 'ne²'

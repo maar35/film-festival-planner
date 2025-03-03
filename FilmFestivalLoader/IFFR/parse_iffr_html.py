@@ -344,7 +344,7 @@ class AzPageParser(HtmlPageParser):
                 error_msg = f'{self.film.title}', f'{self.film.medium_category} from {self.url}'
                 ERROR_COLLECTOR.add(f'Unexpected category "{self.film.medium_category}"', error_msg)
             self.film.duration = self.duration
-            self.film.sortstring = self.sorted_title
+            self.film.sort_string = self.sorted_title
             self.increase_per_duration_class_counter(self.film)
             self.increase_per_film_category_counter()
             self.film_id_by_title[self.film.title] = self.film.film_id

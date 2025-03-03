@@ -3,7 +3,7 @@ import unittest
 from datetime import timedelta
 
 import Shared.application_tools as app_tools
-from Shared.planner_interface import FestivalData, Section, Film
+from Shared.planner_interface import FestivalData, Section, Film, UnicodeMapper
 from Tests.AuxiliaryClasses.test_film import BaseFilmTestCase
 
 
@@ -178,6 +178,61 @@ class AddFilmTestCase(PlannerInterfaceBaseTestCase):
         self.assertEqual(len(films), 1, 'Second film, with same title, should be refused')
         self.assertEqual(films[0], film_1)
         self.assertIsNone(film_2)
+
+
+class SortTitlesTestCase(PlannerInterfaceBaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.input_chars_str = 'azüYéØ190æøåè€ÉíñúàBê'
+
+    def test_dirty_sorting(self):
+        """ Display characters as sorted without our tools """
+        # Arrange.
+        expected_sorted_str = '019BYazÉØàåæèéêíñøúü€'
+        expected_sorted = [c for c in expected_sorted_str]
+
+        # Act.
+        sorted_characters = sorted(self.input_chars_str)
+
+        # Assert.
+        self.assertEqual(sorted_characters, expected_sorted)
+
+    def test_normalized_sorting(self):
+        """ Display normalized characters as sorted by our tool """
+        # Arrange.
+        expected_sorted_str = '019BEYaaaeeeinuuzØæø€'
+        expected_sorted = [c for c in expected_sorted_str]
+        mapper = UnicodeMapper()
+        normalized_str = mapper.normalize(self.input_chars_str)
+
+        # Act.
+        sorted_characters = sorted(normalized_str)
+
+        # Assert.
+        self.assertEqual(sorted_characters, expected_sorted)
+
+    def test_normalized_to_lower_sorting(self):
+        """ Display lower case normalized characters as sorted by our tools """
+        # Arrange.
+        expected_sorted_str = '019aaabeeeeinuuyzæøø€'
+        expected_sorted = [c for c in expected_sorted_str]
+
+        film_args = [
+            'Amphetamine',
+            'https://iffr.com/nl/iffr/2024/films/amphetamine',
+        ]
+        film_kwargs = {
+            'duration': timedelta(minutes=97),
+        }
+        self.festival_data.add_film(*film_args, **film_kwargs)
+        film = self.festival_data.films[0]
+        normalized_str = film.lower(self.input_chars_str)
+
+        # Act.
+        sorted_characters = sorted(normalized_str)
+
+        # Assert.
+        self.assertEqual(sorted_characters, expected_sorted)
 
 
 if __name__ == '__main__':
