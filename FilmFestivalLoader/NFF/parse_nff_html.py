@@ -46,9 +46,6 @@ nff_hostname = "https://www.filmfestival.nl"
 films_webroot = "https://www.filmfestival.nl/en/films/"
 premiere_prefix = "festivalpremiere-"
 
-# Global unicode mapper.
-unicode_mapper = UnicodeMapper()
-
 # Application tools.
 error_collector = ErrorCollector()
 debug_recorder = DebugRecorder(debug_file)
@@ -874,7 +871,7 @@ class NffData(FestivalData):
         if title in self.url_by_title.keys():
             return self.url_by_title[title]
         lower = title.lower()
-        ascii_string = unicode_mapper.toascii(lower)
+        ascii_string = UnicodeMapper.normalize(lower)
         disquoted = re.sub(r'["\']+', '', ascii_string)
         connected = re.sub(r'\W+', '-', disquoted)
         frontstripped = re.sub(r'^\W+', '', connected)

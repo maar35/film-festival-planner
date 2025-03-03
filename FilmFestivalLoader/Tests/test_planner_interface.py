@@ -3,7 +3,7 @@ import unittest
 from datetime import timedelta
 
 import Shared.application_tools as app_tools
-from Shared.planner_interface import FestivalData, Section, Film
+from Shared.planner_interface import FestivalData, Section, Film, UnicodeMapper
 from Tests.AuxiliaryClasses.test_film import BaseFilmTestCase
 
 
@@ -91,17 +91,22 @@ class PlannerInterfaceBaseTestCase(BaseFilmTestCase):
         super().tearDown()
         del self.festival_data
 
-
-class AddFilmTestCase(PlannerInterfaceBaseTestCase):
-    def test_add_new_film(self):
-        # Arrange.
+    @staticmethod
+    def arrange_get_film_params(minutes=90):
         film_args = [
             'Amphetamine',
             'https://iffr.com/nl/iffr/2024/films/amphetamine',
         ]
         film_kwargs = {
-            'duration': timedelta(minutes=97),
+            'duration': timedelta(minutes=minutes),
         }
+        return film_args, film_kwargs
+
+
+class AddFilmTestCase(PlannerInterfaceBaseTestCase):
+    def test_add_new_film(self):
+        # Arrange.
+        film_args, film_kwargs = self.arrange_get_film_params(minutes=97)
 
         # Act.
         self.festival_data.add_film(*film_args, **film_kwargs)
@@ -113,16 +118,8 @@ class AddFilmTestCase(PlannerInterfaceBaseTestCase):
 
     def test_add_existing_title_film(self):
         # Arrange.
-        film_args = [
-            'Amphetamine',
-            'https://iffr.com/nl/iffr/2024/films/amphetamine',
-        ]
-        film_kwargs_1 = {
-            'duration': timedelta(minutes=11),
-        }
-        film_kwargs_2 = {
-            'duration': timedelta(minutes=204),
-        }
+        film_args, film_kwargs_1 = self.arrange_get_film_params(minutes=1)
+        _, film_kwargs_2 = self.arrange_get_film_params(minutes=204)
 
         # Act.
         film_1 = self.festival_data.add_film(*film_args, **film_kwargs_1)
@@ -178,6 +175,50 @@ class AddFilmTestCase(PlannerInterfaceBaseTestCase):
         self.assertEqual(len(films), 1, 'Second film, with same title, should be refused')
         self.assertEqual(films[0], film_1)
         self.assertIsNone(film_2)
+
+
+class SortTitlesTestCase(PlannerInterfaceBaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.input_chars_str = 'azüYéØ190æøåè€ÉíñúàBê'
+
+    def test_dirty_sorting(self):
+        """ Display characters as sorted without our tools """
+        # Arrange.
+        expected_sorted_str = '019BYazÉØàåæèéêíñøúü€'
+        expected_sorted = [c for c in expected_sorted_str]
+
+        # Act.
+        sorted_characters = sorted(self.input_chars_str)
+
+        # Assert.
+        self.assertEqual(sorted_characters, expected_sorted)
+
+    def test_normalized_sorting(self):
+        """ Display normalized characters as sorted by our tool """
+        # Arrange.
+        expected_sorted_str = '019BEYaaaeeeinuuzØæø€'
+        expected_sorted = [c for c in expected_sorted_str]
+
+        # Act.
+        normalized_str = UnicodeMapper.normalize(self.input_chars_str)
+        sorted_characters = sorted(normalized_str)
+
+        # Assert.
+        self.assertEqual(sorted_characters, expected_sorted)
+
+    def test_normalized_to_lower_sorting(self):
+        """ Display lower case normalized characters as sorted by our tools """
+        # Arrange.
+        expected_sorted_str = '019aaabeeeeinuuyzæøø€'
+        expected_sorted = [c for c in expected_sorted_str]
+
+        # Act.
+        normalized_str = Film.lower(self.input_chars_str)
+        sorted_characters = sorted(normalized_str)
+
+        # Assert.
+        self.assertEqual(sorted_characters, expected_sorted)
 
 
 if __name__ == '__main__':

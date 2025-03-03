@@ -12,6 +12,7 @@ import os
 import re
 import xml.etree.ElementTree as Tree
 from enum import Enum, auto
+from unicodedata import normalize
 
 import yaml
 
@@ -20,7 +21,6 @@ from Shared.application_tools import config, pr_info
 INTERFACE_DIR = os.path.expanduser(f"~/{config()['Paths']['LoaderSharedDirectory']}")
 COMMON_DATA_DIR = os.path.expanduser(f"~/{config()['Paths']['CommonDataDirectory']}")
 ARTICLES_FILE = os.path.join(INTERFACE_DIR, "articles.txt")
-UNICODE_FILE = os.path.join(INTERFACE_DIR, "unicodemap.txt")
 FILMS_FILE_HEADER = config()['Headers']['FilmsFileHeader']
 
 
@@ -70,17 +70,17 @@ def write_lists(festival_data, write_film_list, write_other_lists):
 
 
 class UnicodeMapper:
+    form = 'NFD'
+    encoding = 'utf-8'
 
-    def __init__(self):
-        with open(UNICODE_FILE) as f:
-            self.umap_keys = f.readline().rstrip("\n").split(";")
-            self.umap_values = f.readline().rstrip("\n").split(";")
-
-    def toascii(self, s):
-        for (u, a) in zip(self.umap_keys, self.umap_values):
-            s = s.replace(u, a)
-
-        return s
+    @classmethod
+    def normalize(cls, string, encoding=None):
+        encoding = encoding or cls.encoding
+        normalized_str = ''
+        for char in string:
+            n = normalize(cls.form, char).encode(encoding)
+            normalized_str += n.decode(encoding)[0]
+        return normalized_str
 
 
 class Article:
@@ -107,7 +107,6 @@ class Film:
         'events': category_events,
     }
     minutes_mark = "′"
-    mapper = UnicodeMapper()
     articles_by_language = {}
     language_by_title = {}
     re_alpha = re.compile(r'^[a-zA-Z]')
@@ -122,7 +121,7 @@ class Film:
         self.duration = duration
         self.medium_category = medium_category
         self.reviewer = None
-        self.sortstring = self.lower(self.strip_article())
+        self.sort_string = self.lower(self.strip_article())
 
     def __str__(self):
         return ", ".join([str(self.film_id),
@@ -131,7 +130,7 @@ class Film:
                           self.medium_category])
 
     def __lt__(self, other):
-        return self.sortstring < other.sortstring
+        return self.sort_string < other.sort_string
 
     @staticmethod
     def film_repr_csv_head():
@@ -141,7 +140,7 @@ class Film:
         row = [
             str(self.seq_nr),
             str(self.film_id),
-            self.sortstring,
+            self.sort_string,
             self.title,
             self.title_language,
             str(self.subsection.subsection_id) if self.subsection else '',
@@ -155,8 +154,9 @@ class Film:
     def short_str(self):
         return f'{self.title} ({self.duration_str()})'
 
-    def lower(self, s):
-        return self.mapper.toascii(s).lower()
+    @staticmethod
+    def lower(string):
+        return UnicodeMapper.normalize(string).lower()
 
     @staticmethod
     def duration_to_minutes(duration):

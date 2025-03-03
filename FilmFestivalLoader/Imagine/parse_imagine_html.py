@@ -193,7 +193,7 @@ class AzPageParser(HtmlPageParser):
             self.film.subsection = self.get_subsection()
             self.film.medium_category = self.medium_type
             if self.sorting_from_site:
-                self.film.sortstring = self.sort_title
+                self.film.sort_string = self.sort_title
 
             # Add the film to the list.
             self.festival_data.films.append(self.film)
