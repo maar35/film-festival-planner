@@ -70,18 +70,16 @@ def write_lists(festival_data, write_film_list, write_other_lists):
 
 
 class UnicodeMapper:
+    form = 'NFD'
+    encoding = 'utf-8'
 
-    def __init__(self):
-        self.form = 'NFD'
-        self.encoding = 'utf-8'
-
-    def normalize(self, s, encoding=None):
-        encoding = encoding or self.encoding
+    @classmethod
+    def normalize(cls, string, encoding=None):
+        encoding = encoding or cls.encoding
         normalized_str = ''
-        for c in s:
-            n = normalize(self.form, c).encode(encoding)
+        for char in string:
+            n = normalize(cls.form, char).encode(encoding)
             normalized_str += n.decode(encoding)[0]
-
         return normalized_str
 
 
@@ -109,7 +107,6 @@ class Film:
         'events': category_events,
     }
     minutes_mark = "′"
-    mapper = UnicodeMapper()
     articles_by_language = {}
     language_by_title = {}
     re_alpha = re.compile(r'^[a-zA-Z]')
@@ -157,8 +154,9 @@ class Film:
     def short_str(self):
         return f'{self.title} ({self.duration_str()})'
 
-    def lower(self, s):
-        return self.mapper.normalize(s).lower()
+    @staticmethod
+    def lower(string):
+        return UnicodeMapper.normalize(string).lower()
 
     @staticmethod
     def duration_to_minutes(duration):

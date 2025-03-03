@@ -91,17 +91,22 @@ class PlannerInterfaceBaseTestCase(BaseFilmTestCase):
         super().tearDown()
         del self.festival_data
 
-
-class AddFilmTestCase(PlannerInterfaceBaseTestCase):
-    def test_add_new_film(self):
-        # Arrange.
+    @staticmethod
+    def arrange_get_film_params(minutes=90):
         film_args = [
             'Amphetamine',
             'https://iffr.com/nl/iffr/2024/films/amphetamine',
         ]
         film_kwargs = {
-            'duration': timedelta(minutes=97),
+            'duration': timedelta(minutes=minutes),
         }
+        return film_args, film_kwargs
+
+
+class AddFilmTestCase(PlannerInterfaceBaseTestCase):
+    def test_add_new_film(self):
+        # Arrange.
+        film_args, film_kwargs = self.arrange_get_film_params(minutes=97)
 
         # Act.
         self.festival_data.add_film(*film_args, **film_kwargs)
@@ -113,16 +118,8 @@ class AddFilmTestCase(PlannerInterfaceBaseTestCase):
 
     def test_add_existing_title_film(self):
         # Arrange.
-        film_args = [
-            'Amphetamine',
-            'https://iffr.com/nl/iffr/2024/films/amphetamine',
-        ]
-        film_kwargs_1 = {
-            'duration': timedelta(minutes=11),
-        }
-        film_kwargs_2 = {
-            'duration': timedelta(minutes=204),
-        }
+        film_args, film_kwargs_1 = self.arrange_get_film_params(minutes=1)
+        _, film_kwargs_2 = self.arrange_get_film_params(minutes=204)
 
         # Act.
         film_1 = self.festival_data.add_film(*film_args, **film_kwargs_1)
@@ -202,10 +199,9 @@ class SortTitlesTestCase(PlannerInterfaceBaseTestCase):
         # Arrange.
         expected_sorted_str = '019BEYaaaeeeinuuzØæø€'
         expected_sorted = [c for c in expected_sorted_str]
-        mapper = UnicodeMapper()
-        normalized_str = mapper.normalize(self.input_chars_str)
 
         # Act.
+        normalized_str = UnicodeMapper.normalize(self.input_chars_str)
         sorted_characters = sorted(normalized_str)
 
         # Assert.
@@ -217,18 +213,8 @@ class SortTitlesTestCase(PlannerInterfaceBaseTestCase):
         expected_sorted_str = '019aaabeeeeinuuyzæøø€'
         expected_sorted = [c for c in expected_sorted_str]
 
-        film_args = [
-            'Amphetamine',
-            'https://iffr.com/nl/iffr/2024/films/amphetamine',
-        ]
-        film_kwargs = {
-            'duration': timedelta(minutes=97),
-        }
-        self.festival_data.add_film(*film_args, **film_kwargs)
-        film = self.festival_data.films[0]
-        normalized_str = film.lower(self.input_chars_str)
-
         # Act.
+        normalized_str = Film.lower(self.input_chars_str)
         sorted_characters = sorted(normalized_str)
 
         # Assert.
