@@ -1,16 +1,22 @@
+import os
 import re
+import tempfile
 from datetime import timedelta, date
+from html import unescape
 from http import HTTPStatus
 from importlib import import_module
+from shutil import copyfile
 from unittest import skip
 from urllib.parse import urlparse, urlunparse
 
+import yaml
 from django.conf import settings
 from django.db import IntegrityError
 from django.http import HttpRequest
 from django.test import TestCase, Client
 from django.urls import reverse
 
+import festivals.models
 from authentication.models import me, FilmFan
 from authentication.tests import set_up_user_with_fan
 from festival_planner import debug_tools
@@ -20,7 +26,7 @@ from festivals.models import current_festival, FestivalBase, Festival
 from festivals.tests import create_festival
 from films import views, models
 from films.forms.film_forms import PickRating
-from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR
+from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR, minutes_str
 from films.views import FilmsView, FilmDetailView, MAX_SHORT_MINUTES, BaseFilmsFormView, FilmsListView, ReviewersView
 from loader.views import RatingDumperView
 from sections.models import Subsection, Section
@@ -112,7 +118,7 @@ def get_request_with_session(request_with_session, method_is_post=False, post_da
 
 
 def get_decoded_content(response):
-    return response.content.decode('utf-8')
+    return unescape(response.content.decode('utf-8'))
 
 
 class FilmModelTests(TestCase):
@@ -430,7 +436,85 @@ class ViewsTestCase(TestCase):
         return Filter.get_querystring(**kwargs)
 
 
-class ResultsViewTests(ViewsTestCase):
+class FilmDetailsViewTests(ViewsTestCase):
+    def setUp(self):
+        super().setUp()
+        festivals.models.TEST_BASE_DIR = tempfile.TemporaryDirectory()
+
+    def tearDown(self):
+        super().tearDown()
+        festivals.models.clean_base_dir()
+
+    @staticmethod
+    def arrange_combi_and_screened_films():
+        festival = new_std_festival()
+        combi_film = create_film(1, 'The Great Combination', 0, festival=festival)
+        screened_film_1 = create_film(11, 'On A Beach', 12, festival=festival)
+        screened_film_2 = create_film(12, 'I Am Flying', 2, festival=festival)
+        screened_film_3 = create_film(13, 'The Jungle Bible', 56, festival=festival)
+        return festival, combi_film, screened_film_1, screened_film_2, screened_film_3
+
+    @staticmethod
+    def arrange_write_film_info_yaml(festival, combi_film, screened_film_1, screened_film_2, screened_film_3):
+        filminfo_yaml_file = festival.filminfo_yaml_file()
+        os.makedirs(festival.planner_data_dir())
+        metadata_dict = {
+            combi_film.film_id: {'Film type': 'Combination'},
+            screened_film_1.film_id: {'Film type': 'Screened film'},
+            screened_film_2.film_id: {'Film type': 'Screened film'},
+            screened_film_3.film_id: {'Film type': 'Screened film'},
+        }
+        screened_dict = {
+            combi_film.film_id: [
+                {
+                    'film_id': screened_film_1.film_id,
+                    'title': screened_film_1.title,
+                },
+                {
+                    'film_id': screened_film_2.film_id,
+                    'title': screened_film_2.title,
+                },
+                {
+                    'film_id': screened_film_3.film_id,
+                    'title': screened_film_3.title,
+                },
+            ],
+            screened_film_1.film_id: [],
+            screened_film_2.film_id: [],
+            screened_film_3.film_id: [],
+        }
+        combi_dict = {
+            combi_film.film_id: [],
+            screened_film_1.film_id: [
+                {
+                    'film_id': combi_film.film_id,
+                    'title': combi_film.title,
+                }
+            ],
+            screened_film_2.film_id: [
+                {
+                    'film_id': combi_film.film_id,
+                    'title': combi_film.title,
+                }
+            ],
+            screened_film_3.film_id: [
+                {
+                    'film_id': combi_film.film_id,
+                    'title': combi_film.title,
+                }
+            ],
+        }
+        yaml_object = {
+            'metadata': metadata_dict,
+            'screened_films': screened_dict,
+            'combinations': combi_dict,
+        }
+        with open(filminfo_yaml_file, 'w') as stream:
+            yaml.dump(yaml_object, stream, encoding='utf-8', indent=4)
+        copyfile(filminfo_yaml_file, '/tmp/mr.test.yml')        # TODO: Remove this line!
+
+    def assert_unescaped(self):
+        pass
 
     def assert_fan_row(self, fan, rating_str, response, fan_is_current=True):
         if fan_is_current:
@@ -443,9 +527,9 @@ class ResultsViewTests(ViewsTestCase):
         fan_row_re = re.compile(fan_row_re_str, re.DOTALL)
         self.assertRegex(get_decoded_content(response), fan_row_re)
 
-    def test_results_of_hacked_film_without_login(self):
+    def test_details_of_hacked_film_without_login(self):
         """
-        The results view with a hacked film id redirects to login page.
+        The film details view with a hacked film id redirects to login page
         when not logged in.
         """
         # Arrange.
@@ -463,9 +547,9 @@ class ResultsViewTests(ViewsTestCase):
         self.assertContains(redirect_response, 'Application Login')
         self.assertContains(redirect_response, 'Access Denied')
 
-    def test_results_of_hacked_film_logged_in(self):
+    def test_details_of_hacked_film_logged_in(self):
         """
-        The results view with a hacked film id returns a 404 not found.
+        The details view with a hacked film id returns a 404 not found.
         """
         # Arrange.
         hacked_film = new_film(film_id=5001, title='Futuristic Quests', minutes=96)
@@ -480,7 +564,7 @@ class ResultsViewTests(ViewsTestCase):
 
     def test_rating_of_created_film_without_login(self):
         """
-        The results view with film id of a film that was newly added to
+        The details view with film id of a film that was newly added to
         the database forbids to view the ratings of the given film
         when not logged in.
         """
@@ -499,7 +583,7 @@ class ResultsViewTests(ViewsTestCase):
 
     def test_created_film_unrated_logged_in(self):
         """
-        The results view with film id of a film that was newly added to
+        The details view with film id of a film that was newly added to
         the database displays no ratings for the given film.
         """
         # Arrange.
@@ -518,7 +602,7 @@ class ResultsViewTests(ViewsTestCase):
 
     def test_rating_of_created_film_logged_in(self):
         """
-        The results view with film id of a film that was newly added to
+        The details view with film id of a film that was newly added to
         the database displays the ratings of the given film.
         """
         # Arrange.
@@ -593,6 +677,54 @@ class ResultsViewTests(ViewsTestCase):
         self.assertContains(post_response, self.admin_fan.name)
         self.assert_fan_row(fan, str(new_rating_value), post_response)
         self.assert_fan_row(self.admin_fan, UNRATED_STR, post_response, fan_is_current=False)
+
+    def test_details_of_screened_film_display_combination(self):
+        """
+        The details view, when displaying a screened film, displays a link to the combination program.
+        """
+        # Arrange.
+        _ = self.get_regular_fan_request()
+
+        combi_params = self.arrange_combi_and_screened_films()
+        self.arrange_write_film_info_yaml(*combi_params)
+        festival, combi_film, screened_film_1, screened_film_2, screened_film_3 = combi_params
+
+        combi_header = 'Screened as part of combination program'
+        href_str = 'href="' + f"{reverse('films:details', args=[combi_film.pk])}" + '"'
+        re_combi = f'>{combi_header}' + r'</\w+>\s*<ul>\s*<li>\s*<a\b\s*' + href_str + r'.*?>' + f'{combi_film.title}<'
+
+        # Act.
+        response = self.client.get(reverse('films:details', args=[screened_film_1.pk]))
+
+        # Assert.
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertContains(response, combi_header)
+        self.assertContains(response, combi_film.title)
+        self.assertRegex(get_decoded_content(response), re_combi)
+
+    def test_details_of_combination_display_screened_films(self):
+        """
+        The details view, when displaying a combination program, displays links to the screened films.
+        """
+        # Arrange.
+        _ = self.get_regular_fan_request()
+
+        combi_params = self.arrange_combi_and_screened_films()
+        self.arrange_write_film_info_yaml(*combi_params)
+        festival, combi_film, screened_film_1, screened_film_2, screened_film_3 = combi_params
+
+        screened_films_header = 'Screened films'
+
+        # Act.
+        response = self.client.get(reverse('films:details', args=[combi_film.pk]))
+
+        # Assert.
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertContains(response, screened_films_header)
+        self.assertContains(response, screened_film_1.title)
+        self.assertContains(response, screened_film_2.title)
+        self.assertContains(response, screened_film_3.title)
+        self.assertRegex(get_decoded_content(response), f'({minutes_str(screened_film_1.duration)})')
 
 
 class FilmListViewTests(ViewsTestCase):
@@ -1058,14 +1190,14 @@ class ReviewersViewTests(ViewsTestCase):
         models.FANS_IN_RATINGS_TABLE.append(self.regular_fan.name)
         models.FANS_IN_RATINGS_TABLE.append(self.admin_fan.name)
         self.festival_cannes = create_std_festival()
-        self.festival_patient = new_std_festival()
+        self.festival_patience = new_std_festival()
         self.reviewer_cannes = 'Enrique Burdon'
-        self.reviewer_patient = 'Jimmy Van Gills'
+        self.reviewer_patience = 'Jimmy Van Gills'
         self.reviewer_both = 'Carlita Navedo'
         self.film_cannes_1 = create_film(1, 'A New Way to Wield', 117, festival=self.festival_cannes)
         self.film_cannes_2 = create_film(3, 'Pericolo nel sud', 98, festival=self.festival_cannes)
-        self.film_patient_1 = create_film(2, 'I Am Not a Hamburger', 201, festival=self.festival_patient)
-        self.film_patient_2 = create_film(4, 'The Great Swan', 124, festival=self.festival_patient)
+        self.film_patience_1 = create_film(2, 'I Am Not a Hamburger', 201, festival=self.festival_patience)
+        self.film_patience_2 = create_film(4, 'The Great Swan', 124, festival=self.festival_patience)
 
     @staticmethod
     def arrange_set_reviewer(film, reviewer):
@@ -1079,8 +1211,8 @@ class ReviewersViewTests(ViewsTestCase):
         # Arrange.
         self.arrange_set_reviewer(self.film_cannes_1, self.reviewer_cannes)
         self.arrange_set_reviewer(self.film_cannes_2, self.reviewer_both)
-        self.arrange_set_reviewer(self.film_patient_1, self.reviewer_patient)
-        self.arrange_set_reviewer(self.film_patient_2, self.reviewer_both)
+        self.arrange_set_reviewer(self.film_patience_1, self.reviewer_patience)
+        self.arrange_set_reviewer(self.film_patience_2, self.reviewer_both)
 
         _ = self.get_regular_fan_request()
 
@@ -1097,7 +1229,7 @@ class ReviewersViewTests(ViewsTestCase):
         # Assert.
         self.assertEqual(get_response.status_code, HTTPStatus.OK)
         self.assertContains(get_response, 'Current festival: 2 films reviewed')
-        self.assertContains(get_response, f'<td>{self.reviewer_patient}</td>')
+        self.assertContains(get_response, f'<td>{self.reviewer_patience}</td>')
         self.assertContains(get_response, f'<td>{self.reviewer_both}</td>')
 
         self.assertNotContains(get_response, f'<td>{self.reviewer_cannes}</td>')
@@ -1105,7 +1237,7 @@ class ReviewersViewTests(ViewsTestCase):
 
         self.assertEqual(filter_response.status_code, HTTPStatus.OK)
         self.assertContains(filter_response, 'All festivals: 4 films reviewed')
-        self.assertContains(filter_response, f'<td>{self.reviewer_patient}</td>')
+        self.assertContains(filter_response, f'<td>{self.reviewer_patience}</td>')
         self.assertContains(filter_response, f'<td>{self.reviewer_cannes}</td>')
         self.assertContains(filter_response, f'<td>{self.reviewer_both}</td>')
 
@@ -1118,13 +1250,13 @@ class ReviewersViewTests(ViewsTestCase):
         fan = self.regular_fan
 
         rating = FilmFanFilmRating.Rating
-        FilmFanFilmRating.film_ratings.create(film=self.film_patient_1, film_fan=fan, rating=rating.MEDIOCRE)
-        FilmFanFilmRating.film_ratings.create(film=self.film_patient_2, film_fan=fan, rating=rating.BELOW_MEDIOCRE)
+        FilmFanFilmRating.film_ratings.create(film=self.film_patience_1, film_fan=fan, rating=rating.MEDIOCRE)
+        FilmFanFilmRating.film_ratings.create(film=self.film_patience_2, film_fan=fan, rating=rating.BELOW_MEDIOCRE)
         FilmFanFilmRating.film_ratings.create(film=self.film_cannes_2, film_fan=fan, rating=rating.VERY_GOOD)
         FilmFanFilmVote.film_votes.create(film=self.film_cannes_2, film_fan=fan, vote=rating.GOOD)
 
-        self.arrange_set_reviewer(self.film_patient_1, self.reviewer_patient)
-        self.arrange_set_reviewer(self.film_patient_2, self.reviewer_patient)
+        self.arrange_set_reviewer(self.film_patience_1, self.reviewer_patience)
+        self.arrange_set_reviewer(self.film_patience_2, self.reviewer_patience)
         self.arrange_set_reviewer(self.film_cannes_2, self.reviewer_cannes)
 
         judged_re = r'<th\w+.*?<a href="/films/reviewers/\?not-judged=hide">Hide not judged</a>.*?</th>'
@@ -1150,11 +1282,11 @@ class ReviewersViewTests(ViewsTestCase):
         self.assertContains(get_response, 'All festivals: 3 films reviewed')
         get_content = get_decoded_content(get_response)
         self.assertRegex(get_content, r'>\s*' + f'{self.reviewer_cannes}' + r'\s*<')
-        self.assertRegex(get_content, r'>\s*' + f'{self.reviewer_patient}' + r'\s*<')
+        self.assertRegex(get_content, r'>\s*' + f'{self.reviewer_patience}' + r'\s*<')
         self.assertRegex(get_content, compiled_judged_re)
         self.assertEqual(filter_response.status_code, HTTPStatus.OK)
         self.assertContains(filter_response, 'All festivals: 3 films reviewed')
         filter_content = get_decoded_content(filter_response)
         self.assertRegex(filter_content, r'>\s*' + f'{self.reviewer_cannes}' + r'\s*<')
-        self.assertNotRegex(filter_content, r'>\s*' + f'{self.reviewer_patient}' + r'\s*<')
+        self.assertNotRegex(filter_content, r'>\s*' + f'{self.reviewer_patience}' + r'\s*<')
         self.assertRegex(filter_content, compiled_all_re)
