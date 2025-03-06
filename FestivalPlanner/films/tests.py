@@ -483,26 +483,15 @@ class FilmDetailsViewTests(ViewsTestCase):
             screened_film_2.film_id: [],
             screened_film_3.film_id: [],
         }
+        combi_detail_dict = {
+            'film_id': combi_film.film_id,
+            'title': combi_film.title,
+        }
         combi_dict = {
             combi_film.film_id: [],
-            screened_film_1.film_id: [
-                {
-                    'film_id': combi_film.film_id,
-                    'title': combi_film.title,
-                }
-            ],
-            screened_film_2.film_id: [
-                {
-                    'film_id': combi_film.film_id,
-                    'title': combi_film.title,
-                }
-            ],
-            screened_film_3.film_id: [
-                {
-                    'film_id': combi_film.film_id,
-                    'title': combi_film.title,
-                }
-            ],
+            screened_film_1.film_id: [combi_detail_dict],
+            screened_film_2.film_id: [combi_detail_dict],
+            screened_film_3.film_id: [combi_detail_dict],
         }
         yaml_object = {
             'metadata': metadata_dict,
@@ -511,10 +500,6 @@ class FilmDetailsViewTests(ViewsTestCase):
         }
         with open(filminfo_yaml_file, 'w') as stream:
             yaml.dump(yaml_object, stream, encoding='utf-8', indent=4)
-        copyfile(filminfo_yaml_file, '/tmp/mr.test.yml')        # TODO: Remove this line!
-
-    def assert_unescaped(self):
-        pass
 
     def assert_fan_row(self, fan, rating_str, response, fan_is_current=True):
         if fan_is_current:
