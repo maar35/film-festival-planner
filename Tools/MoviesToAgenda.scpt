@@ -1,5 +1,5 @@
-property festival : "IDFA"
-property edition : "2024"
+property festival : "MTMF"
+property edition : "2025"
 property initialMinDate : date "dinsdag 31 december 2199 om 00:00:00"
 property initialMaxDate : date "zondag 31 december 1899 om 00:00:00"
 property maartenInfo : {cal:"Film", eventsAdded:0, minDate:initialMinDate, maxDate:initialMaxDate}

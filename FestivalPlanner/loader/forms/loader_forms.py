@@ -7,6 +7,7 @@ from django.forms import Form, BooleanField, SlugField
 
 from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
+from festival_planner.debug_tools import pr_debug
 from festival_planner.tools import initialize_log, add_log, CSV_DIALECT
 from festivals.config import Config
 from festivals.models import Festival, FestivalBase
@@ -923,13 +924,18 @@ class ScreenDumper(BaseDumper):
         super().__init__(session, 'screen', self.manager)
 
     def object_row(self, screen):
-        return [
-            screen.screen_id,
-            screen.theater.theater_id,
-            screen.parse_name,
-            screen.abbreviation,
-            screen.address_type,
-        ]
+        try:
+            row = [
+                screen.screen_id,
+                screen.theater.theater_id,
+                screen.parse_name,
+                screen.abbreviation,
+                screen.address_type,
+            ]
+        except Theater.DoesNotExist as e:
+            pr_debug(f'{e}: {screen.screen_id=}, {screen.parse_name=}')
+            row = []
+        return row
 
 
 class CalendarDumper(BaseDumper):
