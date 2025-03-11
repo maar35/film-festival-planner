@@ -4,6 +4,7 @@ import datetime
 import os
 import re
 from enum import Enum, auto
+from html import unescape
 from typing import Dict
 
 from Shared.application_tools import ErrorCollector, DebugRecorder, Counter, comment
@@ -64,6 +65,7 @@ def setup_counters():
     COUNTER.start('screened films')
     COUNTER.start('screen not found')
     COUNTER.start('screen fixed')
+    COUNTER.start('url fixed')
     COUNTER.start('EN url fixed')
     COUNTER.start('EN date fixed')
     COUNTER.start('metadata')
@@ -86,9 +88,9 @@ def parse_mtmf_sites(festival_data):
     comment('Get films by URL.')
     get_films_by_url(festival_data, url_finder.charset_by_film_url)
 
-    # # Link combination programs and screened films.
-    # comment('Apply combination data')
-    # FilmPageParser.apply_combinations(festival_data)
+    # Link combination programs and screened films.
+    comment('Apply combination data')
+    FilmPageParser.apply_combinations(festival_data)
 
 
 def get_films_by_url(festival_data, charset_by_film_url):
@@ -121,7 +123,7 @@ def get_film_from_url(festival_data, url, encoding):
     print(f'Requesting film page {url}, encoding={encoding}')
     reader = UrlReader(ERROR_COLLECTOR)
     film_parser = FilmPageParser(festival_data, url)
-    film_html = reader.load_url(url, None, encoding)
+    film_html = reader.load_url(url, target_file=None, encoding=encoding)
     if film_html:
         print(f'Analysing film program data from {url}')
         film_parser.feed(film_html)
@@ -141,7 +143,7 @@ def get_film_from_url(festival_data, url, encoding):
 
 class FilmUrlFinder:
     re_segment_str = r'/[^/#"]*/'
-    re_films = re.compile(r'https://moviesthatmatter.nl/festival/film/[^/]*/')
+    re_films = re.compile('href="(https://moviesthatmatter.nl/festival/film/[^/]*/)"')
     main_sections = {
         'themas': {'singular': 'theme', 'plural': 'themes'},
         'competities': {'singular': 'competition', 'plural': 'competitions'},
@@ -151,6 +153,11 @@ class FilmUrlFinder:
         'themas': 'DodgerBlue',
         'competities': 'Red',
         'specials': 'LimeGreen',
+    }
+    correct_path_by_notfound_path = {
+        'there-will-be-no-end': 'there-will-be-no-other-end',
+        'flowers-standing-silently-witnessing-the': 'flowers-stand-silently-witnessing-the',
+        'in-the-traces-of-tilled-stones': 'in-the-trace-of-tilled-stones',
     }
     charset_by_film_url = {}
     subsection_by_film_url = {}
@@ -184,9 +191,8 @@ class FilmUrlFinder:
         section_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD)
         if section_html is not None:
             subsection_urls = self.re_by_section[section_name].findall(section_html)
-            comment(f'{len(subsection_urls)} {section_name} subsection urls found.')
-            sep = '\n'
-            print(f'{sep.join(subsection_urls)}')
+            comment(f'{len(subsection_urls)} "{section_name}" subsection urls found.')
+            print(f'{'\n'.join(subsection_urls)}')
             for i, subsection_url in enumerate(subsection_urls):
                 COUNTER.increase(self.main_sections[section_name]['plural'])
                 subsection = self.get_subsection(section, subsection_url)
@@ -201,7 +207,8 @@ class FilmUrlFinder:
             print(f'Getting film urls from {subsection_file}, encoding={url_file.encoding}')
             film_count = 0
             for m in self.re_films.finditer(subsection_html):
-                film_url = m.group()
+                film_url = m.group(1)
+                film_url = self.fix_misspelled_url(film_url)
                 if film_url in self.charset_by_film_url:
                     COUNTER.increase('duplicates')
                 else:
@@ -223,6 +230,32 @@ class FilmUrlFinder:
                 subsection_name = SHORT_COMBOS
             subsection = self.festival_data.get_subsection(subsection_name, url, section)
         return subsection
+
+    @classmethod
+    def fix_misspelled_url(cls, url):
+        url = unescape(url)
+        url = cls.set_nl_url(url)
+        parts = url.split('/')
+        path = parts[-2]  # https://moviesthatmatter.nl/festival/film/there-will-be-no-end/
+        try:
+            correct_path = cls.correct_path_by_notfound_path[path]
+        except KeyError:
+            pass
+        else:
+            COUNTER.increase('url fixed')
+            parts[-2] = correct_path
+            url = '/'.join(parts)
+        return url
+
+    @classmethod
+    def set_nl_url(cls, url):
+        language_iso = 'en'
+        if url.split('/')[3] == language_iso:
+            parts = url.split('/')
+            parts.remove(language_iso)
+            url = '/'.join(parts)
+            COUNTER.increase('EN url fixed')
+        return url
 
 
 class FilmPageParser(HtmlPageParser):
@@ -263,6 +296,7 @@ class FilmPageParser(HtmlPageParser):
         self.combination_urls.append(url)
 
     def add_screened_film_url(self, url):
+        url = FilmUrlFinder.fix_misspelled_url(url)
         self.screened_film_urls.append(url)
 
     def add_properties_to_article(self):
@@ -278,23 +312,8 @@ class FilmPageParser(HtmlPageParser):
 
     def get_medium_category(self):
         url_part_index = 4
-        print(f'@@ {self.url=}')
-        if self.url.split('/')[3] == 'en':
-            self.print_debug('in get_medium_category, before:', f'{self.url=}')
-            print(f'@@ in get_medium_category, before: {self.url=}')
-            self.url = self.get_nl_url('en')
-            self.print_debug('in get_medium_category,  after:', f'{self.url=}')
-            print(f'@@ in get_medium_category,  after: {self.url=}')
-            # url_part_index += 1
         category = self.category_by_branch[self.url.split('/')[url_part_index]]
         return category
-
-    def get_nl_url(self, language):
-        parts = self.url.split('/')
-        print(f'@@ {parts=}')
-        parts.remove(language)
-        COUNTER.increase('EN url fixed')
-        return '/'.join(parts)
 
     @staticmethod
     def set_title(data):
@@ -341,7 +360,7 @@ class FilmPageParser(HtmlPageParser):
 
         # Link the screened film urls to the current film.
         screened_films_count = len(self.screened_film_urls)
-        if screened_films_count > 0:
+        if screened_films_count:
             self.screened_film_urls_by_film_id[self.film.film_id] = self.screened_film_urls
             for url in self.screened_film_urls:
                 subsection_name = SHORTS if self.film.subsection.name == SHORT_COMBOS else self.film.subsection.name

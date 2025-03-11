@@ -869,7 +869,8 @@ class BaseDumper:
                     csv_writer.writerow(self.header)
                 for obj in objects:
                     row = self.object_row(obj)
-                    csv_writer.writerow(row)
+                    if row:
+                        csv_writer.writerow(row)
         except PermissionError as e:
             self.add_log(f'{e}: File {file} could not be written.')
             return False
