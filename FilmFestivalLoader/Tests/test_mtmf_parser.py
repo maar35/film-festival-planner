@@ -1,7 +1,7 @@
 import unittest
 from unittest import TestCase
 
-from MTMF.parse_mtmf_html import FilmPageParser, MtmfData, FilmUrlFinder
+from MTMF.parse_mtmf_html import FilmPageParser, MtmfData, FilmUrlFinder, COUNTER
 from Tests.AuxiliaryClasses.test_film import BaseFilmTestCase
 
 
@@ -93,6 +93,35 @@ class UrlHandlingTestCase(TestCase):
 
         # Assert.
         self.assertEqual(url, 'https://moviesthatmatter.nl/festival/el%20ni%C3%B1o')
+
+    def test_set_nl_url(self):
+        """ The Dutch version of a festival page can be derived from the English language version """
+        # Arrange.
+        en_url = 'https://moviesthatmatter.nl/en/festival/film/vlam/'
+        nl_url = 'https://moviesthatmatter.nl/festival/film/vlam/'
+        counter_label = 'EN url fixed'
+        COUNTER.start(counter_label)
+
+        # Act.
+        result_url = FilmUrlFinder.set_nl_url(en_url)
+
+        # Assert.
+        self.assertEqual(result_url, nl_url)
+        self.assertEqual(COUNTER.count_by_label[counter_label], 1)
+
+    def test_set_nl_url_from_nl(self):
+        """ When deriving the Dutch version of a festival page, a Dutch URL is returned unchanged """
+        # Arrange.
+        nl_url = 'https://moviesthatmatter.nl/festival/film/weight-of-light-the/'
+        counter_label = 'EN url fixed'
+        COUNTER.start(counter_label)
+
+        # Act.
+        result_url = FilmUrlFinder.set_nl_url(nl_url)
+
+        # Assert.
+        self.assertEqual(result_url, nl_url)
+        self.assertEqual(COUNTER.count_by_label[counter_label], 0)
 
 
 if __name__ == '__main__':
