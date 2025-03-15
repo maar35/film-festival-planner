@@ -29,7 +29,7 @@ FILE_KEEPER = FileKeeper(FESTIVAL, FESTIVAL_YEAR)
 
 # URL information.
 MTMF_HOSTNAME = 'https://moviesthatmatter.nl'
-mtmf_tickets_hostname = 'https://tickets.moviesthatmatter.nl'
+MTMF_TICKETS_HOSTNAME = 'https://tickets.moviesthatmatter.nl'
 
 # Application tools.
 ERROR_COLLECTOR = ErrorCollector()
@@ -67,7 +67,6 @@ def setup_counters():
     COUNTER.start('screen fixed')
     COUNTER.start('url fixed')
     COUNTER.start('EN url fixed')
-    COUNTER.start('EN date fixed')
     COUNTER.start('metadata')
 
 
@@ -158,6 +157,7 @@ class FilmUrlFinder:
         'there-will-be-no-end': 'there-will-be-no-other-end',
         'flowers-standing-silently-witnessing-the': 'flowers-stand-silently-witnessing-the',
         'in-the-traces-of-tilled-stones': 'in-the-trace-of-tilled-stones',
+        'there-is-another-way-2': 'there-is-another-way',
     }
     charset_by_film_url = {}
     subsection_by_film_url = {}
@@ -597,14 +597,9 @@ class ScreeningsPageParser(HtmlPageParser):
         self.init_screening_data()
 
     def parse_date(self, data):
-        items = data.split()  # zo 23 mrt / Sun 23 Mar
+        items = data.split()  # zo 23 mrt
         day = int(items[1])
-        try:
-            month = self.nl_month_by_name[items[2]]
-        except KeyError as e:
-            month = self.en_month_by_name[items[2]]
-            self.print_debug(f'{str(e)} in parse_date()', 'English date encountered')
-            COUNTER.increase('EN date fixed')
+        month = self.nl_month_by_name[items[2]]
         year = FESTIVAL_YEAR
         return datetime.date(year, month, day)
 
@@ -665,7 +660,7 @@ class ScreeningsPageParser(HtmlPageParser):
     def read_screen_if_needed(self, url):
         self.screening_nr += 1
         netloc = get_netloc(url)
-        if netloc in [MTMF_HOSTNAME, mtmf_tickets_hostname]:
+        if netloc in [MTMF_HOSTNAME, MTMF_TICKETS_HOSTNAME]:
             self.read_screen(url)
 
     def read_screen(self, url):
