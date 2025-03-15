@@ -5,7 +5,6 @@ from datetime import timedelta, date
 from html import unescape
 from http import HTTPStatus
 from importlib import import_module
-from shutil import copyfile
 from unittest import skip
 from urllib.parse import urlparse, urlunparse
 
