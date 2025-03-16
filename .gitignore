@@ -5,6 +5,7 @@
 *.jpeg
 *.jpg
 *.gif
+*.scpt
 .idea/
 __init__.py
 .vs/
