@@ -87,3 +87,8 @@ repeat with calendarInfo in calendarInfoList
 end repeat
 
 
+<<<<<<< Updated upstream
+=======
+
+
+>>>>>>> Stashed changes
