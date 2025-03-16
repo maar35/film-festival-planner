@@ -9,6 +9,7 @@ Created on Mon Nov  2 18:27:20 2020
 import json
 import os
 from enum import Enum, auto
+from http.client import InvalidURL
 from json import JSONDecodeError
 from urllib.error import HTTPError
 from urllib.parse import quote, urlparse, urlunparse
@@ -167,7 +168,7 @@ class UrlReader:
         try:
             with urlopen(request, timeout=self.timeout) as response:
                 html_bytes = response.read()
-        except HTTPError as e:
+        except (HTTPError, InvalidURL) as e:
             self.error_collector.add(e, f'while opening {url}')
             html_bytes = None
         if html_bytes is not None:

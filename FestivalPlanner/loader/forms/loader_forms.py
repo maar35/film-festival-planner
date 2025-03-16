@@ -7,6 +7,7 @@ from django.forms import Form, BooleanField, SlugField
 
 from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
+from festival_planner.debug_tools import pr_debug
 from festival_planner.tools import initialize_log, add_log, CSV_DIALECT
 from festivals.config import Config
 from festivals.models import Festival, FestivalBase
@@ -867,8 +868,9 @@ class BaseDumper:
                 if self.header:
                     csv_writer.writerow(self.header)
                 for obj in objects:
-                    row = self.object_row(obj)
-                    csv_writer.writerow(row)
+                    row_generator = self.object_row(obj)
+                    for row in row_generator:
+                        csv_writer.writerow(row)
         except PermissionError as e:
             self.add_log(f'{e}: File {file} could not be written.')
             return False
@@ -884,7 +886,7 @@ class BaseDumper:
         :obj: The object to be dumped.
         :return: List of object attributes to be written
         """
-        return []
+        yield []
 
     def add_log(self, text):
         add_log(self.session, text)
@@ -897,7 +899,7 @@ class CityDumper(BaseDumper):
         super().__init__(session, 'city', self.manager)
 
     def object_row(self, city):
-        return [city.city_id, city.name, city.country]
+        yield [city.city_id, city.name, city.country]
 
 
 class TheaterDumper(BaseDumper):
@@ -907,7 +909,7 @@ class TheaterDumper(BaseDumper):
         super().__init__(session, 'theater', self.manager)
 
     def object_row(self, theater):
-        return [
+        yield [
             theater.theater_id,
             theater.city.city_id,
             theater.parse_name,
@@ -923,13 +925,18 @@ class ScreenDumper(BaseDumper):
         super().__init__(session, 'screen', self.manager)
 
     def object_row(self, screen):
-        return [
-            screen.screen_id,
-            screen.theater.theater_id,
-            screen.parse_name,
-            screen.abbreviation,
-            screen.address_type,
-        ]
+        try:
+            row = [
+                screen.screen_id,
+                screen.theater.theater_id,
+                screen.parse_name,
+                screen.abbreviation,
+                screen.address_type,
+            ]
+        except Theater.DoesNotExist as e:
+            pr_debug(f'{e}: {screen.screen_id=}, {screen.parse_name=}')
+            return
+        yield row
 
 
 class CalendarDumper(BaseDumper):
@@ -942,7 +949,7 @@ class CalendarDumper(BaseDumper):
     def object_row(self, obj):
         dt_fmt = '%d-%m-%Y %H:%M'
         screening = obj['screening']
-        return [
+        yield [
             f"{screening.film.title} - {screening.screen}",
             screening.screen.theater.parse_name,
             screening.start_dt.strftime(dt_fmt),
@@ -983,7 +990,7 @@ class FestivalBaseBackupDumper(BaseDumper):
         super().__init__(session, 'festival base', self.manager, self.header)
 
     def object_row(self, base):
-        return [
+        yield [
             base.mnemonic,
             base.name,
             base.image,
@@ -999,7 +1006,7 @@ class FestivalBackupDumper(BaseDumper):
         super().__init__(session, 'festival', self.manager, self.header)
 
     def object_row(self, festival):
-        return [
+        yield [
             festival.base.mnemonic,
             festival.year,
             festival.edition,
@@ -1031,7 +1038,7 @@ class FilmBackupDumper(BaseDumper):
         super().__init__(session, 'film', self.manager, self.header)
 
     def object_row(self, film):
-        return [
+        yield [
             film.festival.base.mnemonic,
             film.festival.year,
             film.festival.edition,
@@ -1056,7 +1063,7 @@ class FanBackupDumper(BaseDumper):
         super().__init__(session, 'filmfan', self.manager, self.header)
 
     def object_row(self, fan):
-        return [fan.id, fan.name, fan.seq_nr, fan.is_admin]
+        yield [fan.id, fan.name, fan.seq_nr, fan.is_admin]
 
 
 class RatingBackupDumper(BaseDumper):
@@ -1067,7 +1074,7 @@ class RatingBackupDumper(BaseDumper):
         super().__init__(session, 'rating', self.manager, self.header)
 
     def object_row(self, rating):
-        return [
+        yield [
             rating.id,
             rating.film.festival.base.mnemonic,
             rating.film.festival.year,
@@ -1087,7 +1094,7 @@ class RatingDumper(BaseDumper):
         PickRating.invalidate_festival_caches(session)
 
     def object_row(self, rating):
-        return [rating.film.film_id, rating.film_fan.name, rating.rating]
+        yield [rating.film.film_id, rating.film_fan.name, rating.rating]
 
 
 class AttendanceDumper(BaseDumper):
@@ -1116,4 +1123,4 @@ class AttendanceDumper(BaseDumper):
             9: self.TRUE if attendance.tickets else self.FALSE,
             10: '',     # sold_out
         }
-        return field_by_index.values()
+        yield field_by_index.values()
