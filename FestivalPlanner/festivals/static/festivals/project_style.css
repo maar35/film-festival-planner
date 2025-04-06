@@ -82,6 +82,10 @@ th.active {
 td.with-submit {
     padding: 0 8px;
 }
+td.with-submit-center {
+    padding: 0 8px;
+    text-align: center
+}
 
 /* Customize the select widget. */
 select {

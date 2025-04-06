@@ -2,7 +2,7 @@ import datetime
 
 from django.db import models
 
-from authentication.models import FilmFan
+from authentication.models import FilmFan, get_sorted_fan_list
 from availabilities.models import Availabilities
 from festivals.config import Config
 from films.models import Film, FilmFanFilmRating, fan_rating
@@ -26,6 +26,8 @@ COLOR_PAIR_GREY = color_pair('black', 'rgb(79, 79, 79)')
 COLOR_PAIR_DARKGREY = color_pair('darkgrey', 'rgb(38, 38, 38)')
 COLOR_PAIR_PURPLE = color_pair('white', 'rgb(176, 0, 176)')
 COLOR_PAIR_SELECT_BLUE = color_pair(None,  'rgba(0, 0, 255, 0.8)')
+COLOR_PAIR_WARNING_ORANGE = color_pair('rgb(255, 127, 0)', None)
+COLOR_PAIR_WARNING_RED = color_pair('rgb(255, 38, 0)', None)
 
 COLOR_PAIR_FREE = COLOR_PAIR_TRANSPARANT
 COLOR_PAIR_UNAVAILABLE = COLOR_PAIR_OFF_BLACK
@@ -69,11 +71,17 @@ class Screening(models.Model):
         ScreeningStatus.UNAVAILABLE: color_pair('white', 'blue'),
         ScreeningStatus.ATTENDS: color_pair('white', 'blue'),
         ScreeningStatus.FRIEND_ATTENDS: color_pair('white', 'red'),
-        ScreeningStatus.ATTENDS_FILM: color_pair('white', 'blue'),
+        ScreeningStatus.ATTENDS_FILM: color_pair(COLOR_PAIR_RED['color'], None),
         ScreeningStatus.TIME_OVERLAP: color_pair('white', 'blue'),
         ScreeningStatus.NO_TRAVEL_TIME: color_pair('white', 'blue'),
         ScreeningStatus.NEEDS_TICKETS: color_pair('white', 'blue'),
     }
+    color_pair_warning_by_screening_status = {
+        c[0]: COLOR_PAIR_WARNING_ORANGE for c in ScreeningStatus.choices
+    }
+    color_pair_warning_by_screening_status[ScreeningStatus.ATTENDS_FILM] = COLOR_PAIR_WARNING_RED
+    color_pair_warning_by_screening_status[ScreeningStatus.UNAVAILABLE] = COLOR_PAIR_WARNING_RED
+
     interesting_rating_color_attends_film_background = 'blue'
     uninteresting_rating_color = 'grey'
 
@@ -116,6 +124,9 @@ class Screening(models.Model):
     def str_short(self):
         return f'{self.str_day()} {self.str_start_time()} {self.screen}'
 
+    def str_title(self):
+        return f'{self.film.title} on {self.str_day()}'
+
     def str_q_and_a(self):
         return 'Yes!' if self.q_and_a else None
 
@@ -143,6 +154,10 @@ class Screening(models.Model):
         available_fans = [availability.fan for availability in manager.filter(**kwargs)]
         return available_fans
 
+    def fan_attends(self, fan):
+        attendances = Attendance.attendances.filter(screening=self, fan=fan)
+        return attendances
+
     def attendants_str(self):
         attendances = Attendance.attendances.filter(screening=self)
         return ', '.join(attendance.fan.name for attendance in attendances)
@@ -160,6 +175,10 @@ class Screening(models.Model):
         friend_attendances = Attendance.attendances.filter(screening=self).exclude(fan=fan)
         attending_friends = [a.fan for a in friend_attendances]
         return attending_friends
+
+    def fan_has_ticket(self, fan):
+        tickets = Ticket.tickets.filter(fan=fan, screening=self)
+        return tickets
 
     def filmscreening_count(self):
         return len(filmscreenings(self.film))
@@ -209,10 +228,30 @@ class Attendance(models.Model):
         ]
 
     def __str__(self):
-        title = self.screening.film.title
-        day = self.screening.str_day()
         start_time = self.screening.str_start_time()
-        return f'{self.fan} attends {title} on {day} at {start_time}'
+        return f'{self.fan} attends {self.screening.str_title} at {start_time}'
+
+
+class Ticket(models.Model):
+    """
+    Represents a ticket for a screening of one fan.
+    """
+    # Define the fields.
+    screening = models.ForeignKey(Screening, on_delete=models.CASCADE)
+    fan = models.ForeignKey(FilmFan, on_delete=models.CASCADE)
+    confirmed = models.BooleanField(default=False)
+
+    # Define a manager.
+    tickets = models.Manager()
+
+    class Meta:
+        db_table = 'ticket'
+        constraints = [
+            models.UniqueConstraint(fields=['screening', 'fan'], name='unique_screening_fan')
+        ]
+
+    def __str__(self):
+        return f'Ticket of {self.fan} for {self.screening.str_title()}'
 
 
 def film_rating_strings(screening, current_fan=None):
@@ -220,7 +259,7 @@ def film_rating_strings(screening, current_fan=None):
 
 
 def get_fan_props_str(screening, current_fan):
-    fans = [current_fan] + list(FilmFan.film_fans.exclude(id=current_fan.id).order_by('name'))
+    fans = get_sorted_fan_list(current_fan)
     initials = []
     for fan in fans:
         attending = Attendance.attendances.filter(fan=fan, screening=screening).exists()

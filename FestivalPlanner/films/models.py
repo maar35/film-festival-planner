@@ -16,7 +16,7 @@ FAN_NAMES_BY_FESTIVAL_BASE = {
     'IFFR': ['Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk', 'Martin'],
     'MTMF': ['Maarten', 'Adrienne', 'Manfred'],
     'NNF': [],
-    'Imagine': ['Maarten', 'Adrienne'],
+    'Imagine': ['Maarten', 'Adrienne', 'Piggel'],
     'IDFA': ['Maarten', 'Adrienne'],
 }
 

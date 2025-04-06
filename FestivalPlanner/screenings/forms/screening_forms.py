@@ -10,7 +10,7 @@ from festival_planner.tools import add_log, initialize_log
 from festivals.models import current_festival
 from films.models import FilmFanFilmRating, current_fan, get_rating_as_int
 from loader.forms.loader_forms import CalendarDumper
-from screenings.models import Attendance, Screening, get_available_filmscreenings
+from screenings.models import Attendance, Screening, get_available_filmscreenings, Ticket
 from theaters.models import Theater
 
 
@@ -322,10 +322,30 @@ class AttendanceForm(forms.Form):
     @classmethod
     def update_attendance(cls, screening, fan, attends=True):
         manager = Attendance.attendances
-        kwargs = {'screening': screening, 'fan': fan}
-        if attends:
-            manager.update_or_create(**kwargs)
-        else:
-            existing_attendances = manager.filter(**kwargs)
-            if len(existing_attendances) > 0:
-                existing_attendances.delete()
+        update_fan_screening_bool(manager, fan, screening, bool_prop=attends)
+
+
+class TicketForm(forms.Form):
+    @classmethod
+    def update_has_ticket(cls, session, screening, changed_has_ticket_by_fan, update_log):
+        manager = Ticket.tickets
+        transaction_committed = True
+        try:
+            with transaction.atomic():
+                for fan, has_tickets in changed_has_ticket_by_fan.items():
+                    update_fan_screening_bool(manager, fan, screening, bool_prop=has_tickets)
+                    update_log(fan, has_tickets)
+        except Exception as e:
+            transaction_committed = False
+            add_log(session, f'{e}, transaction rolled back')
+        return transaction_committed
+
+
+def update_fan_screening_bool(manager, fan, screening, bool_prop=True):
+    kwargs = {'screening': screening, 'fan': fan}
+    if bool_prop:
+        manager.update_or_create(**kwargs)
+    else:
+        existing_props = manager.filter(**kwargs)
+        if len(existing_props) > 0:
+            existing_props.delete()

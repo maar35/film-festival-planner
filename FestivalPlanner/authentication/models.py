@@ -28,3 +28,12 @@ class FilmFan(models.Model):
 
 def me():
     return FilmFan.film_fans.get(seq_nr=1) or None
+
+
+def get_sorted_fan_list(current_fan, fan_query_set=None):
+    """
+    Return a list of fans, starting with the current fan, followed by the other fans sorted by name.
+    """
+    fan_query_set = FilmFan.film_fans.all() if fan_query_set is None else fan_query_set
+    first = [current_fan] if current_fan in fan_query_set else []
+    return first + list(fan_query_set.exclude(id=current_fan.id).order_by('name'))

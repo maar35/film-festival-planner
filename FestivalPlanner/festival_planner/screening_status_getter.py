@@ -1,13 +1,32 @@
+from authentication.models import FilmFan, get_sorted_fan_list
 from festival_planner.cookie import Filter, Cookie
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fragment_keeper import ScreeningFragmentKeeper
 from festivals.models import current_festival
 from films.models import current_fan, fan_rating_str, get_present_fans
-from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED
+from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, Ticket, COLOR_PAIR_WARNING_ORANGE
+
+
+def get_buy_sell_warning_tuple(fan, screening):
+    has_ticket = screening.fan_has_ticket(fan).count()
+    attends = screening.fan_attends(fan).count()
+    buy_sell_tuple = (attends and not has_ticket, has_ticket and not attends)
+    return buy_sell_tuple
+
+
+def get_ticket_holders(screening, current_fan):
+    fan_ids = Ticket.tickets.filter(screening=screening).values_list('fan', flat=True)
+    ticket_holders = FilmFan.film_fans.filter(id__in=fan_ids)
+    sorted_holders = get_sorted_fan_list(current_fan, fan_query_set=ticket_holders)
+    return sorted_holders
 
 
 class ScreeningStatusGetter:
     screening_cookie = Cookie('screening')
+    tuple_element_by_side = {
+        'buy': 0,
+        'sell': 1,
+    }
 
     def __init__(self, session, day_screenings):
         self.session = session
@@ -24,8 +43,12 @@ class ScreeningStatusGetter:
         self.has_attended_film_by_screening = self._get_has_attended_film_by_screening()
 
     def get_screening_status(self, screening, attendants):
-        if current_fan(self.session) in attendants:
-            status = Screening.ScreeningStatus.ATTENDS
+        fan = current_fan(self.session)
+        if fan in attendants:
+            if screening.fan_has_ticket(fan):
+                status = Screening.ScreeningStatus.ATTENDS
+            else:
+                status = Screening.ScreeningStatus.NEEDS_TICKETS
         elif attendants:
             status = Screening.ScreeningStatus.FRIEND_ATTENDS
         elif not self.fits_availability(screening):
@@ -77,8 +100,10 @@ class ScreeningStatusGetter:
 
     def get_attendants(self, screening):
         attendances = self.attendances_by_screening[screening]
-        attendants = [attendance.fan for attendance in attendances]
-        return attendants
+        attendant_ids = attendances.values_list('fan', flat=True)
+        attendants = FilmFan.film_fans.filter(id__in=attendant_ids)
+        sorted_attendants = get_sorted_fan_list(self.fan, fan_query_set=attendants)
+        return sorted_attendants
 
     def get_attendants_str(self, screening):
         attendants = self.get_attendants(screening)
@@ -109,11 +134,12 @@ class ScreeningStatusGetter:
         return availability_by_screening_by_fan
 
     def _available_fans(self, screening):
-        available_fans = []
+        available_fan_ids = []
         for fan, available_by_screening in self.available_by_screening_by_fan.items():
             if available_by_screening[screening]:
-                available_fans.append(fan)
-        return available_fans
+                available_fan_ids.append(fan.id)
+        fan_query_set = FilmFan.film_fans.filter(id__in=available_fan_ids)
+        return get_sorted_fan_list(self.fan, fan_query_set=fan_query_set)
 
     def _get_other_status(self, screening, screenings):
         status = Screening.ScreeningStatus.FREE
@@ -136,6 +162,8 @@ class ScreeningStatusGetter:
         attendants = self.get_attendants(film_screening)
         ratings = [f'{fan.initial()}{fan_rating_str(fan, film_screening.film)}' for fan in attendants]
         status = self.get_screening_status(film_screening, attendants)
+        attendants_props = self._get_attendants_props(film_screening, attendants)
+        ticket_holders_props = self._get_ticket_holders_props(film_screening)
         available_fans = self._available_fans(film_screening)
         day = film_screening.start_dt.date().isoformat()
         day_props = {
@@ -144,7 +172,8 @@ class ScreeningStatusGetter:
             'day': day,
             'pair_selected': COLOR_PAIR_SELECTED,
             'pair': Screening.color_pair_by_screening_status[status],
-            'attendants': ', '.join([attendant.name for attendant in attendants]),
+            'attendants_props': attendants_props,
+            'ticket_holders_props': ticket_holders_props,
             'available_fans': ', '.join([fan.name for fan in available_fans]),
             'ratings': ', '.join(ratings),
             'q_and_a': film_screening.str_q_and_a(),
@@ -152,3 +181,27 @@ class ScreeningStatusGetter:
             'fragment': ScreeningFragmentKeeper.fragment_code(film_screening.screen.pk),
         }
         return day_props
+
+    @classmethod
+    def _get_attendants_props(cls, screening, attendants):
+        return cls._get_buy_sell_fan_props(screening, attendants, 'buy')
+
+    def _get_ticket_holders_props(self, screening):
+        ticket_holders = get_ticket_holders(screening, self.fan)
+        return self._get_buy_sell_fan_props(screening, ticket_holders, 'sell')
+
+    @classmethod
+    def _get_buy_sell_fan_props(cls, screening, fans, side):
+        side_key = f'should_{side}'
+        props = []
+        for fan in fans:
+            side_value = get_buy_sell_warning_tuple(fan, screening)[cls.tuple_element_by_side[side]]
+            props.append({
+                side_key: side_value,
+                'name': fan.name,
+                'color': COLOR_PAIR_WARNING_ORANGE['color'] if side_value else 'purple',
+                'delimiter': ', ',
+            })
+        if props:
+            props[-1]['delimiter'] = ''
+        return props

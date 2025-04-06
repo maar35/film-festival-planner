@@ -1,5 +1,7 @@
 {% extends "base_template.html" %}
 
+{% load humanize %}
+
 {% block title %}{{ title }}{% endblock %}
 {% block header %}{{ title }}{% endblock %}
 
@@ -34,7 +36,7 @@
         {{ action.fan }}
         updated attendances of
         <a href="{% url 'screenings:details' action.screening_id %}">{{ action.screening_str }}</a>,
-        {{ action.action_time|timesince }} ago
+        {{ action.action_time|naturaltime }}
     </p>
     <ul>
     {% for update in action.updates %}
@@ -169,7 +171,12 @@
                         <span style="color: {{ prop.rating_color }}">{{ prop.auto_planned }}{{ prop.film_rating }}</span>
                         <span class="day-schema-screening-info"
                               style="background: {{ info.background }}; color: {{ info.color }};">
-                            <a style="color: {{ info.color }}" href="{% url 'screenings:day_schema' %}{{ prop.query_string }}{{ prop.fragment }}">{{ prop.info_spot }}</a>
+                            <a style="color: {{ info.color }}" href="{% url 'screenings:day_schema' %}{{ prop.query_string }}{{ prop.fragment }}">
+                                {{ prop.info_spot }}
+                            </a>
+                            {% if prop.tickets_warning %}
+                                <span style="color: {{ prop.warning_color }};">!</span>
+                            {% endif %}
                         </span>
                         {{ prop.line_2 }}
                     </span>
