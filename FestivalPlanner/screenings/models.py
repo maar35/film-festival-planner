@@ -216,7 +216,6 @@ class Attendance(models.Model):
     # Define the fields.
     fan = models.ForeignKey(FilmFan, on_delete=models.CASCADE)
     screening = models.ForeignKey(Screening, on_delete=models.CASCADE)
-    tickets = models.BooleanField(default=False)
 
     # Define a manager.
     attendances = models.Manager()

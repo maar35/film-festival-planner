@@ -13,8 +13,6 @@
         <br>
         <a href="{% url 'availabilities:list' %}">Availabilities</a>
         <br>
-        <a href="{% url 'theaters:theaters' %}">Theaters</a>
-        <br>
         <a href="{% url 'screenings:planner' %}">Planner</a>
         <br>
         <a href="{% url 'loader:list_action' %}?label=screenings">Load screenings</a>
@@ -22,6 +20,10 @@
         <a href="{% url 'loader:list_action' %}?label=attendances">Load attendances</a>
         <br>
         <a href="{% url 'loader:dump_data' festival.id %}?label=attendances">Dump attendances</a>
+        <br>
+        <a href="{% url 'loader:list_action' %}?label=tickets">Load tickets</a>
+        <br>
+        <a href="{% url 'loader:dump_data' festival.id %}?label=tickets">Dump tickets</a>
     </span>
 </div>
 

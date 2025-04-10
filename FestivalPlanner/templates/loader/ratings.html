@@ -13,6 +13,10 @@
                 <a href="{% url 'loader:dump_data' festival.id %}?label=ratings">Dump ratings</a>
                 <br>
                 <a href="{% url 'loader:list_action' %}?label=screenings">Load screenings</a>
+                <br>
+                <a href="{% url 'loader:list_action' %}?label=attendances">Load attendances</a>
+                <br>
+                <a href="{% url 'loader:list_action' %}?label=tickets">Load tickets</a>
             </span>
         </div>
         {% if unexpected_error %}
