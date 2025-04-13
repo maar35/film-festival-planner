@@ -4,29 +4,65 @@ from festival_planner.debug_tools import pr_debug
 from festival_planner.fragment_keeper import ScreeningFragmentKeeper
 from festivals.models import current_festival
 from films.models import current_fan, fan_rating_str, get_present_fans
-from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, Ticket, COLOR_PAIR_WARNING_ORANGE
+from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, Ticket, COLOR_WARNING_ORANGE, \
+    COLOR_WARNING_YELLOW
+
+
+def get_warning_three_tuple(fan, screening):
+    has_ticket = screening.fan_has_ticket(fan).count()
+    confirmed = False
+    if has_ticket:
+        confirmed = screening.fan_ticket_confirmed(fan).count()
+    attends = screening.fan_attends(fan).count()
+    buy_sell_confirm_tuple = (
+        attends and not has_ticket,
+        has_ticket and not attends,
+        attends and has_ticket and not confirmed
+    )
+    return buy_sell_confirm_tuple
 
 
 def get_buy_sell_warning_tuple(fan, screening):
-    has_ticket = screening.fan_has_ticket(fan).count()
-    attends = screening.fan_attends(fan).count()
-    buy_sell_tuple = (attends and not has_ticket, has_ticket and not attends)
-    return buy_sell_tuple
+    buy_sell_confirm_tuple = get_warning_three_tuple(fan, screening)
+    return buy_sell_confirm_tuple[:-1]
 
 
-def get_ticket_holders(screening, current_fan):
-    fan_ids = Ticket.tickets.filter(screening=screening).values_list('fan', flat=True)
+def get_ticket_confirmed(fan, screening):
+    buy_sell_confirm_tuple = get_warning_three_tuple(fan, screening)
+    return buy_sell_confirm_tuple[-1:]
+
+
+def get_ticket_holders(screening, current_filmfan, confirmed=None):
+    kwargs = {'screening': screening}
+    if confirmed is not None:
+        kwargs['confirmed'] = confirmed
+    fan_ids = Ticket.tickets.filter(**kwargs).values_list('fan', flat=True)
     ticket_holders = FilmFan.film_fans.filter(id__in=fan_ids)
-    sorted_holders = get_sorted_fan_list(current_fan, fan_query_set=ticket_holders)
+    sorted_holders = get_sorted_fan_list(current_filmfan, fan_query_set=ticket_holders)
     return sorted_holders
 
 
 class ScreeningStatusGetter:
     screening_cookie = Cookie('screening')
-    tuple_element_by_side = {
-        'buy': 0,
-        'sell': 1,
+    template_key_by_alert = {
+        'buy': 'should_buy',
+        'sell': 'should_sell',
+        'expect': 'awaits_confirmation',
     }
+    action_by_alert = {
+        'buy': 'needs a ticket',
+        'sell': 'should sell',
+        'expect': 'awaits confirmation'
+    }
+    color_by_alert = {
+        'buy': COLOR_WARNING_ORANGE,
+        'sell': COLOR_WARNING_ORANGE,
+        'expect': COLOR_WARNING_YELLOW,
+    }
+
+    @classmethod
+    def index_of_alert(cls, alert):
+        return list(cls.action_by_alert.keys()).index(alert)
 
     def __init__(self, session, day_screenings):
         self.session = session
@@ -174,6 +210,7 @@ class ScreeningStatusGetter:
             'pair': Screening.color_pair_by_screening_status[status],
             'attendants_props': attendants_props,
             'ticket_holders_props': ticket_holders_props,
+            'confirmed_ticket_holders': self._get_confirmed_ticket_holders_props(film_screening),
             'available_fans': ', '.join([fan.name for fan in available_fans]),
             'ratings': ', '.join(ratings),
             'q_and_a': film_screening.str_q_and_a(),
@@ -184,24 +221,38 @@ class ScreeningStatusGetter:
 
     @classmethod
     def _get_attendants_props(cls, screening, attendants):
-        return cls._get_buy_sell_fan_props(screening, attendants, 'buy')
+        return cls._get_buy_sell_fan_props(screening, attendants, ['buy'])
 
     def _get_ticket_holders_props(self, screening):
         ticket_holders = get_ticket_holders(screening, self.fan)
-        return self._get_buy_sell_fan_props(screening, ticket_holders, 'sell')
+        return self._get_buy_sell_fan_props(screening, ticket_holders, ['sell', 'expect'])
+
+    def _get_confirmed_ticket_holders_props(self, screening):
+        confirmed_ticket_holders = get_ticket_holders(screening, self.fan, confirmed=True)
+        return confirmed_ticket_holders
 
     @classmethod
-    def _get_buy_sell_fan_props(cls, screening, fans, side):
-        side_key = f'should_{side}'
-        props = []
+    def _get_buy_sell_fan_props(cls, screening, fans, alerts):
+        fan_props = []
         for fan in fans:
-            side_value = get_buy_sell_warning_tuple(fan, screening)[cls.tuple_element_by_side[side]]
-            props.append({
-                side_key: side_value,
+            tup = get_warning_three_tuple(fan, screening)
+            alert_bool = False
+            used_alert = None
+            for alert in alerts:
+                alert_bool = tup[cls.index_of_alert(alert)]
+                if alert_bool:
+                    used_alert = alert
+                    break
+            used_alert = used_alert or alerts[0]
+            alert_key = cls.template_key_by_alert[used_alert]
+            props = {
                 'name': fan.name,
-                'color': COLOR_PAIR_WARNING_ORANGE['color'] if side_value else 'purple',
+                alert_key: alert_bool,
+                'action': alert_bool and cls.action_by_alert[used_alert],
+                'color': alert_bool and cls.color_by_alert[used_alert],
                 'delimiter': ', ',
-            })
-        if props:
-            props[-1]['delimiter'] = ''
-        return props
+            }
+            fan_props.append(props)
+        if fan_props:
+            fan_props[-1]['delimiter'] = ''
+        return fan_props

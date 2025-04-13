@@ -13,7 +13,7 @@ from festival_planner.cookie import Filter, FestivalDay
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fan_action import FanAction
 from festival_planner.fragment_keeper import ScreeningFragmentKeeper, FRAGMENT_INDICATOR
-from festival_planner.screening_status_getter import ScreeningStatusGetter, get_buy_sell_warning_tuple
+from festival_planner.screening_status_getter import ScreeningStatusGetter, get_warning_three_tuple
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
 from festivals.models import current_festival
 from films.models import current_fan, initial, fan_rating, minutes_str, get_present_fans, Film, FilmFanFilmRating
@@ -21,33 +21,45 @@ from films.views import FilmDetailView
 from screenings.forms.screening_forms import DummyForm, AttendanceForm, PlannerForm, \
     ScreeningCalendarForm, PlannerSortKeyKeeper, TicketForm
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, filmscreenings, \
-    get_available_filmscreenings, get_fan_props_str
+    get_available_filmscreenings, get_fan_props_str, COLOR_WARNING_YELLOW
 from theaters.models import Theater
 
 AUTO_PLANNED_INDICATOR = "𝛑"
 
 
-class DaySchemaView(LoginRequiredMixin, View):
+class BaseTwoViewStartView(LoginRequiredMixin, View):
+    """
+    Base class for viewsd that call twi different views on one template.
+    """
+    template_name = None
+    list_view = None
+    form_view = None
+
+    def get(self, request, *args, **kwargs):
+        view = self.list_view.as_view()
+        return view(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        view = self.form_view.as_view()
+        return view(request, *args, **kwargs)
+
+
+class DaySchemaView(BaseTwoViewStartView):
     """
     Class-based view to visualise the screenings of a festival day.
     """
     template_name = 'screenings/day_schema.html'
     current_day = FestivalDay('day')
 
+    def __init__(self):
+        super().__init__()
+        self.list_view = DaySchemaListView
+        self.form_view = DaySchemaFormView
+
     def dispatch(self, request, *args, **kwargs):
         self.current_day.day_cookie.handle_get_request(request)
         ScreeningStatusGetter.handle_screening_get_request(request)
         return super().dispatch(request, *args, **kwargs)
-
-    @staticmethod
-    def get(request, *args, **kwargs):
-        view = DaySchemaListView.as_view()
-        return view(request, *args, **kwargs)
-
-    @staticmethod
-    def post(request, *args, **kwargs):
-        view = DaySchemaFormView.as_view()
-        return view(request, *args, **kwargs)
 
 
 class DaySchemaListView(LoginRequiredMixin, ListView):
@@ -212,6 +224,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         _, film_rating_str, rating_color = screening.film_rating_data(status)
         fan = current_fan(self.request.session)
         info_str = ("Q " if screening.q_and_a else "") + get_fan_props_str(screening, fan)
+        warn, expect = self._has_tickets_alert(screening)
         frame_color = pair_selected['color'] if selected else festival_color
         section_color = screening.film.subsection.section.color if screening.film.subsection else frame_color
         querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
@@ -231,8 +244,10 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'section_color': section_color,
             'info_pair': pair_selected if selected else pair,
             'info_spot': info_str or 'info',
-            'tickets_warning': self._has_tickets_warning(screening),
-            'warning_color': Screening.color_pair_warning_by_screening_status[status]['color'],
+            'tickets_warning': warn,
+            'awaiting_confirmation': expect,
+            'warning_color': Screening.color_warning_by_screening_status[status],
+            'awaiting_color': COLOR_WARNING_YELLOW,
             'query_string': '' if selected else querystring,
             'fragment': f'{FRAGMENT_INDICATOR}header_screening' if selected else fragment,
         }
@@ -257,14 +272,18 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             attendance_str += initial(attendant, self.request.session)
         return attendance_str
 
-    def _has_tickets_warning(self, screening):
+    def _has_tickets_alert(self, screening):
         warn = False
+        expect = False
         for fan in self.fans:
-            buy_warning, sell_warning = get_buy_sell_warning_tuple(fan, screening)
+            buy_warning, sell_warning, expect_confirmation = get_warning_three_tuple(fan, screening)
             if buy_warning or sell_warning:
                 warn = True
+            if expect_confirmation:
+                expect = True
+            if warn and expect:
                 break
-        return warn
+        return warn, expect
 
     def _screening_color_pair(self, screening, attendants):
         status = self.status_getter.get_screening_status(screening, attendants)
@@ -318,11 +337,13 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
     fan_action = FanAction('update')
     update_by_attends = {True: 'joins', False: "couldn't come"}
     update_by_has_ticket = {True: 'got a ticket', False: 'sold a ticket'}
+    update_by_confirmed = {True: 'had a ticket confirmed', False: 'had a ticket unconfirmed'}
     fans = None
     object = None
     screening = None
     initial_attendance_by_fan = None
     initial_tickets_by_fan = None
+    initial_confirmed_by_fan = None
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
@@ -333,6 +354,7 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
         self.screening = self.get_object()
         self.initial_attendance_by_fan = {f: bool(self.screening.fan_attends(f)) for f in self.fans}
         self.initial_tickets_by_fan = {f: bool(self.screening.fan_has_ticket(f)) for f in self.fans}
+        self.initial_confirmed_by_fan = {f: bool(self.screening.fan_ticket_confirmed(f)) for f in self.fans}
 
     def get_context_data(self, **kwargs):
         super_context = super().get_context_data(**kwargs)
@@ -342,6 +364,8 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
             'attends': self.initial_attendance_by_fan[fan],
             'ticket_fan': fan.name + '_ticket',
             'has_ticket': self.initial_tickets_by_fan[fan],
+            'confirmed_fan': fan.name + '_confirmed',
+            'confirmed': self.initial_confirmed_by_fan[fan],
         } for fan in self.fans]
         new_context = {
             'title': 'Screening Details',
@@ -360,16 +384,18 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
         post = self.request.POST
         new_attendance_by_fan = {fan: fan.name in post for fan in self.fans}
         new_has_ticket_by_fan = {fan: fan.name + '_ticket' in post for fan in self.fans}
-        self._update_attendance_statuses(new_attendance_by_fan, new_has_ticket_by_fan)
+        new_confirmed_by_fan = {fan: fan.name + '_confirmed' in post for fan in self.fans}
+        self._update_attendance_statuses(new_attendance_by_fan, new_has_ticket_by_fan, new_confirmed_by_fan)
         return super().form_valid(form)
 
     def get_success_url(self):
         return reverse('screenings:day_schema')
 
-    def _update_attendance_statuses(self, new_attendance_by_fan, new_has_ticket_by_fan):
+    def _update_attendance_statuses(self, new_attendance_by_fan, new_has_ticket_by_fan, new_confirmed_by_fan):
         self.fan_action.init_action(self.request.session, screening=self.screening)
         updated_count = self._update_attendance(new_attendance_by_fan)
         updated_count += self._update_tickets(new_has_ticket_by_fan)
+        updated_count += self._update_confirmed(new_confirmed_by_fan)
         if not updated_count:
             session = self.request.session
             add_log(session, f'No attendance statuses of {self.screening} were updated by {current_fan(session)}.')
@@ -385,6 +411,13 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
         update_method = TicketForm.update_has_ticket
         updated_count = self._update_fan_screening_props(
             new_has_ticket_by_fan, self.update_by_has_ticket, self.initial_tickets_by_fan, update_method
+        )
+        return updated_count
+
+    def _update_confirmed(self, new_confirmed_by_fan):
+        update_method = TicketForm.update_ticket_confirmations
+        updated_count = self._update_fan_screening_props(
+            new_confirmed_by_fan, self.update_by_confirmed, self.initial_confirmed_by_fan, update_method
         )
         return updated_count
 
@@ -407,20 +440,15 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
         return ScreeningStatusGetter.get_filmscreening_props(session, self.screening.film)
 
 
-class PlannerView(LoginRequiredMixin, View):
+class PlannerView(BaseTwoViewStartView):
     template_name = 'screenings/planner.html'
     festival = None
     eligible_films = None
 
-    @staticmethod
-    def get(request, *args, **kwargs):
-        view = PlannerListView.as_view()
-        return view(request, *args, **kwargs)
-
-    @staticmethod
-    def post(request, *args, **kwargs):
-        view = PlannerFormView.as_view()
-        return view(request, *args, **kwargs)
+    def __init__(self):
+        super().__init__()
+        self.list_view = PlannerListView
+        self.form_view = PlannerFormView
 
 
 class PlannerListView(LoginRequiredMixin, ListView):
@@ -484,7 +512,6 @@ class PlannerListView(LoginRequiredMixin, ListView):
         eligible_films = [f for f in rating_films if manager.filter(screening__film=f).exists()]
         return eligible_films
 
-    # @staticmethod
     def _get_planned_screening_row(self, screening):
         film = screening.film
         fans_rating_str, film_rating_str, _ = screening.film.rating_strings()
@@ -501,7 +528,6 @@ class PlannerListView(LoginRequiredMixin, ListView):
         }
         return planned_screening_row
 
-    # @staticmethod
     def _get_sorted_screening_row(self, screening):
         film = screening.film
         day = screening.start_dt.date().isoformat()
@@ -555,19 +581,14 @@ class PlannerFormView(LoginRequiredMixin, FormView):
         return reverse('screenings:planner')
 
 
-class ScreeningCalendarView(LoginRequiredMixin, View):
+class ScreeningCalendarView(BaseTwoViewStartView):
     template_name = 'screenings/calendar.html'
     calendar_item_rows = None
 
-    @staticmethod
-    def get(request, *args, **kwargs):
-        view = ScreeningCalendarListView.as_view()
-        return view(request, *args, **kwargs)
-
-    @staticmethod
-    def post(request, *args, **kwargs):
-        view = ScreeningCalendarFormView.as_view()
-        return view(request, *args, **kwargs)
+    def __init__(self):
+        super().__init__()
+        self.list_view = ScreeningCalendarListView
+        self.form_view = ScreeningCalendarFormView
 
 
 class ScreeningCalendarListView(LoginRequiredMixin, ListView):

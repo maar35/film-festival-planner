@@ -62,7 +62,7 @@
                 {{ props.selected_screening }}
             </span>
             <span class="modest-dropdown-content"
-                  style="min-width:42rem; margin-left: 12rem; background: black; cursor: default;">
+                  style="min-width:50rem; margin-left: 12rem; background: black; cursor: default;">
                 <table>
                     <tbody>
                     <tr>
@@ -178,6 +178,9 @@
                             </a>
                             {% if prop.tickets_warning %}
                                 <span style="color: {{ prop.warning_color }};">!</span>
+                            {% endif %}
+                            {% if prop.awaiting_confirmation %}
+                                <span style="color: {{ prop.awaiting_color }};">?</span>
                             {% endif %}
                         </span>
                         {{ prop.line_2 }}

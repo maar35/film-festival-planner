@@ -8,6 +8,7 @@
         <th>Status</th>
         <th>Attendants</th>
         <th>Tickets</th>
+        <th>Confirmed</th>
         <th>Available</th>
         <th>Q&A</th>
     </tr>
@@ -33,7 +34,7 @@
         <td>
             {% for attendant_props in prop.attendants_props %}
                 {% if attendant_props.should_buy %}
-                    <span style="color: {{ attendant_props.color }};">{{ attendant_props.name }} needs a ticket{{ attendant_props.delimiter }}</span>
+                    <span style="color: {{ attendant_props.color }};">{{ attendant_props.name }} {{ attendant_props.action }}{{ attendant_props.delimiter }}</span>
                 {% else %}
                     {{ attendant_props.name }}{{ attendant_props.delimiter }}
                 {% endif %}
@@ -42,14 +43,15 @@
         </td>
         <td>
             {% for holder_props in prop.ticket_holders_props %}
-                {% if holder_props.should_sell %}
-                    <span style="color: {{ holder_props.color }};">{{ holder_props.name }} should sell{{ holder_props.delimiter }}</span>
+                {% if holder_props.should_sell or holder_props.awaits_confirmation %}
+                    <span style="color: {{ holder_props.color }};">{{ holder_props.name }} {{ holder_props.action }}{{ holder_props.delimiter }}</span>
                 {% else %}
                     {{ holder_props.name }}{{ holder_props.delimiter }}
                 {% endif %}
             {% endfor %}
             {% if not prop.ticket_holders_props %} - {% endif %}
         </td>
+        <td>{% if prop.confirmed_ticket_holders %} {{ prop.confirmed_ticket_holders|join:", " }} {% else %} - {% endif %}</td>
         <td>{% if prop.available_fans %} {{ prop.available_fans }} {% else %} - {% endif %}</td>
         <td>{% if prop.q_and_a %} {{ prop.q_and_a }} {% else %} - {% endif %}</td>
     </tr>

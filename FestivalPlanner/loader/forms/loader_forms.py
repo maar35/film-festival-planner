@@ -977,7 +977,7 @@ class CalendarDumper(BaseDumper):
             f"Attendants: {obj['attendants']}",
             f"Ratings: {fans_rating_str} ({film_rating_str})",
             '',
-            FilmDetailView.get_description(screening.film),
+            FilmDetailView.get_description(screening.film) or '',
         ]
         return separator.join(notes)
 
