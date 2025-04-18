@@ -14,7 +14,7 @@ from festivals.models import Festival, FestivalBase
 from films.forms.film_forms import PickRating
 from films.models import Film, FilmFanFilmRating, minutes_str
 from films.views import FilmsView, FilmDetailView
-from screenings.models import Screening, Attendance
+from screenings.models import Screening, Attendance, Ticket
 from sections.models import Section, Subsection
 from theaters.models import Theater, theaters_path, City, cities_path, Screen, screens_path, cities_cache_path, \
     theaters_cache_path, screens_cache_path
@@ -735,13 +735,14 @@ class AttendanceLoader(SimpleLoader):
         'autoplanned', 'blocked', 'Maarten,Adrienne,Manfred,Piggel,Rijk,Geeth', 'ticketsbought', 'soldout'
     ]
     key_fields = ['fan', 'screening']
+    object_name = 'attendance'
     manager = Attendance.attendances
     fan_names = expected_header[ATTENDANCE_FIELD_INDEX].split(',')
 
     def __init__(self, session, festival, festival_pk):
         file = festival.screening_info_file()
         festival_pk = 'screening__film__festival__pk'
-        super().__init__(session, 'attendance', self.manager, file, festival=festival, festival_pk=festival_pk)
+        super().__init__(session, self.object_name, self.manager, file, festival=festival, festival_pk=festival_pk)
         self.unknown_screenings = 0
         initialize_log(session)
 
@@ -774,23 +775,29 @@ class AttendanceLoader(SimpleLoader):
                     attendance_props_by_fan_name[fan_name] = {
                         'fan': fan,
                         'attendance': fan_attendance,
-                        'tickets': tickets_bought,
                     }
 
         if not screening:
             self.unknown_screenings += 1
             yield None
 
+        if self.object_name == 'ticket' and not tickets_bought:
+            yield None
+
         for props in attendance_props_by_fan_name.values():
             value_by_field = {
                 'screening': screening,
                 'fan': props['fan'],
-                'tickets': props['tickets'],
             }
             yield value_by_field
 
     def finalize(self):
         self.add_log(f'{self.unknown_screenings} unknown screenings.')
+
+
+class TicketLoader(AttendanceLoader):
+    object_name = 'ticket'
+    manager = Ticket.tickets
 
 
 class CityUpdater(SimpleLoader):
@@ -970,7 +977,7 @@ class CalendarDumper(BaseDumper):
             f"Attendants: {obj['attendants']}",
             f"Ratings: {fans_rating_str} ({film_rating_str})",
             '',
-            FilmDetailView.get_description(screening.film),
+            FilmDetailView.get_description(screening.film) or '',
         ]
         return separator.join(notes)
 
@@ -1110,6 +1117,7 @@ class AttendanceDumper(BaseDumper):
 
     def object_row(self, attendance):
         attending_fans = [self.field_by_bool[attendance.fan.name == fan_name] for fan_name in self.fan_names]
+        ticket_bought = Ticket.tickets.filter(screening=attendance.sceening, fan=attendance.fan)
         field_by_index = {
             0: attendance.screening.film.film_id,
             1: attendance.screening.screen.screen_id,
@@ -1120,7 +1128,23 @@ class AttendanceDumper(BaseDumper):
             6: '',      # auto_planned
             7: '',      # blocked
             8: ','.join(attending_fans),
-            9: self.TRUE if attendance.tickets else self.FALSE,
+            9: self.TRUE if ticket_bought else self.FALSE,
             10: '',     # sold_out
         }
         yield field_by_index.values()
+
+
+class TicketDumper(BaseDumper):
+    manager = Ticket.tickets
+    header = ['film_id', 'screen_id', 'start_dt', 'fan']
+
+    def __init__(self, session):
+        super().__init__(session, 'ticket', self.manager, self.header)
+
+    def object_row(self, ticket):
+        yield [
+            ticket.screening.film.film_id,
+            ticket.screening.screen.screen_id,
+            ticket.screening.start_dt.isoformat(timespec='minutes'),
+            ticket.fan.name,
+        ]

@@ -41,6 +41,8 @@
                 <th>Film fan</th>
                 <th style="text-align: center">Attends</th>
                 <th>Preset</th>
+                <th style="text-align: center">Ticket</th>
+                <th style="text-align: center">Confirmed</th>
             </tr>
         </thead>
         <tbody>
@@ -48,17 +50,27 @@
             <tr>
                 <td>{{ prop.fan }}</td>
                 {% if prop.attends %}
-                    <td class="with-submit" style="text-align: center"><input type="checkbox" checked="" value="{{ prop.value }}" name="{{ prop.fan }}"></td>
+                    <td class="with-submit-center"><input type="checkbox" checked="" value="{{ prop.value }}" name="{{ prop.fan }}"></td>
                 {% else %}
-                    <td class="with-submit" style="text-align: center"><input type="checkbox" value="attends" name="{{ prop.fan }}"></td>
+                    <td class="with-submit-center"><input type="checkbox" value="attends" name="{{ prop.fan }}"></td>
                 {% endif %}
                 <td style="background: var(--screeningBackground)">{{ prop.attends }}</td>
+                {% if prop.has_ticket %}
+                    <td class="with-submit-center"><input type="checkbox" checked="" value="" name="{{ prop.ticket_fan }}"></td>
+                {% else %}
+                    <td class="with-submit-center"><input type="checkbox" value="ticket" name="{{ prop.ticket_fan }}"></td>
+                {% endif %}
+                {% if prop.confirmed %}
+                    <td class="with-submit-center"><input type="checkbox" checked="" value="" name="{{ prop.confirmed_fan }}"></td>
+                {% else %}
+                    <td class="with-submit-center"><input type="checkbox" value="confirmed" name="{{ prop.confirmed_fan }}"></td>
+                {% endif %}
             </tr>
         {% endfor %}
         </tbody>
     </table>
 <br>
-<input type="submit" value="Submit attendances">
+<input type="submit" value="Submit attendance statuses">
 </form>
 <br>
 {% include "../includes/film_screenings.html" with film_screening_props=film_screening_props %}

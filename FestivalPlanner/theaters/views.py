@@ -1,14 +1,13 @@
 from operator import attrgetter
 
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms import formset_factory
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from django.views import View
 from django.views.generic import ListView, DetailView, FormView
 from django.views.generic.detail import SingleObjectMixin
 
 from festival_planner.cookie import Cookie
+from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, get_log, unset_log
 from festivals.models import current_festival
 from theaters.forms.theater_forms import TheaterDetailsForm, TheaterScreenDetailsForm
@@ -211,14 +210,6 @@ class TheaterScreenListFormView(SingleObjectMixin, FormView):
         return self.clean_response()
 
 
-class TheaterView(LoginRequiredMixin, View):
-
-    @staticmethod
-    def get(request, *args, **kwargs):
-        view = TheaterDetailView.as_view()
-        return view(request, *args, **kwargs)
-
-    @staticmethod
-    def post(request, *args, **kwargs):
-        view = TheaterScreenListFormView.as_view()
-        return view(request, *args, **kwargs)
+class TheaterView(SharedTemplateReferrerView):
+    list_view = TheaterDetailView
+    form_view = TheaterScreenListFormView

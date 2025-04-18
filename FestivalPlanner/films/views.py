@@ -9,7 +9,6 @@ from django.db.models import Exists, OuterRef
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
-from django.views import View
 from django.views.generic import FormView, DetailView, ListView, TemplateView
 
 from authentication.models import FilmFan
@@ -18,10 +17,11 @@ from festival_planner.cookie import Filter, Cookie
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fragment_keeper import FilmFragmentKeeper
 from festival_planner.screening_status_getter import ScreeningStatusGetter
+from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, unset_log, wrap_up_form_errors, application_name, get_log, \
     initialize_log, add_log, CSV_DIALECT
 from festivals.config import Config
-from festivals.models import current_festival, Festival
+from festivals.models import current_festival
 from films.forms.film_forms import PickRating, UserForm
 from films.models import FilmFanFilmRating, Film, current_fan, get_judging_fans, fan_rating_str, \
     FilmFanFilmVote, fan_rating
@@ -134,7 +134,7 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
             self.view.unexpected_errors.append("Can't identify submit widget.")
 
 
-class FilmsView(LoginRequiredMixin, View):
+class FilmsView(SharedTemplateReferrerView):
     """
     Film list with updatable ratings.
     """
@@ -143,15 +143,10 @@ class FilmsView(LoginRequiredMixin, View):
     post_attendance = False
     unexpected_errors = []
 
-    @staticmethod
-    def get(request, *args, **kwargs):
-        view = FilmsListView.as_view()
-        return view(request, *args, **kwargs)
-
-    @staticmethod
-    def post(request, *args, **kwargs):
-        view = FilmsFormView.as_view()
-        return view(request, *args, **kwargs)
+    def __init__(self):
+        super().__init__()
+        self.list_view = FilmsListView
+        self.form_view = FilmsFormView
 
 
 class FilmsListView(LoginRequiredMixin, ListView):
@@ -461,21 +456,16 @@ class FilmsFormView(BaseFilmsFormView):
     success_view_name = 'films:films'
 
 
-class VotesView(LoginRequiredMixin, View):
+class VotesView(SharedTemplateReferrerView):
     template_name = 'films/votes.html'
     submit_name_prefix = 'votes_'
     post_attendance = True
     unexpected_errors = []
 
-    @staticmethod
-    def get(request, *args, **kwargs):
-        view = VotesListView.as_view()
-        return view(request, *args, **kwargs)
-
-    @staticmethod
-    def post(request, *args, **kwargs):
-        view = VotesFormView.as_view()
-        return view(request, *args, **kwargs)
+    def __init__(self):
+        super().__init__()
+        self.list_view = VotesListView
+        self.form_view = VotesFormView
 
 
 class VotesListView(LoginRequiredMixin, ListView):

@@ -1,5 +1,7 @@
 {% extends "base_template.html" %}
 
+{% load humanize %}
+
 {% block title %}{{ title }}{% endblock %}
 {% block header %}{{ title }}{% endblock %}
 
@@ -11,8 +13,6 @@
         <br>
         <a href="{% url 'availabilities:list' %}">Availabilities</a>
         <br>
-        <a href="{% url 'theaters:theaters' %}">Theaters</a>
-        <br>
         <a href="{% url 'screenings:planner' %}">Planner</a>
         <br>
         <a href="{% url 'loader:list_action' %}?label=screenings">Load screenings</a>
@@ -20,8 +20,16 @@
         <a href="{% url 'loader:list_action' %}?label=attendances">Load attendances</a>
         <br>
         <a href="{% url 'loader:dump_data' festival.id %}?label=attendances">Dump attendances</a>
+        <br>
+        <a href="{% url 'loader:list_action' %}?label=tickets">Load tickets</a>
+        <br>
+        <a href="{% url 'loader:dump_data' festival.id %}?label=tickets">Dump tickets</a>
     </span>
 </div>
+
+{% block errors %}
+    {{ block.super }}
+{% endblock %}
 
 {% block log %}
     {{ block.super }}
@@ -34,7 +42,7 @@
         {{ action.fan }}
         updated attendances of
         <a href="{% url 'screenings:details' action.screening_id %}">{{ action.screening_str }}</a>,
-        {{ action.action_time|timesince }} ago
+        {{ action.action_time|naturaltime }}
     </p>
     <ul>
     {% for update in action.updates %}
@@ -58,7 +66,7 @@
                 {{ props.selected_screening }}
             </span>
             <span class="modest-dropdown-content"
-                  style="min-width:42rem; margin-left: 12rem; background: black; cursor: default;">
+                  style="min-width:50rem; margin-left: 12rem; background: black; cursor: default;">
                 <table>
                     <tbody>
                     <tr>
@@ -169,7 +177,15 @@
                         <span style="color: {{ prop.rating_color }}">{{ prop.auto_planned }}{{ prop.film_rating }}</span>
                         <span class="day-schema-screening-info"
                               style="background: {{ info.background }}; color: {{ info.color }};">
-                            <a style="color: {{ info.color }}" href="{% url 'screenings:day_schema' %}{{ prop.query_string }}{{ prop.fragment }}">{{ prop.info_spot }}</a>
+                            <a style="color: {{ info.color }}" href="{% url 'screenings:day_schema' %}{{ prop.query_string }}{{ prop.fragment }}">
+                                {{ prop.info_spot }}
+                                {% if prop.tickets_warning %}
+                                    <span style="color: {{ prop.warning_color }};">!</span>
+                                {% endif %}
+                                {% if prop.awaiting_confirmation %}
+                                    <span style="color: {{ prop.awaiting_color }};">?</span>
+                                {% endif %}
+                            </a>
                         </span>
                         {{ prop.line_2 }}
                     </span>

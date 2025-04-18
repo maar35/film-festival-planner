@@ -3,13 +3,13 @@ import datetime
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from django.views import View
 from django.views.generic import ListView, FormView
 
 from authentication.models import FilmFan
 from availabilities.forms.availabilities_forms import AvailabilityForm
 from availabilities.models import Availabilities
 from festival_planner.cookie import Cookie, Filter, FestivalDay
+from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, wrap_up_form_errors, get_log, unset_log, add_log, initialize_log
 from festivals.models import current_festival
 from films.models import current_fan
@@ -59,7 +59,7 @@ class AvailabilityDay(FestivalDay):
             return self.festival.start_date.isoformat()
 
 
-class AvailabilityView(LoginRequiredMixin, View):
+class AvailabilityView(SharedTemplateReferrerView):
     """
     Class te receive and forward requests on availabilities.
     """
@@ -75,15 +75,10 @@ class AvailabilityView(LoginRequiredMixin, View):
     delete_queryset = None
     merge_queryset = None
 
-    @staticmethod
-    def get(request, *args, **kwargs):
-        view = AvailabilityListView.as_view()
-        return view(request, *args, **kwargs)
-
-    @staticmethod
-    def post(request, *args, **kwargs):
-        view = AvailabilityFormView.as_view()
-        return view(request, *args, **kwargs)
+    def __init__(self):
+        super().__init__()
+        self.list_view = AvailabilityListView
+        self.form_view = AvailabilityFormView
 
     @classmethod
     def get_dt(cls, session, date_field, time_field):
@@ -296,6 +291,48 @@ class AvailabilityListView(LoginRequiredMixin, ListView):
         return False
 
 
+class AvailabilityFormView(LoginRequiredMixin, FormView):
+    template_name = AvailabilityView.template_name
+    http_method_names = ['post']
+    form_class = AvailabilityForm
+    success_url = '/availabilities/list'
+
+    def form_valid(self, form):
+        session = self.request.session
+        match self.request.POST:
+            case {'fan': fan}:
+                AvailabilityView.fan_cookie.set(session, fan)
+            case {'start_day': start_day}:
+                AvailabilityView.start_day.set_str(session, start_day, is_choice=True)
+            case {'start_time': start_time}:
+                AvailabilityView.start_time.set(session, start_time)
+            case {'end_day': end_day}:
+                AvailabilityView.end_day.set_str(session, end_day, is_choice=True)
+            case {'end_time': end_time}:
+                AvailabilityView.end_time.set(session, end_time)
+            case {'add': _} | {'merge': _} | {'delete': _}:
+                AvailabilityView.confirm = True
+            case {'add_confirmed': _}:
+                handle_new_period(session, update_db=True, action='add')
+            case {'merge_confirmed': _}:
+                handle_period_overlaps_existing_period(session, update_db=True, action='merge')
+            case {'delete_confirmed': _}:
+                handle_period_in_existing_period(session, update_db=True, action='delete')
+            case {'add_canceled': _}:
+                add_log(session, 'Add new availability period canceled.')
+            case {'merge_canceled': _}:
+                add_log(session, 'Merge of overlapping availabilities canceled.')
+            case {'delete_canceled': _}:
+                add_log(session, 'Partly delete of an existing availability canceled.')
+
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        ERRORS_COOKIE.set(self.request.session, wrap_up_form_errors(form.errors))
+        super().form_invalid(form)
+        return HttpResponseRedirect(reverse('availabilities:list'))
+
+
 def get_new_availability_data(session):
     fan_name = AvailabilityView.fan_cookie.get(session)
     start_dt = AvailabilityView.get_dt(session, 'start_day', 'start_time')
@@ -361,45 +398,3 @@ def handle_period_in_existing_period(session, update_db=False, action=None):
                                                              last_remaining_obj)
             except Exception as e:
                 set_error(session, str(e), action)
-
-
-class AvailabilityFormView(LoginRequiredMixin, FormView):
-    template_name = AvailabilityView.template_name
-    http_method_names = ['post']
-    form_class = AvailabilityForm
-    success_url = '/availabilities/list'
-
-    def form_valid(self, form):
-        session = self.request.session
-        match self.request.POST:
-            case {'fan': fan}:
-                AvailabilityView.fan_cookie.set(session, fan)
-            case {'start_day': start_day}:
-                AvailabilityView.start_day.set_str(session, start_day, is_choice=True)
-            case {'start_time': start_time}:
-                AvailabilityView.start_time.set(session, start_time)
-            case {'end_day': end_day}:
-                AvailabilityView.end_day.set_str(session, end_day, is_choice=True)
-            case {'end_time': end_time}:
-                AvailabilityView.end_time.set(session, end_time)
-            case {'add': _} | {'merge': _} | {'delete': _}:
-                AvailabilityView.confirm = True
-            case {'add_confirmed': _}:
-                handle_new_period(session, update_db=True, action='add')
-            case {'merge_confirmed': _}:
-                handle_period_overlaps_existing_period(session, update_db=True, action='merge')
-            case {'delete_confirmed': _}:
-                handle_period_in_existing_period(session, update_db=True, action='delete')
-            case {'add_canceled': _}:
-                add_log(session, 'Add new availability period canceled.')
-            case {'merge_canceled': _}:
-                add_log(session, 'Merge of overlapping availabilities canceled.')
-            case {'delete_canceled': _}:
-                add_log(session, 'Partly delete of an existing availability canceled.')
-
-        return super().form_valid(form)
-
-    def form_invalid(self, form):
-        ERRORS_COOKIE.set(self.request.session, wrap_up_form_errors(form.errors))
-        super().form_invalid(form)
-        return HttpResponseRedirect(reverse('availabilities:list'))

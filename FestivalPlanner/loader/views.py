@@ -10,6 +10,7 @@ from django.views.generic import FormView, ListView
 
 from authentication.models import FilmFan
 from festival_planner.cookie import Cookie
+from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, wrap_up_form_errors
 from festivals.models import Festival, switch_festival, current_festival, FestivalBase
 from films.models import Film, FilmFanFilmRating
@@ -17,9 +18,9 @@ from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoa
     TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm, RatingDataBackupForm, \
     FILM_FANS_BACKUP_PATH, RATINGS_BACKUP_PATH, FILMS_BACKUP_PATH, \
     FESTIVALS_BACKUP_PATH, FESTIVAL_BASES_BACKUP_PATH, BACKUP_DATA_DIR, CITIES_BACKUP_PATH, \
-    ScreeningLoader, AttendanceLoader, AttendanceDumper, RatingDumper, SingleTableDumperForm
+    ScreeningLoader, AttendanceLoader, AttendanceDumper, RatingDumper, SingleTableDumperForm, TicketLoader, TicketDumper
 from screenings.forms.screening_forms import DummyForm
-from screenings.models import Screening, Attendance
+from screenings.models import Screening, Attendance, Ticket
 from sections.models import Section, Subsection
 from theaters.models import Theater, City, cities_path, theaters_path, screens_path, Screen, new_screens_path, \
     new_cities_path, new_theaters_path
@@ -466,8 +467,9 @@ class BaseListActionFormView(LoginRequiredMixin, FormView):
     form_class = DummyForm
     template_name = None
     loader_class = None
-    success_view_name = None
-    invalid_view_name = None
+    success_template_name = None
+    invalid_template_name = None
+    invalid_template_query = None
 
     def form_valid(self, form):
         session = self.request.session
@@ -481,28 +483,23 @@ class BaseListActionFormView(LoginRequiredMixin, FormView):
     def form_invalid(self, form):
         super().form_invalid(form)
         ScreeningsLoaderView.unexpected_error = '\n'.join(wrap_up_form_errors(form.errors))
-        return HttpResponseRedirect(reverse(self.invalid_view_name))
+        return HttpResponseRedirect(reverse(self.invalid_template_name) + self.invalid_template_query or '')
 
     def get_success_url(self):
-        return reverse(self.success_view_name)
+        return reverse(self.success_template_name)
 
 
-class ScreeningsLoaderView(LoginRequiredMixin, View):
+class ScreeningsLoaderView(SharedTemplateReferrerView):
     """
     Class-based view to load the screenings of a specific festival.
     """
     template_name = 'loader/list_action.html'
     unexpected_error = ''
 
-    @staticmethod
-    def get(request, *args, **kwargs):
-        view = ScreeningLoaderListView.as_view()
-        return view(request, *args, **kwargs)
-
-    @staticmethod
-    def post(request, *args, **kwargs):
-        view = ScreeningLoaderFormView.as_view()
-        return view(request, *args, **kwargs)
+    def __init__(self):
+        super().__init__()
+        self.list_view = ScreeningLoaderListView
+        self.form_view = ScreeningLoaderFormView
 
 
 class ScreeningLoaderListView(BaseListActionListView):
@@ -519,26 +516,22 @@ class ScreeningLoaderListView(BaseListActionListView):
 class ScreeningLoaderFormView(BaseListActionFormView):
     template_name = ScreeningsLoaderView.template_name
     loader_class = ScreeningLoader
-    success_view_name = 'screenings:day_schema'
-    invalid_view_name = 'loader:screenings'
+    success_template_name = 'screenings:day_schema'
+    invalid_template_name = 'loader:list_action'
+    invalid_template_query = 'screenings'
 
 
-class AttendanceLoaderView(LoginRequiredMixin, View):
+class AttendanceLoaderView(SharedTemplateReferrerView):
     """
     Class-based view to load the attendances of a specific festival.
     """
     template_name = 'loader/list_action.html'
     unexpected_error = ''
 
-    @staticmethod
-    def get(request, *args, **kwargs):
-        view = AttendanceLoaderListView.as_view()
-        return view(request, *args, **kwargs)
-
-    @staticmethod
-    def post(request, *args, **kwargs):
-        view = AttendanceLoaderFormView.as_view()
-        return view(request, *args, **kwargs)
+    def __init__(self):
+        super().__init__()
+        self.list_view = AttendanceLoaderListView
+        self.form_view = AttendanceLoaderFormView
 
 
 class AttendanceLoaderListView(BaseListActionListView):
@@ -554,8 +547,36 @@ class AttendanceLoaderListView(BaseListActionListView):
 class AttendanceLoaderFormView(BaseListActionFormView):
     template_name = AttendanceLoaderView.template_name
     loader_class = AttendanceLoader
-    success_view_name = 'screenings:day_schema'
-    invalid_view_name = 'loader:attendances'
+    success_template_name = 'screenings:day_schema'
+    invalid_template_name = 'loader:list_action'
+    invalid_template_query = 'attendances'
+
+
+class TicketLoaderView(SharedTemplateReferrerView):
+    """
+    Class-based view to load the tickets of a specific festival.
+    """
+    template_name = 'loader/list_action.html'
+    unexpected_error = ''
+
+    def __init__(self):
+        super().__init__()
+        self.list_view = TicketLoaderListView
+        self.form_view = TicketLoaderFormView
+
+
+class TicketLoaderListView(AttendanceLoaderListView):
+    template_name = TicketLoaderView.template_name
+    loader_class = TicketLoader
+    manager = Ticket.tickets
+    title = 'Festival Tickets Loader'
+    list_name = 'tickets'
+
+
+class TicketLoaderFormView(AttendanceLoaderFormView):
+    template_name = TicketLoaderView.template_name
+    loader_class = TicketLoader
+    invalid_template_query = 'tickets'
 
 
 class BaseDumperView(LoginRequiredMixin, FormView):
@@ -564,7 +585,7 @@ class BaseDumperView(LoginRequiredMixin, FormView):
 
     These globals should be filled:
     - dump_class, must be derived from BaseDumper
-    - success_utl
+    - success_url
     - data_name, for use in log texts
     - has_header, whether the dumpfile should have a header
 
@@ -641,7 +662,6 @@ class AttendanceDumperView(BaseDumperView):
     success_url = '/screenings/day_schema/'
     data_name = 'attendances'
     has_header = True
-    queryset = None
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
@@ -649,7 +669,19 @@ class AttendanceDumperView(BaseDumperView):
         self.queryset = Attendance.attendances.filter(screening__film__festival=self.festival)
 
 
-class SingleTemplateBaseView(View):
+class TicketDumperView(BaseDumperView):
+    dump_class = TicketDumper
+    success_url = '/screenings/day_schema/'
+    data_name = 'tickets'
+    has_header = True
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.dumpfile = self.festival.tickets_file()
+        self.queryset = Ticket.tickets.filter(screening__film__festival=self.festival)
+
+
+class SingleTemplateBaseView(SharedTemplateReferrerView):
     http_method_names = ['get', 'post']
     label_cookie = Cookie('label')
     view_class_by_label = None
@@ -659,21 +691,16 @@ class SingleTemplateBaseView(View):
         self.label_cookie.handle_get_request(request)
         data_name = self.label_cookie.get(request.session)
         self.view_class = self.view_class_by_label[data_name]
+        self.list_view = self.view_class
+        self.form_view = self.view_class
         return super().dispatch(request, *args, **kwargs)
-
-    def get(self, request, *args, **kwargs):
-        view = self.view_class.as_view()
-        return view(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        view = self.view_class.as_view()
-        return view(request, *args, **kwargs)
 
 
 class SingleTemplateListView(SingleTemplateBaseView):
     view_class_by_label = {
         'screenings': ScreeningsLoaderView,
         'attendances': AttendanceLoaderView,
+        'tickets': TicketLoaderView,
     }
 
 
@@ -681,4 +708,5 @@ class SingleTemplateDumperView(SingleTemplateBaseView):
     view_class_by_label = {
         'ratings': RatingDumperView,
         'attendances': AttendanceDumperView,
+        'tickets': TicketDumperView,
     }

@@ -12,7 +12,7 @@ from festivals.models import FestivalBase, Festival, switch_festival, current_fe
 from films.models import Film, FAN_NAMES_BY_FESTIVAL_BASE, LOWEST_PLANNABLE_RATING, FilmFanFilmRating, set_current_fan
 from films.tests import create_film, ViewsTestCase, get_decoded_content
 from films.views import MAX_SHORT_MINUTES
-from screenings.models import Screening, Attendance
+from screenings.models import Screening, Attendance, Ticket
 from sections.models import Section, Subsection
 from theaters.models import Theater, Screen, City
 
@@ -48,23 +48,34 @@ class ScreeningModelTests(TestCase):
         super().setUp()
         self.film, self.theater, self.screen = arrange_screening_attributes()
 
+    def _arrange_screening_kwargs(self, iso_dt=None, minutes=None):
+        start_dt = arrange_get_datetime(iso_dt or '2024-02-10 23:14')
+        minutes = minutes or 115
+        end_dt = start_dt + datetime.timedelta(minutes=minutes)
+        screening_kwargs = {
+            'film': self.film,
+            'screen': self.screen,
+            'start_dt': start_dt,
+            'end_dt': end_dt,
+            'subtitles': 'en',
+            'q_and_a': True,
+        }
+        return screening_kwargs
+
     def test_unique_constraint(self):
         """t
         Screenings can not have the same film, screen and start time.
         """
         # Arrange.
-        start_dt = arrange_get_datetime('2022-10-31 20:00')
-        screening_kwargs = {
-            'film': self.film,
-            'screen': self.screen,
-            'start_dt': start_dt,
-            'subtitles': 'en',
-            'q_and_a': True,
-        }
+        screening_kwargs = self._arrange_screening_kwargs(iso_dt='2022-10-31 20:00')
+        start_dt = screening_kwargs['start_dt']
         end_dt_1 = start_dt + datetime.timedelta(minutes=101)
         end_dt_2 = start_dt + datetime.timedelta(minutes=21)
-        screening_1 = Screening(end_dt=end_dt_1, **screening_kwargs)
-        screening_2 = Screening(end_dt=end_dt_2, **screening_kwargs)
+
+        screening_kwargs['end_dt'] = end_dt_1
+        screening_1 = Screening(**screening_kwargs)
+        screening_kwargs['end_dt'] = end_dt_2
+        screening_2 = Screening(**screening_kwargs)
 
         # Act.
         screening_1.save()
@@ -98,28 +109,53 @@ class ScreeningModelTests(TestCase):
         # Assert.
         self.assertEqual(Screening.screenings.count(), 2)
 
+    def test_short_string_leading_zero(self):
+        # Arrange.
+        screening_kwargs = self._arrange_screening_kwargs(iso_dt='2024-02-06 21:00')
+        screening = Screening.screenings.create(**screening_kwargs)
 
-class AttendanceModelTests(TestCase):
+        # Act.
+        string = screening.str_short()
+
+        # Assert.
+        self.assertRegex(string, r'Tue 6 Feb')
+
+    def test_short_string_decimal_zero(self):
+        # Arrange.
+        screening_kwargs = self._arrange_screening_kwargs(iso_dt='2021-11-30 22:30')
+        screening = Screening.screenings.create(**screening_kwargs)
+
+        # Act.
+        string = screening.str_short()
+
+        # Assert.
+        self.assertRegex(string, r'Tue 30 Nov')
+
+
+class AttendanceModelTests(ScreeningModelTests):
 
     def setUp(self):
-        debug_tools.SUPPRESS_DEBUG_PRINT = True
-        self.film, self.theater, self.screen = arrange_screening_attributes()
+        super().setUp()
 
-    def _arrange_screening_kwargs(self, iso_dt=None, minutes=None):
-        start_dt = datetime.datetime.fromisoformat(iso_dt or '2024-02-10 23:14').replace(tzinfo=None)
-        minutes = minutes or 115
-        end_dt = start_dt + datetime.timedelta(minutes=minutes)
-        screening_kwargs = {
-            'film': self.film,
-            'screen': self.screen,
-            'start_dt': start_dt,
-            'end_dt': end_dt,
-            'subtitles': 'en',
-            'q_and_a': True,
-        }
-        return screening_kwargs
+    def test_unique_constraint(self):
+        """
+        Attendances can not have the same fan and screening.
+        """
+        # Arrange.
+        fan = FilmFan.film_fans.create(name='Neil', seq_nr=1)
+        screening_kwargs = self._arrange_screening_kwargs(iso_dt='2022-10-31 20:00')
+        screening = Screening(**screening_kwargs)
+        attendance_1 = Attendance(fan=fan, screening=screening)
+        attendance_2 = Attendance(fan=fan, screening=screening)
 
-    def test_attendance_string_leading_zero(self):
+        # Act.
+        screening.save()
+        attendance_1.save()
+
+        # Assert.
+        self.assertRaises(IntegrityError, attendance_2.save)
+
+    def test_attendance_string_contains_fan(self):
         # Arrange.
         jim = FilmFan.film_fans.create(name='Jim', seq_nr=1)
         screening_kwargs = self._arrange_screening_kwargs(iso_dt='2024-02-06 21:00')
@@ -130,20 +166,30 @@ class AttendanceModelTests(TestCase):
         string = str(attendance)
 
         # Assert.
-        self.assertRegex(string, r'Tue 6 Feb')
+        self.assertRegex(string, f'{jim} attends')
 
-    def test_attendance_string_decimal_zero(self):
+
+class TicketModelTests(ScreeningModelTests):
+    def setUp(self):
+        super().setUp()
+
+    def test_unique_constraint(self):
+        """
+        Tickets can not have the same fan and screening.
+        """
         # Arrange.
-        fan = FilmFan.film_fans.create(name='Mick', seq_nr=1)
-        screening_kwargs = self._arrange_screening_kwargs(iso_dt='2021-11-30 22:30')
-        screening = Screening.screenings.create(**screening_kwargs)
-        attendance = Attendance(fan=fan, screening=screening)
+        fan = FilmFan.film_fans.create(name='Eric', seq_nr=1)
+        screening_kwargs = self._arrange_screening_kwargs(iso_dt='2025-03-29 16:15')
+        screening = Screening(**screening_kwargs)
+        ticket_1 = Ticket(fan=fan, screening=screening, confirmed=False)
+        ticket_2 = Ticket(fan=fan, screening=screening, confirmed=True)
 
         # Act.
-        string = str(attendance)
+        screening.save()
+        ticket_1.save()
 
         # Assert.
-        self.assertRegex(string, r'Tue 30 Nov')
+        self.assertRaises(IntegrityError, ticket_2.save)
 
 
 class ScreeningViewsTests(ViewsTestCase):
@@ -253,6 +299,10 @@ class ScreeningViewsTests(ViewsTestCase):
 
 
 class DaySchemaViewTests(ScreeningViewsTests):
+    def setUp(self):
+        super().setUp()
+        self.re_warning = r'<span[^>]*>!</span>'
+
     def arrange_create_std_screening(self):
 
         start_dt = arrange_get_datetime('2024-08-30 11:15')
@@ -277,7 +327,6 @@ class DaySchemaViewTests(ScreeningViewsTests):
         response = self.client.get(reverse('screenings:day_schema'))
 
         # Assert.
-        self.assertEqual(current_festival(self.session), self.festival)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(Screening.screenings.count(), 1)
         self.assert_screening_status(response, Screening.ScreeningStatus.FREE)
@@ -337,7 +386,30 @@ class DaySchemaViewTests(ScreeningViewsTests):
 
     def test_attendance(self):
         """
-        An attended screening has the correct colors in the day schema.
+        A screening attended by a fan with a ticket is correctly displayed in the day schema.
+        """
+        # Arrange.
+        self.arrange_regular_user_props()
+
+        start_dt = arrange_get_datetime('2024-08-31 11:30')
+        screening = self.arrange_create_screening(self.screen_b, start_dt)
+
+        _ = Attendance.attendances.create(fan=self.fan, screening=screening)
+        _ = Ticket.tickets.create(fan=self.fan, screening=screening)
+
+        # Act.
+        response = self.client.get(reverse('screenings:day_schema'))
+
+        # Assert.
+        self.assertEqual(current_festival(self.session), self.festival)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertEqual(Screening.screenings.count(), 1)
+        self.assert_screening_status(response, Screening.ScreeningStatus.ATTENDS)
+        self.assertNotRegex(get_decoded_content(response), self.re_warning)
+
+    def test_needs_ticket(self):
+        """
+        A screening attended by a fan without a ticket is correctly displayed in the day schema.
         """
         # Arrange.
         self.arrange_regular_user_props()
@@ -354,13 +426,57 @@ class DaySchemaViewTests(ScreeningViewsTests):
         self.assertEqual(current_festival(self.session), self.festival)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(Screening.screenings.count(), 1)
-        self.assert_screening_status(response, Screening.ScreeningStatus.ATTENDS)
+        self.assert_screening_status(response, Screening.ScreeningStatus.NEEDS_TICKETS)
+        self.assertRegex(get_decoded_content(response), self.re_warning)
+
+    def test_warning_ticket_while_not_attending(self):
+        """
+        In the Day Schema, a warning symbol is displayed if a fan has a ticket for a screening but doesn't attend it.
+        """
+        # Arrange.
+        self.arrange_regular_user_props()
+
+        start_dt = arrange_get_datetime('2024-08-31 11:30')
+        screening = self.arrange_create_screening(self.screen_b, start_dt)
+
+        _ = Ticket.tickets.create(fan=self.fan, screening=screening)
+
+        # Act.
+        response = self.client.get(reverse('screenings:day_schema'))
+
+        # Assert.
+        self.assertEqual(current_festival(self.session), self.festival)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertEqual(Screening.screenings.count(), 1)
+        self.assertRegex(get_decoded_content(response), self.re_warning)
 
 
 class DetailsViewTest(ScreeningViewsTests):
     def test_attendance(self):
         """
-        An attended screening is correctly displayed in the screening details view.
+        A screening attended by a fan with a ticket is correctly displayed in the screening details view.
+        """
+        # Arrange.
+        self.arrange_regular_user_props()
+
+        start_dt = arrange_get_datetime('2024-08-30 11:15')
+        screening = self.arrange_create_screening(self.screen_sg, start_dt)
+
+        _ = Attendance.attendances.create(fan=self.fan, screening=screening)
+        _ = Ticket.tickets.create(fan=self.fan, screening=screening)
+
+        # Act.
+        response = self.client.get(reverse('screenings:details', args=[screening.pk]))
+
+        # Assert.
+        self.assertEqual(current_festival(self.session), self.festival)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertEqual(Screening.screenings.count(), 1)
+        self.assert_screening_status(response, Screening.ScreeningStatus.ATTENDS, view='details')
+
+    def test_needs_ticket(self):
+        """
+        A screening attended by a fan without a ticket is correctly displayed in the screening details view.
         """
         # Arrange.
         self.arrange_regular_user_props()
@@ -377,7 +493,7 @@ class DetailsViewTest(ScreeningViewsTests):
         self.assertEqual(current_festival(self.session), self.festival)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(Screening.screenings.count(), 1)
-        self.assert_screening_status(response, Screening.ScreeningStatus.ATTENDS, view='details')
+        self.assert_screening_status(response, Screening.ScreeningStatus.NEEDS_TICKETS, view='details')
 
     def test_attends_film(self):
         """

@@ -4,14 +4,17 @@ from operator import attrgetter
 from django import forms
 from django.db import transaction
 
+from festival_planner.cookie import Errors
 from festival_planner.debug_tools import pr_debug, ExceptionTracer
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_log, initialize_log
 from festivals.models import current_festival
 from films.models import FilmFanFilmRating, current_fan, get_rating_as_int
 from loader.forms.loader_forms import CalendarDumper
-from screenings.models import Attendance, Screening, get_available_filmscreenings
+from screenings.models import Attendance, Screening, get_available_filmscreenings, Ticket
 from theaters.models import Theater
+
+ERRORS = Errors()
 
 
 class DummyForm(forms.Form):
@@ -192,7 +195,7 @@ class PlannerForm(DummyForm):
             with transaction.atomic():
                 for screening in auto_planned_screenings:
                     screening.auto_planned = False
-                    AttendanceForm.update_attendance(screening, fan, attends=False)
+                    AttendanceForm.update_attendance(fan, screening, attends=False)
                 updated_count = manager.bulk_update(auto_planned_screenings, ['auto_planned'])
                 add_log(session, f'{updated_count} screenings updated')
         except Exception as e:
@@ -238,7 +241,7 @@ class PlannerForm(DummyForm):
                 # Update the screening.
                 cls.reporter.planned_screenings_by_rating[rating].append(eligible_screening)
                 eligible_screening.auto_planned = True
-                AttendanceForm.update_attendance(eligible_screening, cls.getter.fan)
+                AttendanceForm.update_attendance(cls.getter.fan, eligible_screening)
                 eligible_screening.save()
 
                 # Update the status of other screenings.
@@ -307,25 +310,67 @@ class AttendanceForm(forms.Form):
     attendance = forms.CheckboxInput()
 
     @classmethod
-    def update_attendances(cls, session, screening, changed_attendance_by_fan, update_log):
-        transaction_committed = True
-        try:
-            with transaction.atomic():
-                for fan, attends in changed_attendance_by_fan.items():
-                    cls.update_attendance(screening, fan, attends=attends)
-                    update_log(fan, attends)
-        except Exception as e:
-            transaction_committed = False
-            add_log(session, f'{e}, transaction rolled back')
-        return transaction_committed
+    def update_attendances(cls, *args):
+        """
+        Args are: session, screening, changed_prop_by_fan, update_log
+        """
+        return update_attendance_statuses(cls.update_attendance, *args)
 
     @classmethod
-    def update_attendance(cls, screening, fan, attends=True):
-        manager = Attendance.attendances
-        kwargs = {'screening': screening, 'fan': fan}
-        if attends:
-            manager.update_or_create(**kwargs)
-        else:
-            existing_attendances = manager.filter(**kwargs)
-            if len(existing_attendances) > 0:
-                existing_attendances.delete()
+    def update_attendance(cls, fan, screening, attends=True, bool_prop=None, manager=None):
+        attends = attends if bool_prop is None else bool_prop
+        manager = manager or Attendance.attendances
+        update_fan_screening_bool(fan, screening, manager=manager, bool_prop=attends)
+
+
+class TicketForm(forms.Form):
+    @classmethod
+    def update_has_ticket(cls, *args):
+        """
+        Args are: session, screening, changed_prop_by_fan, update_log
+        """
+        return update_attendance_statuses(update_fan_screening_bool, *args)
+
+    @classmethod
+    def update_ticket_confirmations(cls, *args):
+        """
+        Args are: session, screening, changed_prop_by_fan, update_log
+        """
+        return update_attendance_statuses(cls.update_fan_ticket_conformation, *args)
+
+    @classmethod
+    def update_fan_ticket_conformation(cls, fan, screening, manager=None, bool_prop=None):
+        manager = manager or Ticket.tickets
+        kwargs = {'fan': fan, 'screening': screening}
+        try:
+            ticket = manager.get(**kwargs)
+        except Ticket.DoesNotExist as e:
+            ticket = manager.create(**kwargs)
+        ticket.confirmed = bool_prop
+        ticket.save()
+
+
+def update_attendance_statuses(update_method, session, screening, changed_pop_by_fan, update_log, manager=None):
+    transaction_committed = True
+    try:
+        with transaction.atomic():
+            for fan, bool_prop in changed_pop_by_fan.items():
+                update_method(fan, screening, manager=manager, bool_prop=bool_prop)
+                update_log(fan, bool_prop)
+    except Exception as e:
+        transaction_committed = False
+        rolled_back = 'transaction rolled back'
+        ERRORS.set(session, [str(e), rolled_back])
+        add_log(session, f'{e}, {rolled_back}')
+    return transaction_committed
+
+
+def update_fan_screening_bool(fan, screening, manager=None, bool_prop=True):
+    manager = manager or Ticket.tickets
+    kwargs = {'screening': screening, 'fan': fan}
+    if bool_prop:
+        manager.update_or_create(**kwargs)
+    else:
+        existing_props = manager.filter(**kwargs)
+        if len(existing_props) > 0:
+            existing_props.delete()
