@@ -3,13 +3,13 @@ import datetime
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from django.views import View
 from django.views.generic import ListView, FormView
 
 from authentication.models import FilmFan
 from availabilities.forms.availabilities_forms import AvailabilityForm
 from availabilities.models import Availabilities
 from festival_planner.cookie import Cookie, Filter, FestivalDay
+from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, wrap_up_form_errors, get_log, unset_log, add_log, initialize_log
 from festivals.models import current_festival
 from films.models import current_fan
@@ -59,7 +59,7 @@ class AvailabilityDay(FestivalDay):
             return self.festival.start_date.isoformat()
 
 
-class AvailabilityView(LoginRequiredMixin, View):
+class AvailabilityView(SharedTemplateReferrerView):
     """
     Class te receive and forward requests on availabilities.
     """
@@ -75,15 +75,10 @@ class AvailabilityView(LoginRequiredMixin, View):
     delete_queryset = None
     merge_queryset = None
 
-    @staticmethod
-    def get(request, *args, **kwargs):
-        view = AvailabilityListView.as_view()
-        return view(request, *args, **kwargs)
-
-    @staticmethod
-    def post(request, *args, **kwargs):
-        view = AvailabilityFormView.as_view()
-        return view(request, *args, **kwargs)
+    def __init__(self):
+        super().__init__()
+        self.list_view = AvailabilityListView
+        self.form_view = AvailabilityFormView
 
     @classmethod
     def get_dt(cls, session, date_field, time_field):

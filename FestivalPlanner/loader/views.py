@@ -10,6 +10,7 @@ from django.views.generic import FormView, ListView
 
 from authentication.models import FilmFan
 from festival_planner.cookie import Cookie
+from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, wrap_up_form_errors
 from festivals.models import Festival, switch_festival, current_festival, FestivalBase
 from films.models import Film, FilmFanFilmRating
@@ -488,22 +489,17 @@ class BaseListActionFormView(LoginRequiredMixin, FormView):
         return reverse(self.success_template_name)
 
 
-class ScreeningsLoaderView(LoginRequiredMixin, View):
+class ScreeningsLoaderView(SharedTemplateReferrerView):
     """
     Class-based view to load the screenings of a specific festival.
     """
     template_name = 'loader/list_action.html'
     unexpected_error = ''
 
-    @staticmethod
-    def get(request, *args, **kwargs):
-        view = ScreeningLoaderListView.as_view()
-        return view(request, *args, **kwargs)
-
-    @staticmethod
-    def post(request, *args, **kwargs):
-        view = ScreeningLoaderFormView.as_view()
-        return view(request, *args, **kwargs)
+    def __init__(self):
+        super().__init__()
+        self.list_view = ScreeningLoaderListView
+        self.form_view = ScreeningLoaderFormView
 
 
 class ScreeningLoaderListView(BaseListActionListView):
@@ -525,22 +521,17 @@ class ScreeningLoaderFormView(BaseListActionFormView):
     invalid_template_query = 'screenings'
 
 
-class AttendanceLoaderView(LoginRequiredMixin, View):
+class AttendanceLoaderView(SharedTemplateReferrerView):
     """
     Class-based view to load the attendances of a specific festival.
     """
     template_name = 'loader/list_action.html'
     unexpected_error = ''
 
-    @staticmethod
-    def get(request, *args, **kwargs):
-        view = AttendanceLoaderListView.as_view()
-        return view(request, *args, **kwargs)
-
-    @staticmethod
-    def post(request, *args, **kwargs):
-        view = AttendanceLoaderFormView.as_view()
-        return view(request, *args, **kwargs)
+    def __init__(self):
+        super().__init__()
+        self.list_view = AttendanceLoaderListView
+        self.form_view = AttendanceLoaderFormView
 
 
 class AttendanceLoaderListView(BaseListActionListView):
@@ -561,22 +552,17 @@ class AttendanceLoaderFormView(BaseListActionFormView):
     invalid_template_query = 'attendances'
 
 
-class TicketLoaderView(LoginRequiredMixin, View):
+class TicketLoaderView(SharedTemplateReferrerView):
     """
     Class-based view to load the tickets of a specific festival.
     """
     template_name = 'loader/list_action.html'
     unexpected_error = ''
 
-    @staticmethod
-    def get(request, *args, **kwargs):
-        view = TicketLoaderListView.as_view()
-        return view(request, *args, **kwargs)
-
-    @staticmethod
-    def post(request, *args, **kwargs):
-        view = TicketLoaderFormView.as_view()
-        return view(request, *args, **kwargs)
+    def __init__(self):
+        super().__init__()
+        self.list_view = TicketLoaderListView
+        self.form_view = TicketLoaderFormView
 
 
 class TicketLoaderListView(AttendanceLoaderListView):
@@ -695,7 +681,7 @@ class TicketDumperView(BaseDumperView):
         self.queryset = Ticket.tickets.filter(screening__film__festival=self.festival)
 
 
-class SingleTemplateBaseView(View):
+class SingleTemplateBaseView(SharedTemplateReferrerView):
     http_method_names = ['get', 'post']
     label_cookie = Cookie('label')
     view_class_by_label = None
@@ -705,15 +691,9 @@ class SingleTemplateBaseView(View):
         self.label_cookie.handle_get_request(request)
         data_name = self.label_cookie.get(request.session)
         self.view_class = self.view_class_by_label[data_name]
+        self.list_view = self.view_class
+        self.form_view = self.view_class
         return super().dispatch(request, *args, **kwargs)
-
-    def get(self, request, *args, **kwargs):
-        view = self.view_class.as_view()
-        return view(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        view = self.view_class.as_view()
-        return view(request, *args, **kwargs)
 
 
 class SingleTemplateListView(SingleTemplateBaseView):
