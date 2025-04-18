@@ -333,8 +333,8 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
-        initialize_log(request.session, 'Update attendance statuses')
-        session = self.request.session
+        session = request.session
+        initialize_log(session, 'Update attendance statuses')
         fans = get_present_fans(session)
         self.fans = get_sorted_fan_list(current_fan(session), fan_query_set=fans)
         self.screening = self.get_object()

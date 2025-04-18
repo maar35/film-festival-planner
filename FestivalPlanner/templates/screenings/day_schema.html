@@ -179,13 +179,13 @@
                               style="background: {{ info.background }}; color: {{ info.color }};">
                             <a style="color: {{ info.color }}" href="{% url 'screenings:day_schema' %}{{ prop.query_string }}{{ prop.fragment }}">
                                 {{ prop.info_spot }}
+                                {% if prop.tickets_warning %}
+                                    <span style="color: {{ prop.warning_color }};">!</span>
+                                {% endif %}
+                                {% if prop.awaiting_confirmation %}
+                                    <span style="color: {{ prop.awaiting_color }};">?</span>
+                                {% endif %}
                             </a>
-                            {% if prop.tickets_warning %}
-                                <span style="color: {{ prop.warning_color }};">!</span>
-                            {% endif %}
-                            {% if prop.awaiting_confirmation %}
-                                <span style="color: {{ prop.awaiting_color }};">?</span>
-                            {% endif %}
                         </span>
                         {{ prop.line_2 }}
                     </span>
