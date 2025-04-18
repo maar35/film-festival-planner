@@ -4,6 +4,7 @@ from operator import attrgetter
 from django import forms
 from django.db import transaction
 
+from festival_planner.cookie import Errors
 from festival_planner.debug_tools import pr_debug, ExceptionTracer
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_log, initialize_log
@@ -12,6 +13,8 @@ from films.models import FilmFanFilmRating, current_fan, get_rating_as_int
 from loader.forms.loader_forms import CalendarDumper
 from screenings.models import Attendance, Screening, get_available_filmscreenings, Ticket
 from theaters.models import Theater
+
+ERRORS = Errors()
 
 
 class DummyForm(forms.Form):
@@ -356,7 +359,9 @@ def update_attendance_statuses(update_method, session, screening, changed_pop_by
                 update_log(fan, bool_prop)
     except Exception as e:
         transaction_committed = False
-        add_log(session, f'{e}, transaction rolled back')
+        rolled_back = 'transaction rolled back'
+        ERRORS.set(session, [str(e), rolled_back])
+        add_log(session, f'{e}, {rolled_back}')
     return transaction_committed
 
 

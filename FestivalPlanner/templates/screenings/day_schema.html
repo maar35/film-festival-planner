@@ -27,6 +27,10 @@
     </span>
 </div>
 
+{% block errors %}
+    {{ block.super }}
+{% endblock %}
+
 {% block log %}
     {{ block.super }}
 {% endblock log %}

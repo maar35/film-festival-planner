@@ -45,6 +45,41 @@ class Cookie:
             del session[self._cookie_key]
 
 
+ERRORS_COOKIE = Cookie('error', initial_value=[])
+WARNING_COOKIE = Cookie('warning', initial_value=[])
+
+
+class Alert:
+    alert_cookie = None
+
+    def __init__(self, alert_cookie):
+        self.alert_cookie = alert_cookie
+
+    def set(self, session, messages):
+        self.alert_cookie.set(session, messages)
+
+    def get(self, session):
+        return self.alert_cookie.get(session)
+
+    def add(self, session, message):
+        alerts = self.alert_cookie.get(session)
+        alerts.append(message)
+        self.alert_cookie.set(session, alerts)
+
+    def remove(self, session):
+        self.alert_cookie.remove(session)
+
+
+class Errors(Alert):
+    def __init__(self):
+        super().__init__(ERRORS_COOKIE)
+
+
+class Warnings(Alert):
+    def __init__(self):
+        super().__init__(WARNING_COOKIE)
+
+
 class Filter(Cookie):
     """
     Provide filtering data on a "on/off" basis.

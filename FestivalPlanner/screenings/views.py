@@ -13,13 +13,14 @@ from festival_planner.cookie import Filter, FestivalDay
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fan_action import FanAction
 from festival_planner.fragment_keeper import ScreeningFragmentKeeper, FRAGMENT_INDICATOR
-from festival_planner.screening_status_getter import ScreeningStatusGetter, get_warning_three_tuple
+from festival_planner.screening_status_getter import ScreeningStatusGetter, get_buy_sell_confirm_alert_tuple
+from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
 from festivals.models import current_festival
 from films.models import current_fan, initial, fan_rating, minutes_str, get_present_fans, Film, FilmFanFilmRating
 from films.views import FilmDetailView
 from screenings.forms.screening_forms import DummyForm, AttendanceForm, PlannerForm, \
-    ScreeningCalendarForm, PlannerSortKeyKeeper, TicketForm
+    ScreeningCalendarForm, PlannerSortKeyKeeper, TicketForm, ERRORS
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, filmscreenings, \
     get_available_filmscreenings, get_fan_props_str, COLOR_WARNING_YELLOW
 from theaters.models import Theater
@@ -27,24 +28,7 @@ from theaters.models import Theater
 AUTO_PLANNED_INDICATOR = "𝛑"
 
 
-class BaseTwoViewStartView(LoginRequiredMixin, View):
-    """
-    Base class for viewsd that call twi different views on one template.
-    """
-    template_name = None
-    list_view = None
-    form_view = None
-
-    def get(self, request, *args, **kwargs):
-        view = self.list_view.as_view()
-        return view(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        view = self.form_view.as_view()
-        return view(request, *args, **kwargs)
-
-
-class DaySchemaView(BaseTwoViewStartView):
+class DaySchemaView(SharedTemplateReferrerView):
     """
     Class-based view to visualise the screenings of a festival day.
     """
@@ -143,9 +127,11 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'total_width': self.hour_count * self.pixels_per_hour,
             'selected_screening_props': selected_screening_props,
             'timescale': self._get_timescale(),
+            'form_errors': ERRORS.get(session),
             'log': get_log(session),
             'action': ScreeningDetailView.fan_action.get_refreshed_action(session),
         }
+        ERRORS.remove(session)
         unset_log(session)
         return add_base_context(self.request, super_context | new_context)
 
@@ -276,7 +262,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         warn = False
         expect = False
         for fan in self.fans:
-            buy_warning, sell_warning, expect_confirmation = get_warning_three_tuple(fan, screening)
+            buy_warning, sell_warning, expect_confirmation = get_buy_sell_confirm_alert_tuple(fan, screening)
             if buy_warning or sell_warning:
                 warn = True
             if expect_confirmation:
@@ -440,7 +426,7 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
         return ScreeningStatusGetter.get_filmscreening_props(session, self.screening.film)
 
 
-class PlannerView(BaseTwoViewStartView):
+class PlannerView(SharedTemplateReferrerView):
     template_name = 'screenings/planner.html'
     festival = None
     eligible_films = None
@@ -581,7 +567,7 @@ class PlannerFormView(LoginRequiredMixin, FormView):
         return reverse('screenings:planner')
 
 
-class ScreeningCalendarView(BaseTwoViewStartView):
+class ScreeningCalendarView(SharedTemplateReferrerView):
     template_name = 'screenings/calendar.html'
     calendar_item_rows = None
 

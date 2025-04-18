@@ -296,6 +296,48 @@ class AvailabilityListView(LoginRequiredMixin, ListView):
         return False
 
 
+class AvailabilityFormView(LoginRequiredMixin, FormView):
+    template_name = AvailabilityView.template_name
+    http_method_names = ['post']
+    form_class = AvailabilityForm
+    success_url = '/availabilities/list'
+
+    def form_valid(self, form):
+        session = self.request.session
+        match self.request.POST:
+            case {'fan': fan}:
+                AvailabilityView.fan_cookie.set(session, fan)
+            case {'start_day': start_day}:
+                AvailabilityView.start_day.set_str(session, start_day, is_choice=True)
+            case {'start_time': start_time}:
+                AvailabilityView.start_time.set(session, start_time)
+            case {'end_day': end_day}:
+                AvailabilityView.end_day.set_str(session, end_day, is_choice=True)
+            case {'end_time': end_time}:
+                AvailabilityView.end_time.set(session, end_time)
+            case {'add': _} | {'merge': _} | {'delete': _}:
+                AvailabilityView.confirm = True
+            case {'add_confirmed': _}:
+                handle_new_period(session, update_db=True, action='add')
+            case {'merge_confirmed': _}:
+                handle_period_overlaps_existing_period(session, update_db=True, action='merge')
+            case {'delete_confirmed': _}:
+                handle_period_in_existing_period(session, update_db=True, action='delete')
+            case {'add_canceled': _}:
+                add_log(session, 'Add new availability period canceled.')
+            case {'merge_canceled': _}:
+                add_log(session, 'Merge of overlapping availabilities canceled.')
+            case {'delete_canceled': _}:
+                add_log(session, 'Partly delete of an existing availability canceled.')
+
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        ERRORS_COOKIE.set(self.request.session, wrap_up_form_errors(form.errors))
+        super().form_invalid(form)
+        return HttpResponseRedirect(reverse('availabilities:list'))
+
+
 def get_new_availability_data(session):
     fan_name = AvailabilityView.fan_cookie.get(session)
     start_dt = AvailabilityView.get_dt(session, 'start_day', 'start_time')
@@ -361,45 +403,3 @@ def handle_period_in_existing_period(session, update_db=False, action=None):
                                                              last_remaining_obj)
             except Exception as e:
                 set_error(session, str(e), action)
-
-
-class AvailabilityFormView(LoginRequiredMixin, FormView):
-    template_name = AvailabilityView.template_name
-    http_method_names = ['post']
-    form_class = AvailabilityForm
-    success_url = '/availabilities/list'
-
-    def form_valid(self, form):
-        session = self.request.session
-        match self.request.POST:
-            case {'fan': fan}:
-                AvailabilityView.fan_cookie.set(session, fan)
-            case {'start_day': start_day}:
-                AvailabilityView.start_day.set_str(session, start_day, is_choice=True)
-            case {'start_time': start_time}:
-                AvailabilityView.start_time.set(session, start_time)
-            case {'end_day': end_day}:
-                AvailabilityView.end_day.set_str(session, end_day, is_choice=True)
-            case {'end_time': end_time}:
-                AvailabilityView.end_time.set(session, end_time)
-            case {'add': _} | {'merge': _} | {'delete': _}:
-                AvailabilityView.confirm = True
-            case {'add_confirmed': _}:
-                handle_new_period(session, update_db=True, action='add')
-            case {'merge_confirmed': _}:
-                handle_period_overlaps_existing_period(session, update_db=True, action='merge')
-            case {'delete_confirmed': _}:
-                handle_period_in_existing_period(session, update_db=True, action='delete')
-            case {'add_canceled': _}:
-                add_log(session, 'Add new availability period canceled.')
-            case {'merge_canceled': _}:
-                add_log(session, 'Merge of overlapping availabilities canceled.')
-            case {'delete_canceled': _}:
-                add_log(session, 'Partly delete of an existing availability canceled.')
-
-        return super().form_valid(form)
-
-    def form_invalid(self, form):
-        ERRORS_COOKIE.set(self.request.session, wrap_up_form_errors(form.errors))
-        super().form_invalid(form)
-        return HttpResponseRedirect(reverse('availabilities:list'))

@@ -7,8 +7,20 @@ from films.models import current_fan, fan_rating_str, get_present_fans
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, Ticket, COLOR_WARNING_ORANGE, \
     COLOR_WARNING_YELLOW
 
+INDEX_BY_ALERT = {}
 
-def get_warning_three_tuple(fan, screening):
+
+def get_ticket_holders(screening, current_filmfan, confirmed=None):
+    kwargs = {'screening': screening}
+    if confirmed is not None:
+        kwargs['confirmed'] = confirmed
+    fan_ids = Ticket.tickets.filter(**kwargs).values_list('fan', flat=True)
+    ticket_holders = FilmFan.film_fans.filter(id__in=fan_ids)
+    sorted_holders = get_sorted_fan_list(current_filmfan, fan_query_set=ticket_holders)
+    return sorted_holders
+
+
+def get_buy_sell_confirm_alert_tuple(fan, screening):
     has_ticket = screening.fan_has_ticket(fan).count()
     confirmed = False
     if has_ticket:
@@ -22,28 +34,13 @@ def get_warning_three_tuple(fan, screening):
     return buy_sell_confirm_tuple
 
 
-def get_buy_sell_warning_tuple(fan, screening):
-    buy_sell_confirm_tuple = get_warning_three_tuple(fan, screening)
-    return buy_sell_confirm_tuple[:-1]
-
-
-def get_ticket_confirmed(fan, screening):
-    buy_sell_confirm_tuple = get_warning_three_tuple(fan, screening)
-    return buy_sell_confirm_tuple[-1:]
-
-
-def get_ticket_holders(screening, current_filmfan, confirmed=None):
-    kwargs = {'screening': screening}
-    if confirmed is not None:
-        kwargs['confirmed'] = confirmed
-    fan_ids = Ticket.tickets.filter(**kwargs).values_list('fan', flat=True)
-    ticket_holders = FilmFan.film_fans.filter(id__in=fan_ids)
-    sorted_holders = get_sorted_fan_list(current_filmfan, fan_query_set=ticket_holders)
-    return sorted_holders
-
-
 class ScreeningStatusGetter:
     screening_cookie = Cookie('screening')
+    buy_sell_confirm_tuple_index_by_alert = {
+        'buy': 0,
+        'sell': 1,
+        'expect': 2,
+    }
     template_key_by_alert = {
         'buy': 'should_buy',
         'sell': 'should_sell',
@@ -59,10 +56,6 @@ class ScreeningStatusGetter:
         'sell': COLOR_WARNING_ORANGE,
         'expect': COLOR_WARNING_YELLOW,
     }
-
-    @classmethod
-    def index_of_alert(cls, alert):
-        return list(cls.action_by_alert.keys()).index(alert)
 
     def __init__(self, session, day_screenings):
         self.session = session
@@ -235,11 +228,11 @@ class ScreeningStatusGetter:
     def _get_buy_sell_fan_props(cls, screening, fans, alerts):
         fan_props = []
         for fan in fans:
-            tup = get_warning_three_tuple(fan, screening)
+            tup = get_buy_sell_confirm_alert_tuple(fan, screening)
             alert_bool = False
             used_alert = None
             for alert in alerts:
-                alert_bool = tup[cls.index_of_alert(alert)]
+                alert_bool = tup[cls.buy_sell_confirm_tuple_index_by_alert[alert]]
                 if alert_bool:
                     used_alert = alert
                     break
