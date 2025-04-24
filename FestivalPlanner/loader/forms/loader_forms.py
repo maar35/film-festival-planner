@@ -684,9 +684,8 @@ class ScreeningLoader(SimpleLoader):
         screen = self.get_foreign_key(Screen, Screen.screens, **{'screen_id': screen_id})
         combination_program = None
         if combination_id is not None:
-            combination_program = Film.films.filter(festival=self.festival,
-                                                    film_id=combination_id
-                                                    ).first()
+            kwargs = {'festival': self.festival, 'film_id': combination_id}
+            combination_program = Film.films.filter(**kwargs).first()
         try:
             existing_screening = Screening.screenings.get(film=film, screen=screen, start_dt=start_dt)
         except Screening.DoesNotExist:
