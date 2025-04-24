@@ -1,8 +1,8 @@
 import csv
+import datetime
 import os
 import re
 import tempfile
-from datetime import timedelta
 from http import HTTPStatus
 
 from django.test import RequestFactory
@@ -13,13 +13,14 @@ import theaters
 from festival_planner import debug_tools
 from festival_planner.tools import initialize_log, unset_log, CSV_DIALECT
 from festivals.tests import create_festival, mock_base_festival_mnemonic
-from films.models import FilmFanFilmRating, Film
+from films.models import FilmFanFilmRating, Film, FAN_NAMES_BY_FESTIVAL_BASE
 from films.tests import create_film, ViewsTestCase, get_request_with_session, new_film
 from films.views import FilmsView
 from loader.forms.loader_forms import FilmLoader, RatingLoader, CityDumper, TheaterDumper, ScreenDumper, \
-    get_subsection_id
+    get_subsection_id, ScreeningLoader
 from loader.views import SectionsLoaderView, get_festival_row, RatingsLoaderView, NewTheaterDataView, \
     RatingDumperView
+from screenings.models import Screening
 from sections.models import Section, Subsection
 from theaters.models import City, new_cities_path, new_theaters_path, new_screens_path, Theater, Screen
 
@@ -51,6 +52,21 @@ def serialize_rating(rating):
         str(rating.film_id),
         rating.film_fan.name,
         str(rating.rating),
+    ]
+    return fields
+
+
+def serialize_screening(screening):
+    fields = [
+        str(screening.film.film_id),
+        str(screening.screen.screen_id),
+        screening.start_dt.isoformat(sep=' '),
+        screening.end_dt.isoformat(sep=' '),
+        str(screening.combination_program.film_id if screening.combination_program is not None else ''),
+        screening.subtitles,
+        'Q&A' if screening.q_and_a else '',
+        '',    # extra
+        '',    # sold_out
     ]
     return fields
 
@@ -122,14 +138,14 @@ class RatingLoaderViewsTests(LoaderViewsTests):
             film_id=common_film_id,
             seq_nr=12,
             title='Der schlaue Fuchs',
-            duration=timedelta(minutes=88),
+            duration=datetime.timedelta(minutes=88),
             subsection=None)
         film_1 = Film(
             festival=self.festival,
             film_id=other_film_id,
             seq_nr=11,
             title='Die dumme Gans',
-            duration=timedelta(minutes=188),
+            duration=datetime.timedelta(minutes=188),
             subsection=None)
 
         with open(self.festival.films_file(), 'w', newline='') as csv_films_file:
@@ -680,17 +696,24 @@ class SectionLoaderViewsTests(LoaderViewsTests):
         self.assertContains(redirect_response, section_2.name)
 
 
-class TheaterDataLoaderViewsTests(LoaderViewsTests):
+class CommonDataLoaderViewTests(LoaderViewsTests):
     def setUp(self):
         super().setUp()
         theaters.models.TEST_COMMON_DATA_DIR = tempfile.TemporaryDirectory()
-        NewTheaterDataView.state_nr = 0
         self.session = None
 
     def tearDown(self):
         super().tearDown()
         theaters.models.clean_common_data_dir()
         unset_log(self.session)
+
+    def load_test_theater_data(self):
+        self.cities_post_response = self.client.post(reverse('loader:new_screens'))
+        self.cities_redirect_response = self.client.get(self.cities_post_response.url)
+        self.theaters_post_response = self.client.post(reverse('loader:new_screens'))
+        self.theaters_redirect_response = self.client.get(self.theaters_post_response.url)
+        self.screens_post_response = self.client.post(reverse('loader:new_screens'))
+        self.screens_redirect_response = self.client.get(self.screens_post_response.url)
 
     def arrange_session_with_log(self, by_admin=True):
         if by_admin:
@@ -704,9 +727,9 @@ class TheaterDataLoaderViewsTests(LoaderViewsTests):
         city = City(name='Groningen', country='nl', city_id=50)
         theater = Theater(city=city, parse_name='Kriterion', abbreviation='kr-', priority=1, theater_id=2001)
         screen_1 = Screen(theater=theater, abbreviation='gr', parse_name='Kriterion Grote Zaal',
-                          address_type=3, screen_id=1)
+                          address_type=3, screen_id=42)
         screen_2 = Screen(theater=theater, abbreviation='kl', parse_name='Kriterion Kleine Zaal',
-                          address_type=3, screen_id=2)
+                          address_type=3, screen_id=666)
 
         self.expected_words_new_screens = ['Groningen', 'Kriterion', 'Kleine Zaal', 'Grote Zaal']
         self.expected_words_theaters = ['Groningen', 'Kriterion', 'kr-', '2']
@@ -714,6 +737,13 @@ class TheaterDataLoaderViewsTests(LoaderViewsTests):
         _ = CityDumper(session).dump_objects(new_cities_path(), objects=[city])
         _ = TheaterDumper(session).dump_objects(new_theaters_path(), objects=[theater])
         _ = ScreenDumper(session).dump_objects(new_screens_path(), objects=[screen_1, screen_2])
+
+    def assert_words_visible(self, response, expected_words, by_admin=True):
+        for word in expected_words:
+            if by_admin:
+                self.assertContains(response, word)
+            else:
+                self.assertNotContains(response, word)
 
     def assert_load_results(self, response, by_admin=True):
         self.assertEqual(response.status_code, HTTPStatus.OK)
@@ -726,12 +756,19 @@ class TheaterDataLoaderViewsTests(LoaderViewsTests):
             self.assertNotContains(response, 'Load results')
         self.assert_words_visible(response, self.expected_words_new_screens, by_admin=by_admin)
 
-    def assert_words_visible(self, response, expected_words, by_admin=True):
-        for word in expected_words:
-            if by_admin:
-                self.assertContains(response, word)
-            else:
-                self.assertNotContains(response, word)
+    def assert_load_test_theater_data(self):
+        self.assertEqual(self.cities_post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(self.theaters_post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(self.screens_post_response.status_code, HTTPStatus.FOUND)
+        self.assertContains(self.cities_redirect_response, 'Cities insert results')
+        self.assertContains(self.theaters_redirect_response, 'Theaters insert results')
+        self.assertContains(self.screens_redirect_response, 'Screens insert results')
+
+
+class TheaterDataLoaderViewsTests(CommonDataLoaderViewTests):
+    def setUp(self):
+        super().setUp()
+        NewTheaterDataView.state_nr = 0
 
     def test_regular_user_cannot_load_new_screens(self):
         # Arrange.
@@ -760,21 +797,67 @@ class TheaterDataLoaderViewsTests(LoaderViewsTests):
         self.arrange_session_with_log(by_admin=True)
         self.arrange_new_screens(self.session)
         get_response = self.client.get(reverse('loader:new_screens'))
-        self.assert_load_results(get_response)
 
         # Act.
-        cities_post_response = self.client.post(reverse('loader:new_screens'))
-        cities_redirect_response = self.client.get(cities_post_response.url)
-        theaters_post_response = self.client.post(reverse('loader:new_screens'))
-        theaters_redirect_response = self.client.get(theaters_post_response.url)
-        screens_post_response = self.client.post(reverse('loader:new_screens'))
-        screens_redirect_response = self.client.get(screens_post_response.url)
+        self.load_test_theater_data()
 
         # Assert.
-        self.assertEqual(cities_post_response.status_code, HTTPStatus.FOUND)
-        self.assertEqual(theaters_post_response.status_code, HTTPStatus.FOUND)
-        self.assertEqual(screens_post_response.status_code, HTTPStatus.FOUND)
-        self.assertContains(cities_redirect_response, 'Cities insert results')
-        self.assertContains(theaters_redirect_response, 'Theaters insert results')
-        self.assertContains(screens_redirect_response, 'Screens insert results')
-        self.assert_words_visible(screens_redirect_response, self.expected_words_theaters)
+        self.assert_load_results(get_response)
+        self.assert_load_test_theater_data()
+        self.assert_words_visible(self.screens_redirect_response, self.expected_words_theaters)
+
+
+class ScreeningLoaderViewTests(CommonDataLoaderViewTests):
+    def arrange_dump_new_screening(self, screen):
+        start_dt = datetime.datetime.fromisoformat('2023-02-17 20:30')
+        minutes = 115
+        self.film = new_film(27, "Eric's Burden", minutes, festival=self.festival)
+        self.film.save()
+        kwargs = {
+            'film': self.film,
+            'screen': screen,
+            'start_dt': start_dt,
+            'end_dt': start_dt + datetime.timedelta(minutes=minutes),
+            'subtitles': 'en',
+            'q_and_a': True,
+        }
+        screening = Screening(**kwargs)
+
+        dump_file = self.festival.screenings_file()
+        with open(dump_file, 'w', newline='') as csv_screenings_file:
+            screening_writer = csv.writer(csv_screenings_file, dialect=CSV_DIALECT)
+            screening_writer.writerow(ScreeningLoader.expected_header)
+            screening_writer.writerow(serialize_screening(screening))
+
+        return screening
+
+    def test_screening_screen_linked_by_screen_id(self):
+        """
+        The screen of a screening, loaded from the parser, has screen with screen.screen_id equals screen_id from the loader file.
+        """
+        # Arrange.
+        FAN_NAMES_BY_FESTIVAL_BASE[self.festival.base.mnemonic] = []
+
+        self.arrange_session_with_log(by_admin=True)
+        self.arrange_new_screens(self.session)
+        get_response = self.client.get(reverse('loader:new_screens'))
+
+        self.load_test_theater_data()
+
+        screen = Screen.screens.last()
+        screening = self.arrange_dump_new_screening(screen)
+        post_data = {f'{self.festival.id}': ['Load']}
+        post_response = self.client.post('/loader/list_action?label=screenings', post_data)
+
+        # Act.
+        redirect_response = self.client.get(post_response.url)
+        db_screening = Screening.screenings.get(film=self.film, start_dt=screening.start_dt)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assert_words_visible(get_response, self.expected_words_new_screens)
+        self.assert_load_test_theater_data()
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        self.assertEqual(db_screening.screen.screen_id, screen.screen_id)
+        self.assertNotEqual(db_screening.screen.id, screen.screen_id)
