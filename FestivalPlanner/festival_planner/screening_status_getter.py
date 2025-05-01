@@ -1,3 +1,5 @@
+from enum import Enum, auto
+
 from authentication.models import FilmFan, get_sorted_fan_list
 from festival_planner.cookie import Filter, Cookie
 from festival_planner.debug_tools import pr_debug
@@ -8,6 +10,9 @@ from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, Ticket
     COLOR_WARNING_YELLOW
 
 INDEX_BY_ALERT = {}
+TICKET_BUY_SELL_WARNING_SYMBOL = '!'
+TICKET_CONFIRMATION_WARNING_SYMBOL = '?'
+ATTENDANCE_WARNING_SYMBOL = '⛔'
 
 
 def get_ticket_holders(screening, current_filmfan, confirmed=None):
@@ -78,6 +83,8 @@ class ScreeningStatusGetter:
                 status = Screening.ScreeningStatus.ATTENDS
             else:
                 status = Screening.ScreeningStatus.NEEDS_TICKETS
+        elif screening.fan_has_ticket(fan):
+            status = Screening.ScreeningStatus.SHOULD_SELL_TICKETS
         elif attendants:
             status = Screening.ScreeningStatus.FRIEND_ATTENDS
         elif not self.fits_availability(screening):
@@ -249,3 +256,23 @@ class ScreeningStatusGetter:
         if fan_props:
             fan_props[-1]['delimiter'] = ''
         return fan_props
+
+
+class ScreeningWarning:
+    """
+    Represents a warning that concerns a screening and a filmfan.
+    """
+    class WarningType(Enum):
+        NEEDS_TICKET = auto()
+        NEEDS_CONFIRMATION = auto()
+        SHOULD_SELL_TICKET = auto()
+        ATTENDS_SAME_FILM = auto()
+        ATTENDS_OVERLAPPING = auto()
+        ATTENDS_WHILE_UNAVAILABLE = auto()
+
+    screening = None
+    fan = None
+    warning = None
+
+    def __str__(self):
+        return f'Warning {self.warning.name} for {self.fan} in {self.screening}'

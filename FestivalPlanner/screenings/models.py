@@ -30,6 +30,7 @@ COLOR_PAIR_YELLOW = color_pair('black', 'yellow')
 COLOR_PAIR_GREY = color_pair('darkgrey', 'rgb(79, 79, 79)')
 COLOR_PAIR_DARKGREY = color_pair('darkgrey', 'rgb(38, 38, 38)')
 COLOR_PAIR_PURPLE = color_pair('white', 'rgb(176, 0, 176)')
+COLOR_PAIR_AQUA = color_pair('black', 'rgb(38, 255, 176)')
 COLOR_PAIR_SELECT_BLUE = color_pair(None,  'rgba(0, 0, 255, 0.8)')
 
 COLOR_PAIR_FREE = COLOR_PAIR_TRANSPARANT
@@ -40,6 +41,7 @@ COLOR_PAIR_ATTENDS_FILM = COLOR_PAIR_YELLOW
 COLOR_PAIR_TIME_OVERLAP = COLOR_PAIR_GREY
 COLOR_PAIR_NO_TRAVEL_TIME = COLOR_PAIR_DARKGREY
 COLOR_PAIR_NEEDS_TICKETS = COLOR_PAIR_PURPLE
+COLOR_PAIR_SHOULD_SELL_TICKETS = COLOR_PAIR_AQUA
 COLOR_PAIR_SELECTED = COLOR_PAIR_SELECT_BLUE
 
 
@@ -57,6 +59,7 @@ class Screening(models.Model):
         TIME_OVERLAP = 5,
         NO_TRAVEL_TIME = 6,
         NEEDS_TICKETS = 7,
+        SHOULD_SELL_TICKETS = 8,
 
     # Define color dictionaries.
     color_pair_by_screening_status = {
@@ -68,6 +71,7 @@ class Screening(models.Model):
         ScreeningStatus.TIME_OVERLAP: COLOR_PAIR_TIME_OVERLAP,
         ScreeningStatus.NO_TRAVEL_TIME: COLOR_PAIR_NO_TRAVEL_TIME,
         ScreeningStatus.NEEDS_TICKETS: COLOR_PAIR_NEEDS_TICKETS,
+        ScreeningStatus.SHOULD_SELL_TICKETS: COLOR_PAIR_SHOULD_SELL_TICKETS,
     }
 
     color_pair_selected_by_screening_status = {
@@ -84,6 +88,7 @@ class Screening(models.Model):
 
     # Define colors that help interesting ratings to stand out.
     interesting_rating_color_attends_film_background = 'blue'
+    interesting_rating_color_should_sell_background = 'blue'
     uninteresting_rating_color = 'grey'
 
     # Define the fields.
@@ -199,6 +204,7 @@ class Screening(models.Model):
         # decide the color.
         attends_film = status == self.ScreeningStatus.ATTENDS_FILM
         attends = status == self.ScreeningStatus.ATTENDS
+        should_sell_ticket = status == self.ScreeningStatus.SHOULD_SELL_TICKETS
         rating_is_interesting = max_rating in FilmFanFilmRating.get_interesting_ratings()
         regular_color = self.color_pair_selected_by_screening_status[status]['color']
         if attends:
@@ -206,6 +212,8 @@ class Screening(models.Model):
         elif rating_is_interesting:
             if attends_film:
                 color = Screening.interesting_rating_color_attends_film_background
+            elif should_sell_ticket:
+                color = Screening.interesting_rating_color_should_sell_background
             else:
                 color = regular_color
         else:
