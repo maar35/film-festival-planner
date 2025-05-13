@@ -3,6 +3,7 @@
     --regularColor: silver;
     --modestStandoutColor: ivory;
     --linkColor: green;
+    --infoColor: rgb(38, 176, 38);
     --warningColor: rgb(255, 142, 0);
     --inputBackground: forestGreen;
     --hoverBackground: darkGreen;
@@ -15,7 +16,8 @@
     --inputDisabledBackground : red;
     --errorBackground: red;
     --warningBackground: var(--warningColor);
-    --warningHoverBackground: tomato;
+    --infoHoverBackground: var(--infoColor);
+    --warningHoverBackground: var(--warningColor);
     --stickyBackground: #00000090;
     --tableBackground: #00000070;
     --modestBackground: #00000070;
@@ -215,10 +217,22 @@ input[type=submit].in-table:hover {
     /* left should be defined in the template because it is variable */
 }
 .day-schema-screening-info {
-    margin-right: 0.5rem;
-    padding: 0 1rem;
+    margin-right: 0.1rem;
+    padding: 0 0.1rem 0 0.5rem;
     border 3px solid white;
     border-radius: 1rem;
+}
+.day-schema-screening-warning {
+    margin-right: 0.1rem;
+    padding: 0 0.1rem 0 0.5rem;
+    border 3px solid white;
+    border-radius: 1rem;
+}
+.day-schema-screening-info:hover {
+    background-color: var(--infoHoverBackground);
+}
+.day-schema-screening-warning:hover {
+    background-color: var(--warningHoverBackground);
 }
 
 /* Sticky styles */

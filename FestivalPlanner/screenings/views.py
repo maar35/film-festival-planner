@@ -2,7 +2,6 @@ import datetime
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse
-from django.views import View
 from django.views.generic import ListView, FormView
 from django.views.generic.detail import SingleObjectMixin
 
@@ -13,16 +12,17 @@ from festival_planner.cookie import Filter, FestivalDay
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fan_action import FanAction
 from festival_planner.fragment_keeper import ScreeningFragmentKeeper, FRAGMENT_INDICATOR
-from festival_planner.screening_status_getter import ScreeningStatusGetter, get_buy_sell_confirm_alert_tuple
+from festival_planner.screening_status_getter import ScreeningStatusGetter, get_fan_warnings, ScreeningWarning, \
+    get_warnings, get_warning_color
 from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
 from festivals.models import current_festival
-from films.models import current_fan, initial, fan_rating, minutes_str, get_present_fans, Film, FilmFanFilmRating
+from films.models import current_fan, fan_rating, minutes_str, get_present_fans, Film, FilmFanFilmRating
 from films.views import FilmDetailView
 from screenings.forms.screening_forms import DummyForm, AttendanceForm, PlannerForm, \
     ScreeningCalendarForm, PlannerSortKeyKeeper, TicketForm, ERRORS
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, filmscreenings, \
-    get_available_filmscreenings, get_fan_props_str, COLOR_WARNING_YELLOW
+    get_available_filmscreenings, get_fan_props_str, Ticket
 from theaters.models import Theater
 
 AUTO_PLANNED_INDICATOR = "𝛑"
@@ -210,7 +210,8 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         _, film_rating_str, rating_color = screening.film_rating_data(status)
         fan = current_fan(self.request.session)
         info_str = ("Q " if screening.q_and_a else "") + get_fan_props_str(screening, fan)
-        warn, expect = self._has_tickets_alert(screening)
+        warnings = get_warnings(self.fans, screening)
+        warnings_props = self._get_warning_props(status, warnings)
         frame_color = pair_selected['color'] if selected else festival_color
         section_color = screening.film.subsection.section.color if screening.film.subsection else frame_color
         querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
@@ -230,10 +231,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'section_color': section_color,
             'info_pair': pair_selected if selected else pair,
             'info_spot': info_str or 'info',
-            'tickets_warning': warn,
-            'awaiting_confirmation': expect,
-            'warning_color': Screening.color_warning_by_screening_status[status],
-            'awaiting_color': COLOR_WARNING_YELLOW,
+            'warnings_props': warnings_props,
             'query_string': '' if selected else querystring,
             'fragment': f'{FRAGMENT_INDICATOR}header_screening' if selected else fragment,
         }
@@ -252,24 +250,20 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             hour_list.append(props_by_hour)
         return hour_list
 
-    def _attendants_str(self, attendants):
-        attendance_str = ''
-        for attendant in attendants:
-            attendance_str += initial(attendant, self.request.session)
-        return attendance_str
-
-    def _has_tickets_alert(self, screening):
-        warn = False
-        expect = False
-        for fan in self.fans:
-            buy_warning, sell_warning, expect_confirmation = get_buy_sell_confirm_alert_tuple(fan, screening)
-            if buy_warning or sell_warning:
-                warn = True
-            if expect_confirmation:
-                expect = True
-            if warn and expect:
-                break
-        return warn, expect
+    @staticmethod
+    def _get_warning_props(screening_status, warnings):
+        props = []
+        if warnings:
+            warning_types = sorted({warning.warning for warning in warnings}, key=lambda t: t.value)
+            for warning_type in warning_types:
+                symbol = ScreeningWarning.symbol_by_warning[warning_type]
+                prop = {
+                    'symbol': symbol,
+                    'small': ScreeningWarning.small_by_symbol[symbol],
+                    'color': get_warning_color(screening_status, warning_type),
+                }
+                props.append(prop)
+        return props
 
     def _screening_color_pair(self, screening, attendants):
         status = self.status_getter.get_screening_status(screening, attendants)
@@ -629,3 +623,73 @@ class ScreeningCalendarFormView(LoginRequiredMixin, FormView):
 
     def get_success_url(self):
         return reverse('screenings:calendar')
+
+
+class ScreeningWarningsView(SharedTemplateReferrerView):
+    template_name = 'screenings/warnings.html'
+
+    def __init__(self):
+        super().__init__()
+        self.list_view = ScreeningWarningsListView
+
+
+class ScreeningWarningsListView(LoginRequiredMixin, ListView):
+    template_name = ScreeningWarningsView.template_name
+    http_method_names = ['get']
+    context_object_name = 'warning_rows'
+    status_getter = None
+
+    def get_queryset(self):
+        session = self.request.session
+
+        # Get the warning-prone screening-fan tuples.
+        festival = current_festival(session)
+        attendances = Attendance.attendances.filter(screening__film__festival=festival)
+        a_keys_set = {(attendance.screening, attendance.fan) for attendance in attendances}
+        tickets = Ticket.tickets.filter(screening__film__festival=festival)
+        t_keys_set = {(t.screening, t.fan) for t in tickets}
+        keys_set = a_keys_set | t_keys_set
+
+        # prepare a screening status getter.
+        screenings = {screening for screening, fan in keys_set}
+        self.status_getter = ScreeningStatusGetter(session, screenings)
+
+        # Get the queryset.
+        warning_rows = []
+        for keys in keys_set:
+            row_generator = self._get_warning_rows(*keys)
+            for row in row_generator:
+                warning_rows.append(row)
+
+        return sorted(warning_rows, key=lambda r: (r['screening'].film.sort_title, r['screening'].start_dt, r['fan'].name))
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        super_context = super().get_context_data(**kwargs)
+        session = self.request.session
+        new_context = {
+            'title': 'Warnings',
+            'sub_header': 'Warnings per screening per fan',
+            'log': get_log(session)
+        }
+        unset_log(session)
+        return add_base_context(self.request, super_context | new_context)
+
+    def _get_warning_rows(self, screening, fan):
+        for warning in get_fan_warnings(fan, screening):
+            attendants = self.status_getter.get_attendants(screening)
+            status = self.status_getter.get_screening_status(screening, attendants)
+            color = get_warning_color(status, warning.warning)
+            background = Screening.color_pair_by_screening_status[status]['background']
+            day = screening.start_dt.date().isoformat()
+            querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
+            yield {
+                'screening': screening,
+                'fan': fan,
+                'warning': ScreeningWarning.wording_by_warning[warning.warning],
+                'wording_color': ScreeningWarning.color_by_warning[warning.warning],
+                'symbol': ScreeningWarning.symbol_by_warning[warning.warning],
+                'color': color,
+                'background': background,
+                'query_string': querystring,
+                'fragment': ScreeningFragmentKeeper.fragment_code(screening.screen.pk),
+            }

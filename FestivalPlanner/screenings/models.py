@@ -85,6 +85,7 @@ class Screening(models.Model):
     color_warning_by_screening_status[ScreeningStatus.ATTENDS] = COLOR_WARNING_YELLOW
     color_warning_by_screening_status[ScreeningStatus.ATTENDS_FILM] = COLOR_WARNING_RED
     color_warning_by_screening_status[ScreeningStatus.UNAVAILABLE] = COLOR_WARNING_RED
+    color_warning_by_screening_status[ScreeningStatus.SHOULD_SELL_TICKETS] = COLOR_WARNING_RED
 
     # Define colors that help interesting ratings to stand out.
     interesting_rating_color_attends_film_background = 'blue'

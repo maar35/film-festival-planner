@@ -82,7 +82,7 @@ class Warnings(Alert):
 
 class Filter(Cookie):
     """
-    Provide filtering data on a "on/off" basis.
+    Provide filtering data on an "on/off" basis.
     """
     filtered_by_query = {'display': False, 'hide': True}
     query_by_filtered = {filtered: query for query, filtered in filtered_by_query.items()}

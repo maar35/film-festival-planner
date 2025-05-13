@@ -31,9 +31,32 @@
     .day-schema-time-mark {
         padding: 0 0.5rem;
         border-left: 2px solid {{ festival_color }};
-        background-color: black;
+        background: black;
         position: absolute;
     }
+
+
+
+    /* ----- AS LONG AS CSS IS NOT LOADED ----- */
+    .day-schema-screening-info {
+        margin-right: 0.1rem;
+        padding: 0 0.1rem 0 0.5rem;
+        border 3px solid white;
+        border-radius: 1rem;
+    }
+    .day-schema-screening-warning {
+        margin-right: 0.1rem;
+        padding: 0 0.1rem 0 0.5rem;
+        border 3px solid white;
+        border-radius: 1rem;
+    }
+    .day-schema-screening-info:hover {
+        background-color: var(--infoHoverBackground);
+    }
+    .day-schema-screening-warning:hover {
+        background-color: var(--warningHoverBackground);
+    }
+
 </style>
 
 <body>

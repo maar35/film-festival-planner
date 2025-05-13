@@ -1,3 +1,4 @@
+from copy import deepcopy
 from enum import Enum, auto
 
 from authentication.models import FilmFan, get_sorted_fan_list
@@ -7,12 +8,41 @@ from festival_planner.fragment_keeper import ScreeningFragmentKeeper
 from festivals.models import current_festival
 from films.models import current_fan, fan_rating_str, get_present_fans
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, Ticket, COLOR_WARNING_ORANGE, \
-    COLOR_WARNING_YELLOW
+    COLOR_WARNING_YELLOW, COLOR_WARNING_RED
 
-INDEX_BY_ALERT = {}
 TICKET_BUY_SELL_WARNING_SYMBOL = '!'
-TICKET_CONFIRMATION_WARNING_SYMBOL = '?'
+TICKET_CONFIRMATION_WARNING_SYMBOL = '?️'
 ATTENDANCE_WARNING_SYMBOL = '⛔'
+
+
+def get_color_matrix():
+    status = Screening.ScreeningStatus
+    warning_type = ScreeningWarning.WarningType
+    color_by_warning_by_status = {}
+    color_by_screening_status = Screening.color_warning_by_screening_status
+    for warning in warning_type.__iter__():
+        color_by_warning_by_status[warning] = deepcopy(color_by_screening_status)
+    color_by_warning_by_status[warning_type.AWAITS_CONFIRMATION][status.ATTENDS] = COLOR_WARNING_RED
+    color_by_warning_by_status[warning_type.AWAITS_CONFIRMATION][status.FRIEND_ATTENDS] = COLOR_WARNING_YELLOW
+    color_by_warning_by_status[warning_type.AWAITS_CONFIRMATION][status.NEEDS_TICKETS] = COLOR_WARNING_YELLOW
+    color_by_warning_by_status[warning_type.AWAITS_CONFIRMATION][status.SHOULD_SELL_TICKETS] = COLOR_WARNING_ORANGE
+    color_by_warning_by_status[warning_type.SHOULD_SELL_TICKET][status.UNAVAILABLE] = 'orange'
+    color_by_warning_by_status[warning_type.AWAITS_CONFIRMATION][status.UNAVAILABLE] = COLOR_WARNING_ORANGE
+    return color_by_warning_by_status
+
+
+def get_warning_color(screening_status, warning_type):
+    color_matrix = ScreeningWarning.color_by_warning_by_status
+    if not color_matrix:
+        color_matrix = get_color_matrix()
+
+    color = color_matrix[warning_type][screening_status.value]
+    return color
+
+
+def to_sentence_case(sentence):
+    lower_case_sentence = sentence.lower().replace('_', ' ')
+    return lower_case_sentence[0].upper() + lower_case_sentence[1:]
 
 
 def get_ticket_holders(screening, current_filmfan, confirmed=None):
@@ -25,47 +55,25 @@ def get_ticket_holders(screening, current_filmfan, confirmed=None):
     return sorted_holders
 
 
-def get_buy_sell_confirm_alert_tuple(fan, screening):
-    has_ticket = screening.fan_has_ticket(fan).count()
-    confirmed = False
-    if has_ticket:
-        confirmed = screening.fan_ticket_confirmed(fan).count()
-    attends = screening.fan_attends(fan).count()
-    buy_sell_confirm_tuple = (
-        attends and not has_ticket,
-        has_ticket and not attends,
-        attends and has_ticket and not confirmed
-    )
-    return buy_sell_confirm_tuple
+def get_warnings(fans, screening):
+    warnings = []
+    for fan in fans:
+        warnings.extend(ScreeningWarning.get_fan_warnings(fan, screening))
+    return warnings
+
+
+def get_fan_warnings(fan, screening):
+    return ScreeningWarning.get_fan_warnings(fan, screening)
 
 
 class ScreeningStatusGetter:
     screening_cookie = Cookie('screening')
-    buy_sell_confirm_tuple_index_by_alert = {
-        'buy': 0,
-        'sell': 1,
-        'expect': 2,
-    }
-    template_key_by_alert = {
-        'buy': 'should_buy',
-        'sell': 'should_sell',
-        'expect': 'awaits_confirmation',
-    }
-    action_by_alert = {
-        'buy': 'needs a ticket',
-        'sell': 'should sell',
-        'expect': 'awaits confirmation'
-    }
-    color_by_alert = {
-        'buy': COLOR_WARNING_ORANGE,
-        'sell': COLOR_WARNING_ORANGE,
-        'expect': COLOR_WARNING_YELLOW,
-    }
 
     def __init__(self, session, day_screenings):
         self.session = session
         self.day_screenings = day_screenings
         self.fan = current_fan(self.session)
+        self.fans = get_sorted_fan_list(self.fan)
         self.attendances_by_screening = self._get_attendances_by_screening()
         self.attends_by_screening = {s: self.attendances_by_screening[s].filter(fan=self.fan) for s in day_screenings}
         self.has_attended_film_by_screening = self._get_has_attended_film_by_screening()
@@ -196,10 +204,11 @@ class ScreeningStatusGetter:
 
     def _get_day_props(self, film_screening):
         attendants = self.get_attendants(film_screening)
-        ratings = [f'{fan.initial()}{fan_rating_str(fan, film_screening.film)}' for fan in attendants]
+        ticket_holders = get_ticket_holders(film_screening, self.fan)
         status = self.get_screening_status(film_screening, attendants)
-        attendants_props = self._get_attendants_props(film_screening, attendants)
-        ticket_holders_props = self._get_ticket_holders_props(film_screening)
+        warnings = get_warnings(self.fans, film_screening)
+        attendants_props = self._get_fan_props('attendant', attendants, warnings)
+        ticket_holders_props = self._get_fan_props('ticket_holder', ticket_holders, warnings)
         available_fans = self._available_fans(film_screening)
         day = film_screening.start_dt.date().isoformat()
         day_props = {
@@ -212,7 +221,6 @@ class ScreeningStatusGetter:
             'ticket_holders_props': ticket_holders_props,
             'confirmed_ticket_holders': self._get_confirmed_ticket_holders_props(film_screening),
             'available_fans': ', '.join([fan.name for fan in available_fans]),
-            'ratings': ', '.join(ratings),
             'q_and_a': film_screening.str_q_and_a(),
             'query_string': Filter.get_querystring(**{'day': day, 'screening': film_screening.pk}),
             'fragment': ScreeningFragmentKeeper.fragment_code(film_screening.screen.pk),
@@ -220,42 +228,40 @@ class ScreeningStatusGetter:
         return day_props
 
     @classmethod
-    def _get_attendants_props(cls, screening, attendants):
-        return cls._get_buy_sell_fan_props(screening, attendants, ['buy'])
+    def _get_warnings_props(cls, warnings):
+        warnings_props = []
+        for warning in warnings:
+            props = {
+                'name': warning.fan.name,
+                'type': warning.warning,
+                'wording': ScreeningWarning.wording_by_warning[warning.warning],
+                'color': ScreeningWarning.color_by_warning[warning.warning],
+                'fan_status': ScreeningWarning.fan_status_by_warning[warning.warning],
+                'delimiter': ', ',
+            }
+            warnings_props.append(props)
+        return warnings_props
 
-    def _get_ticket_holders_props(self, screening):
-        ticket_holders = get_ticket_holders(screening, self.fan)
-        return self._get_buy_sell_fan_props(screening, ticket_holders, ['sell', 'expect'])
+    @classmethod
+    def _get_fan_props(cls, fan_status, attendants, screening_warnings):
+        status_by_warning = ScreeningWarning.fan_status_by_warning
+        fan_status_warnings = [w for w in screening_warnings if status_by_warning[w.warning] == fan_status]
+        fans_props = []
+        for fan in attendants:
+            warnings = [w for w in fan_status_warnings if w.fan == fan]
+            if warnings:
+                fan_props_list = cls._get_warnings_props(warnings)
+                fans_props.extend(fan_props_list)
+            else:
+                fan_props = {'name': fan.name, 'delimiter': ', '}
+                fans_props.append(fan_props)
+        if fans_props:
+            fans_props[-1]['delimiter'] = ''
+        return fans_props
 
     def _get_confirmed_ticket_holders_props(self, screening):
         confirmed_ticket_holders = get_ticket_holders(screening, self.fan, confirmed=True)
         return confirmed_ticket_holders
-
-    @classmethod
-    def _get_buy_sell_fan_props(cls, screening, fans, alerts):
-        fan_props = []
-        for fan in fans:
-            tup = get_buy_sell_confirm_alert_tuple(fan, screening)
-            alert_bool = False
-            used_alert = None
-            for alert in alerts:
-                alert_bool = tup[cls.buy_sell_confirm_tuple_index_by_alert[alert]]
-                if alert_bool:
-                    used_alert = alert
-                    break
-            used_alert = used_alert or alerts[0]
-            alert_key = cls.template_key_by_alert[used_alert]
-            props = {
-                'name': fan.name,
-                alert_key: alert_bool,
-                'action': alert_bool and cls.action_by_alert[used_alert],
-                'color': alert_bool and cls.color_by_alert[used_alert],
-                'delimiter': ', ',
-            }
-            fan_props.append(props)
-        if fan_props:
-            fan_props[-1]['delimiter'] = ''
-        return fan_props
 
 
 class ScreeningWarning:
@@ -263,16 +269,105 @@ class ScreeningWarning:
     Represents a warning that concerns a screening and a filmfan.
     """
     class WarningType(Enum):
-        NEEDS_TICKET = auto()
-        NEEDS_CONFIRMATION = auto()
-        SHOULD_SELL_TICKET = auto()
         ATTENDS_SAME_FILM = auto()
         ATTENDS_OVERLAPPING = auto()
         ATTENDS_WHILE_UNAVAILABLE = auto()
+        NEEDS_TICKET = auto()
+        AWAITS_CONFIRMATION = auto()
+        SHOULD_SELL_TICKET = auto()
 
-    screening = None
-    fan = None
-    warning = None
+    wording_by_warning = {w: w.name.lower().replace('_', ' ') for w in WarningType}
+    wording_by_warning[WarningType.NEEDS_TICKET] = 'needs a ticket'
+    wording_by_warning[WarningType.SHOULD_SELL_TICKET] = 'should sell'
+
+    color_by_warning_by_status = None
+    color_by_warning = {
+        WarningType.NEEDS_TICKET: COLOR_WARNING_ORANGE,
+        WarningType.AWAITS_CONFIRMATION: COLOR_WARNING_YELLOW,
+        WarningType.SHOULD_SELL_TICKET: COLOR_WARNING_ORANGE,
+        WarningType.ATTENDS_SAME_FILM: COLOR_WARNING_RED,
+        WarningType.ATTENDS_OVERLAPPING: COLOR_WARNING_RED,
+        WarningType.ATTENDS_WHILE_UNAVAILABLE: COLOR_WARNING_RED,
+    }
+
+    fan_status_by_warning = {w: 'attendant' for w in WarningType}
+    fan_status_by_warning[WarningType.AWAITS_CONFIRMATION] = 'ticket_holder'
+    fan_status_by_warning[WarningType.SHOULD_SELL_TICKET] = 'ticket_holder'
+
+    symbol_by_warning = {
+        WarningType.NEEDS_TICKET: TICKET_BUY_SELL_WARNING_SYMBOL,
+        WarningType.AWAITS_CONFIRMATION: TICKET_CONFIRMATION_WARNING_SYMBOL,
+        WarningType.SHOULD_SELL_TICKET: TICKET_BUY_SELL_WARNING_SYMBOL,
+        WarningType.ATTENDS_SAME_FILM: ATTENDANCE_WARNING_SYMBOL,
+        WarningType.ATTENDS_OVERLAPPING: ATTENDANCE_WARNING_SYMBOL,
+        WarningType.ATTENDS_WHILE_UNAVAILABLE: ATTENDANCE_WARNING_SYMBOL,
+    }
+    small_by_symbol = {
+        TICKET_BUY_SELL_WARNING_SYMBOL: False,
+        TICKET_CONFIRMATION_WARNING_SYMBOL: False,
+        ATTENDANCE_WARNING_SYMBOL: True,
+    }
+    festival = None
+    attended_screenings = None
+
+    def __init__(self, screening, fan, warning):
+        self.screening = screening
+        self.fan = fan
+        self.warning = warning
+        self.festival = self.screening.film.festival
 
     def __str__(self):
         return f'Warning {self.warning.name} for {self.fan} in {self.screening}'
+
+    @classmethod
+    def get_fan_warnings(cls, fan, screening):
+        warnings = []
+        has_ticket = screening.fan_has_ticket(fan).count()
+        confirmed = False
+        if has_ticket:
+            confirmed = screening.fan_ticket_confirmed(fan).count()
+        attends = screening.fan_attends(fan).count()
+
+        warning_type = cls.WarningType
+        if attends and not has_ticket:
+            warnings.append(cls(screening, fan, warning_type.NEEDS_TICKET))
+        if has_ticket and not attends:
+            warnings.append(cls(screening, fan, warning_type.SHOULD_SELL_TICKET))
+        if attends and has_ticket and not confirmed:
+            warnings.append(cls(screening, fan, warning_type.AWAITS_CONFIRMATION))
+
+        if attends:
+            # Check if screenings of the same film are attended.
+            film_screenings = Screening.screenings.filter(film=screening.film)
+            multiple_attends = Attendance.attendances.filter(screening__in=film_screenings, fan=fan).count() > 1
+            if multiple_attends:
+                warnings.append(cls(screening, fan, warning_type.ATTENDS_SAME_FILM))
+
+            # Check if overlapping screenings are attended.
+            overlaps = len(cls._get_overlapping_attended_screenings(fan, screening))
+            if overlaps:
+                warnings.append(cls(screening, fan, warning_type.ATTENDS_OVERLAPPING))
+
+            # Check if fan is available for screening.
+            available = screening.available_by_fan(fan)
+            if not available:
+                warnings.append(cls(screening, fan, warning_type.ATTENDS_WHILE_UNAVAILABLE))
+
+        return warnings
+
+    @classmethod
+    def _get_overlapping_attended_screenings(cls, fan, screening):
+        manager = Attendance.attendances
+        festival = screening.film.festival
+        if not cls.festival or festival.id != cls.festival.id:
+            pr_debug('init attended screenings', with_time=True)
+            cls.festival = festival
+            cls.attended_screenings = [
+                a.screening for a in manager.filter(fan=fan, screening__film__festival=cls.festival)]
+        day_screenings = [
+            s for s in cls.attended_screenings if s.start_dt.date() == screening.start_dt.date() and s.id != screening.id]
+        result_screenings = []
+        for day_screening in day_screenings:
+            if day_screening.overlaps(screening):
+                result_screenings.append(day_screening)
+        return result_screenings

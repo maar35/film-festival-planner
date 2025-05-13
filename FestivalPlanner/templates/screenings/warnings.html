@@ -1,0 +1,67 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+<h2 class="row col-left-h2"><span>{{ sub_header }}</span></h2>
+<div class="row">
+    <span class="col-right">
+        <a href="{% url 'screenings:day_schema' %}">Day schema</a>
+        <br>
+        <a href="{% url 'films:films' %}">Film ratings</a>
+    </span>
+</div>
+{% if warning_rows %}
+    <br>
+    <table>
+    <thead>
+    <tr>
+        <th>Title</th>
+        <th>Screening</th>
+        <th>Details</th>
+        <th>Fan</th>
+        <th>Warning</th>
+        <th>Symbol</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for row in warning_rows %}
+        <tr>
+            <td>
+                {% ifchanged row.screening.film.title %}
+                {{ row.screening.film.title }}
+                {% endifchanged %}
+            </td>
+            <td>
+                {% ifchanged row.screening %}
+                <a href="{% url 'screenings:day_schema' %}{{ row.query_string }}{{ row.fragment }}">
+                    {{ row.screening.str_short }}
+                </a>
+                {% endifchanged %}
+            </td>
+            <td>
+                {% ifchanged row.screening %}
+                <a href="{% url 'screenings:details' row.screening.id %}">
+                    {{ row.screening.id }}
+                </a>
+                {% endifchanged %}
+            </td>
+            <td>{{ row.fan }}</td>
+            <td style="color: {{ row.wording_color }};">{{ row.warning }}</td>
+            <td style="text-align: center; background: {{ row.background }};">
+                <span class="no-select">
+                    <span style="color: {{ row.color }};">
+                        {{ row.symbol }}
+                    </span>
+                </span>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+{% else %}
+    <p>No warnings</p>
+{% endif %}
+<br>
+{% endblock %}}
