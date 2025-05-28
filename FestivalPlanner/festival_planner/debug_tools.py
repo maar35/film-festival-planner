@@ -21,9 +21,8 @@ def debug(frame=inspect.currentframe().f_back):
 def pr_debug(message, with_time=False):
     if SUPPRESS_DEBUG_PRINT:
         return
-    if with_time:
-        message = f'{datetime.now():%Y-%m-%d %H:%M:%S.%f}  {message}'
-    print(f'@@ {debug(frame=inspect.currentframe().f_back)} {message}')
+    time_str = f' {datetime.now():%Y-%m-%d %H:%M:%S.%f}' if with_time else ' '
+    print(f'@@{time_str} {debug(frame=inspect.currentframe().f_back)} {message}')
 
 
 class ExceptionTracer:

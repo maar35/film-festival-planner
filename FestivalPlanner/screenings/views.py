@@ -8,12 +8,13 @@ from django.views.generic.detail import SingleObjectMixin
 from authentication.models import FilmFan, get_sorted_fan_list
 from availabilities.models import Availabilities
 from availabilities.views import get_festival_dt, DAY_START_TIME, DAY_BREAK_TIME
-from festival_planner.cookie import Filter, FestivalDay
+from festival_planner.cookie import Filter, FestivalDay, Cookie
 from festival_planner.debug_tools import pr_debug
 from festival_planner.fan_action import FanAction
-from festival_planner.fragment_keeper import ScreeningFragmentKeeper, FRAGMENT_INDICATOR
+from festival_planner.fragment_keeper import ScreenFragmentKeeper, FRAGMENT_INDICATOR, ScreeningFragmentKeeper, \
+    TOP_CORRECTION_ROWS
 from festival_planner.screening_status_getter import ScreeningStatusGetter, get_fan_warnings, ScreeningWarning, \
-    get_warnings, get_warning_color
+    screening_warnings, get_warning_color, get_warnings_keys, get_warnings
 from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
 from festivals.models import current_festival
@@ -22,7 +23,8 @@ from films.views import FilmDetailView
 from screenings.forms.screening_forms import DummyForm, AttendanceForm, PlannerForm, \
     ScreeningCalendarForm, PlannerSortKeyKeeper, TicketForm, ERRORS
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, filmscreenings, \
-    get_available_filmscreenings, get_fan_props_str, Ticket
+    get_available_filmscreenings, get_fan_props_str, Ticket, COLOR_WARNING_ORANGE, COLOR_WARNING_YELLOW, \
+    COLOR_WARNING_RED
 from theaters.models import Theater
 
 AUTO_PLANNED_INDICATOR = "𝛑"
@@ -57,7 +59,9 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.row_nr_by_object_id = None
+        self.warning_row_nr_by_screening_id = None
+        self.first_screening_warning_count = None
+        self.sorted_warnings = None
         self.festival = None
         self.selected_screening = None
         self.selected_screening_props = None
@@ -65,7 +69,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         self.day_screenings = None
         self.attendances_by_screening = None
         self.attends_by_screening = None
-        self.fragment_keeper = None
+        self.screen_fragment_keeper = None
 
     def setup(self, request, *args, **kwargs):
         pr_debug('start', with_time=True)
@@ -75,12 +79,12 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         self.selected_screening = ScreeningStatusGetter.get_selected_screening(request)
         self.day_screenings = Screening.screenings.filter(film__festival=self.festival, start_dt__date=current_date)
         self.status_getter = ScreeningStatusGetter(request.session, self.day_screenings)
-        self.fragment_keeper = ScreeningFragmentKeeper('pk')
+        self.screen_fragment_keeper = ScreenFragmentKeeper()
+        self._get_top_fragments_data()
         pr_debug('done', with_time=True)
 
     def dispatch(self, request, *args, **kwargs):
         cookie = DaySchemaView.current_day.day_cookie
-        cookie.handle_get_request(request)
         DaySchemaView.current_day.set_str(request.session, cookie.get(request.session))
         return super().dispatch(request, *args, **kwargs)
 
@@ -93,7 +97,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
                 screenings_by_screen[screening.screen].append(screening)
             except KeyError:
                 screenings_by_screen[screening.screen] = [screening]
-        self.fragment_keeper.add_fragments(screenings_by_screen.keys())
+        self.screen_fragment_keeper.add_fragments(screenings_by_screen.keys())
         screen_rows = [self._get_screen_row(i, s, screenings_by_screen[s]) for i, s in enumerate(screenings_by_screen)]
         pr_debug('done', with_time=True)
         return screen_rows
@@ -127,6 +131,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'total_width': self.hour_count * self.pixels_per_hour,
             'selected_screening_props': selected_screening_props,
             'timescale': self._get_timescale(),
+            'stats': ScreeningWarning.get_warning_stats(self.festival, self.sorted_warnings),
             'form_errors': ERRORS.get(session),
             'log': get_log(session),
             'action': ScreeningDetailView.fan_action.get_refreshed_action(session),
@@ -138,7 +143,7 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
     def _get_screen_row(self, screen_nr, screen, screenings):
         screening_props = [self._screening_prop(s) for s in screenings]
         selected = len([prop['selected'] for prop in screening_props if prop['selected']])
-        fragment_name = self.fragment_keeper.get_fragment_name(screen_nr)
+        fragment_name = self.screen_fragment_keeper.get_fragment_name(screen_nr)
         screen_row = {
             'screen': screen,
             'fragment_name': fragment_name,
@@ -210,12 +215,15 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         _, film_rating_str, rating_color = screening.film_rating_data(status)
         fan = current_fan(self.request.session)
         info_str = ("Q " if screening.q_and_a else "") + get_fan_props_str(screening, fan)
-        warnings = get_warnings(self.fans, screening)
+        warnings = screening_warnings(self.fans, screening)
         warnings_props = self._get_warning_props(status, warnings)
         frame_color = pair_selected['color'] if selected else festival_color
         section_color = screening.film.subsection.section.color if screening.film.subsection else frame_color
-        querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
-        fragment = ScreeningFragmentKeeper.fragment_code(screening.screen.pk)
+        warn_query_key = ScreeningStatusGetter.screening_cookie.get_cookie_key()
+        warn_querystring = Filter.get_querystring(**{warn_query_key: screening.pk})
+        warn_fragment = self._get_warning_fragment(screening)
+        schema_querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
+        schema_fragment = ScreenFragmentKeeper.fragment_code(screening.screen)
         screening_prop = {
             'screening': screening,
             'line_1': f'{screening.film.title}',
@@ -232,8 +240,10 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'info_pair': pair_selected if selected else pair,
             'info_spot': info_str or 'info',
             'warnings_props': warnings_props,
-            'query_string': '' if selected else querystring,
-            'fragment': f'{FRAGMENT_INDICATOR}header_screening' if selected else fragment,
+            'warn_fragment': warn_fragment,
+            'warn_querystring': warn_querystring,
+            'schema_querystring': '' if selected else schema_querystring,
+            'schema_fragment': f'{FRAGMENT_INDICATOR}header_screening' if selected else schema_fragment,
         }
         return screening_prop
 
@@ -293,6 +303,42 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'subsection': film.subsection,
             'film_screening_props': self._get_filmscreening_props(),
         }
+
+    @staticmethod
+    def _get_warning(warning):
+        warning_props = {'warning': warning, 'screening': warning.screening, 'fan': warning.fan}
+        return warning_props
+
+    def _get_top_fragments_data(self):
+        # Get all warnings, sorted as in the warrnings view.
+        sort_key = ScreeningWarningsListView.get_sort_key
+        sorted_warning_rows = sorted(get_warnings(self.festival, self._get_warning), key=sort_key)
+
+        # Create a dictionary to find the row by screening.
+        self.warning_row_nr_by_screening_id = {row['screening'].id: i for i, row in enumerate(sorted_warning_rows)}
+
+        # Get the number of warnings of the first screening.
+        first_screening = sorted_warning_rows[0]['screening']
+        warning_count = 0
+        index = 0
+        while sorted_warning_rows[index]['screening'].id == first_screening.id:
+            index += 1
+            warning_count += 1
+        self.first_screening_warning_count = warning_count
+
+        # Store the warnings for use in warning stats mini-view.
+        self.sorted_warnings = [row['warning'] for row in sorted_warning_rows]
+
+    def _get_warning_fragment(self, screening):
+        warn_fragment = ScreeningFragmentKeeper.fragment_code(screening)
+        try:
+            row = self.warning_row_nr_by_screening_id[screening.id]
+        except KeyError:
+            pass
+        else:
+            if row < max(TOP_CORRECTION_ROWS, self.first_screening_warning_count):
+                warn_fragment = '#top'
+        return warn_fragment
 
 
 class DaySchemaFormView(LoginRequiredMixin, FormView):
@@ -477,6 +523,7 @@ class PlannerListView(LoginRequiredMixin, ListView):
             'planned_screening_count': self.planned_screening_count,
             'eligible_screening_count': len(self.sorted_eligible_screenings),
             'eligible_screening_rows': self.sorted_eligible_screenings,
+            'warning_stats': ScreeningWarning.get_warning_stats(PlannerView.festival),
             'form_errors': PlannerForm.tracer.get_errors() if PlannerForm.tracer else [],
             'log': get_log(session),
         }
@@ -512,7 +559,7 @@ class PlannerListView(LoginRequiredMixin, ListView):
         film = screening.film
         day = screening.start_dt.date().isoformat()
         querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
-        fragment = ScreeningFragmentKeeper.fragment_code(screening.screen.pk)
+        fragment = ScreenFragmentKeeper.fragment_code(screening.screen)
         highest_rating, second_highest_rating = PlannerSortKeyKeeper.get_highest_ratings(film)
         eligible_screening_row = {
             'screening': screening,
@@ -637,59 +684,81 @@ class ScreeningWarningsListView(LoginRequiredMixin, ListView):
     template_name = ScreeningWarningsView.template_name
     http_method_names = ['get']
     context_object_name = 'warning_rows'
+    selected_cookie = Cookie('selected_screening')
     status_getter = None
+    fragment_keeper = None
+    warnings = None
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        self.fragment_keeper = ScreeningFragmentKeeper()
+
+    def dispatch(self, request, *args, **kwargs):
+        ScreeningStatusGetter.handle_screening_get_request(request)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
+        pr_debug('start', with_time=True)
         session = self.request.session
 
         # Get the warning-prone screening-fan tuples.
         festival = current_festival(session)
-        attendances = Attendance.attendances.filter(screening__film__festival=festival)
-        a_keys_set = {(attendance.screening, attendance.fan) for attendance in attendances}
-        tickets = Ticket.tickets.filter(screening__film__festival=festival)
-        t_keys_set = {(t.screening, t.fan) for t in tickets}
-        keys_set = a_keys_set | t_keys_set
+        keys_set = get_warnings_keys(festival)
 
         # prepare a screening status getter.
         screenings = {screening for screening, fan in keys_set}
         self.status_getter = ScreeningStatusGetter(session, screenings)
 
         # Get the queryset.
-        warning_rows = []
-        for keys in keys_set:
-            row_generator = self._get_warning_rows(*keys)
-            for row in row_generator:
-                warning_rows.append(row)
+        warning_rows = get_warnings(festival, self._get_warning_details, keys_set=keys_set)
+        sorted_warning_rows = sorted(warning_rows, key=self.get_sort_key)
 
-        return sorted(warning_rows, key=lambda r: (r['screening'].film.sort_title, r['screening'].start_dt, r['fan'].name))
+        # Set fragments for the screenings in the view.
+        self.fragment_keeper.add_fragment_data(sorted_warning_rows)
+
+        # Store the warnings for use in warning stats mini-view.
+        self.warnings = [row['warning'] for row in sorted_warning_rows]
+
+        pr_debug('done', with_time=True)
+        return sorted_warning_rows
 
     def get_context_data(self, *, object_list=None, **kwargs):
         super_context = super().get_context_data(**kwargs)
         session = self.request.session
+        base_context = add_base_context(self.request, super_context)
         new_context = {
             'title': 'Warnings',
             'sub_header': 'Warnings per screening per fan',
-            'log': get_log(session)
+            'screening': ScreeningStatusGetter.get_selected_screening(self.request),
+            'selected_background': COLOR_PAIR_SELECTED['background'],
+            'stats': ScreeningWarning.get_warning_stats(base_context['festival'], warnings=self.warnings),
+            'log': get_log(session),
         }
         unset_log(session)
-        return add_base_context(self.request, super_context | new_context)
+        return base_context | new_context
 
-    def _get_warning_rows(self, screening, fan):
-        for warning in get_fan_warnings(fan, screening):
-            attendants = self.status_getter.get_attendants(screening)
-            status = self.status_getter.get_screening_status(screening, attendants)
-            color = get_warning_color(status, warning.warning)
-            background = Screening.color_pair_by_screening_status[status]['background']
-            day = screening.start_dt.date().isoformat()
-            querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
-            yield {
-                'screening': screening,
-                'fan': fan,
-                'warning': ScreeningWarning.wording_by_warning[warning.warning],
-                'wording_color': ScreeningWarning.color_by_warning[warning.warning],
-                'symbol': ScreeningWarning.symbol_by_warning[warning.warning],
-                'color': color,
-                'background': background,
-                'query_string': querystring,
-                'fragment': ScreeningFragmentKeeper.fragment_code(screening.screen.pk),
-            }
+    @classmethod
+    def get_sort_key(cls, row):
+        return row['screening'].film.sort_title, row['screening'].start_dt, row['fan'].name
+
+    def _get_warning_details(self, warning):
+        screening = warning.screening
+        attendants = self.status_getter.get_attendants(screening)
+        status = self.status_getter.get_screening_status(screening, attendants)
+        color = get_warning_color(status, warning.warning)
+        background = Screening.color_pair_by_screening_status[status]['background']
+        day = screening.start_dt.date().isoformat()
+        schema_querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
+        return {
+            'warning': warning,
+            'screening': screening,
+            'fan': warning.fan,
+            'warning_wording': ScreeningWarning.wording_by_warning[warning.warning],
+            'wording_color': ScreeningWarning.color_by_warning[warning.warning],
+            'symbol': ScreeningWarning.symbol_by_warning[warning.warning],
+            'color': color,
+            'background': background,
+            'fragment_name': None,
+            'query_string': schema_querystring,
+            'fragment': ScreenFragmentKeeper.fragment_code(screening.screen),
+        }

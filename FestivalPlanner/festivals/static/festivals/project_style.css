@@ -5,6 +5,7 @@
     --linkColor: green;
     --infoColor: rgb(38, 176, 38);
     --warningColor: rgb(255, 142, 0);
+    --warningColorYellow: rgb(255, 219, 0);
     --inputBackground: forestGreen;
     --hoverBackground: darkGreen;
     --focusBackgrond: yellowGreen;
@@ -18,12 +19,12 @@
     --warningBackground: var(--warningColor);
     --infoHoverBackground: var(--infoColor);
     --warningHoverBackground: var(--warningColor);
-    --stickyBackground: #00000090;
-    --tableBackground: #00000070;
-    --modestBackground: #00000070;
-    --screeningBackground: #000000BB;
+    --stickyBackground: rgba(0, 0, 0, 144);  /* #00000090;*/
+    --tableBackground: rgba(0, 0, 0, 112);  /* #00000070;*/
+    --modestBackground: rgba(0, 0, 0, 112);
+    --screeningBackground: rgba(0, 0, 0, 183);  /*#000000BB;*/
     --screeningBorderWidth: 3px;
-    --screeningBorderColor: #00000070;
+    --screeningBorderColor: rgba(0, 0, 0, 112);
 }
 
 /* Color links green, conform Django style. */
@@ -197,7 +198,7 @@ input[type=submit].in-table:hover {
     min-width: 8rem;"
 }
 
-/* Screening day scheme grid style */
+/* Screening day schema grid style */
 .day-schema-border {
     border: var(--screeningBorderWidth) solid var(--screeningBorderColor);
 }
@@ -216,16 +217,10 @@ input[type=submit].in-table:hover {
     bottom: 0px;
     /* left should be defined in the template because it is variable */
 }
-.day-schema-screening-info {
-    margin-right: 0.1rem;
-    padding: 0 0.1rem 0 0.5rem;
-    border 3px solid white;
-    border-radius: 1rem;
-}
+.day-schema-screening-info,
 .day-schema-screening-warning {
     margin-right: 0.1rem;
     padding: 0 0.1rem 0 0.5rem;
-    border 3px solid white;
     border-radius: 1rem;
 }
 .day-schema-screening-info:hover {
@@ -485,6 +480,19 @@ span.up {
 }
 .cell-dropdown:hover .drop-button {
     background-color: var(--hoverBackground);
+}
+
+/* Classes for floating elements */
+.floating-warning-box {
+    position: fixed;
+    right: 1rem;
+    top: 1.2rem;
+    padding: 0.5rem;
+    background: var(--warningColorYellow);
+    border-radius: 1rem;
+}
+.floating-warning-box:hover {
+    background: var(--warningColor);
 }
 
 /* Descendant combinators for different input states */

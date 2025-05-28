@@ -17,23 +17,28 @@
     <table>
     <thead>
     <tr>
-        <th>Title</th>
-        <th>Screening</th>
-        <th>Details</th>
-        <th>Fan</th>
-        <th>Warning</th>
-        <th>Symbol</th>
+        <th class="sticky-t-head">Title</th>
+        <th class="sticky-t-head">Screening</th>
+        <th class="sticky-t-head">Details</th>
+        <th class="sticky-t-head">Fan</th>
+        <th class="sticky-t-head">Warning</th>
+        <th class="sticky-t-head">Symbol</th>
     </tr>
     </thead>
     <tbody>
     {% for row in warning_rows %}
         <tr>
             <td>
+                <a name="{{ row.fragment_name }}"></a>
                 {% ifchanged row.screening.film.title %}
                 {{ row.screening.film.title }}
                 {% endifchanged %}
             </td>
+        {% if row.screening == screening %}
+            <td style="background: {{ selected_background }};">
+        {% else %}
             <td>
+        {% endif %}
                 {% ifchanged row.screening %}
                 <a href="{% url 'screenings:day_schema' %}{{ row.query_string }}{{ row.fragment }}">
                     {{ row.screening.str_short }}
@@ -42,13 +47,14 @@
             </td>
             <td>
                 {% ifchanged row.screening %}
+                <a name=""></a>
                 <a href="{% url 'screenings:details' row.screening.id %}">
                     {{ row.screening.id }}
                 </a>
                 {% endifchanged %}
             </td>
             <td>{{ row.fan }}</td>
-            <td style="color: {{ row.wording_color }};">{{ row.warning }}</td>
+            <td style="color: {{ row.wording_color }};">{{ row.warning_wording }}</td>
             <td style="text-align: center; background: {{ row.background }};">
                 <span class="no-select">
                     <span style="color: {{ row.color }};">
@@ -64,4 +70,5 @@
     <p>No warnings</p>
 {% endif %}
 <br>
+{% include "../includes/warning_box.html" with stats=stats %}
 {% endblock %}}

@@ -4,9 +4,9 @@ from enum import Enum, auto
 from authentication.models import FilmFan, get_sorted_fan_list
 from festival_planner.cookie import Filter, Cookie
 from festival_planner.debug_tools import pr_debug
-from festival_planner.fragment_keeper import ScreeningFragmentKeeper
+from festival_planner.fragment_keeper import ScreenFragmentKeeper
 from festivals.models import current_festival
-from films.models import current_fan, fan_rating_str, get_present_fans
+from films.models import current_fan, get_present_fans
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, Ticket, COLOR_WARNING_ORANGE, \
     COLOR_WARNING_YELLOW, COLOR_WARNING_RED
 
@@ -55,15 +55,55 @@ def get_ticket_holders(screening, current_filmfan, confirmed=None):
     return sorted_holders
 
 
-def get_warnings(fans, screening):
+def get_warnings_keys(festival):
+    """
+    Return a set of screening-fan tuples that could have one or more
+    warnings.
+    """
+    pr_debug('start', with_time=True)
+    attendances = Attendance.attendances.filter(screening__film__festival=festival)
+    a_keys_set = {(attendance.screening, attendance.fan) for attendance in attendances}
+    tickets = Ticket.tickets.filter(screening__film__festival=festival)
+    t_keys_set = {(ticket.screening, ticket.fan) for ticket in tickets}
+    keys_set = a_keys_set | t_keys_set
+    pr_debug('done', with_time=True)
+    return keys_set
+
+
+def get_warnings(festival, details_getter, keys_set=None):
+    """
+    Get all warnings concerning the given festival.
+    The details getter should deliver objects that will be the
+    elements of the returned list.
+    """
+    pr_debug('start', with_time=True)
+    keys_set = keys_set or get_warnings_keys(festival)
+    warning_details = []
+    for keys in keys_set:
+        for warning in get_fan_warnings(*keys):
+            warning_details.append(details_getter(warning))
+    pr_debug('done', with_time=True)
+    return warning_details
+
+
+def get_warning_details(warnings, details_getter):
+    pr_debug('start', with_time=True)
+    warning_details = []
+    for warning  in warnings:
+        warning_details.append(details_getter(warning))
+    pr_debug('done', with_time=True)
+    return warning_details
+
+
+def screening_warnings(fans, screening):
     warnings = []
     for fan in fans:
-        warnings.extend(ScreeningWarning.get_fan_warnings(fan, screening))
+        warnings.extend(get_fan_warnings(screening, fan))
     return warnings
 
 
-def get_fan_warnings(fan, screening):
-    return ScreeningWarning.get_fan_warnings(fan, screening)
+def get_fan_warnings(screening, fan):
+    return ScreeningWarning.get_fan_warnings(screening, fan)
 
 
 class ScreeningStatusGetter:
@@ -173,7 +213,7 @@ class ScreeningStatusGetter:
     def _get_availability_by_screening_by_fan(self):
         availability_by_screening_by_fan = {}
         for fan in get_present_fans(self.session):
-            availability_by_screening_by_fan[fan] =\
+            availability_by_screening_by_fan[fan] = \
                 {s: s.available_by_fan(fan) for s in self.day_screenings}
         return availability_by_screening_by_fan
 
@@ -206,7 +246,7 @@ class ScreeningStatusGetter:
         attendants = self.get_attendants(film_screening)
         ticket_holders = get_ticket_holders(film_screening, self.fan)
         status = self.get_screening_status(film_screening, attendants)
-        warnings = get_warnings(self.fans, film_screening)
+        warnings = screening_warnings(self.fans, film_screening)
         attendants_props = self._get_fan_props('attendant', attendants, warnings)
         ticket_holders_props = self._get_fan_props('ticket_holder', ticket_holders, warnings)
         available_fans = self._available_fans(film_screening)
@@ -223,7 +263,7 @@ class ScreeningStatusGetter:
             'available_fans': ', '.join([fan.name for fan in available_fans]),
             'q_and_a': film_screening.str_q_and_a(),
             'query_string': Filter.get_querystring(**{'day': day, 'screening': film_screening.pk}),
-            'fragment': ScreeningFragmentKeeper.fragment_code(film_screening.screen.pk),
+            'fragment': ScreenFragmentKeeper.fragment_code(film_screening.screen),
         }
         return day_props
 
@@ -268,6 +308,7 @@ class ScreeningWarning:
     """
     Represents a warning that concerns a screening and a filmfan.
     """
+
     class WarningType(Enum):
         ATTENDS_SAME_FILM = auto()
         ATTENDS_OVERLAPPING = auto()
@@ -307,7 +348,11 @@ class ScreeningWarning:
         TICKET_CONFIRMATION_WARNING_SYMBOL: False,
         ATTENDANCE_WARNING_SYMBOL: True,
     }
-    festival = None
+    prio_by_symbol = {
+        ATTENDANCE_WARNING_SYMBOL: 0,
+        TICKET_BUY_SELL_WARNING_SYMBOL: 1,
+        TICKET_CONFIRMATION_WARNING_SYMBOL: 2,
+    }
     attended_screenings = None
 
     def __init__(self, screening, fan, warning):
@@ -320,7 +365,7 @@ class ScreeningWarning:
         return f'Warning {self.warning.name} for {self.fan} in {self.screening}'
 
     @classmethod
-    def get_fan_warnings(cls, fan, screening):
+    def get_fan_warnings(cls, screening, fan):
         warnings = []
         has_ticket = screening.fan_has_ticket(fan).count()
         confirmed = False
@@ -344,8 +389,9 @@ class ScreeningWarning:
                 warnings.append(cls(screening, fan, warning_type.ATTENDS_SAME_FILM))
 
             # Check if overlapping screenings are attended.
-            overlaps = len(cls._get_overlapping_attended_screenings(fan, screening))
+            overlaps = len(cls._get_overlapping_attended_screenings(screening, fan))
             if overlaps:
+                # print(f'@@@@ Yes!')
                 warnings.append(cls(screening, fan, warning_type.ATTENDS_OVERLAPPING))
 
             # Check if fan is available for screening.
@@ -353,21 +399,59 @@ class ScreeningWarning:
             if not available:
                 warnings.append(cls(screening, fan, warning_type.ATTENDS_WHILE_UNAVAILABLE))
 
-        return warnings
+        for warning in warnings:
+            yield warning
 
     @classmethod
-    def _get_overlapping_attended_screenings(cls, fan, screening):
-        manager = Attendance.attendances
+    def _get_overlapping_attended_screenings(cls, screening, fan):
+        if screening.id == 3870:
+            pr_debug(f'start for {str(fan)}', with_time=True)
         festival = screening.film.festival
-        if not cls.festival or festival.id != cls.festival.id:
-            pr_debug('init attended screenings', with_time=True)
-            cls.festival = festival
-            cls.attended_screenings = [
-                a.screening for a in manager.filter(fan=fan, screening__film__festival=cls.festival)]
-        day_screenings = [
-            s for s in cls.attended_screenings if s.start_dt.date() == screening.start_dt.date() and s.id != screening.id]
+        manager = Attendance.attendances
+        cls.attended_screenings = [a.screening for a in manager.filter(fan=fan, screening__film__festival=festival)]
+        day_screenings = []
+        for s in cls.attended_screenings:
+            if s.start_dt.date() == screening.start_dt.date() and s.id != screening.id:
+                day_screenings.append(s)
         result_screenings = []
         for day_screening in day_screenings:
             if day_screening.overlaps(screening):
                 result_screenings.append(day_screening)
+        if screening.id == 3870:
+            pr_debug('done', with_time=True)
         return result_screenings
+
+    @classmethod
+    def get_warning_stats(cls, festival, warnings=None):
+        pr_debug('start', with_time=True)
+
+        # Get the warnings.
+        getter = cls._get_warning_details
+        warning_details = get_warning_details(warnings, getter) if warnings else get_warnings(festival, getter)
+
+        # Calculate the statistics.
+        count_by_symbol = {}
+        for detail in sorted(warning_details, key=lambda d: d['prio']):
+            try:
+                count_by_symbol[detail['symbol']] += 1
+            except KeyError:
+                count_by_symbol[detail['symbol']] = 1
+
+        # Make the statistics representable.
+        stats = {
+            'count': len(warning_details),
+            'background': COLOR_WARNING_YELLOW,
+            'color': COLOR_WARNING_RED,
+            'symbols': [{'symbol': symbol, 'count': count} for symbol, count in count_by_symbol.items()],
+        }
+
+        pr_debug('done', with_time=True)
+        return stats
+
+    @classmethod
+    def _get_warning_details(cls, warning):
+        symbol = cls.symbol_by_warning[warning.warning]
+        return {
+            'symbol': symbol,
+            'prio': cls.prio_by_symbol[symbol]
+        }

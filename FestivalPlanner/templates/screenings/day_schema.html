@@ -180,14 +180,14 @@
                         <span class="day-schema-screening-info"
                               style="background: {{ info.background }}; color: {{ info.color }};">
                             <span class="day-schema-screening-info">
-                                <a style="color: {{ info.color }}" href="{% url 'screenings:day_schema' %}{{ prop.query_string }}{{ prop.fragment }}">
+                                <a style="color: {{ info.color }}" href="{% url 'screenings:day_schema' %}{{ prop.schema_querystring }}{{ prop.schema_fragment }}">
                                     {{ prop.info_spot }}
                                 </a>
                             </span>
                         </span>
                             {% if prop.warnings_props %}
                             <span class="day-schema-screening-warning">
-                                <a style="font-weight: bold;" href="{% url 'screenings:warnings' %}">
+                                <a style="font-weight: bold;" href="{% url 'screenings:warnings' %}{{ prop.warn_querystring }}{{ prop.warn_fragment }}">
                                     {% for props in prop.warnings_props %}
                                         {% if props.small %}
                                         <small style="color: {{ props.color }}">{{ props.symbol }}</small>
@@ -211,4 +211,7 @@
     <p>No screenings available for this festival day.</p>
 {% endif %}
 </div>
+
+{% include "../includes/warning_box.html" with stats=stats %}
+
 {% endblock %}

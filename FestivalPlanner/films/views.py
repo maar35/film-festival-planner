@@ -87,7 +87,7 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
 
     def get_success_url(self):
         errors = self.view.unexpected_errors
-        fragment = '#top' if not self.film or errors else FilmFragmentKeeper.fragment_code(self.film.film_id)
+        fragment = '#top' if not self.film or errors else FilmFragmentKeeper.fragment_code(self.film)
         return reverse(self.success_view_name) + fragment
 
     @staticmethod
@@ -194,7 +194,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
 
     def dispatch(self, request, *args, **kwargs):
         session = self.request.session
-        self.fragment_keeper = FilmFragmentKeeper('film_id')
+        self.fragment_keeper = FilmFragmentKeeper()
 
         # Ensure the film rating cache is initialized.
         if not PickRating.film_rating_cache:
@@ -484,7 +484,7 @@ class VotesListView(LoginRequiredMixin, ListView):
         session = self.request.session
         self.festival = current_festival(session)
         self.logged_in_fan = current_fan(session)
-        self.fragment_keeper = FilmFragmentKeeper('film_id')
+        self.fragment_keeper = FilmFragmentKeeper()
         VotesView.unexpected_errors = []
 
         # Read the films that were attended.
@@ -609,7 +609,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
             'screened_films': screened_films,
             'combination_films': combi_films,
             'metadata': metadata,
-            'fragment': FilmFragmentKeeper.fragment_code(film.film_id),
+            'fragment': FilmFragmentKeeper.fragment_code(film),
             'film_in_cache': in_cache,
             'no_cache': in_cache is None,
             'display_all_query': in_cache is None or self.get_query_string_to_display_all(session),
