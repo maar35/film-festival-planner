@@ -172,6 +172,15 @@
                     {% with info=prop.info_pair %}
                     <span class="day-schema-screening"
                           style="background: {{ prop.pair.background }}; color: {{ prop.pair.color }}; left: {{ prop.left }}px; width: {{ prop.width }}px; border: 1px solid {{ prop.frame_color }}; border-right: 1px solid {{ prop.section_color }};">
+                        {% if prop.warnings_props and prop.warnings_debug %}
+                        <span class="in-screening-dropdown inline-dropdown-addition">
+                            <span class="in-screening-active-text">⚠︎</span>
+                            <span class="in-screening-dropdown-content"
+                                  style="font-size: 0.6rem; animation-name: {% if prop.warnings|length == 1 %} none {% else %} ticker {% endif %};">
+                                {{ prop.warnings|join:", " }}
+                            </span>
+                        </span>
+                        {% endif %}
                         <a style="color: {{ prop.pair.color }};" href="{% url 'screenings:details' prop.screening.id %}">
                             {{ prop.line_1 }}
                         </a>

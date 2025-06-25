@@ -9,12 +9,14 @@ from authentication.models import FilmFan, get_sorted_fan_list
 from availabilities.models import Availabilities
 from availabilities.views import get_festival_dt, DAY_START_TIME, DAY_BREAK_TIME
 from festival_planner.cookie import Filter, FestivalDay, Cookie
-from festival_planner.debug_tools import pr_debug
+from festival_planner.debug_tools import pr_debug, profiled_method, SETUP_PROFILER, QUERY_PROFILER, \
+    GET_CONTEXT_PROFILER, SCREENING_DICT_PROFILER, SCREEN_ROW_PROFILER, DurationProfiler, SELECTED_PROPS_PROFILER, \
+    FAN_PROPS_PROFILER
 from festival_planner.fan_action import FanAction
 from festival_planner.fragment_keeper import ScreenFragmentKeeper, FRAGMENT_INDICATOR, ScreeningFragmentKeeper, \
     TOP_CORRECTION_ROWS
-from festival_planner.screening_status_getter import ScreeningStatusGetter, get_fan_warnings, ScreeningWarning, \
-    screening_warnings, get_warning_color, get_warnings_keys, get_warnings
+from festival_planner.screening_status_getter import ScreeningStatusGetter, ScreeningWarning, \
+    get_screening_warnings, get_warning_color, get_warnings_keys, get_warnings
 from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
 from festivals.models import current_festival
@@ -23,8 +25,7 @@ from films.views import FilmDetailView
 from screenings.forms.screening_forms import DummyForm, AttendanceForm, PlannerForm, \
     ScreeningCalendarForm, PlannerSortKeyKeeper, TicketForm, ERRORS
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, filmscreenings, \
-    get_available_filmscreenings, get_fan_props_str, Ticket, COLOR_WARNING_ORANGE, COLOR_WARNING_YELLOW, \
-    COLOR_WARNING_RED
+    get_available_filmscreenings, COLOR_PAIR_SCREEN
 from theaters.models import Theater
 
 AUTO_PLANNED_INDICATOR = "𝛑"
@@ -59,6 +60,9 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.fan = None
+        self.sorted_fans = None
+        self.rating_by_fan_by_film = None
         self.warning_row_nr_by_screening_id = None
         self.first_screening_warning_count = None
         self.sorted_warnings = None
@@ -67,17 +71,20 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         self.selected_screening_props = None
         self.status_getter = None
         self.day_screenings = None
-        self.attendances_by_screening = None
-        self.attends_by_screening = None
         self.screen_fragment_keeper = None
 
+    @profiled_method(duration_profiler=SETUP_PROFILER)
     def setup(self, request, *args, **kwargs):
         pr_debug('start', with_time=True)
         super().setup(request, *args, **kwargs)
-        self.festival = DaySchemaView.current_day.check_session(request.session)
-        current_date = DaySchemaView.current_day.get_date(request.session)
+        session = request.session
+        self.fan = current_fan(session)
+        self.sorted_fans = get_sorted_fan_list(self.fan)
+        self.festival = DaySchemaView.current_day.check_session(session)
+        current_date = DaySchemaView.current_day.get_date(session)
         self.selected_screening = ScreeningStatusGetter.get_selected_screening(request)
         self.day_screenings = Screening.screenings.filter(film__festival=self.festival, start_dt__date=current_date)
+        self.rating_by_fan_by_film = self._get_rating_by_fan_by_film()
         self.status_getter = ScreeningStatusGetter(request.session, self.day_screenings)
         self.screen_fragment_keeper = ScreenFragmentKeeper()
         self._get_top_fragments_data()
@@ -88,26 +95,17 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         DaySchemaView.current_day.set_str(request.session, cookie.get(request.session))
         return super().dispatch(request, *args, **kwargs)
 
+    @profiled_method(duration_profiler=QUERY_PROFILER)
     def get_queryset(self):
         pr_debug('start', with_time=True)
-        screenings_by_screen = {}
-        sorted_screenings = sorted(self.day_screenings, key=lambda s: str(s.screen))
-        for screening in sorted(sorted_screenings, key=lambda s: s.screen.theater.priority, reverse=True):
-            try:
-                screenings_by_screen[screening.screen].append(screening)
-            except KeyError:
-                screenings_by_screen[screening.screen] = [screening]
+        screenings_by_screen = self._get_screenings_by_screen()
         self.screen_fragment_keeper.add_fragments(screenings_by_screen.keys())
         screen_rows = [self._get_screen_row(i, s, screenings_by_screen[s]) for i, s in enumerate(screenings_by_screen)]
         pr_debug('done', with_time=True)
         return screen_rows
 
+    @profiled_method(GET_CONTEXT_PROFILER)
     def get_context_data(self, **kwargs):
-        def next_festival_day(choices, days):
-            next_date = current_day.get_date(session) + datetime.timedelta(days=days)
-            within_festival = next_date.strftime(FestivalDay.day_str_format) in choices
-            return next_date.strftime(FestivalDay.date_str_format) if within_festival else None
-
         super_context = super().get_context_data(**kwargs)
         session = self.request.session
         current_day = DaySchemaView.current_day
@@ -121,16 +119,15 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'day_label': 'Festival day:',
             'day': current_day_str,
             'day_choices': day_choices,
-            'prev_day': next_festival_day(day_choices, days=-1),
-            'next_day': next_festival_day(day_choices, days=1),
+            'prev_day': self._next_festival_day(session, current_day, day_choices, days=-1),
+            'next_day': self._next_festival_day(session, current_day, day_choices, days=1),
             'first_day': day_choices[0].split()[1],
             'last_day': day_choices[-1].split()[1],
-            'availability_props': availability_props,
-            'film_title': self.selected_screening.film.title if self.selected_screening else '',
             'screening': self.selected_screening,
-            'total_width': self.hour_count * self.pixels_per_hour,
             'selected_screening_props': selected_screening_props,
             'timescale': self._get_timescale(),
+            'availability_props': availability_props,
+            'total_width': self.hour_count * self.pixels_per_hour,
             'stats': ScreeningWarning.get_warning_stats(self.festival, self.sorted_warnings),
             'form_errors': ERRORS.get(session),
             'log': get_log(session),
@@ -140,8 +137,21 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         unset_log(session)
         return add_base_context(self.request, super_context | new_context)
 
+    def render_to_response(self, context, **response_kwargs):
+        """Defined here for debugging only"""
+        response = super().render_to_response(context, **response_kwargs)
+        print(f'{"\n".join(DurationProfiler.report())}')
+        return response
+
+    @staticmethod
+    def _next_festival_day(session, current_day, day_choices, days):
+        next_date = current_day.get_date(session) + datetime.timedelta(days=days)
+        within_festival = next_date.strftime(FestivalDay.day_str_format) in day_choices
+        return next_date.strftime(FestivalDay.date_str_format) if within_festival else None
+
+    @profiled_method(SCREEN_ROW_PROFILER)
     def _get_screen_row(self, screen_nr, screen, screenings):
-        screening_props = [self._screening_prop(s) for s in screenings]
+        screening_props = [self._screening_props(s) for s in screenings]
         selected = len([prop['selected'] for prop in screening_props if prop['selected']])
         fragment_name = self.screen_fragment_keeper.get_fragment_name(screen_nr)
         screen_row = {
@@ -150,9 +160,20 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'color': Theater.color_by_priority[screen.theater.priority],
             'total_width': self.hour_count * self.pixels_per_hour,
             'screening_props': sorted(screening_props, key=lambda prop: prop['screening'].start_dt),
-            'background': COLOR_PAIR_SELECTED['background'] if selected else None,
+            'background': COLOR_PAIR_SELECTED['background'] if selected else COLOR_PAIR_SCREEN['background'],
         }
         return screen_row
+
+    @profiled_method(SCREENING_DICT_PROFILER)
+    def _get_screenings_by_screen(self):
+        screenings_by_screen = {}
+        sorted_screenings = sorted(self.day_screenings, key=lambda s: str(s.screen))
+        for screening in sorted(sorted_screenings, key=lambda s: s.screen.theater.priority, reverse=True):
+            try:
+                screenings_by_screen[screening.screen].append(screening)
+            except KeyError:
+                screenings_by_screen[screening.screen] = [screening]
+        return screenings_by_screen
 
     def _get_day_schema_start_dt(self):
         return DaySchemaView.current_day.get_datetime(self.request.session, self.start_hour)
@@ -166,6 +187,32 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         pixel_minutes = (dt - start_dt).total_seconds() / 60
         pixels = self.pixels_per_hour * pixel_minutes / 60
         return pixels
+
+    def _get_timescale(self):
+        hour_list = []
+        delta = datetime.timedelta(hours=1)
+        start_dt = self._get_day_schema_start_dt()
+        for hour in range(self.hour_count):
+            dt = (start_dt + hour * delta)
+            props_by_hour = {
+                'text': dt.strftime('%H:%M %Z'),
+                'left': self._pixels_from_dt(dt),
+            }
+            hour_list.append(props_by_hour)
+        return hour_list
+
+    def _get_rating_by_fan_by_film(self):
+        day_films = {screening.film for screening in self.day_screenings}
+        ratings = FilmFanFilmRating.film_ratings.filter(film__in=day_films)
+        rating_by_fan_by_film = {}
+        for rating in ratings:
+            fan = rating.film_fan
+            film = rating.film
+            try:
+                rating_by_fan_by_film[fan][film] = rating
+            except KeyError:
+                rating_by_fan_by_film[fan] = {film: rating}
+        return rating_by_fan_by_film
 
     def _get_available_fan_props(self, session):
         date = DaySchemaView.current_day.get_date(session)
@@ -199,8 +246,9 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         }
         return availability_props
 
-    def _screening_prop(self, screening):
-        attendants = self.status_getter.get_attendants(screening)
+    def _screening_props(self, screening):
+        getter = self.status_getter
+        attendants = getter.get_attendants(screening)
         status, pair = self._screening_color_pair(screening, attendants)
 
         selected = screening == self.selected_screening
@@ -213,15 +261,15 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         pair_selected = Screening.color_pair_selected_by_screening_status[status]
         festival_color = screening.film.festival.festival_color
         _, film_rating_str, rating_color = screening.film_rating_data(status)
-        fan = current_fan(self.request.session)
-        info_str = ("Q " if screening.q_and_a else "") + get_fan_props_str(screening, fan)
-        warnings = screening_warnings(self.fans, screening)
+        info_str = ("Q " if screening.q_and_a else "") + self._get_fan_props_str(screening)
+        warnings = get_screening_warnings(screening, self.sorted_fans, getter.keeper, getter)
         warnings_props = self._get_warning_props(status, warnings)
         frame_color = pair_selected['color'] if selected else festival_color
         section_color = screening.film.subsection.section.color if screening.film.subsection else frame_color
         warn_query_key = ScreeningStatusGetter.screening_cookie.get_cookie_key()
         warn_querystring = Filter.get_querystring(**{warn_query_key: screening.pk})
         warn_fragment = self._get_warning_fragment(screening)
+        warning_wordings = [f'{w.fan} {ScreeningWarning.wording_by_warning[w.warning]}' for w in warnings]
         schema_querystring = Filter.get_querystring(**{'day': day, 'screening': screening.pk})
         schema_fragment = ScreenFragmentKeeper.fragment_code(screening.screen)
         screening_prop = {
@@ -239,6 +287,8 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
             'section_color': section_color,
             'info_pair': pair_selected if selected else pair,
             'info_spot': info_str or 'info',
+            'warnings': warning_wordings,
+            'warnings_debug': True,
             'warnings_props': warnings_props,
             'warn_fragment': warn_fragment,
             'warn_querystring': warn_querystring,
@@ -247,18 +297,21 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         }
         return screening_prop
 
-    def _get_timescale(self):
-        hour_list = []
-        delta = datetime.timedelta(hours=1)
-        start_dt = self._get_day_schema_start_dt()
-        for hour in range(self.hour_count):
-            dt = (start_dt + hour * delta)
-            props_by_hour = {
-                'text': dt.strftime('%H:%M %Z'),
-                'left': self._pixels_from_dt(dt),
-            }
-            hour_list.append(props_by_hour)
-        return hour_list
+    @profiled_method(FAN_PROPS_PROFILER)
+    def _get_fan_props_str(self, screening):
+        initials = []
+        for fan in self.sorted_fans:
+            attending = self.status_getter.attendance_by_screening_by_fan[screening][fan]
+            initial = fan.initial() if attending else fan.initial().lower()
+            try:
+                rating = self.rating_by_fan_by_film[fan][screening.film]
+            except KeyError:
+                rating = None
+            if rating:
+                initial += str(rating.rating)
+            if attending or rating:
+                initials.append(initial)
+        return ''.join(initials)
 
     @staticmethod
     def _get_warning_props(screening_status, warnings):
@@ -286,10 +339,11 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
     def _get_selected_screening_props(self):
         return self.selected_screening_props
 
+    @profiled_method(SELECTED_PROPS_PROFILER)
     def _set_selected_screening_props(self, status, pair, attendants):
         screening = self.selected_screening
         film = screening.film
-        rating_by_fan = {fan: fan_rating(fan, film) for fan in self.fans}
+        rating_by_fan = {fan: fan_rating(fan, film) for fan in self.sorted_fans}
         self.selected_screening_props = {
             'selected_screening': self.selected_screening,
             'status': status,
@@ -321,7 +375,8 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         first_screening = sorted_warning_rows[0]['screening']
         warning_count = 0
         index = 0
-        while sorted_warning_rows[index]['screening'].id == first_screening.id:
+        max_iter = len(sorted_warning_rows)
+        while index < max_iter and sorted_warning_rows[index]['screening'].id == first_screening.id:
             index += 1
             warning_count += 1
         self.first_screening_warning_count = warning_count

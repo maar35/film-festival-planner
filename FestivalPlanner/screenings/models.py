@@ -4,6 +4,8 @@ from django.db import models
 
 from authentication.models import FilmFan, get_sorted_fan_list
 from availabilities.models import Availabilities
+from festival_planner.debug_tools import profiled_method, UNAVAILABLE_PROFILER, RATING_DATA_PROFILER, \
+    FAN_ATTENDS_PROFILER
 from festivals.config import Config
 from films.models import Film, FilmFanFilmRating, fan_rating
 from theaters.models import Screen
@@ -32,6 +34,7 @@ COLOR_PAIR_DARKGREY = color_pair('darkgrey', 'rgb(38, 38, 38)')
 COLOR_PAIR_PURPLE = color_pair('white', 'rgb(176, 0, 176)')
 COLOR_PAIR_AQUA = color_pair('black', 'rgb(38, 255, 176)')
 COLOR_PAIR_SELECT_BLUE = color_pair(None,  'rgba(0, 0, 255, 0.8)')
+COLOR_PAIR_SCREEN = color_pair(None, 'rgba(0, 0, 0, 0.4)')
 
 COLOR_PAIR_FREE = COLOR_PAIR_TRANSPARANT
 COLOR_PAIR_UNAVAILABLE = COLOR_PAIR_OFF_BLACK
@@ -150,6 +153,7 @@ class Screening(models.Model):
         travel_time = WALK_TIME_SAME_THEATER if same_theater else TRAVEL_TIME_OTHER_THEATER
         return travel_time
 
+    @profiled_method(UNAVAILABLE_PROFILER)
     def available_by_fan(self, fan):
         manager = Availabilities.availabilities
         availabilities = manager.filter(fan=fan, start_dt__lte=self.start_dt, end_dt__gte=self.end_dt)
@@ -161,6 +165,7 @@ class Screening(models.Model):
         available_fans = [availability.fan for availability in manager.filter(**kwargs)]
         return available_fans
 
+    @profiled_method(FAN_ATTENDS_PROFILER)
     def fan_attends(self, fan):
         attendances = Attendance.attendances.filter(screening=self, fan=fan)
         return attendances
@@ -194,6 +199,7 @@ class Screening(models.Model):
     def filmscreening_count(self):
         return len(filmscreenings(self.film))
 
+    @profiled_method(RATING_DATA_PROFILER)
     def film_rating_data(self, status):
         """
         Return compact rating per fan, representative film rating string
@@ -267,22 +273,8 @@ class Ticket(models.Model):
         return f'Ticket of {self.fan} for {self.screening.str_title()}'
 
 
-def film_rating_strings(screening, current_fan=None):
+def film_rating_strings(screening):
     return screening.film.rating_strings()
-
-
-def get_fan_props_str(screening, current_fan):
-    fans = get_sorted_fan_list(current_fan)
-    initials = []
-    for fan in fans:
-        attending = Attendance.attendances.filter(fan=fan, screening=screening).exists()
-        initial = fan.initial() if attending else fan.initial().lower()
-        rating = fan_rating(fan, screening.film)
-        if rating:
-            initial += str(rating.rating)
-        if attending or rating:
-            initials.append(initial)
-    return ''.join(initials)
 
 
 def filmscreenings(film):

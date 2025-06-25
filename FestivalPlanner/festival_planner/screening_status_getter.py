@@ -2,11 +2,15 @@ from copy import deepcopy
 from enum import Enum, auto
 
 from authentication.models import FilmFan, get_sorted_fan_list
+from availabilities.models import Availabilities
 from festival_planner.cookie import Filter, Cookie
-from festival_planner.debug_tools import pr_debug
+from festival_planner.debug_tools import pr_debug, profiled_method, OVERLAP_PROFILER, GET_WARNINGS_PROFILER, \
+    FILMSCREENINGS_PROFILER, SCREENING_STATUS_PROFILER, GET_AV_KEEPER_PROFILER, \
+    WARNING_KEYS_PROFILER, MULTI_ATTENDS_PROFILER, FAN_WARNINGS_PROFILER, ATTENDANTS_PROFILER, \
+    GET_AVAILABILITY_PROFILER, SCREENING_WARNINGS_PROFILER, SET_TICKET_STATUS_PROFILER
 from festival_planner.fragment_keeper import ScreenFragmentKeeper
 from festivals.models import current_festival
-from films.models import current_fan, get_present_fans
+from films.models import current_fan
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, Ticket, COLOR_WARNING_ORANGE, \
     COLOR_WARNING_YELLOW, COLOR_WARNING_RED
 
@@ -55,6 +59,7 @@ def get_ticket_holders(screening, current_filmfan, confirmed=None):
     return sorted_holders
 
 
+@profiled_method(WARNING_KEYS_PROFILER)
 def get_warnings_keys(festival):
     """
     Return a set of screening-fan tuples that could have one or more
@@ -70,18 +75,44 @@ def get_warnings_keys(festival):
     return keys_set
 
 
+@profiled_method(GET_AV_KEEPER_PROFILER)
+def get_availability_keeper(keys_set):
+    """
+    Convert a set of screening-fan tuples into a list of screenings and
+    a list of fans as input for a new Availability Keeper.
+    Returns the availability keeper.
+    """
+    keeper = AvailabilityKeeper()
+    screenings = set()
+    fans = set()
+    for screening, fan in keys_set:
+        screenings.add(screening)
+        fans.add(fan)
+    keeper.set_availability(screenings, fans)
+    keeper.set_ticket_status(screenings, fans)
+    return keeper
+
+
+@profiled_method(GET_WARNINGS_PROFILER)
 def get_warnings(festival, details_getter, keys_set=None):
     """
     Get all warnings concerning the given festival.
     The details getter should deliver objects that will be the
     elements of the returned list.
     """
+    @profiled_method(FAN_WARNINGS_PROFILER)
+    def get_fan_warnings(_keys_set):
+        """For profiling reasons only"""
+        details = []
+        for keys in _keys_set:
+            for warning in ScreeningWarning.get_fan_warnings(*keys, availability_keeper=keeper):
+                details.append(details_getter(warning))
+        return details
+
     pr_debug('start', with_time=True)
     keys_set = keys_set or get_warnings_keys(festival)
-    warning_details = []
-    for keys in keys_set:
-        for warning in get_fan_warnings(*keys):
-            warning_details.append(details_getter(warning))
+    keeper = get_availability_keeper(keys_set)
+    warning_details = get_fan_warnings(keys_set)
     pr_debug('done', with_time=True)
     return warning_details
 
@@ -89,21 +120,23 @@ def get_warnings(festival, details_getter, keys_set=None):
 def get_warning_details(warnings, details_getter):
     pr_debug('start', with_time=True)
     warning_details = []
-    for warning  in warnings:
+    for warning in warnings:
         warning_details.append(details_getter(warning))
     pr_debug('done', with_time=True)
     return warning_details
 
 
-def screening_warnings(fans, screening):
+@profiled_method(SCREENING_WARNINGS_PROFILER)
+def get_screening_warnings(screening, fans, availability_keeper, status_getter=None):
     warnings = []
     for fan in fans:
-        warnings.extend(get_fan_warnings(screening, fan))
+        warnings.extend(ScreeningWarning.get_fan_warnings(screening, fan, availability_keeper, status_getter))
     return warnings
 
 
-def get_fan_warnings(screening, fan):
-    return ScreeningWarning.get_fan_warnings(screening, fan)
+def get_filmscreenings(film):
+    filmscreenings = Screening.screenings.filter(film=film).order_by('start_dt')
+    return filmscreenings
 
 
 class ScreeningStatusGetter:
@@ -113,17 +146,19 @@ class ScreeningStatusGetter:
         self.session = session
         self.day_screenings = day_screenings
         self.fan = current_fan(self.session)
-        self.fans = get_sorted_fan_list(self.fan)
+        self.sorted_fans = get_sorted_fan_list(self.fan)
         self.attendances_by_screening = self._get_attendances_by_screening()
-        self.attends_by_screening = {s: self.attendances_by_screening[s].filter(fan=self.fan) for s in day_screenings}
+        self.attendance_by_screening_by_fan = self._get_attendance_by_screening_by_fan(self.attendances_by_screening)
+        self.attends_by_screening = {s: self.attendance_by_screening_by_fan[s][self.fan] for s in day_screenings}
         self.has_attended_film_by_screening = self._get_has_attended_film_by_screening()
-        self.available_by_screening_by_fan = self._get_availability_by_screening_by_fan()
+        self.keeper = self._get_availability_keeper()
 
     def update_attendances_by_screening(self, screening):
         self.attendances_by_screening[screening] = Attendance.attendances.filter(screening=screening)
         self.attends_by_screening[screening] = True
         self.has_attended_film_by_screening = self._get_has_attended_film_by_screening()
 
+    @profiled_method(SCREENING_STATUS_PROFILER)
     def get_screening_status(self, screening, attendants):
         fan = current_fan(self.session)
         if fan in attendants:
@@ -160,28 +195,27 @@ class ScreeningStatusGetter:
         cls.screening_cookie.handle_get_request(request)
 
     @classmethod
+    @profiled_method(FILMSCREENINGS_PROFILER)
     def get_filmscreening_props(cls, session, film):
         pr_debug('start', with_time=True)
         festival = current_festival(session)
         festival_screenings = Screening.screenings.filter(film__festival=festival)
-        filmscreenings = festival_screenings.filter(film=film).order_by('start_dt')
+        filmscreenings = get_filmscreenings(film)
         dates = filmscreenings.dates('start_dt', 'day')
         film_screenings_props = []
         for date in dates:
             day_filmscreenings = filmscreenings.filter(start_dt__date=date)
             day_screenings = festival_screenings.filter(start_dt__date=date)
-            getter = cls(session, day_screenings)
+            getter = cls(session, set(day_screenings) | set(day_filmscreenings))
             film_screenings_props.extend([getter._get_day_props(s) for s in day_filmscreenings])
         pr_debug('done', with_time=True)
         return film_screenings_props
 
     def fits_availability(self, screening):
-        try:
-            fits = self.available_by_screening_by_fan[self.fan][screening]
-        except KeyError:
-            fits = False
+        fits = self.keeper.get_availability(screening, self.fan)
         return fits
 
+    @profiled_method(ATTENDANTS_PROFILER)
     def get_attendants(self, screening):
         attendances = self.attendances_by_screening[screening]
         attendant_ids = attendances.values_list('fan', flat=True)
@@ -201,6 +235,17 @@ class ScreeningStatusGetter:
         attendances_by_screening = {s: Attendance.attendances.filter(screening=s) for s in self.day_screenings}
         return attendances_by_screening
 
+    def _get_attendance_by_screening_by_fan(self, attendances_by_screening):
+        attendance_by_screening_by_fan = {}
+        for screening, attendances in attendances_by_screening.items():
+            for fan in self.sorted_fans:
+                fan_attends = fan in [attendance.fan for attendance in attendances]
+                try:
+                    attendance_by_screening_by_fan[screening][fan] = fan_attends
+                except KeyError:
+                    attendance_by_screening_by_fan[screening] = {fan: fan_attends}
+        return attendance_by_screening_by_fan
+
     def _get_has_attended_film_by_screening(self):
         manager = Attendance.attendances
         return {s: manager.filter(screening__film=s.film, fan=self.fan).exists() for s in self.day_screenings}
@@ -210,17 +255,16 @@ class ScreeningStatusGetter:
         current_fan_attends_other_filmscreening = self.has_attended_film_by_screening[screening]
         return current_fan_attends_other_filmscreening
 
-    def _get_availability_by_screening_by_fan(self):
-        availability_by_screening_by_fan = {}
-        for fan in get_present_fans(self.session):
-            availability_by_screening_by_fan[fan] = \
-                {s: s.available_by_fan(fan) for s in self.day_screenings}
-        return availability_by_screening_by_fan
+    def _get_availability_keeper(self):
+        keeper = AvailabilityKeeper()
+        keeper.set_availability(self.day_screenings, self.sorted_fans)
+        keeper.set_ticket_status(self.day_screenings, self.sorted_fans)
+        return keeper
 
     def _available_fans(self, screening):
         available_fan_ids = []
-        for fan, available_by_screening in self.available_by_screening_by_fan.items():
-            if available_by_screening[screening]:
+        for fan, available_by_screening in self.keeper.available_by_screening_by_fan.items():
+            if screening in available_by_screening and available_by_screening[screening]:
                 available_fan_ids.append(fan.id)
         fan_query_set = FilmFan.film_fans.filter(id__in=available_fan_ids)
         return get_sorted_fan_list(self.fan, fan_query_set=fan_query_set)
@@ -246,7 +290,7 @@ class ScreeningStatusGetter:
         attendants = self.get_attendants(film_screening)
         ticket_holders = get_ticket_holders(film_screening, self.fan)
         status = self.get_screening_status(film_screening, attendants)
-        warnings = screening_warnings(self.fans, film_screening)
+        warnings = get_screening_warnings(film_screening, self.sorted_fans, self.keeper)
         attendants_props = self._get_fan_props('attendant', attendants, warnings)
         ticket_holders_props = self._get_fan_props('ticket_holder', ticket_holders, warnings)
         available_fans = self._available_fans(film_screening)
@@ -304,11 +348,61 @@ class ScreeningStatusGetter:
         return confirmed_ticket_holders
 
 
+class AvailabilityKeeper:
+    """
+    Keeps availability of fans for screenings.
+    """
+    def __init__(self):
+        self.available_by_screening_by_fan = {}
+        self.ticket_by_screening_by_fan = {}
+
+    def set_availability(self, screenings, fans):
+        manager = Availabilities.availabilities
+        for screening in screenings:
+            self.available_by_screening_by_fan[screening] = {}
+            kwargs = {
+                'start_dt__lte': screening.start_dt,
+                'end_dt__gte': screening.end_dt,
+                'fan__in': fans,
+            }
+            availabilities = manager.filter(**kwargs)
+            available_fans = [availability.fan for availability in availabilities]
+            for fan in available_fans:
+                self.available_by_screening_by_fan[screening][fan] = True
+
+    @profiled_method(SET_TICKET_STATUS_PROFILER)
+    def set_ticket_status(self, screenings, fans):
+        manager = Ticket.tickets
+
+        tickets = manager.filter(screening__in=screenings, fan__in=fans)
+        for ticket in tickets:
+            screening = ticket.screening
+            fan = ticket.fan
+            try:
+                self.ticket_by_screening_by_fan[screening][fan] = ticket
+            except KeyError as e:
+                self.ticket_by_screening_by_fan[screening] = {fan: ticket}
+
+    @profiled_method(GET_AVAILABILITY_PROFILER)
+    def get_availability(self, screening, fan):
+        try:
+            available = self.available_by_screening_by_fan[screening][fan]
+        except KeyError as e:
+            available = False
+        return available
+
+    def get_ticket(self, screening, fan):
+        try:
+            ticket = self.ticket_by_screening_by_fan[screening][fan]
+        except KeyError:
+            ticket = None
+        return ticket
+
+
 class ScreeningWarning:
     """
     Represents a warning that concerns a screening and a filmfan.
     """
-
     class WarningType(Enum):
         ATTENDS_SAME_FILM = auto()
         ATTENDS_OVERLAPPING = auto()
@@ -353,7 +447,6 @@ class ScreeningWarning:
         TICKET_BUY_SELL_WARNING_SYMBOL: 1,
         TICKET_CONFIRMATION_WARNING_SYMBOL: 2,
     }
-    attended_screenings = None
 
     def __init__(self, screening, fan, warning):
         self.screening = screening
@@ -365,14 +458,18 @@ class ScreeningWarning:
         return f'Warning {self.warning.name} for {self.fan} in {self.screening}'
 
     @classmethod
-    def get_fan_warnings(cls, screening, fan):
-        warnings = []
-        has_ticket = screening.fan_has_ticket(fan).count()
-        confirmed = False
-        if has_ticket:
-            confirmed = screening.fan_ticket_confirmed(fan).count()
-        attends = screening.fan_attends(fan).count()
+    def get_fan_warnings(cls, screening, fan, availability_keeper, status_getter=None):
+        # Get tickets status.
+        ticket = availability_keeper.get_ticket(screening, fan)
+        has_ticket = ticket is not None
+        confirmed = ticket.confirmed if ticket else False
 
+        # Get attendance status.
+        attends = status_getter.attendance_by_screening_by_fan[screening][fan] \
+            if status_getter else screening.fan_attends(fan).count()
+
+        # Get warnings concerning tickets.
+        warnings = []
         warning_type = cls.WarningType
         if attends and not has_ticket:
             warnings.append(cls(screening, fan, warning_type.NEEDS_TICKET))
@@ -383,43 +480,22 @@ class ScreeningWarning:
 
         if attends:
             # Check if screenings of the same film are attended.
-            film_screenings = Screening.screenings.filter(film=screening.film)
-            multiple_attends = Attendance.attendances.filter(screening__in=film_screenings, fan=fan).count() > 1
+            multiple_attends = cls._get_multiple_attends(screening, fan)
             if multiple_attends:
                 warnings.append(cls(screening, fan, warning_type.ATTENDS_SAME_FILM))
 
             # Check if overlapping screenings are attended.
-            overlaps = len(cls._get_overlapping_attended_screenings(screening, fan))
+            overlaps = cls._overlaps_attended_screenings(screening, fan)
             if overlaps:
-                # print(f'@@@@ Yes!')
                 warnings.append(cls(screening, fan, warning_type.ATTENDS_OVERLAPPING))
 
             # Check if fan is available for screening.
-            available = screening.available_by_fan(fan)
+            available = availability_keeper.get_availability(screening, fan)
             if not available:
                 warnings.append(cls(screening, fan, warning_type.ATTENDS_WHILE_UNAVAILABLE))
 
         for warning in warnings:
             yield warning
-
-    @classmethod
-    def _get_overlapping_attended_screenings(cls, screening, fan):
-        if screening.id == 3870:
-            pr_debug(f'start for {str(fan)}', with_time=True)
-        festival = screening.film.festival
-        manager = Attendance.attendances
-        cls.attended_screenings = [a.screening for a in manager.filter(fan=fan, screening__film__festival=festival)]
-        day_screenings = []
-        for s in cls.attended_screenings:
-            if s.start_dt.date() == screening.start_dt.date() and s.id != screening.id:
-                day_screenings.append(s)
-        result_screenings = []
-        for day_screening in day_screenings:
-            if day_screening.overlaps(screening):
-                result_screenings.append(day_screening)
-        if screening.id == 3870:
-            pr_debug('done', with_time=True)
-        return result_screenings
 
     @classmethod
     def get_warning_stats(cls, festival, warnings=None):
@@ -447,6 +523,31 @@ class ScreeningWarning:
 
         pr_debug('done', with_time=True)
         return stats
+
+    @classmethod
+    @profiled_method(OVERLAP_PROFILER)
+    def _overlaps_attended_screenings(cls, screening, fan):
+        festival = screening.film.festival
+        manager = Attendance.attendances
+        filter_kwargs = {
+            'fan': fan,
+            'screening__film__festival': festival,
+            'screening__start_dt__date': screening.start_dt.date(),
+        }
+        attended_screenings = [a.screening for a in manager.filter(**filter_kwargs) if a.screening != screening]
+        overlaps = False
+        for day_screening in attended_screenings:
+            if day_screening.overlaps(screening):
+                overlaps = True
+                break
+        return overlaps
+
+    @classmethod
+    @profiled_method(MULTI_ATTENDS_PROFILER)
+    def _get_multiple_attends(cls, screening, fan):
+        filmscreenings = Screening.screenings.filter(film=screening.film)
+        multiple_attends = Attendance.attendances.filter(screening__in=filmscreenings, fan=fan).count() > 1
+        return multiple_attends
 
     @classmethod
     def _get_warning_details(cls, warning):

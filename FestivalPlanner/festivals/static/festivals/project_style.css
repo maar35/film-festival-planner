@@ -25,6 +25,7 @@
     --screeningBackground: rgba(0, 0, 0, 183);  /*#000000BB;*/
     --screeningBorderWidth: 3px;
     --screeningBorderColor: rgba(0, 0, 0, 112);
+    --boxShadowColor: rgba(255, 219, 0, .4);
 }
 
 /* Color links green, conform Django style. */
@@ -32,6 +33,10 @@ a,
 li a,
 td a {
     color: var(--linkColor);
+}
+
+a:focus {
+    color: var(--focusBackgrond)
 }
 
 /* Style the h1 header as to stand out within the page.
@@ -207,7 +212,7 @@ input[type=submit].in-table:hover {
     position: relative;
 }
 .day-schema-screening {
-    padding: 0 0.5rem;
+    padding: 0 .5rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -219,8 +224,8 @@ input[type=submit].in-table:hover {
 }
 .day-schema-screening-info,
 .day-schema-screening-warning {
-    margin-right: 0.1rem;
-    padding: 0 0.1rem 0 0.5rem;
+    margin-right: .1rem;
+    padding: 0 .1rem 0 .5rem;
     border-radius: 1rem;
 }
 .day-schema-screening-info:hover {
@@ -269,7 +274,7 @@ input[type=submit].in-table:hover {
     position: absolute;
     cursor: default;
     background-color: black;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, .2);
     min-width: 200px;
     padding: 6px 8px;
     z-index: 2;
@@ -371,7 +376,7 @@ span.up {
     position: absolute;
     cursor: pointer;
     background-color: var(--inputBackground);
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,.2);
     width: auto;
     padding: 6px 8px;
     z-index: 1;
@@ -420,9 +425,9 @@ span.up {
     position: absolute;
     cursor: default;
     background-color: black;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    box-shadow: 1px 1px 1px var(--boxShadowColor);
     min-width: 200px;
-    padding: 6px 8px;
+    padding: 3px 3px;
     z-index: 2;
 }
 .modest-dropdown:hover .modest-dropdown-content {
@@ -437,7 +442,7 @@ span.up {
 /* Dropdown definitions for cells within a table */
 .inline-dropdown-addition {
     display: inline !important;
-    padding: 0.5rem;
+    padding: .5rem;
     font-size: 1rem
 }
 .cell-dropdown {
@@ -457,7 +462,7 @@ span.up {
     position: absolute;
     cursor: pointer;
     background-color: var(--inputBackground);
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, .2);
     min-width: 200px;
     padding: 6px 8px;
     z-index: 1;
@@ -482,12 +487,62 @@ span.up {
     background-color: var(--hoverBackground);
 }
 
+/* Dropdown definitions for within a screening representation */
+
+/* - Animate the dropdown text when too long to display in a small frame */
+@keyframes ticker {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-30rem);
+    }
+}
+
+/* - Class definitions for the in-screening dropdown */
+.in-screening-dropdown {
+    display: table-cell;
+    position: relative;
+    background: var(--warningColorYellow);
+    font-size: .6rem;
+    text-align: center;
+    width: auto;
+    height: auto;
+    margin-top: .1rem;
+    margin-right: .2rem;
+    padding: 0 .1rem 0 .3rem;
+    border-radius: .8rem;
+}
+.in-screening-dropdown:hover {
+    background: var(--warningBackground);
+}
+.in-screening-dropdown-content {
+    display: none;
+    position: absolute;
+    top: .5rem;
+    cursor: default;
+    background-color: blue;
+    z-index: 2;
+    margin: 0;
+    padding: .1rem .5rem;
+    border-radius: 1rem;
+    animation: ticker 4s linear 800ms;
+}
+.in-screening-dropdown:hover .in-screening-dropdown-content {
+    display: block;
+}
+.in-screening-active-text {
+    color: black;
+    text-decoration-line: underline;
+    text-decoration-style: dashed;
+}
+
 /* Classes for floating elements */
 .floating-warning-box {
     position: fixed;
     right: 1rem;
     top: 1.2rem;
-    padding: 0.5rem;
+    padding: .5rem;
     background: var(--warningColorYellow);
     border-radius: 1rem;
 }

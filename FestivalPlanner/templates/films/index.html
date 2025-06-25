@@ -10,25 +10,25 @@
         </tbody>
     </table>
     <h2>Site links</h2>
-    <h3>Film actions</h3>
+    <h3>Film views</h3>
     <a href="{% url 'films:films' %}">Film ratings</a>
     <br>
     <a href="{% url 'films:votes' %}">Film votes</a>
     <br>
     <a href="{% url 'films:reviewers' %}">Reviewers</a>
-    <br>
-    <a href="{% url 'availabilities:list' %}">Availabilities</a>
 
     <h3>Screening views</h3>
     <a href="{% url 'screenings:day_schema' %}">Day schema</a>
     <br>
+    <a href="{% url 'availabilities:list' %}">Availabilities</a>
+    <br>
+    <a href="{% url 'screenings:warnings' %}">Warnings</a>
+    <br>
     <a href="{% url 'screenings:planner' %}">Planner</a>
     <br>
     <a href="{% url 'screenings:calendar' %}">Calendar</a>
-    <br>
-    <a href="{% url 'screenings:warnings' %}">Warnings</a>
 
-    <h3>Related entities</h3>
+    <h3>Related views</h3>
     <a href="{% url 'theaters:theaters' %}">Theaters</a>
     <br>
     <a href="{% url 'sections:index' %}">Sections</a>

@@ -1,28 +1,54 @@
+import functools
 import inspect
-from datetime import datetime
+from datetime import datetime, timedelta
 
 SUPPRESS_DEBUG_PRINT = False
 
 
-def caller():
+def calling_func(frame_depth=0):
+    try:
+        frame = inspect.currentframe().f_back
+        for _ in range(frame_depth):
+            frame = frame.f_back
+        code = frame.f_code.co_name if frame.f_code else 'code'
+    finally:
+        del frame
+    return code
+
+
+def debug(frame_depth=0):
     frame = inspect.currentframe().f_back
-    return frame.f_code.co_name if frame.f_code is not None else 'code'
+    for d in range(frame_depth):
+        frame = frame.f_back
 
-
-def debug(frame=inspect.currentframe().f_back):
     try:
         lineno = frame.f_lineno
-        code = frame.f_code.co_name if frame.f_code is not None else 'code'
+        code = frame.f_code.co_name if frame.f_code else 'code'
     finally:
         del frame
     return f'{code}:{lineno:4}'
 
 
-def pr_debug(message, with_time=False):
+def pr_debug(message, with_time=False, frame_depth=1):
     if SUPPRESS_DEBUG_PRINT:
         return
     time_str = f' {datetime.now():%Y-%m-%d %H:%M:%S.%f}' if with_time else ' '
-    print(f'@@{time_str} {debug(frame=inspect.currentframe().f_back)} {message}')
+    print(f'@@{time_str} {debug(frame_depth=frame_depth)} {message}')
+
+
+def timed_method(func):
+    """
+    Enclose func between 'start' and 'dane' debug messages.
+    Doesn't seem to work because functools.wraps doesn't work (yet?).
+    """
+    @functools.wraps(func)
+    def time_wrapper(*args, **kwargs):
+        frame_depth = 4
+        pr_debug('START', with_time=True, frame_depth=frame_depth)
+        result = func(*args, **kwargs)
+        pr_debug('DONE', with_time=True, frame_depth=frame_depth)
+        return result
+    return time_wrapper
 
 
 class ExceptionTracer:
@@ -49,3 +75,114 @@ class ExceptionTracer:
 
     def get_errors(self):
         return self.errors
+
+
+class DurationProfiler:
+    props_by_label = {}
+    objects = []
+
+    def __init__(self, label, active=True, newline=False, caller_depth=0):
+        self.label = label
+        self.caller_depth = caller_depth
+        self.props_by_label[label] = {
+            'duration': timedelta(),
+            'call_count': 0,
+            'active': active,
+            'props_by_caller': {},
+            'newline': newline,
+        }
+        self.last_start_time = None
+        DurationProfiler.objects.append(self)
+
+    def start(self):
+        self.last_start_time = datetime.now()
+        self.props_by_label[self.label]['call_count'] += 1
+
+    def done(self):
+        last_duration = datetime.now() - self.last_start_time
+        self.props_by_label[self.label]['duration'] += last_duration
+        if self.caller_depth:
+            caller = calling_func(frame_depth=self.caller_depth)
+            try:
+                self._caller_props(self.label)[caller]['duration'] += last_duration
+                self._caller_props(self.label)[caller]['count'] += 1
+            except KeyError:
+                self._caller_props(self.label)[caller] = {
+                    'duration': last_duration,
+                    'count': 1,
+                }
+
+    @classmethod
+    def report(cls):
+        durations = [cls._label_report(label) for label in cls.props_by_label if cls.props_by_label[label]['active']]
+        cls._reset()
+        return durations
+
+    @classmethod
+    def _label_report(cls, label):
+        duration = cls.props_by_label[label]['duration']
+        count = cls.props_by_label[label]['call_count']
+        newline = '\n' if cls.props_by_label[label]['newline'] else ''
+        report = newline + f'{label:16}: {duration} {count:5}'
+        for caller, props in cls._caller_props(label).items():
+            caller_line = f"{label:16}from {caller:40}: {props['duration']} {props['count']}"
+            report += '\n' + caller_line
+        return report
+
+    @classmethod
+    def _caller_props(cls, label):
+        return cls.props_by_label[label]['props_by_caller']
+
+    @classmethod
+    def _reset(cls):
+        for obj in cls.objects:
+            cls.props_by_label[obj.label]['duration'] = timedelta()
+            cls.props_by_label[obj.label]['call_count'] = 0
+            cls.props_by_label[obj.label]['props_by_caller'] = {}
+
+
+SETUP_PROFILER = DurationProfiler('setup')
+QUERY_PROFILER = DurationProfiler('queryset')
+GET_CONTEXT_PROFILER = DurationProfiler('context', active=False)
+
+SET_TICKET_STATUS_PROFILER = DurationProfiler('set_ticket_stat', newline=True, caller_depth=4)
+
+SCREENING_DICT_PROFILER = DurationProfiler('screening_dict', newline=True, active=False)
+FRAGMENT_PROFILER = DurationProfiler('fragment', active=False)
+
+SCREEN_ROW_PROFILER = DurationProfiler('screen_row', newline=True, caller_depth=0)
+SCREENING_WARNINGS_PROFILER = DurationProfiler('screening_warns', active=False)
+FAN_ATTENDS_PROFILER = DurationProfiler('fan_attends')
+ATTENDANTS_PROFILER = DurationProfiler('get_attendants')
+SCREENING_STATUS_PROFILER = DurationProfiler('screening_status')
+RATING_DATA_PROFILER = DurationProfiler('rating_data')
+FAN_PROPS_PROFILER = DurationProfiler('fan_props')
+TICKET_STATUS_PROFILER = DurationProfiler('ticket_status', caller_depth=3)
+
+MULTI_ATTENDS_PROFILER = DurationProfiler('multi_attends', newline=True)
+OVERLAP_PROFILER = DurationProfiler('overlap', caller_depth=3)
+GET_AVAILABILITY_PROFILER = DurationProfiler('get_availability')
+UNAVAILABLE_PROFILER = DurationProfiler('available', active=False)
+
+SELECTED_PROPS_PROFILER = DurationProfiler('selected_props', newline=True, caller_depth=0)
+FAN_RATING_PROFILER = DurationProfiler('fan_rating', caller_depth=0)
+FILMSCREENINGS_PROFILER = DurationProfiler('filmscreenings', caller_depth=0)
+
+GET_WARNINGS_PROFILER = DurationProfiler('get_warnings', newline=True, caller_depth=0)
+WARNING_KEYS_PROFILER = DurationProfiler('warning_keys')
+GET_AV_KEEPER_PROFILER = DurationProfiler('get_av_keeper')
+FAN_WARNINGS_PROFILER = DurationProfiler('fan_warnings', caller_depth=2)
+
+
+def profiled_method(duration_profiler: DurationProfiler):
+    """Bookkeep duration of given duration profiles"""
+    def decorator_profiled_method(func):
+        @functools.wraps(func)
+        def duration_wrapper(*args, **kwargs):
+            duration_profiler.start()
+            result = func(*args, **kwargs)
+            duration_profiler.done()
+            return result
+        return duration_wrapper
+
+    return decorator_profiled_method
