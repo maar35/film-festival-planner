@@ -137,7 +137,7 @@
 
         {% block log %}
             {% if log.results %}
-                <h3 class="log-header">{{ log.action }} results</h3>
+                <h2 class="log-header">{{ log.action }} results</h2>
                 {% for result in log.results %}
                     <p class="log">{{ result }}</p>
                 {% endfor %}

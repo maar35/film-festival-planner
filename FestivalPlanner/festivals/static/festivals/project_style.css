@@ -489,16 +489,6 @@ span.up {
 
 /* Dropdown definitions for within a screening representation */
 
-/* - Animate the dropdown text when too long to display in a small frame */
-@keyframes ticker {
-    from {
-        transform: translateX(0);
-    }
-    to {
-        transform: translateX(-30rem);
-    }
-}
-
 /* - Class definitions for the in-screening dropdown */
 .in-screening-dropdown {
     display: table-cell;
@@ -535,6 +525,16 @@ span.up {
     color: black;
     text-decoration-line: underline;
     text-decoration-style: dashed;
+}
+
+/* - Animate the dropdown text when too long to display in a small frame */
+@keyframes ticker {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-30rem);
+    }
 }
 
 /* Classes for floating elements */

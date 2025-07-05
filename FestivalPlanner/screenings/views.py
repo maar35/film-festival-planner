@@ -11,8 +11,8 @@ from availabilities.views import get_festival_dt, DAY_START_TIME, DAY_BREAK_TIME
 from festival_planner.cookie import Filter, FestivalDay, Cookie
 from festival_planner.debug_tools import pr_debug, profiled_method, SETUP_PROFILER, QUERY_PROFILER, \
     GET_CONTEXT_PROFILER, SCREENING_DICT_PROFILER, SCREEN_ROW_PROFILER, DurationProfiler, SELECTED_PROPS_PROFILER, \
-    FAN_PROPS_PROFILER
-from festival_planner.fan_action import FanAction
+    FAN_PROPS_PROFILER, LISTVIEW_DISPATCH_PROFILER
+from festival_planner.fan_action import FanAction, FixWarningAction
 from festival_planner.fragment_keeper import ScreenFragmentKeeper, FRAGMENT_INDICATOR, ScreeningFragmentKeeper, \
     TOP_CORRECTION_ROWS
 from festival_planner.screening_status_getter import ScreeningStatusGetter, ScreeningWarning, \
@@ -23,12 +23,21 @@ from festivals.models import current_festival
 from films.models import current_fan, fan_rating, minutes_str, get_present_fans, Film, FilmFanFilmRating
 from films.views import FilmDetailView
 from screenings.forms.screening_forms import DummyForm, AttendanceForm, PlannerForm, \
-    ScreeningCalendarForm, PlannerSortKeyKeeper, TicketForm, ERRORS
+    ScreeningCalendarForm, PlannerSortKeyKeeper, TicketForm, ERRORS, ScreeningWarningsForm, ERRORS_IN_WARNING_FIXES
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, filmscreenings, \
     get_available_filmscreenings, COLOR_PAIR_SCREEN
 from theaters.models import Theater
 
 AUTO_PLANNED_INDICATOR = "𝛑"
+
+
+class ProfiledListView(ListView):
+
+    def render_to_response(self, context, **response_kwargs):
+        """Defined here for debugging only"""
+        response = super().render_to_response(context, **response_kwargs)
+        print(f'{"\n".join(DurationProfiler.report())}')
+        return response
 
 
 class DaySchemaView(SharedTemplateReferrerView):
@@ -49,7 +58,7 @@ class DaySchemaView(SharedTemplateReferrerView):
         return super().dispatch(request, *args, **kwargs)
 
 
-class DaySchemaListView(LoginRequiredMixin, ListView):
+class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
     template_name = DaySchemaView.template_name
     http_method_names = ['get']
     context_object_name = 'screen_rows'
@@ -136,12 +145,6 @@ class DaySchemaListView(LoginRequiredMixin, ListView):
         ERRORS.remove(session)
         unset_log(session)
         return add_base_context(self.request, super_context | new_context)
-
-    def render_to_response(self, context, **response_kwargs):
-        """Defined here for debugging only"""
-        response = super().render_to_response(context, **response_kwargs)
-        print(f'{"\n".join(DurationProfiler.report())}')
-        return response
 
     @staticmethod
     def _next_festival_day(session, current_day, day_choices, days):
@@ -504,7 +507,7 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
 
     def _update_fan_screening_props(self, new_prop_by_fan, update_by_prop, initial_prop_by_fan, update_method):
         def update_log(film_fan, fan_action):
-            self.fan_action.add_update(session, f'{film_fan} {update_by_prop[fan_action]}')
+            self.fan_action.add_detail(session, f'{film_fan} {update_by_prop[fan_action]}')
 
         session = self.request.session
         changed_prop_by_fan = {}
@@ -733,9 +736,10 @@ class ScreeningWarningsView(SharedTemplateReferrerView):
     def __init__(self):
         super().__init__()
         self.list_view = ScreeningWarningsListView
+        self.form_view = ScreeningWarningsFormView
 
 
-class ScreeningWarningsListView(LoginRequiredMixin, ListView):
+class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
     template_name = ScreeningWarningsView.template_name
     http_method_names = ['get']
     context_object_name = 'warning_rows'
@@ -748,6 +752,7 @@ class ScreeningWarningsListView(LoginRequiredMixin, ListView):
         super().setup(request, *args, **kwargs)
         self.fragment_keeper = ScreeningFragmentKeeper()
 
+    @profiled_method(LISTVIEW_DISPATCH_PROFILER)
     def dispatch(self, request, *args, **kwargs):
         ScreeningStatusGetter.handle_screening_get_request(request)
         return super().dispatch(request, *args, **kwargs)
@@ -773,6 +778,7 @@ class ScreeningWarningsListView(LoginRequiredMixin, ListView):
 
         # Store the warnings for use in warning stats mini-view.
         self.warnings = [row['warning'] for row in sorted_warning_rows]
+        self._set_warnings(self.warnings)
 
         pr_debug('done', with_time=True)
         return sorted_warning_rows
@@ -788,9 +794,16 @@ class ScreeningWarningsListView(LoginRequiredMixin, ListView):
             'selected_background': COLOR_PAIR_SELECTED['background'],
             'stats': ScreeningWarning.get_warning_stats(base_context['festival'], warnings=self.warnings),
             'log': get_log(session),
+            'form_errors': ERRORS_IN_WARNING_FIXES.get(session),
+            'action': ScreeningWarningsForm.fix_action.get_refreshed_action(session)
         }
+        ERRORS_IN_WARNING_FIXES.remove(session)
         unset_log(session)
         return base_context | new_context
+
+    @classmethod
+    def _set_warnings(cls, warnings):
+        cls.warnings = warnings
 
     @classmethod
     def get_sort_key(cls, row):
@@ -810,6 +823,8 @@ class ScreeningWarningsListView(LoginRequiredMixin, ListView):
             'fan': warning.fan,
             'warning_wording': ScreeningWarning.wording_by_warning[warning.warning],
             'wording_color': ScreeningWarning.color_by_warning[warning.warning],
+            'warning_fix': ScreeningWarning.fix_by_warning[warning.warning],
+            'choices': self._get_choices(warning),
             'symbol': ScreeningWarning.symbol_by_warning[warning.warning],
             'color': color,
             'background': background,
@@ -817,3 +832,89 @@ class ScreeningWarningsListView(LoginRequiredMixin, ListView):
             'query_string': schema_querystring,
             'fragment': ScreenFragmentKeeper.fragment_code(screening.screen),
         }
+
+    @classmethod
+    def _get_choices(cls, warning):
+        fan = warning.fan
+        screening = warning.screening
+        warning_type = warning.warning
+        match warning_type:
+            case ScreeningWarning.WarningType.NEEDS_TICKET\
+                 | ScreeningWarning.WarningType.AWAITS_CONFIRMATION\
+                 | ScreeningWarning.WarningType.SHOULD_SELL_TICKET:
+                choices = cls._get_ticket_warning_choices(warning_type, fan, screening)
+            case _:
+                choices = [{
+                    'value': 'Sorry, work in progress',
+                    'submit_name': None,
+                }]
+        return choices
+
+    @classmethod
+    def _get_ticket_warning_choices(cls, warning_type, fan, screening):
+        fix_wording = ScreeningWarning.fix_by_warning[warning_type]
+        all_of_screening_wording = ScreeningWarning.all_of_screening_wording_by_ticket_warning[warning_type]
+        all_of_fan_wording = ScreeningWarning.all_of_fan_wording_by_ticket_warning[warning_type]
+        choices = [{
+            'value': f'{fix_wording} for {fan}',
+            'submit_name': f'{warning_type.name}:{fan.name}:{screening.id}',
+        }, {
+            'value': f'{fix_wording} {all_of_screening_wording}',
+            'submit_name': f'{warning_type.name}::{screening.id}',
+        }, {
+            'value': f'{fix_wording} {all_of_fan_wording} {fan}',
+            'submit_name': f'{warning_type.name}:{fan.name}:',
+        }]
+        return choices
+
+
+class ScreeningWarningsFormView(LoginRequiredMixin, FormView):
+    template_name = ScreeningWarningsView.template_name
+    form_class = ScreeningWarningsForm
+    http_method_names = ['post']
+    success_url = '/screenings/warnings'
+    fix_result_by_warning = {
+        ScreeningWarning.WarningType.NEEDS_TICKET: 'created',
+        ScreeningWarning.WarningType.AWAITS_CONFIRMATION: 'confirmed',
+        ScreeningWarning.WarningType.SHOULD_SELL_TICKET: 'deleted',
+    }
+
+    def __init__(self):
+        super().__init__()
+        self.session = None
+
+    def form_valid(self, form):
+        self.session = self.request.session
+        initialize_log(self.session, 'Fixed warnings')
+        wt = ScreeningWarning.WarningType
+        fc = self.form_class
+        submitted_name = list(self.request.POST)[-1]
+        match submitted_name.split(':'):
+            case [wt.NEEDS_TICKET.name, fan_name, screening_id]:
+                self._fix_ticket_warnings(wt.NEEDS_TICKET, fc.buy_tickets, fan_name, screening_id)
+            case [wt.AWAITS_CONFIRMATION.name, fan_name, screening_id]:
+                self._fix_ticket_warnings(wt.AWAITS_CONFIRMATION, fc.confirm_tickets, fan_name, screening_id)
+            case [wt.SHOULD_SELL_TICKET.name, fan_name, screening_id]:
+                self._fix_ticket_warnings(wt.SHOULD_SELL_TICKET, fc.delete_tickets, fan_name, screening_id)
+        return super().form_valid(form)
+
+    def _fix_ticket_warnings(self, warning_type, fix_method, fan_name, screening_id):
+        wording = self.fix_result_by_warning[warning_type]
+        if fan_name and screening_id:
+            _ = fix_method(self.session, [fan_name], [screening_id], wording)
+        elif screening_id:
+            self._fix_screening_tickets(warning_type, screening_id, fix_method)
+        elif fan_name:
+            self._fix_fan_tickets(warning_type, fan_name, fix_method)
+
+    def _fix_screening_tickets(self, warning_type, screening_id, fix_method):
+        warnings = ScreeningWarningsListView.warnings
+        fan_names = [w.fan.name for w in warnings if w.screening.id == int(screening_id) and w.warning == warning_type]
+        wording = self.fix_result_by_warning[warning_type]
+        _ = fix_method(self.session, fan_names, [screening_id], wording)
+
+    def _fix_fan_tickets(self, warning_type, fan_name, fix_method):
+        warnings = ScreeningWarningsListView.warnings
+        screening_ids = [w.screening.id for w in warnings if w.fan.name == fan_name and w.warning == warning_type]
+        wording = self.fix_result_by_warning[warning_type]
+        _ = fix_method(self.session, [fan_name], screening_ids, wording)

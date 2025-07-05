@@ -415,6 +415,27 @@ class ScreeningWarning:
     wording_by_warning[WarningType.NEEDS_TICKET] = 'needs a ticket'
     wording_by_warning[WarningType.SHOULD_SELL_TICKET] = 'should sell'
 
+    fix_by_warning = {
+        WarningType.NEEDS_TICKET: 'Buy ticket',
+        WarningType.AWAITS_CONFIRMATION: 'Confirm',
+        WarningType.SHOULD_SELL_TICKET: 'Sell ticket',
+        WarningType.ATTENDS_SAME_FILM: 'Unattend',
+        WarningType.ATTENDS_OVERLAPPING: 'Unattend',
+        WarningType.ATTENDS_WHILE_UNAVAILABLE: 'Unattend',
+    }
+
+    all_of_screening_wording_by_ticket_warning = {
+        WarningType.NEEDS_TICKET: 'for all attendants',
+        WarningType.AWAITS_CONFIRMATION: 'for all attendants',
+        WarningType.SHOULD_SELL_TICKET: 'for unattending fans',
+    }
+
+    all_of_fan_wording_by_ticket_warning = {
+        WarningType.NEEDS_TICKET: 'for all screenings of',
+        WarningType.AWAITS_CONFIRMATION: 'all tickets for',
+        WarningType.SHOULD_SELL_TICKET: 'for all unattended screenings of',
+    }
+
     color_by_warning_by_status = None
     color_by_warning = {
         WarningType.NEEDS_TICKET: COLOR_WARNING_ORANGE,

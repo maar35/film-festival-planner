@@ -1,5 +1,7 @@
 {% extends "base_template.html" %}
 
+{% load humanize %}
+
 {% block title %}{{ title }}{% endblock %}
 {% block header %}{{ title }}{% endblock %}
 
@@ -14,8 +16,31 @@
         <a href="{% url 'availabilities:list' %}">Availabilities</a>
     </span>
 </div>
+
+{% block errors %}
+    {{ block.super }}
+{% endblock %}
+
+{% block log %}
+    {{ block.super }}
+{% endblock log %}
+
+{% if action.header %}
+    <p>
+        {{ action.header }},
+        {{ action.action_time|naturaltime }}
+    </p>
+    <ul>
+    {% for line in action.updates %}
+        <li>{{ line }}</li>
+    {% endfor %}
+    </ul>
+{% endif %}
+
 {% if warning_rows %}
     <br>
+    <form method="post">
+    {% csrf_token %}
     <table>
     <thead>
     <tr>
@@ -25,6 +50,7 @@
         <th class="sticky-t-head">Fan</th>
         <th class="sticky-t-head">Warning</th>
         <th class="sticky-t-head">Symbol</th>
+        <th class="sticky-t-head">Fix</th>
     </tr>
     </thead>
     <tbody>
@@ -36,11 +62,11 @@
                 {{ row.screening.film.title }}
                 {% endifchanged %}
             </td>
-        {% if row.screening == screening %}
+            {% if row.screening == screening %}
             <td style="background: {{ selected_background }};">
-        {% else %}
+            {% else %}
             <td>
-        {% endif %}
+            {% endif %}
                 {% ifchanged row.screening %}
                 <a href="{% url 'screenings:day_schema' %}{{ row.query_string }}{{ row.fragment }}">
                     {{ row.screening.str_short }}
@@ -64,10 +90,27 @@
                     </span>
                 </span>
             </td>
+            <td class="cell-dropdown">
+                <span class="drop-button">
+                    {{ row.warning_fix }}
+                </span>
+                <div class="cell-dropdown-content">
+                    {% for choice in row.choices %}
+                    {% if choice.submit_name %}
+                        <input type="submit" value="{{ choice.value }}" name="{{ choice.submit_name }}">
+                    {% else %}
+                        <span class="disabled-input">
+                            <input type="submit" value="{{ choice.value }}" disabled>
+                        </span>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </td>
         </tr>
     {% endfor %}
     </tbody>
     </table>
+    </form>
 {% else %}
     <p>No warnings</p>
 {% endif %}
