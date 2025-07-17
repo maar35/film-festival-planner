@@ -29,6 +29,14 @@
             {{ block.super }}
         {% endblock log %}
 
+        {% if reminders %}
+            <h3 class="log-header" style="color: var(--warningColor);">Reminder</h3>
+            {% for reminder in reminders %}
+                <p class="log">{{ reminder }}</p>
+            {% endfor %}
+            <br>
+        {% endif %}
+        <br>
         {% include "../includes/fan_picker.html" with label=fan_label fan=fan choices=fan_choices name="fan" %}
 
         {% include "../includes/date_picker.html" with label=start_day_label day=start_day choices=start_day_choices name="start_day" %}
@@ -73,7 +81,7 @@
         </form>
         <br>
 
-    {% if availability_rows or filtered %}
+    {% if availability_rows or fan_filter_props.on %}
         <h3>Availabilities {{ festival }} </h3>
         <div style="color: {{ festival_color }}">
             {{ festival_start_dt|date:"D Y-m-d H:i" }} - {{ festival_end_dt|date:"D Y-m-d H:i" }}
@@ -84,24 +92,7 @@
                 <tr>
                     <th class="sticky-t-head">Start date</th>
                     <th class="sticky-t-head">End date</th>
-                    <td class="sticky-modest-drop-t-head">
-                        <span class="active-text" style="color: var(--modestStandoutColor);">
-                            Fan
-                        </span>
-                        <div class="sticky-modest-drop-t-head-content">
-                            <table style="min-width: 12rem;">
-                                <tbody>
-                                    {% for prop in fan_filter_props %}
-                                        <tr><td>
-                                            <a href="{{ prop.href_filter }}">
-                                                {{ prop.action }} {{ prop.fan.name }}
-                                            </a>
-                                        </td></tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </td>
+                    {% include "../includes/filtered_header_field.html" with obj_filter_props=fan_filter_props %}
                 </tr>
             </thead>
             <tbody>
@@ -134,4 +125,5 @@
     <h2 class="error">Not allowed</h2>
     <p>Only an admin fan can maintain availabilities.</p>
 {% endif %}
+{% include "../includes/warning_box.html" with stats=stats %}
 {% endblock %}}

@@ -3,12 +3,14 @@ import datetime
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from django.views.generic import ListView, FormView
+from django.views.generic import FormView
 
-from authentication.models import FilmFan
+from authentication.models import FilmFan, get_sorted_fan_list
 from availabilities.forms.availabilities_forms import AvailabilityForm
 from availabilities.models import Availabilities
-from festival_planner.cookie import Cookie, Filter, FestivalDay
+from festival_planner.cookie import Cookie, Filter, FestivalDay, get_fan_filter_props
+from festival_planner.debug_tools import ProfiledListView
+from festival_planner.screening_status_getter import ScreeningWarning, get_warnings
 from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, wrap_up_form_errors, get_log, unset_log, add_log, initialize_log
 from festivals.models import current_festival
@@ -101,7 +103,7 @@ class AvailabilityView(SharedTemplateReferrerView):
         _ = date_attr.check_session(session, last=last)
 
 
-class AvailabilityListView(LoginRequiredMixin, ListView):
+class AvailabilityListView(LoginRequiredMixin, ProfiledListView):
     """
     Lists the known availability periods of all fans within the current festival.
     """
@@ -118,15 +120,18 @@ class AvailabilityListView(LoginRequiredMixin, ListView):
         'get': '',
         'def': 'DEFAULT',
     }
-    fan_list = FilmFan.film_fans.all().order_by('seq_nr')
+    reminder_cookie = Cookie('reminder')
+    fan_list = None
     form = AvailabilityForm
     title = 'Availabilities List'
     festival = None
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self.fan = None
+        self.warning_rows = None
         self.filters = None
-        self.fan_filters = None
+        self.filter_by_fan = None
 
     def setup(self, request, *args, **kwargs):
         super().setup(request, *args, **kwargs)
@@ -139,23 +144,38 @@ class AvailabilityListView(LoginRequiredMixin, ListView):
         # Get festival period from session.
         self.festival = current_festival(session)
 
+        # Get warnings.
+        self.warning_rows = get_warnings(self.festival, self._get_warning_details)
+
         # Set up the fan filters. TODO: Generalize fan, section and subsection filtering, #393.
+        self.fan = current_fan(session)
+        self.fan_list = get_sorted_fan_list(self.fan)
         self.filters = []
-        self.fan_filters = {}
+        self.filter_by_fan = {}
         for fan in self.fan_list:
-            self.fan_filters[fan] = Filter('fan',
-                                           cookie_key=f'fan-{fan.id}',
-                                           action_false='Select fan',
-                                           action_true='Remove filter')
-            self.filters.append(self.fan_filters[fan])
+            self.filter_by_fan[fan] = Filter('fan',
+                                             cookie_key=f'fan-{fan.id}',
+                                             action_false='Select fan',
+                                             action_true='Remove filter')
+            self.filters.append(self.filter_by_fan[fan])
 
         # Reset form times if the festival changed.
         AvailabilityView.check_dt_from_session(session, 'start_day', 'start_time')
         AvailabilityView.check_dt_from_session(session, 'end_day', 'end_time')
 
     def dispatch(self, request, *args, **kwargs):
+        session = request.session
+
+        # Get reminder cookie data.
+        if 'warning_name' in request.GET and 'fan_name' in request.GET:
+            warning_name = request.GET['warning_name']
+            fan_name = request.GET['fan_name']
+            self.reminder_cookie.set(session, {'warning_name': warning_name, 'fan_name': fan_name})
+
+        # Refresh the fan filters.
         for f in self.filters:
             f.handle_get_request(request)
+
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -165,21 +185,22 @@ class AvailabilityListView(LoginRequiredMixin, ListView):
             'start_dt__lte': get_festival_dt(self.festival.end_date, DAY_BREAK_TIME),
         }
         for fan in self.fan_list:
-            if self.fan_filters[fan].on(self.request.session):
+            if self.filter_by_fan[fan].on(self.request.session):
                 kwargs['fan'] = fan
                 break
         selected_availabilities = manager.filter(**kwargs).order_by('start_dt', 'end_dt', 'fan__name')
+        self.queryset = selected_availabilities
         return selected_availabilities  # availability_rows
 
     def get_context_data(self, *, object_list=None, **kwargs):
         super_context = super().get_context_data(**kwargs)
         session = self.request.session
         self.festival = current_festival(session)
-        fan = AvailabilityView.fan_cookie.get(session, default=current_fan(session))
-        fan_filter_props = self._get_filter_props()
-        filtered = [prop['on'] for prop in fan_filter_props if prop['on']]
+        fan = AvailabilityView.fan_cookie.get(session, default=self.fan)
         can_submit = self._can_submit(session)
+        reminders = self._get_reminders(session)
         action = ACTION_COOKIE.get(session, 'get') or 'def'
+        warnings = [row['warning'] for row in self.warning_rows]
         new_context = {
             'title': self.title,
 
@@ -207,11 +228,12 @@ class AvailabilityListView(LoginRequiredMixin, ListView):
             'confirm': AvailabilityView.confirm,
             'festival_start_dt': get_festival_dt(self.festival.start_date, DAY_START_TIME),
             'festival_end_dt': get_festival_dt(self.festival.end_date, DAY_BREAK_TIME),
-            'fan_filter_props': fan_filter_props,
-            'filtered': filtered,
+            'fan_filter_props': self._get_filter_props(),
+            'reminders': reminders,
             'log': get_log(session),
             'warnings': WARNING_COOKIE.get(session),
             'form_errors': ERRORS_COOKIE.get(session),
+            'stats': ScreeningWarning.get_warning_stats(self.festival, warnings=warnings),
         }
         AvailabilityView.confirm = False
         unset_log(session)
@@ -224,21 +246,33 @@ class AvailabilityListView(LoginRequiredMixin, ListView):
 
     def _get_filter_props(self):
         session = self.request.session
-        fan_filter_props = []
-        for fan in self.fan_list:
-            fan_filter = self.fan_filters[fan]
-            filter_on = fan_filter.on(session)
-            fan_filter_props_dict = {
-                'fan': fan,
-                'href_filter': fan_filter.get_href_filter(session),
-                'action': fan_filter.action(session),
-                'on': filter_on,
-            }
-            if filter_on:
-                fan_filter_props = [fan_filter_props_dict]
-                break
-            fan_filter_props.append(fan_filter_props_dict)
-        return fan_filter_props
+        return get_fan_filter_props(session, self.queryset, self.fan_list, self.filter_by_fan)
+
+    @staticmethod
+    def _get_warning_details(warning):
+        return {
+            'warning': warning,
+            'fan_name': warning.fan.name,
+            'warning_name': warning.warning.name,
+            'start_dt': warning.screening.start_dt,
+        }
+
+    def _get_reminders(self, session):
+        reminder_dict = self.reminder_cookie.get(session)
+        if not reminder_dict:
+            return []
+        fan_name = reminder_dict['fan_name']
+        warning_name = reminder_dict['warning_name']
+        reminders = []
+        for row in sorted(self.warning_rows, key=lambda r: r['start_dt']):
+            if row['fan_name'] == fan_name and row['warning_name'] == warning_name:
+                warning = row['warning']
+                start_dt = warning.screening.start_dt
+                end_time = warning.screening.end_dt.time()
+                title = warning.screening.film.title
+                reminder = f'{fan_name} should be available from {start_dt} till {end_time} to see {title}.'
+                reminders.append(reminder)
+        return reminders
 
     def _can_submit(self, session):
         add_log(session, 'Check submit.')

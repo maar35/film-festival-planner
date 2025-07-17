@@ -248,7 +248,7 @@ class Attendance(models.Model):
 
     def __str__(self):
         start_time = self.screening.str_start_time()
-        return f'{self.fan} attends {self.screening.str_title} at {start_time}'
+        return f'{self.fan} attends {self.screening.str_title()} at {start_time}'
 
 
 class Ticket(models.Model):

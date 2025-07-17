@@ -2,6 +2,8 @@ import functools
 import inspect
 from datetime import datetime, timedelta
 
+from django.views.generic import ListView
+
 SUPPRESS_DEBUG_PRINT = False
 
 
@@ -160,7 +162,7 @@ FAN_PROPS_PROFILER = DurationProfiler('fan_props', active=False)
 TICKET_STATUS_PROFILER = DurationProfiler('ticket_status', active=False, caller_depth=3)
 
 MULTI_ATTENDS_PROFILER = DurationProfiler('multi_attends', active=False, newline=True)
-OVERLAP_PROFILER = DurationProfiler('overlap', active=False, caller_depth=3)
+OVERLAP_PROFILER = DurationProfiler('overlap', active=True, caller_depth=3)
 GET_AVAILABILITY_PROFILER = DurationProfiler('get_availability', active=False)
 UNAVAILABLE_PROFILER = DurationProfiler('available', active=False)
 
@@ -188,3 +190,12 @@ def profiled_method(duration_profiler: DurationProfiler):
         return duration_wrapper
 
     return decorator_profiled_method
+
+
+class ProfiledListView(ListView):
+
+    def render_to_response(self, context, **response_kwargs):
+        """Defined here for debugging only"""
+        response = super().render_to_response(context, **response_kwargs)
+        print(f'{"\n".join(DurationProfiler.report())}')
+        return response

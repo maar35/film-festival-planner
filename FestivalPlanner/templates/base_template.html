@@ -39,14 +39,27 @@
 
     /* ----- AS LONG AS CSS IS NOT LOADED ----- */
 
-<!--    @keyframes ticker {-->
-<!--        from {-->
-<!--            transform: translateX(0)-->
-<!--        }-->
-<!--        to {-->
-<!--            transform: translateX(-30rem)-->
-<!--        }-->
-<!--    }-->
+    :root {
+        --inputDisabledText: grey;
+        --stickyBackground: rgba(30, 30, 30, .5);
+    }
+
+    .disabled-color {
+        cursor: default;
+        font-weight: normal;
+        color: var(--inputDisabledText);
+    }
+
+
+    /* TODO get this working in the project style sheet. */
+    @keyframes ticker {
+        from {
+            transform: translateX(0)
+        }
+        to {
+            transform: translateX(-30rem)
+        }
+    }
 
 </style>
 

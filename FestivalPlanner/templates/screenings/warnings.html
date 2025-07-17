@@ -35,20 +35,20 @@
         <li>{{ line }}</li>
     {% endfor %}
     </ul>
+    <br>
 {% endif %}
 
-{% if warning_rows %}
-    <br>
+{% if warnings %}
     <form method="post">
     {% csrf_token %}
-    <table>
+    <table style="position: relative; z-index: 1;">
     <thead>
     <tr>
         <th class="sticky-t-head">Title</th>
         <th class="sticky-t-head">Screening</th>
         <th class="sticky-t-head">Details</th>
-        <th class="sticky-t-head">Fan</th>
-        <th class="sticky-t-head">Warning</th>
+        {% include "../includes/filtered_header_field.html" with obj_filter_props=fan_filter_props %}
+        {% include "../includes/filtered_header_field.html" with obj_filter_props=warning_filter_props %}
         <th class="sticky-t-head">Symbol</th>
         <th class="sticky-t-head">Fix</th>
     </tr>
@@ -68,20 +68,19 @@
             <td>
             {% endif %}
                 {% ifchanged row.screening %}
-                <a href="{% url 'screenings:day_schema' %}{{ row.query_string }}{{ row.fragment }}">
+                <a href="{% url 'screenings:day_schema' %}{{ row.schema_querystring }}{{ row.fragment }}">
                     {{ row.screening.str_short }}
                 </a>
                 {% endifchanged %}
             </td>
             <td>
                 {% ifchanged row.screening %}
-                <a name=""></a>
                 <a href="{% url 'screenings:details' row.screening.id %}">
                     {{ row.screening.id }}
                 </a>
                 {% endifchanged %}
             </td>
-            <td>{{ row.fan }}</td>
+            <td> {{ row.fan }} </td>
             <td style="color: {{ row.wording_color }};">{{ row.warning_wording }}</td>
             <td style="text-align: center; background: {{ row.background }};">
                 <span class="no-select">
@@ -98,6 +97,8 @@
                     {% for choice in row.choices %}
                     {% if choice.submit_name %}
                         <input type="submit" value="{{ choice.value }}" name="{{ choice.submit_name }}">
+                    {% elif choice.link %}
+                        <a class="link-in-dropdown" href="{{ choice.link }}">{{ choice.value }}</a>
                     {% else %}
                         <span class="disabled-input">
                             <input type="submit" value="{{ choice.value }}" disabled>
@@ -112,7 +113,10 @@
     </table>
     </form>
 {% else %}
-    <p>No warnings</p>
+    <p>No warnings in {{ festival }}</p>
+{% endif %}
+{% if warnings and not warning_rows %}
+    <p>Warnings hidden by a filter.</p>
 {% endif %}
 <br>
 {% include "../includes/warning_box.html" with stats=stats %}

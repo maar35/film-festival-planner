@@ -358,38 +358,43 @@ class ScreeningWarningsForm(DummyForm):
     fix_action = FixWarningAction('fix_warning')
 
     @classmethod
+    def buy_tickets(cls, session, fan_names, screening_ids, wording):
+        committed = cls.fix_ticket_warnings(session, cls._buy_tickets, fan_names, screening_ids, wording)
+        return committed
+
+    @classmethod
+    def confirm_tickets(cls, session, fan_names, screening_ids, wording):
+        committed = cls.fix_ticket_warnings(session, cls._confirm_tickets, fan_names, screening_ids, wording)
+        return committed
+
+    @classmethod
+    def delete_tickets(cls, session, fan_names, screening_ids, wording):
+        committed = cls.fix_ticket_warnings(session, cls._delete_tickets, fan_names, screening_ids, wording)
+        return committed
+
+    @classmethod
+    def delete_attendances(cls, session, fan_names, screening_ids, wording):
+        committed = cls.fix_ticket_warnings(session, cls._unattend_screenings, fan_names, screening_ids, wording)
+        return committed
+
+    @classmethod
     def fix_ticket_warnings(cls, session, fix_method, fan_names, screening_ids, wording):
-        transaction_comitted = True
+        transaction_committed = True
         try:
             with transaction.atomic():
                 tickets, count_by_type = fix_method(fan_names, screening_ids)
         except Exception as e:
-            transaction_comitted = False
+            transaction_committed = False
             ERRORS_IN_WARNING_FIXES.set(session, [str(e), cls.rolled_back_msg])
             add_log(session, f'{e} {cls.rolled_back_msg}')
         else:
-            cls.fix_action.init_action(session, header=f'{len(tickets)} tickets {wording}')
+            cls.fix_action.init_action(session, header=f'{len(tickets)} {wording}')
             for ticket in tickets:
                 cls.fix_action.add_detail(session, f'{str(ticket)}')
             if count_by_type:
                 for _type, count in count_by_type.items():
-                    cls.fix_action.add_detail(session, f'{count:5} {_type} objects {wording}')
-        return transaction_comitted
-
-    @classmethod
-    def buy_tickets(cls, session, fan_names, screening_ids, wording):
-        comitted = cls.fix_ticket_warnings(session, cls._buy_tickets, fan_names, screening_ids, wording)
-        return comitted
-
-    @classmethod
-    def confirm_tickets(cls, session, fan_names, screening_ids, wording):
-        comitted = cls.fix_ticket_warnings(session, cls._confirm_tickets, fan_names, screening_ids, wording)
-        return comitted
-
-    @classmethod
-    def delete_tickets(cls, session, fan_names, screening_ids, wording):
-        comitted = cls.fix_ticket_warnings(session, cls._delete_tickets, fan_names, screening_ids, wording)
-        return comitted
+                    cls.fix_action.add_detail(session, f'{count:5} {_type} objects deleted')
+        return transaction_committed
 
     @classmethod
     def _buy_tickets(cls, fan_names, screening_ids):
@@ -405,8 +410,8 @@ class ScreeningWarningsForm(DummyForm):
     @classmethod
     def _confirm_tickets(cls, fan_names, screening_ids):
         tickets = Ticket.tickets.filter(fan__name__in=fan_names, screening__in=screening_ids)
-        count = tickets.update(confirmed=True)
-        return tickets, {Ticket.__name__: count}
+        _ = tickets.update(confirmed=True)
+        return tickets, {}
 
     @classmethod
     def _delete_tickets(cls, fan_names, screening_ids):
@@ -414,6 +419,13 @@ class ScreeningWarningsForm(DummyForm):
         org_tickets = list(tickets)
         _, count_by_type = tickets.delete()
         return org_tickets, count_by_type
+
+    @classmethod
+    def _unattend_screenings(cls, fan_names, screening_ids):
+        attendances = Attendance.attendances.filter(fan__name__in=fan_names, screening__in=screening_ids)
+        org_attendances = list(attendances)
+        _, count_by_type = attendances.delete()
+        return org_attendances, count_by_type
 
 
 def update_attendance_statuses(update_method, session, screening, changed_pop_by_fan, update_log, manager=None):

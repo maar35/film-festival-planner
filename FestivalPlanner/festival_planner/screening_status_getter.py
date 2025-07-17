@@ -139,6 +139,31 @@ def get_filmscreenings(film):
     return filmscreenings
 
 
+def get_same_film_attendances(screening, fan):
+    filmscreenings = get_filmscreenings(screening.film)
+    same_film_attendances = Attendance.attendances.filter(screening__in=filmscreenings, fan=fan)
+    return same_film_attendances
+
+
+@profiled_method(OVERLAP_PROFILER)
+def get_overlapping_attended_screenings(screening, fan, first_only=True):
+    festival = screening.film.festival
+    manager = Attendance.attendances
+    filter_kwargs = {
+        'fan': fan,
+        'screening__film__festival': festival,
+        'screening__start_dt__date': screening.start_dt.date(),
+    }
+    attended_screenings = [a.screening for a in manager.filter(**filter_kwargs) if a.screening != screening]
+    overlapping_screenings = []
+    for day_screening in attended_screenings:
+        if day_screening.overlaps(screening):
+            overlapping_screenings.append(day_screening)
+            if first_only:
+                break
+    return overlapping_screenings
+
+
 class ScreeningStatusGetter:
     screening_cookie = Cookie('screening')
 
@@ -192,6 +217,7 @@ class ScreeningStatusGetter:
 
     @classmethod
     def handle_screening_get_request(cls, request):
+        """Set the selected screening if requested"""
         cls.screening_cookie.handle_get_request(request)
 
     @classmethod
@@ -436,6 +462,24 @@ class ScreeningWarning:
         WarningType.SHOULD_SELL_TICKET: 'for all unattended screenings of',
     }
 
+    fix_verb_by_warning = {
+        WarningType.NEEDS_TICKET: 'created',
+        WarningType.AWAITS_CONFIRMATION: 'confirmed',
+        WarningType.SHOULD_SELL_TICKET: 'deleted',
+        WarningType.ATTENDS_SAME_FILM: 'deleted',
+        WarningType.ATTENDS_OVERLAPPING: 'deleted',
+        WarningType.ATTENDS_WHILE_UNAVAILABLE: 'deleted',
+    }
+
+    fix_noun_by_warning = {
+        WarningType.NEEDS_TICKET: 'ticket',
+        WarningType.AWAITS_CONFIRMATION: 'ticket',
+        WarningType.SHOULD_SELL_TICKET: 'ticket',
+        WarningType.ATTENDS_SAME_FILM: 'attendance',
+        WarningType.ATTENDS_OVERLAPPING: 'attendance',
+        WarningType.ATTENDS_WHILE_UNAVAILABLE: 'attendance',
+    }
+
     color_by_warning_by_status = None
     color_by_warning = {
         WarningType.NEEDS_TICKET: COLOR_WARNING_ORANGE,
@@ -501,12 +545,12 @@ class ScreeningWarning:
 
         if attends:
             # Check if screenings of the same film are attended.
-            multiple_attends = cls._get_multiple_attends(screening, fan)
-            if multiple_attends:
+            attends_same_film = cls._get_attends_same_film(screening, fan)
+            if attends_same_film:
                 warnings.append(cls(screening, fan, warning_type.ATTENDS_SAME_FILM))
 
             # Check if overlapping screenings are attended.
-            overlaps = cls._overlaps_attended_screenings(screening, fan)
+            overlaps = get_overlapping_attended_screenings(screening, fan)
             if overlaps:
                 warnings.append(cls(screening, fan, warning_type.ATTENDS_OVERLAPPING))
 
@@ -546,29 +590,10 @@ class ScreeningWarning:
         return stats
 
     @classmethod
-    @profiled_method(OVERLAP_PROFILER)
-    def _overlaps_attended_screenings(cls, screening, fan):
-        festival = screening.film.festival
-        manager = Attendance.attendances
-        filter_kwargs = {
-            'fan': fan,
-            'screening__film__festival': festival,
-            'screening__start_dt__date': screening.start_dt.date(),
-        }
-        attended_screenings = [a.screening for a in manager.filter(**filter_kwargs) if a.screening != screening]
-        overlaps = False
-        for day_screening in attended_screenings:
-            if day_screening.overlaps(screening):
-                overlaps = True
-                break
-        return overlaps
-
-    @classmethod
     @profiled_method(MULTI_ATTENDS_PROFILER)
-    def _get_multiple_attends(cls, screening, fan):
-        filmscreenings = Screening.screenings.filter(film=screening.film)
-        multiple_attends = Attendance.attendances.filter(screening__in=filmscreenings, fan=fan).count() > 1
-        return multiple_attends
+    def _get_attends_same_film(cls, screening, fan):
+        same_film_attendances = get_same_film_attendances(screening, fan)
+        return same_film_attendances.count() > 1
 
     @classmethod
     def _get_warning_details(cls, warning):

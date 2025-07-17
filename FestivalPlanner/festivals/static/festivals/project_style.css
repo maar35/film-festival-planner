@@ -15,11 +15,12 @@
     --warningBlockShadowColor: steelBlue;
     --inputDisabledColor: lightGrey;
     --inputDisabledBackground : red;
+    --inputDisabledText: grey;
     --errorBackground: red;
     --warningBackground: var(--warningColor);
     --infoHoverBackground: var(--infoColor);
     --warningHoverBackground: var(--warningColor);
-    --stickyBackground: rgba(0, 0, 0, 144);  /* #00000090;*/
+    --stickyBackground: rgba(30, 30, 30, .5);
     --tableBackground: rgba(0, 0, 0, 112);  /* #00000070;*/
     --modestBackground: rgba(0, 0, 0, 112);
     --screeningBackground: rgba(0, 0, 0, 183);  /*#000000BB;*/
@@ -489,6 +490,17 @@ span.up {
 
 /* Dropdown definitions for within a screening representation */
 
+/* - Animate the dropdown text when too long to display in a small frame */
+/* @keyframes ticker {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-30rem);
+    }
+}
+Doesn't seem te work from here */
+
 /* - Class definitions for the in-screening dropdown */
 .in-screening-dropdown {
     display: table-cell;
@@ -526,15 +538,16 @@ span.up {
     text-decoration-line: underline;
     text-decoration-style: dashed;
 }
-
-/* - Animate the dropdown text when too long to display in a small frame */
-@keyframes ticker {
-    from {
-        transform: translateX(0);
-    }
-    to {
-        transform: translateX(-30rem);
-    }
+.link-in-dropdown {
+    color: var(--modestStandoutColor);
+    font-weight: lighter;
+    text-align: left;
+    margin: 0px;
+    padding: 4px 16px;
+    display: block;
+}
+.link-in-dropdown:hover {
+    background-color: var(--hoverBackground)
 }
 
 /* Classes for floating elements */
@@ -613,7 +626,8 @@ span.up {
 /* Color of disabled element */
 .disabled-color {
     cursor: default;
-    color: var(--inputDisabledColor);
+    font-weight: normal;
+    color: var(--inputDisabledText);
 }
 
 /* Disable text selection */
