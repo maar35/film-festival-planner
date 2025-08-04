@@ -5,7 +5,7 @@ from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.views.generic import FormView
 
-from authentication.models import FilmFan, get_sorted_fan_list
+from authentication.models import FilmFan, get_sorted_fan_list, get_fan_by_name
 from availabilities.forms.availabilities_forms import AvailabilityForm
 from availabilities.models import Availabilities
 from festival_planner.cookie import Cookie, Filter, FestivalDay, get_fan_filter_props
@@ -29,7 +29,7 @@ END_TIME_CHOICES = TIME_CHOICES[1:]
 ERRORS_COOKIE = Cookie('form_errors', initial_value=[])
 WARNING_COOKIE = Cookie('warnings', initial_value=[])
 ACTION_COOKIE = Cookie('form_action')
-DEFAULT_FAN = FilmFan.film_fans.get(seq_nr=1) if FilmFan.film_fans.filter(seq_nr=1) else FilmFan(name='John', seq_nr=1)
+DEFAULT_FAN_NAME = FilmFan.film_fans.get(seq_nr=1).name
 
 
 def get_festival_dt(date, time):
@@ -68,7 +68,7 @@ class AvailabilityView(SharedTemplateReferrerView):
     template_name = 'availabilities/list.html'
     initial_start_time = DAY_START_TIME.strftime('%H:%M')
     initial_end_time = DAY_BREAK_TIME.strftime('%H:%M')
-    fan_cookie = Cookie('available_fan', initial_value=DEFAULT_FAN.name)
+    fan_cookie = Cookie('available_fan')
     start_day = AvailabilityDay('start_day')
     start_time = Cookie('start_time', initial_value=initial_start_time)
     end_day = AvailabilityDay('end_day')
@@ -196,7 +196,7 @@ class AvailabilityListView(LoginRequiredMixin, ProfiledListView):
         super_context = super().get_context_data(**kwargs)
         session = self.request.session
         self.festival = current_festival(session)
-        fan = AvailabilityView.fan_cookie.get(session, default=self.fan)
+        fan = self._get_availability_fan(session)
         can_submit = self._can_submit(session)
         reminders = self._get_reminders(session)
         action = ACTION_COOKIE.get(session, 'get') or 'def'
@@ -274,6 +274,14 @@ class AvailabilityListView(LoginRequiredMixin, ProfiledListView):
                 reminders.append(reminder)
         return reminders
 
+    def _get_availability_fan(self, session):
+        fan_name = AvailabilityView.fan_cookie.get(session, default=self.fan.name)
+        if not fan_name:
+            AvailabilityView.fan_cookie.set(session, DEFAULT_FAN_NAME)
+            fan_name = AvailabilityView.fan_cookie.get(session, default=self.fan.name)
+        fan = get_fan_by_name(fan_name)
+        return fan
+
     def _can_submit(self, session):
         add_log(session, 'Check submit.')
         fan_name = AvailabilityView.fan_cookie.get(session)
@@ -329,7 +337,7 @@ class AvailabilityFormView(LoginRequiredMixin, FormView):
     template_name = AvailabilityView.template_name
     http_method_names = ['post']
     form_class = AvailabilityForm
-    success_url = '/availabilities/list'
+    success_url = '/availabilities/list/'
 
     def form_valid(self, form):
         session = self.request.session

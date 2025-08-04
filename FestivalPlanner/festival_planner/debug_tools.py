@@ -197,5 +197,6 @@ class ProfiledListView(ListView):
     def render_to_response(self, context, **response_kwargs):
         """Defined here for debugging only"""
         response = super().render_to_response(context, **response_kwargs)
-        print(f'{"\n".join(DurationProfiler.report())}')
+        if not SUPPRESS_DEBUG_PRINT:
+            print(f'{"\n".join(DurationProfiler.report())}')
         return response

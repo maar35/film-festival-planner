@@ -367,7 +367,7 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
         self.warning_row_nr_by_screening_id = {row['screening'].id: i for i, row in enumerate(sorted_warning_rows)}
 
         # Get the number of warnings of the first screening.
-        first_screening = sorted_warning_rows[0]['screening']
+        first_screening = sorted_warning_rows[0]['screening'] if sorted_warning_rows else None
         warning_count = 0
         index = 0
         max_iter = len(sorted_warning_rows)
@@ -979,6 +979,7 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
 
         # Set up the queryset to select screenings with the given fan and warning.
         filters = [self.reset_filter, self.filter_by_fan[fan], self.filter_by_warning_type[warning_type]]
+        link_wording = ScreeningWarning.link_wording_by_ticket_warning[warning_type]
         querystring = Filter.get_display_query_from_keys([f.get_cookie_key() for f in filters], on=True)
 
         # Create choices for related screenings.
@@ -994,7 +995,7 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
             'value': f'{fix_wording}',
             'submit_name': f'{warning_type.name}:{fan.name}:{screening.id}:',
         }] + other_screening_choices + [{
-            'value': f'Display overlapping screenings',
+            'value': f'Display {link_wording}',
             'link': '/screenings/warnings' + querystring
         }]
 
@@ -1052,7 +1053,7 @@ class ScreeningWarningsFormView(LoginRequiredMixin, FormView):
     template_name = ScreeningWarningsView.template_name
     form_class = ScreeningWarningsForm
     http_method_names = ['post']
-    success_url = '/screenings/warnings'
+    success_url = '/screenings/warnings/'
     fix_method_by_warning = {
         ScreeningWarning.WarningType.NEEDS_TICKET: form_class.buy_tickets,
         ScreeningWarning.WarningType.AWAITS_CONFIRMATION: form_class.confirm_tickets,

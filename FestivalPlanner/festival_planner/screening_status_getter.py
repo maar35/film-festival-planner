@@ -461,6 +461,10 @@ class ScreeningWarning:
         WarningType.AWAITS_CONFIRMATION: 'all tickets for',
         WarningType.SHOULD_SELL_TICKET: 'for all unattended screenings of',
     }
+    link_wording_by_ticket_warning = {
+        WarningType.ATTENDS_SAME_FILM: 'filmscreenings',
+        WarningType.ATTENDS_OVERLAPPING: 'overlapping screenings',
+    }
 
     fix_verb_by_warning = {
         WarningType.NEEDS_TICKET: 'created',

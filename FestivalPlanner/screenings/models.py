@@ -2,12 +2,12 @@ import datetime
 
 from django.db import models
 
-from authentication.models import FilmFan, get_sorted_fan_list
+from authentication.models import FilmFan
 from availabilities.models import Availabilities
 from festival_planner.debug_tools import profiled_method, UNAVAILABLE_PROFILER, RATING_DATA_PROFILER, \
     FAN_ATTENDS_PROFILER
 from festivals.config import Config
-from films.models import Film, FilmFanFilmRating, fan_rating
+from films.models import Film, FilmFanFilmRating
 from theaters.models import Screen
 
 CONSTANTS_CONFIG = Config().config['Constants']

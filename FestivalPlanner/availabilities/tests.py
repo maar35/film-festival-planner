@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from authentication.models import FilmFan
+from availabilities import views as availability_views
 from availabilities.models import Availabilities
 from festivals.models import current_festival
 from screenings.models import Screening
@@ -12,43 +13,42 @@ from screenings.tests import ScreeningViewsTests
 
 
 class AvailabilitiesModelTests(TestCase):
+    """
+    TODO: Create a few test here, see #392.
+    """
+    pass
+
+
+class AvailabilityViewTests(ScreeningViewsTests):
+    def setUp(self):
+        super().setUp()
+        self.arrange_regular_user_props()
+        self.jimmie = FilmFan.film_fans.create(name='Jimmie', is_admin=False, seq_nr=3)
+        availability_views.DEFAULT_FAN_NAME = self.jimmie.name
+
     def test_str(self):
         """
         Test the string representation of a availability records.
         """
         # Arrange.
-        screening_view_tests = ScreeningViewsTests()
-        screening_view_tests.setUp()
-        screening_view_tests.arrange_regular_user_props()
-        client = screening_view_tests.client
-
-        fan = FilmFan.film_fans.create(name='Jimmie', is_admin=False, seq_nr=3)
-
         start_dt_1 = datetime.datetime.fromisoformat('2024-09-30 00:00')
         end_dt_1 = datetime.datetime.fromisoformat('2024-10-06 00:00')
-        availability_kwargs_1 = {'fan': fan, 'start_dt': start_dt_1, 'end_dt': end_dt_1}
+        availability_kwargs_1 = {'fan': self.jimmie, 'start_dt': start_dt_1, 'end_dt': end_dt_1}
         availability_1 = Availabilities.availabilities.create(**availability_kwargs_1)
 
         start_dt_2 = datetime.datetime.fromisoformat('2024-09-29 14:59')
         end_dt_2 = datetime.datetime.fromisoformat('2024-09-29 23:00')
-        availability_kwargs_2 = {'fan': fan, 'start_dt': start_dt_2, 'end_dt': end_dt_2}
+        availability_kwargs_2 = {'fan': self.jimmie, 'start_dt': start_dt_2, 'end_dt': end_dt_2}
         availability_2 = Availabilities.availabilities.create(**availability_kwargs_2)
 
         # Act.
-        response = client.get(reverse('availabilities:list'))
+        response = self.client.get(reverse('availabilities:list'))
 
         # Assert.
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(str(availability_1), 'Jimmie is available between 2024-09-30 00:00 and 2024-10-06 00:00')
         self.assertEqual(str(availability_2), 'Jimmie is available between 2024-09-29 14:59 and 2024-09-29 23:00')
         self.assertEqual(Availabilities.availabilities.count(), 2)
-
-
-class AvailabilityViewTestCase(TestCase):
-    """
-    TODO: Create a few tests here, created issue #392 for it.
-    """
-    pass
 
 
 class DaySchemaViewTests(ScreeningViewsTests):
