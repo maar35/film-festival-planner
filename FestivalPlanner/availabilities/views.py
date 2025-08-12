@@ -197,7 +197,7 @@ class AvailabilityListView(LoginRequiredMixin, ProfiledListView):
         session = self.request.session
         self.festival = current_festival(session)
         fan = self._get_availability_fan(session)
-        can_submit = self._can_submit(session)
+        can_submit = self._can_submit(session, fan.name)
         reminders = self._get_reminders(session)
         action = ACTION_COOKIE.get(session, 'get') or 'def'
         warnings = [row['warning'] for row in self.warning_rows]
@@ -276,15 +276,11 @@ class AvailabilityListView(LoginRequiredMixin, ProfiledListView):
 
     def _get_availability_fan(self, session):
         fan_name = AvailabilityView.fan_cookie.get(session, default=self.fan.name)
-        if not fan_name:
-            AvailabilityView.fan_cookie.set(session, DEFAULT_FAN_NAME)
-            fan_name = AvailabilityView.fan_cookie.get(session, default=self.fan.name)
         fan = get_fan_by_name(fan_name)
         return fan
 
-    def _can_submit(self, session):
+    def _can_submit(self, session, fan_name):
         add_log(session, 'Check submit.')
-        fan_name = AvailabilityView.fan_cookie.get(session)
         start_dt = AvailabilityView.get_dt(session, 'start_day', 'start_time')
         end_dt = AvailabilityView.get_dt(session, 'end_day', 'end_time')
         strf_spec = "%Y-%m-%d %H:%M"

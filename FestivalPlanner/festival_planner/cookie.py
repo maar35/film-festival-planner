@@ -14,11 +14,11 @@ class Cookie:
         self._cookie_key = cookie_key
         self._initial_value = initial_value
 
-    def _set_value_from_session(self, session):
+    def _set_value_from_session(self, session, default=None):
         """
         Link the cookie to a session.
         """
-        self.set(session, session.get(self._cookie_key, self._initial_value))
+        self.set(session, session.get(self._cookie_key, default or self._initial_value))
 
     def get_cookie_key(self):
         return self._cookie_key
@@ -40,8 +40,8 @@ class Cookie:
         """
         Return the cookie value from the session or default if it doesn't exist.
         """
-        self._set_value_from_session(session)
-        value = session.get(self._cookie_key, default)
+        self._set_value_from_session(session, default=default)
+        value = session.get(self._cookie_key)
         return value
 
     def set(self, session, value):
