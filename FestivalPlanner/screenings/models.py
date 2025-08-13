@@ -4,8 +4,6 @@ from django.db import models
 
 from authentication.models import FilmFan
 from availabilities.models import Availabilities
-from festival_planner.debug_tools import profiled_method, UNAVAILABLE_PROFILER, RATING_DATA_PROFILER, \
-    FAN_ATTENDS_PROFILER
 from festivals.config import Config
 from films.models import Film, FilmFanFilmRating
 from theaters.models import Screen
@@ -153,7 +151,6 @@ class Screening(models.Model):
         travel_time = WALK_TIME_SAME_THEATER if same_theater else TRAVEL_TIME_OTHER_THEATER
         return travel_time
 
-    @profiled_method(UNAVAILABLE_PROFILER)
     def available_by_fan(self, fan):
         manager = Availabilities.availabilities
         availabilities = manager.filter(fan=fan, start_dt__lte=self.start_dt, end_dt__gte=self.end_dt)
@@ -165,7 +162,6 @@ class Screening(models.Model):
         available_fans = [availability.fan for availability in manager.filter(**kwargs)]
         return available_fans
 
-    @profiled_method(FAN_ATTENDS_PROFILER)
     def fan_attends(self, fan):
         attendances = Attendance.attendances.filter(screening=self, fan=fan)
         return attendances
@@ -199,7 +195,6 @@ class Screening(models.Model):
     def filmscreening_count(self):
         return len(filmscreenings(self.film))
 
-    @profiled_method(RATING_DATA_PROFILER)
     def film_rating_data(self, status):
         """
         Return compact rating per fan, representative film rating string

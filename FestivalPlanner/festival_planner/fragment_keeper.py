@@ -1,4 +1,4 @@
-from festival_planner.debug_tools import pr_debug, profiled_method, FRAGMENT_PROFILER, timed_method
+from festival_planner.debug_tools import timed_method
 
 FRAGMENT_INDICATOR = '#'
 TOP_CORRECTION_ROWS = 2
@@ -18,7 +18,6 @@ class FragmentKeeper:
     def fragment_code(cls, obj):
         return f'{FRAGMENT_INDICATOR}{cls._fragment_name(cls._object_id(obj))}'
 
-    @profiled_method(FRAGMENT_PROFILER)
     def add_fragments(self, objects):
         for row_nr, obj in enumerate(objects):
             self.add_fragment(row_nr, obj)

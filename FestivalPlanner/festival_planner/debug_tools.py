@@ -161,28 +161,7 @@ SETUP_PROFILER = DurationProfiler('setup')
 QUERY_PROFILER = DurationProfiler('queryset')
 GET_CONTEXT_PROFILER = DurationProfiler('context', active=True)
 
-SET_TICKET_STATUS_PROFILER = DurationProfiler('set_ticket_stat', active=False, newline=True, caller_depth=4)
-
-SCREENING_DICT_PROFILER = DurationProfiler('screening_dict', newline=True, active=False)
-FRAGMENT_PROFILER = DurationProfiler('fragment', active=False)
-
-SCREEN_ROW_PROFILER = DurationProfiler('screen_row', active=False, newline=True, caller_depth=0)
-SCREENING_WARNINGS_PROFILER = DurationProfiler('screening_warns', active=False)
-FAN_ATTENDS_PROFILER = DurationProfiler('fan_attends', active=False)
-ATTENDANTS_PROFILER = DurationProfiler('get_attendants', active=False)
-SCREENING_STATUS_PROFILER = DurationProfiler('screening_status', active=False)
-RATING_DATA_PROFILER = DurationProfiler('rating_data', active=False)
-FAN_PROPS_PROFILER = DurationProfiler('fan_props', active=False)
-TICKET_STATUS_PROFILER = DurationProfiler('ticket_status', active=False, caller_depth=3)
-
-MULTI_ATTENDS_PROFILER = DurationProfiler('multi_attends', active=False, newline=True)
 OVERLAP_PROFILER = DurationProfiler('overlap', active=True, caller_depth=3)
-GET_AVAILABILITY_PROFILER = DurationProfiler('get_availability', active=False)
-UNAVAILABLE_PROFILER = DurationProfiler('available', active=False)
-
-SELECTED_PROPS_PROFILER = DurationProfiler('selected_props', active=False, newline=True, caller_depth=0)
-FAN_RATING_PROFILER = DurationProfiler('fan_rating', active=False, caller_depth=0)
-FILMSCREENINGS_PROFILER = DurationProfiler('filmscreenings', active=False, caller_depth=0)
 
 GET_WARNINGS_PROFILER = DurationProfiler('get_warnings', newline=True, caller_depth=0)
 WARNING_KEYS_PROFILER = DurationProfiler('warning_keys')

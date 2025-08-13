@@ -4,10 +4,8 @@ from enum import Enum, auto
 from authentication.models import FilmFan, get_sorted_fan_list
 from availabilities.models import Availabilities
 from festival_planner.cookie import Filter, Cookie
-from festival_planner.debug_tools import pr_debug, profiled_method, OVERLAP_PROFILER, GET_WARNINGS_PROFILER, \
-    FILMSCREENINGS_PROFILER, SCREENING_STATUS_PROFILER, GET_AV_KEEPER_PROFILER, \
-    WARNING_KEYS_PROFILER, MULTI_ATTENDS_PROFILER, FAN_WARNINGS_PROFILER, ATTENDANTS_PROFILER, \
-    GET_AVAILABILITY_PROFILER, SCREENING_WARNINGS_PROFILER, SET_TICKET_STATUS_PROFILER, timed_method
+from festival_planner.debug_tools import profiled_method, OVERLAP_PROFILER, GET_WARNINGS_PROFILER, \
+    GET_AV_KEEPER_PROFILER, WARNING_KEYS_PROFILER, FAN_WARNINGS_PROFILER, timed_method
 from festival_planner.fragment_keeper import ScreenFragmentKeeper
 from festivals.models import current_festival
 from films.models import current_fan
@@ -123,7 +121,6 @@ def get_warning_details(warnings, details_getter):
     return warning_details
 
 
-@profiled_method(SCREENING_WARNINGS_PROFILER)
 def get_screening_warnings(screening, fans, availability_keeper, status_getter=None):
     warnings = []
     for fan in fans:
@@ -180,7 +177,6 @@ class ScreeningStatusGetter:
         self.attends_by_screening[screening] = True
         self.has_attended_film_by_screening = self._get_has_attended_film_by_screening()
 
-    @profiled_method(SCREENING_STATUS_PROFILER)
     def get_screening_status(self, screening, attendants):
         fan = current_fan(self.session)
         if fan in attendants:
@@ -219,7 +215,6 @@ class ScreeningStatusGetter:
 
     @classmethod
     @timed_method
-    @profiled_method(FILMSCREENINGS_PROFILER)
     def get_filmscreening_props(cls, session, film):
         festival = current_festival(session)
         festival_screenings = Screening.screenings.filter(film__festival=festival)
@@ -237,7 +232,6 @@ class ScreeningStatusGetter:
         fits = self.keeper.get_availability(screening, self.fan)
         return fits
 
-    @profiled_method(ATTENDANTS_PROFILER)
     def get_attendants(self, screening):
         attendances = self.attendances_by_screening[screening]
         attendant_ids = attendances.values_list('fan', flat=True)
@@ -392,7 +386,6 @@ class AvailabilityKeeper:
             for fan in available_fans:
                 self.available_by_screening_by_fan[screening][fan] = True
 
-    @profiled_method(SET_TICKET_STATUS_PROFILER)
     def set_ticket_status(self, screenings, fans):
         manager = Ticket.tickets
 
@@ -405,7 +398,6 @@ class AvailabilityKeeper:
             except KeyError as e:
                 self.ticket_by_screening_by_fan[screening] = {fan: ticket}
 
-    @profiled_method(GET_AVAILABILITY_PROFILER)
     def get_availability(self, screening, fan):
         try:
             available = self.available_by_screening_by_fan[screening][fan]
@@ -588,7 +580,6 @@ class ScreeningWarning:
         return stats
 
     @classmethod
-    @profiled_method(MULTI_ATTENDS_PROFILER)
     def _get_attends_same_film(cls, screening, fan):
         same_film_attendances = get_same_film_attendances(screening, fan)
         return same_film_attendances.count() > 1

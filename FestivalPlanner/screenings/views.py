@@ -9,9 +9,8 @@ from authentication.models import FilmFan, get_sorted_fan_list
 from availabilities.models import Availabilities
 from availabilities.views import get_festival_dt, DAY_START_TIME, DAY_BREAK_TIME
 from festival_planner.cookie import Filter, FestivalDay, Cookie, get_filter_props, get_fan_filter_props
-from festival_planner.debug_tools import pr_debug, profiled_method, SETUP_PROFILER, QUERY_PROFILER, \
-    GET_CONTEXT_PROFILER, SCREENING_DICT_PROFILER, SCREEN_ROW_PROFILER, SELECTED_PROPS_PROFILER, \
-    FAN_PROPS_PROFILER, LISTVIEW_DISPATCH_PROFILER, ProfiledListView, timed_method
+from festival_planner.debug_tools import profiled_method, SETUP_PROFILER, QUERY_PROFILER, \
+    GET_CONTEXT_PROFILER, LISTVIEW_DISPATCH_PROFILER, ProfiledListView, timed_method
 from festival_planner.fan_action import FanAction
 from festival_planner.fragment_keeper import ScreenFragmentKeeper, FRAGMENT_INDICATOR, ScreeningFragmentKeeper, \
     TOP_CORRECTION_ROWS
@@ -142,7 +141,6 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
         within_festival = next_date.strftime(FestivalDay.day_str_format) in day_choices
         return next_date.strftime(FestivalDay.date_str_format) if within_festival else None
 
-    @profiled_method(SCREEN_ROW_PROFILER)
     def _get_screen_row(self, screen_nr, screen, screenings):
         screening_props = [self._screening_props(s) for s in screenings]
         selected = len([prop['selected'] for prop in screening_props if prop['selected']])
@@ -157,7 +155,6 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
         }
         return screen_row
 
-    @profiled_method(SCREENING_DICT_PROFILER)
     def _get_screenings_by_screen(self):
         screenings_by_screen = {}
         sorted_screenings = sorted(self.day_screenings, key=lambda s: str(s.screen))
@@ -290,7 +287,6 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
         }
         return screening_prop
 
-    @profiled_method(FAN_PROPS_PROFILER)
     def _get_fan_props_str(self, screening):
         initials = []
         for fan in self.sorted_fans:
@@ -332,7 +328,6 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
     def _get_selected_screening_props(self):
         return self.selected_screening_props
 
-    @profiled_method(SELECTED_PROPS_PROFILER)
     def _set_selected_screening_props(self, status, pair, attendants):
         screening = self.selected_screening
         film = screening.film

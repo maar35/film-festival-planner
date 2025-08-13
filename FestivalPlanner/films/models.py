@@ -1,7 +1,6 @@
 from django.db import models
 
 from authentication.models import FilmFan
-from festival_planner.debug_tools import profiled_method, FAN_RATING_PROFILER
 from festivals.config import Config
 from festivals.models import Festival, current_festival
 from sections.models import Subsection
@@ -222,7 +221,6 @@ def get_rating_name(rating_value):
     return name
 
 
-@profiled_method(FAN_RATING_PROFILER)
 def fan_rating(fan, film, manager=None):
     manager = manager or FilmFanFilmRating.film_ratings
     kwargs = {'film': film, 'film_fan': fan}
