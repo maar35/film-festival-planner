@@ -6,7 +6,7 @@ from django.db import transaction
 
 from authentication.models import FilmFan
 from festival_planner.cookie import Errors
-from festival_planner.debug_tools import pr_debug, ExceptionTracer
+from festival_planner.debug_tools import pr_debug, ExceptionTracer, timed_method
 from festival_planner.fan_action import FixWarningAction
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_log, initialize_log
@@ -140,8 +140,8 @@ class PlannerForm(DummyForm):
     session = None
 
     @classmethod
+    @timed_method
     def auto_plan_screenings(cls, session, eligible_films):
-        pr_debug('start', with_time=True)
         cls.session = session
         cls.tracer = ExceptionTracer()
         cls.reporter = PlannerReporter(session, 'Plan screenings')
@@ -173,7 +173,6 @@ class PlannerForm(DummyForm):
 
         cls.reporter.report(eligible_films)
         add_log(session, f'{cls.planned_screenings_count} screenings planned')
-        pr_debug('done', with_time=True)
         return transaction_committed
 
     @classmethod

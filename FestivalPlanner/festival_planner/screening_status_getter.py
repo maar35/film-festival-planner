@@ -7,7 +7,7 @@ from festival_planner.cookie import Filter, Cookie
 from festival_planner.debug_tools import pr_debug, profiled_method, OVERLAP_PROFILER, GET_WARNINGS_PROFILER, \
     FILMSCREENINGS_PROFILER, SCREENING_STATUS_PROFILER, GET_AV_KEEPER_PROFILER, \
     WARNING_KEYS_PROFILER, MULTI_ATTENDS_PROFILER, FAN_WARNINGS_PROFILER, ATTENDANTS_PROFILER, \
-    GET_AVAILABILITY_PROFILER, SCREENING_WARNINGS_PROFILER, SET_TICKET_STATUS_PROFILER
+    GET_AVAILABILITY_PROFILER, SCREENING_WARNINGS_PROFILER, SET_TICKET_STATUS_PROFILER, timed_method
 from festival_planner.fragment_keeper import ScreenFragmentKeeper
 from festivals.models import current_festival
 from films.models import current_fan
@@ -59,19 +59,18 @@ def get_ticket_holders(screening, current_filmfan, confirmed=None):
     return sorted_holders
 
 
+@timed_method
 @profiled_method(WARNING_KEYS_PROFILER)
 def get_warnings_keys(festival):
     """
     Return a set of screening-fan tuples that could have one or more
     warnings.
     """
-    pr_debug('start', with_time=True)
     attendances = Attendance.attendances.filter(screening__film__festival=festival)
     a_keys_set = {(attendance.screening, attendance.fan) for attendance in attendances}
     tickets = Ticket.tickets.filter(screening__film__festival=festival)
     t_keys_set = {(ticket.screening, ticket.fan) for ticket in tickets}
     keys_set = a_keys_set | t_keys_set
-    pr_debug('done', with_time=True)
     return keys_set
 
 
@@ -93,6 +92,7 @@ def get_availability_keeper(keys_set):
     return keeper
 
 
+@timed_method
 @profiled_method(GET_WARNINGS_PROFILER)
 def get_warnings(festival, details_getter, keys_set=None):
     """
@@ -109,20 +109,17 @@ def get_warnings(festival, details_getter, keys_set=None):
                 details.append(details_getter(warning))
         return details
 
-    pr_debug('start', with_time=True)
     keys_set = keys_set or get_warnings_keys(festival)
     keeper = get_availability_keeper(keys_set)
     warning_details = get_fan_warnings(keys_set)
-    pr_debug('done', with_time=True)
     return warning_details
 
 
+@timed_method
 def get_warning_details(warnings, details_getter):
-    pr_debug('start', with_time=True)
     warning_details = []
     for warning in warnings:
         warning_details.append(details_getter(warning))
-    pr_debug('done', with_time=True)
     return warning_details
 
 
@@ -221,9 +218,9 @@ class ScreeningStatusGetter:
         cls.screening_cookie.handle_get_request(request)
 
     @classmethod
+    @timed_method
     @profiled_method(FILMSCREENINGS_PROFILER)
     def get_filmscreening_props(cls, session, film):
-        pr_debug('start', with_time=True)
         festival = current_festival(session)
         festival_screenings = Screening.screenings.filter(film__festival=festival)
         filmscreenings = get_filmscreenings(film)
@@ -234,7 +231,6 @@ class ScreeningStatusGetter:
             day_screenings = festival_screenings.filter(start_dt__date=date)
             getter = cls(session, set(day_screenings) | set(day_filmscreenings))
             film_screenings_props.extend([getter._get_day_props(s) for s in day_filmscreenings])
-        pr_debug('done', with_time=True)
         return film_screenings_props
 
     def fits_availability(self, screening):
@@ -567,9 +563,8 @@ class ScreeningWarning:
             yield warning
 
     @classmethod
+    @timed_method
     def get_warning_stats(cls, festival, warnings=None):
-        pr_debug('start', with_time=True)
-
         # Get the warnings.
         getter = cls._get_warning_details
         warning_details = get_warning_details(warnings, getter) if warnings else get_warnings(festival, getter)
@@ -590,7 +585,6 @@ class ScreeningWarning:
             'symbols': [{'symbol': symbol, 'count': count} for symbol, count in count_by_symbol.items()],
         }
 
-        pr_debug('done', with_time=True)
         return stats
 
     @classmethod

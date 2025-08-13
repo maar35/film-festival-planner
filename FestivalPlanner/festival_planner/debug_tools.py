@@ -38,17 +38,31 @@ def pr_debug(message, with_time=False, frame_depth=1):
     print(f'@@{time_str} {debug(frame_depth=frame_depth)} {message}')
 
 
+def pr_time(message):
+    if SUPPRESS_DEBUG_PRINT:
+        return
+    time_str = f' {datetime.now():%Y-%m-%d %H:%M:%S.%f}'
+    print(f'@@{time_str} {message}')
+
+
 def timed_method(func):
     """
-    Enclose func between 'start' and 'dane' debug messages.
-    Doesn't seem to work because functools.wraps doesn't work (yet?).
+    Enclose func between 'start' and 'done' debug messages.
     """
     @functools.wraps(func)
     def time_wrapper(*args, **kwargs):
-        frame_depth = 4
-        pr_debug('START', with_time=True, frame_depth=frame_depth)
+        start_dt = datetime.now(tz=None)
+        try:
+            frame = inspect.currentframe().f_back
+            lineno = frame.f_lineno
+            code = frame.f_code.co_name
+        finally:
+            del frame
+        pr_time(f'START {func.__name__} {func.__module__}, called from {code}: {lineno}')
         result = func(*args, **kwargs)
-        pr_debug('DONE', with_time=True, frame_depth=frame_depth)
+        duration = datetime.now(tz=None) - start_dt
+        seconds = duration.total_seconds()
+        pr_time(f'DONE  {func.__name__} {func.__module__}{seconds:7.3f}s')
         return result
     return time_wrapper
 
@@ -179,7 +193,7 @@ LISTVIEW_DISPATCH_PROFILER = DurationProfiler('list_dispatch', newline=True, cal
 
 
 def profiled_method(duration_profiler: DurationProfiler):
-    """Bookkeep duration of given duration profiles"""
+    """Bookkeep duration of given duration profiler"""
     def decorator_profiled_method(func):
         @functools.wraps(func)
         def duration_wrapper(*args, **kwargs):

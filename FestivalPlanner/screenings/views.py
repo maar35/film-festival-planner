@@ -11,7 +11,7 @@ from availabilities.views import get_festival_dt, DAY_START_TIME, DAY_BREAK_TIME
 from festival_planner.cookie import Filter, FestivalDay, Cookie, get_filter_props, get_fan_filter_props
 from festival_planner.debug_tools import pr_debug, profiled_method, SETUP_PROFILER, QUERY_PROFILER, \
     GET_CONTEXT_PROFILER, SCREENING_DICT_PROFILER, SCREEN_ROW_PROFILER, SELECTED_PROPS_PROFILER, \
-    FAN_PROPS_PROFILER, LISTVIEW_DISPATCH_PROFILER, ProfiledListView
+    FAN_PROPS_PROFILER, LISTVIEW_DISPATCH_PROFILER, ProfiledListView, timed_method
 from festival_planner.fan_action import FanAction
 from festival_planner.fragment_keeper import ScreenFragmentKeeper, FRAGMENT_INDICATOR, ScreeningFragmentKeeper, \
     TOP_CORRECTION_ROWS
@@ -74,9 +74,9 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
         self.day_screenings = None
         self.screen_fragment_keeper = None
 
+    @timed_method
     @profiled_method(duration_profiler=SETUP_PROFILER)
     def setup(self, request, *args, **kwargs):
-        pr_debug('start', with_time=True)
         super().setup(request, *args, **kwargs)
         session = request.session
         self.fan = current_fan(session)
@@ -89,20 +89,18 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
         self.status_getter = ScreeningStatusGetter(request.session, self.day_screenings)
         self.screen_fragment_keeper = ScreenFragmentKeeper()
         self._get_top_fragments_data()
-        pr_debug('done', with_time=True)
 
     def dispatch(self, request, *args, **kwargs):
         cookie = DaySchemaView.current_day.day_cookie
         DaySchemaView.current_day.set_str(request.session, cookie.get(request.session))
         return super().dispatch(request, *args, **kwargs)
 
+    @timed_method
     @profiled_method(duration_profiler=QUERY_PROFILER)
     def get_queryset(self):
-        pr_debug('start', with_time=True)
         screenings_by_screen = self._get_screenings_by_screen()
         self.screen_fragment_keeper.add_fragments(screenings_by_screen.keys())
         screen_rows = [self._get_screen_row(i, s, screenings_by_screen[s]) for i, s in enumerate(screenings_by_screen)]
-        pr_debug('done', with_time=True)
         return screen_rows
 
     @profiled_method(GET_CONTEXT_PROFILER)
@@ -538,17 +536,15 @@ class PlannerListView(LoginRequiredMixin, ListView):
         self.planned_screening_count = None
         self.sorted_eligible_screenings = None
 
+    @timed_method
     def setup(self, request, *args, **kwargs):
-        pr_debug('start', with_time=True)
         super().setup(request, *args, **kwargs)
         PlannerView.festival = current_festival(request.session)
         PlannerView.eligible_films = self._get_eligible_films()
         self.fan = current_fan(request.session)
-        pr_debug('done', with_time=True)
 
+    @timed_method
     def get_queryset(self):
-        pr_debug('start', with_time=True)
-
         # Get the planned screening rows.
         get_row = self._get_planned_screening_row
         films = PlannerView.eligible_films
@@ -559,7 +555,6 @@ class PlannerListView(LoginRequiredMixin, ListView):
         self.planned_screening_count = len(planned_screening_rows)
         sorted_screenings = self._get_sorted_screenings(films)
         self.sorted_eligible_screenings = [self._get_sorted_screening_row(s) for s in sorted_screenings]
-        pr_debug('done', with_time=True)
 
         return planned_screening_rows
 
@@ -779,8 +774,8 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
 
         return super().dispatch(request, *args, **kwargs)
 
+    @timed_method
     def get_queryset(self):
-        pr_debug('start', with_time=True)
         session = self.request.session
         festival = current_festival(session)
 
@@ -803,7 +798,6 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
         # Apply filters to the warnings
         filtered_warning_rows = self._filter_warnings(session, sorted_warning_rows)
 
-        pr_debug('done', with_time=True)
         return filtered_warning_rows
 
     def get_context_data(self, *, object_list=None, **kwargs):

@@ -1,4 +1,4 @@
-from festival_planner.debug_tools import pr_debug, profiled_method, FRAGMENT_PROFILER
+from festival_planner.debug_tools import pr_debug, profiled_method, FRAGMENT_PROFILER, timed_method
 
 FRAGMENT_INDICATOR = '#'
 TOP_CORRECTION_ROWS = 2
@@ -61,11 +61,10 @@ class ScreeningFragmentKeeper(FragmentKeeper):
     object_tag = 'screening'
     key_field = 'pk'
 
+    @timed_method
     def add_fragment_data(self, rows):
-        pr_debug('start', with_time=True)
         for row_nr, row in enumerate(rows):
             screening = row['screening']
             self.add_fragment(row_nr, screening)
         for row_nr, row in enumerate(rows):
             row['fragment_name'] = self.get_fragment_name(row_nr)
-        pr_debug('done', with_time=True)

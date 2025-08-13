@@ -1,7 +1,7 @@
 import copy
 import datetime
 
-from festival_planner.debug_tools import pr_debug
+from festival_planner.debug_tools import pr_debug, timed_method
 from festivals.models import current_festival
 from films.models import rating_str
 
@@ -63,13 +63,13 @@ class FilmRatingCache:
             return []
         return cache_data.get_film_rows()
 
+    @timed_method
     def set_film_rows(self, session, film_rows):
-        pr_debug('start', with_time=True)
         cache_key = self.get_cache_key(session)
         cache_data = FilmRatingCacheData(film_rows)
         self.cache_by_key[cache_key] = cache_data
         self.check_invalidate_caches()
-        pr_debug(f'done, {len(self.get_film_rows(session))} records', with_time=True)
+        pr_debug(f'{len(self.get_film_rows(session))} records', with_time=True)
 
     def update_festival_caches(self, session, film, fan, rating_value):
         festival = current_festival(session)
@@ -77,8 +77,8 @@ class FilmRatingCache:
         for invalid_cache_key in invalid_cache_keys:
             self.update(invalid_cache_key, film, fan, rating_value)
 
+    @timed_method
     def update(self, cache_key, film, fan, rating_value):
-        pr_debug('start', with_time=True)
         film_rows = self.cache_by_key[cache_key].get_film_rows()
 
         # Filter out film data.
@@ -97,10 +97,9 @@ class FilmRatingCache:
             else:
                 fan_data['rating'] = rating_str(rating_value)
 
-        pr_debug('done', with_time=True)
-
+    @timed_method
     def check_invalidate_caches(self):
-        pr_debug(f'start, {len(self.cache_by_key)} caches', with_time=True)
+        pr_debug(f'{len(self.cache_by_key)} caches', with_time=True)
 
         # Delete expired caches
         invalid_cache_keys = [k for k, c in self.cache_by_key.items() if c.expire_date < datetime.datetime.now()]
@@ -114,7 +113,7 @@ class FilmRatingCache:
             for cache_key, cache_data in old_cache_items:
                 self.invalidate(cache_key)
 
-        pr_debug(f'done, {len(self.cache_by_key)} caches', with_time=True)
+        pr_debug(f'{len(self.cache_by_key)} caches', with_time=True)
 
     def invalidate_festival_caches(self, festival):
         invalid_cache_keys = self.festival_cache_keys(festival)

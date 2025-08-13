@@ -14,7 +14,7 @@ from django.views.generic import FormView, DetailView, ListView, TemplateView
 from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
 from festival_planner.cookie import Filter, Cookie
-from festival_planner.debug_tools import pr_debug
+from festival_planner.debug_tools import pr_debug, timed_method
 from festival_planner.fragment_keeper import FilmFragmentKeeper
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
@@ -177,9 +177,8 @@ class FilmsListView(LoginRequiredMixin, ListView):
         self.subsection_list = Subsection.subsections.all()
         self.fan_list = get_judging_fans()
 
+    @timed_method
     def setup(self, request, *args, **kwargs):
-        pr_debug('start', with_time=True)
-
         super().setup(request, *args, **kwargs)
         self.festival = current_festival(request.session)
 
@@ -189,8 +188,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
 
         # Define the filters.
         self._setup_filters()
-
-        pr_debug('done', with_time=True)
 
     def dispatch(self, request, *args, **kwargs):
         session = self.request.session
@@ -212,8 +209,8 @@ class FilmsListView(LoginRequiredMixin, ListView):
 
         return super().dispatch(request, *args, **kwargs)
 
+    @timed_method
     def get_queryset(self):
-        pr_debug('start', with_time=True)
         session = self.request.session
         self.logged_in_fan = current_fan(session)
 
@@ -237,7 +234,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
         # Fill the cache.
         PickRating.film_rating_cache.set_film_rows(session, film_rows)
 
-        pr_debug('done', with_time=True)
         return film_rows
 
     def get_context_data(self, *, object_list=None, **kwargs):
@@ -294,8 +290,8 @@ class FilmsListView(LoginRequiredMixin, ListView):
                                                          action_true='Remove filter')
             self.filters.append(self.subsection_filters[subsection])
 
+    @timed_method
     def _filter_films(self, session):
-        pr_debug('start', with_time=True)
         filter_kwargs = {'festival': self.festival}
         if self.shorts_filter.on(session):
             filter_kwargs['duration__gt'] = self.short_threshold
@@ -311,7 +307,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
                 self.selected_films = self.selected_films.filter(
                     ~Exists(FilmFanFilmRating.film_ratings.filter(film=OuterRef('pk'), film_fan=fan))
                 )
-        pr_debug('done', with_time=True)
 
     @staticmethod
     def _get_query_string_to_select_all_subsections(session):
