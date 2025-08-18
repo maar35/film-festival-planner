@@ -22,8 +22,8 @@ def get_color_matrix():
     warning_type = ScreeningWarning.WarningType
     color_by_warning_by_status = {}
     color_by_screening_status = Screening.color_warning_by_screening_status
-    for warning in warning_type.__iter__():
-        color_by_warning_by_status[warning] = deepcopy(color_by_screening_status)
+    for warning_type_ in warning_type:
+        color_by_warning_by_status[warning_type_] = deepcopy(color_by_screening_status)
     color_by_warning_by_status[warning_type.AWAITS_CONFIRMATION][status.ATTENDS] = COLOR_WARNING_RED
     color_by_warning_by_status[warning_type.AWAITS_CONFIRMATION][status.FRIEND_ATTENDS] = COLOR_WARNING_YELLOW
     color_by_warning_by_status[warning_type.AWAITS_CONFIRMATION][status.NEEDS_TICKETS] = COLOR_WARNING_YELLOW
@@ -449,6 +449,7 @@ class ScreeningWarning:
         WarningType.AWAITS_CONFIRMATION: 'all tickets for',
         WarningType.SHOULD_SELL_TICKET: 'for all unattended screenings of',
     }
+
     link_wording_by_ticket_warning = {
         WarningType.ATTENDS_SAME_FILM: 'filmscreenings',
         WarningType.ATTENDS_OVERLAPPING: 'overlapping screenings',
@@ -494,11 +495,13 @@ class ScreeningWarning:
         WarningType.ATTENDS_OVERLAPPING: ATTENDANCE_WARNING_SYMBOL,
         WarningType.ATTENDS_WHILE_UNAVAILABLE: ATTENDANCE_WARNING_SYMBOL,
     }
+
     small_by_symbol = {
         TICKET_BUY_SELL_WARNING_SYMBOL: False,
         TICKET_CONFIRMATION_WARNING_SYMBOL: False,
         ATTENDANCE_WARNING_SYMBOL: True,
     }
+
     prio_by_symbol = {
         ATTENDANCE_WARNING_SYMBOL: 0,
         TICKET_BUY_SELL_WARNING_SYMBOL: 1,

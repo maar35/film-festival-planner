@@ -3,9 +3,9 @@
     --regularColor: silver;
     --modestStandoutColor: ivory;
     --linkColor: green;
-    --infoColor: rgb(38, 176, 38);
-    --warningColor: rgb(255, 142, 0);
-    --warningColorYellow: rgb(255, 219, 0);
+    --infoColor: rgb(38 176 38);
+    --warningColor: rgb(255 142 0);
+    --warningColorYellow: rgb(255 219 0);
     --inputBackground: forestGreen;
     --hoverBackground: darkGreen;
     --focusBackgrond: yellowGreen;
@@ -20,13 +20,15 @@
     --warningBackground: var(--warningColor);
     --infoHoverBackground: var(--infoColor);
     --warningHoverBackground: var(--warningColor);
-    --stickyBackground: rgba(30, 30, 30, .5);
-    --tableBackground: rgba(0, 0, 0, 112);  /* #00000070;*/
-    --modestBackground: rgba(0, 0, 0, 112);
-    --screeningBackground: rgba(0, 0, 0, 183);  /*#000000BB;*/
+    --stickyBackground: rgb(30 30 30 / .5);
+    --tableBackground: rgb(0 0 0 / .6);
+    --modestBackground: rgb(0 0 38 / .73);
+    --screeningBackground: rgb(0 0 0 / .73);
     --screeningBorderWidth: 3px;
-    --screeningBorderColor: rgba(0, 0, 0, 112);
-    --boxShadowColor: rgba(255, 219, 0, .4);
+    --screeningBorderColor: rgb(0 0 0 / .44);
+    --boxShadowColor: rgb(0 0 0 / 1);
+    --standoutBoxShadow: -6px 0 var(--boxShadowColor), 1px 1px .5rem var(--boxShadowColor);
+    --modestBoxShadow: 0px 8px 16px 0px rgb(0 0 0 / .2);
 }
 
 /* Color links green, conform Django style. */
@@ -275,7 +277,7 @@ input[type=submit].in-table:hover {
     position: absolute;
     cursor: default;
     background-color: black;
-    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, .2);
+    box-shadow: var(--modestBoxShadow);
     min-width: 200px;
     padding: 6px 8px;
     z-index: 2;
@@ -377,7 +379,7 @@ span.up {
     position: absolute;
     cursor: pointer;
     background-color: var(--inputBackground);
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,.2);
+    box-shadow: var(--modestBoxShadow);
     width: auto;
     padding: 6px 8px;
     z-index: 1;
@@ -421,12 +423,15 @@ span.up {
 .modest-dropdown:hover {
     background-color: var(--hoverBackground);
 }
+.standout-box-addition {
+    box-shadow: var(--standoutBoxShadow);
+}
 .modest-dropdown-content {
     display: none;
     position: absolute;
     cursor: default;
     background-color: black;
-    box-shadow: 1px 1px 1px var(--boxShadowColor);
+    box-shadow: var(--modestBoxShadow);
     min-width: 200px;
     padding: 3px 3px;
     z-index: 2;
@@ -438,6 +443,33 @@ span.up {
     color: var(--linkColor);
     text-decoration-line: underline;
     text-decoration-style: dashed;
+}
+
+/* Drop down to stand out from its environment */
+.standout-dropdown {
+    position: relative;
+    display: table-cell;
+    background: var(--modestBackground);
+    text-align: left;
+    margin: auto;
+    width: auto;
+    height: auto;
+}
+.standout-dropdown:hover {
+    background-color: var(--hoverBackground);
+}
+.standout-dropdown-content {
+    display: none;
+    position: absolute;
+    cursor: default;
+    background-color: black;
+    box-shadow: var(--standoutBoxShadow);
+    min-width: 200px;
+    padding: 3px 3px;
+    z-index: 2;
+}
+.standout-dropdown:hover .standout-dropdown-content {
+    display: block;
 }
 
 /* Dropdown definitions for cells within a table */
@@ -463,7 +495,7 @@ span.up {
     position: absolute;
     cursor: pointer;
     background-color: var(--inputBackground);
-    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, .2);
+    box-shadow: var(--modestBoxShadow);
     min-width: 200px;
     padding: 6px 8px;
     z-index: 1;
@@ -487,6 +519,7 @@ span.up {
 .cell-dropdown:hover .drop-button {
     background-color: var(--hoverBackground);
 }
+
 
 /* Dropdown definitions for within a screening representation */
 
