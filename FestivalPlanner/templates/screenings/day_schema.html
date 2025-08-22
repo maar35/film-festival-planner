@@ -172,7 +172,7 @@
                     {% with info=prop.info_pair %}
                     <span class="day-schema-screening"
                           style="background: {{ prop.pair.background }}; color: {{ prop.pair.color }}; left: {{ prop.left }}px; width: {{ prop.width }}px; border: 1px solid {{ prop.frame_color }}; border-right: 1px solid {{ prop.section_color }};">
-                        {% if prop.warnings_props and prop.warnings_debug %}
+                        {% if prop.warnings_props %}
                         <span class="in-screening-dropdown inline-dropdown-addition">
                             <span class="in-screening-active-text">⚠︎</span>
                             <span class="in-screening-dropdown-content"

@@ -810,6 +810,7 @@ class WarningsViewTests(ScreeningViewsTests):
         and the warning symbol has the background color associated with the screening status.
         """
         def _get_coloring_regex():
+            status_getter = ScreeningStatusGetter(self.session, [screening])
             attendants = status_getter.get_attendants(screening)
             status = status_getter.get_screening_status(screening, attendants)
             symbol_background = Screening.color_pair_by_screening_status[status]['background']
@@ -825,20 +826,20 @@ class WarningsViewTests(ScreeningViewsTests):
         # Arrange.
         self.arrange_regular_user_props()
         screening = self.arrange_create_std_screening()
-        status_getter = ScreeningStatusGetter(self.session, [screening])
         kwargs = {'fan': self.fan, 'screening': screening}
         _ = Attendance.attendances.create(**kwargs)
         _ = Ticket.tickets.create(**kwargs)
+
+        displayed_warning_types = [
+            ScreeningWarning.WarningType.AWAITS_CONFIRMATION,
+            ScreeningWarning.WarningType.ATTENDS_WHILE_UNAVAILABLE,
+        ]
 
         # Act.
         response = self.client.get(reverse('screenings:warnings'))
 
         # Assert.
         self.assertEqual(response.status_code, HTTPStatus.OK)
-        displayed_warning_types = [
-            ScreeningWarning.WarningType.AWAITS_CONFIRMATION,
-            ScreeningWarning.WarningType.ATTENDS_WHILE_UNAVAILABLE,
-        ]
         for warning_type in displayed_warning_types:
             wording = ScreeningWarning.wording_by_warning[warning_type]
             symbol = ScreeningWarning.symbol_by_warning[warning_type]
@@ -883,7 +884,7 @@ class WarningsViewTests(ScreeningViewsTests):
 
     def test_buy_tickets(self):
         """
-        When needing tickets, a popup menu lets you getting them.
+        When needing tickets, a dropdown menu lets you getting them.
         """
         # Arrange.
         self.arrange_regular_user_props()
@@ -923,7 +924,7 @@ class WarningsViewTests(ScreeningViewsTests):
 
     def test_confirm_tickets(self):
         """
-        When tickets need to be confirmed, a popup menu helps a fan to confirm all tickets.
+        When tickets need to be confirmed, a dropdown menu helps a fan to confirm all tickets.
         """
         # Arrange.
         self.arrange_regular_user_props()
@@ -965,7 +966,7 @@ class WarningsViewTests(ScreeningViewsTests):
 
     def test_fix_attends_overlapping_screenings(self):
         """
-        When attending overlapping screenings, a popup menu allows you to unattend one.
+        When attending overlapping screenings, a dropdown menu allows you to stop attending one.
         """
         # Arrange.
         self.arrange_regular_user_props()
@@ -1012,7 +1013,7 @@ class WarningsViewTests(ScreeningViewsTests):
 
     def test_fix_attends_same_film(self):
         """
-        When fans attend a film more than once, the fix popup menu helps them out.
+        When fans attend a film more than once, the fix dropdown menu helps them out.
         """
         # Arrange.
         self.arrange_regular_user_props()

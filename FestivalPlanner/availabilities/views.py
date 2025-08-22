@@ -100,7 +100,7 @@ class AvailabilityView(SharedTemplateReferrerView):
         date = date_attr.get_date(session, default=default)
         if not (date and festival.has_date(date)):
             time_attr.set(session, (DAY_BREAK_TIME if last else DAY_START_TIME).strftime('%H:%M'))
-        _ = date_attr.check_session(session, last=last)
+        date_attr.check_festival_day(session, last=last)
 
 
 class AvailabilityListView(LoginRequiredMixin, ProfiledListView):

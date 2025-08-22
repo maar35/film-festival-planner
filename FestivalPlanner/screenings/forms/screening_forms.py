@@ -346,7 +346,7 @@ class TicketForm(forms.Form):
         kwargs = {'fan': fan, 'screening': screening}
         try:
             ticket = manager.get(**kwargs)
-        except Ticket.DoesNotExist as e:
+        except Ticket.DoesNotExist:
             ticket = manager.create(**kwargs)
         ticket.confirmed = bool_prop
         ticket.save()

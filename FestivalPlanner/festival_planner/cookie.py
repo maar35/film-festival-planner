@@ -181,7 +181,7 @@ class FestivalDay:
             day_choices.append((day + factor * delta).strftime(self.day_str_format))
         return day_choices
 
-    def check_session(self, session, last=False):
+    def check_festival_day(self, session, last=False):
         self.festival = current_festival(session)
         day_str = self.day_cookie.get(session)
         if day_str:
@@ -190,7 +190,6 @@ class FestivalDay:
         if not day_str:
             day_str = self.alternative_day_str(last=last)
             self.day_cookie.set(session, day_str)
-        return self.festival
 
     def alternative_day_str(self, last=False):
         try:

@@ -80,7 +80,8 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
         session = request.session
         self.fan = current_fan(session)
         self.sorted_fans = get_sorted_fan_list(self.fan)
-        self.festival = DaySchemaView.current_day.check_session(session)
+        self.festival = current_festival(session)
+        DaySchemaView.current_day.check_festival_day(session)
         current_date = DaySchemaView.current_day.get_date(session)
         self.selected_screening = ScreeningStatusGetter.get_selected_screening(request)
         self.day_screenings = Screening.screenings.filter(film__festival=self.festival, start_dt__date=current_date)
@@ -278,7 +279,6 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
             'info_pair': pair_selected if selected else pair,
             'info_spot': info_str or 'info',
             'warnings': warning_wordings,
-            'warnings_debug': True,
             'warnings_props': warnings_props,
             'warn_fragment': warn_fragment,
             'warn_querystring': warn_querystring,
