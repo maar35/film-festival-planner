@@ -39,6 +39,10 @@
 {% endif %}
 
 {% if warnings %}
+    {% for item in filmscreening_props_list %}
+        {% include "../includes/film_screenings.html" with film_title=item.title film_screening_props=item.props %}
+    {% endfor %}
+    <h3>Warnings</h3>
     <form method="post">
     {% csrf_token %}
     <table style="position: relative; z-index: 1;">

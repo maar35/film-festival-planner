@@ -610,7 +610,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
             'display_all_query': in_cache is None or self.get_query_string_to_display_all(session),
             'fan_rows': fan_rows,
             'film_title': film.title,
-            'film_screening_props_list': self._get_film_screening_props_list(session, films_for_screenings),
+            'film_screening_props_list': get_filmscreening_props_list(session, films_for_screenings),
             'screening': selected_screening,
             'unexpected_error': self.unexpected_error,
         }
@@ -687,18 +687,6 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         filter_keys = FilmRatingCache.get_active_filter_keys(session)
         display_all_query = Filter.get_display_query_from_keys(filter_keys)
         return display_all_query
-
-    @staticmethod
-    def _get_film_screening_props_list(session, films):
-        film_screening_props_list = []
-        for film in films:
-            film_screening_props = ScreeningStatusGetter.get_filmscreening_props(session, film)
-            film_screening_props_item = {
-                'props': film_screening_props,
-                'title': film.title,
-            }
-            film_screening_props_list.append(film_screening_props_item)
-        return film_screening_props_list
 
 
 class ReviewersView(ListView):
@@ -844,6 +832,18 @@ class ReviewersView(ListView):
         vote_set = set([vote.film for vote in votes])
         judge_set = rating_set & vote_set
         return judge_set
+
+
+def get_filmscreening_props_list(session, films):
+    filmscreening_props_list = []
+    for film in films:
+        filmscreening_props = ScreeningStatusGetter.get_filmscreening_props(session, film)
+        filmscreening_props_item = {
+            'props': filmscreening_props,
+            'title': film.title,
+        }
+        filmscreening_props_list.append(filmscreening_props_item)
+    return filmscreening_props_list
 
 
 def film_fan(request):
