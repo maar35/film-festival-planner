@@ -139,6 +139,12 @@ def get_same_film_attendances(screening, fan):
     return same_film_attendances
 
 
+def get_other_attended_screenings(screening, fan):
+    same_film_attendances = get_same_film_attendances(screening, fan)
+    other_attended_screenings = [a.screening for a in same_film_attendances if a.screening != screening]
+    return other_attended_screenings
+
+
 @profiled_method(OVERLAP_PROFILER)
 def get_overlapping_attended_screenings(screening, fan, first_only=True):
     festival = screening.film.festival

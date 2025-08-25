@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.views.generic import ListView, FormView
 from django.views.generic.detail import SingleObjectMixin
 
-from authentication.models import FilmFan, get_sorted_fan_list
+from authentication.models import FilmFan, get_sorted_fan_list, get_fan_by_name
 from availabilities.models import Availabilities
 from availabilities.views import get_festival_dt, DAY_START_TIME, DAY_BREAK_TIME
 from festival_planner.cookie import Filter, FestivalDay, Cookie, get_filter_props, get_fan_filter_props
@@ -15,8 +15,8 @@ from festival_planner.fan_action import FanAction
 from festival_planner.fragment_keeper import ScreenFragmentKeeper, FRAGMENT_INDICATOR, ScreeningFragmentKeeper, \
     TOP_CORRECTION_ROWS
 from festival_planner.screening_status_getter import ScreeningStatusGetter, ScreeningWarning, \
-    get_screening_warnings, get_warning_color, get_warnings_keys, get_warnings, get_same_film_attendances, \
-    get_overlapping_attended_screenings
+    get_screening_warnings, get_warning_color, get_warnings_keys, get_warnings, get_overlapping_attended_screenings, \
+    get_other_attended_screenings
 from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, add_log
 from festivals.models import current_festival
@@ -991,7 +991,6 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
         return choices
 
     def _get_choices_with_link(self, warning_type, fan, screening):
-        session = self.request.session
         fix_wording = ScreeningWarning.fix_by_warning[warning_type]
 
         # Set up the queryset to select screenings with the given fan and warning.
@@ -1042,13 +1041,15 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
         fix_wording = ScreeningWarning.fix_by_warning[warning_type]
 
         # Create choices for each attended screening of the same film.
-        same_film_attendances = get_same_film_attendances(screening, fan)
-        other_attended_screenings = [a.screening for a in same_film_attendances if a.screening != screening]
-        same_film_choices = []
+        other_attended_screenings = get_other_attended_screenings(screening, fan)
+        same_film_choices = [{
+            'value': f'{fix_wording} other screenings',
+            'submit_name': f'{warning_type.name}:{fan.name}::{screening.id}',
+        }]
         for screening in other_attended_screenings:
             same_film_choice = {
-                'value': f'{fix_wording} {screening.str_short()}',
-                'submit_name': f'{warning_type.name}:{fan.name}::{screening.id}',
+                'value': f'- {screening.str_short()}',
+                'submit_name': None,
             }
             same_film_choices.append(same_film_choice)
 
@@ -1106,11 +1107,18 @@ class ScreeningWarningsFormView(LoginRequiredMixin, FormView):
         if fan_name and screening_id:
             _ = fix_method(self.session, [fan_name], [screening_id], wording)
         elif other_id:
-            _ = fix_method(self.session, [fan_name], [other_id], wording)
+            self._fix_other_screenings(warning_type, fan_name, other_id, fix_method)
         elif screening_id:
             self._fix_screening_tickets(warning_type, screening_id, fix_method)
         elif fan_name:
             self._fix_fan_tickets(warning_type, fan_name, fix_method)
+
+    def _fix_other_screenings(self, warning_type, fan_name, screening_id, fix_method):
+        screening = Screening.screenings.get(pk=screening_id)
+        other_screenings = get_other_attended_screenings(screening, get_fan_by_name(fan_name))
+        other_ids = [screening.id for screening in other_screenings]
+        wording = self._get_wording_for_fix(warning_type)
+        _ = fix_method(self.session, [fan_name], other_ids, wording)
 
     def _fix_screening_tickets(self, warning_type, screening_id, fix_method):
         warnings = ScreeningWarningsListView.warnings
