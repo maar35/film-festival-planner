@@ -852,9 +852,8 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
             'symbol': ScreeningWarning.symbol_by_warning[warning_type],
             'color': color,
             'background': background,
-            'fragment_name': None,
             'schema_querystring': schema_querystring,
-            'fragment': ScreenFragmentKeeper.fragment_code(screening.screen),
+            'schema_fragment': ScreenFragmentKeeper.fragment_code(screening.screen),
         }
 
     def _get_filmscreening_props_list(self):
@@ -1093,32 +1092,32 @@ class ScreeningWarningsFormView(LoginRequiredMixin, FormView):
 
         # Get the individual parameters from the post data.
         submitted_name = list(self.request.POST)[-1]
-        warning_name, fan_name, screening_id, other_id = submitted_name.split(':')
+        warning_name, fan_name, screening_id, keep_screening_id = submitted_name.split(':')
         warning_type = ScreeningWarning.WarningType[warning_name]
 
         # Feed the parameters to warning fixing machinery.
         fix_method = self.fix_method_by_warning[warning_type]
-        self._fix_ticket_warnings(warning_type, fan_name, screening_id, other_id, fix_method)
+        self._fix_ticket_warnings(warning_type, fan_name, screening_id, keep_screening_id, fix_method)
 
         return super().form_valid(form)
 
-    def _fix_ticket_warnings(self, warning_type, fan_name, screening_id, other_id, fix_method):
+    def _fix_ticket_warnings(self, warning_type, fan_name, screening_id, keep_screening_id, fix_method):
         wording = self._get_wording_for_fix(warning_type)
         if fan_name and screening_id:
             _ = fix_method(self.session, [fan_name], [screening_id], wording)
-        elif other_id:
-            self._fix_other_screenings(warning_type, fan_name, other_id, fix_method)
+        elif keep_screening_id:
+            self._fix_other_screenings(warning_type, fan_name, keep_screening_id, fix_method)
         elif screening_id:
             self._fix_screening_tickets(warning_type, screening_id, fix_method)
         elif fan_name:
             self._fix_fan_tickets(warning_type, fan_name, fix_method)
 
-    def _fix_other_screenings(self, warning_type, fan_name, screening_id, fix_method):
-        screening = Screening.screenings.get(pk=screening_id)
-        other_screenings = get_other_attended_screenings(screening, get_fan_by_name(fan_name))
-        other_ids = [screening.id for screening in other_screenings]
+    def _fix_other_screenings(self, warning_type, fan_name, keep_screening_id, fix_method):
+        keep_screening = Screening.screenings.get(pk=keep_screening_id)
+        other_screenings = get_other_attended_screenings(keep_screening, get_fan_by_name(fan_name))
+        other_screening_id = [screening.id for screening in other_screenings]
         wording = self._get_wording_for_fix(warning_type)
-        _ = fix_method(self.session, [fan_name], other_ids, wording)
+        _ = fix_method(self.session, [fan_name], other_screening_id, wording)
 
     def _fix_screening_tickets(self, warning_type, screening_id, fix_method):
         warnings = ScreeningWarningsListView.warnings

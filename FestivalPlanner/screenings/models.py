@@ -100,7 +100,7 @@ class Screening(models.Model):
     end_dt = models.DateTimeField()
     combination_program = models.ForeignKey(Film, null=True, on_delete=models.SET_NULL,
                                             related_name='combined_screening')
-    subtitles = models.CharField(max_length=24)
+    subtitles = models.CharField(max_length=24, null=True)
     q_and_a = models.BooleanField()
     auto_planned = models.BooleanField(default=False)
 

@@ -72,7 +72,7 @@
             <td>
             {% endif %}
                 {% ifchanged row.screening %}
-                <a href="{% url 'screenings:day_schema' %}{{ row.schema_querystring }}{{ row.fragment }}">
+                <a href="{% url 'screenings:day_schema' %}{{ row.schema_querystring }}{{ row.schema_fragment }}">
                     {{ row.screening.str_short }}
                 </a>
                 {% endifchanged %}
