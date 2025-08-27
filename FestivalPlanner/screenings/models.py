@@ -2,10 +2,10 @@ import datetime
 
 from django.db import models
 
-from authentication.models import FilmFan, get_sorted_fan_list
+from authentication.models import FilmFan
 from availabilities.models import Availabilities
 from festivals.config import Config
-from films.models import Film, FilmFanFilmRating, fan_rating
+from films.models import Film, FilmFanFilmRating
 from theaters.models import Screen
 
 CONSTANTS_CONFIG = Config().config['Constants']
@@ -30,7 +30,9 @@ COLOR_PAIR_YELLOW = color_pair('black', 'yellow')
 COLOR_PAIR_GREY = color_pair('darkgrey', 'rgb(79, 79, 79)')
 COLOR_PAIR_DARKGREY = color_pair('darkgrey', 'rgb(38, 38, 38)')
 COLOR_PAIR_PURPLE = color_pair('white', 'rgb(176, 0, 176)')
+COLOR_PAIR_AQUA = color_pair('black', 'rgb(38, 255, 176)')
 COLOR_PAIR_SELECT_BLUE = color_pair(None,  'rgba(0, 0, 255, 0.8)')
+COLOR_PAIR_SCREEN = color_pair(None, 'rgba(0, 0, 0, 0.4)')
 
 COLOR_PAIR_FREE = COLOR_PAIR_TRANSPARANT
 COLOR_PAIR_UNAVAILABLE = COLOR_PAIR_OFF_BLACK
@@ -40,6 +42,7 @@ COLOR_PAIR_ATTENDS_FILM = COLOR_PAIR_YELLOW
 COLOR_PAIR_TIME_OVERLAP = COLOR_PAIR_GREY
 COLOR_PAIR_NO_TRAVEL_TIME = COLOR_PAIR_DARKGREY
 COLOR_PAIR_NEEDS_TICKETS = COLOR_PAIR_PURPLE
+COLOR_PAIR_SHOULD_SELL_TICKETS = COLOR_PAIR_AQUA
 COLOR_PAIR_SELECTED = COLOR_PAIR_SELECT_BLUE
 
 
@@ -57,6 +60,7 @@ class Screening(models.Model):
         TIME_OVERLAP = 5,
         NO_TRAVEL_TIME = 6,
         NEEDS_TICKETS = 7,
+        SHOULD_SELL_TICKETS = 8,
 
     # Define color dictionaries.
     color_pair_by_screening_status = {
@@ -68,6 +72,7 @@ class Screening(models.Model):
         ScreeningStatus.TIME_OVERLAP: COLOR_PAIR_TIME_OVERLAP,
         ScreeningStatus.NO_TRAVEL_TIME: COLOR_PAIR_NO_TRAVEL_TIME,
         ScreeningStatus.NEEDS_TICKETS: COLOR_PAIR_NEEDS_TICKETS,
+        ScreeningStatus.SHOULD_SELL_TICKETS: COLOR_PAIR_SHOULD_SELL_TICKETS,
     }
 
     color_pair_selected_by_screening_status = {
@@ -81,9 +86,11 @@ class Screening(models.Model):
     color_warning_by_screening_status[ScreeningStatus.ATTENDS] = COLOR_WARNING_YELLOW
     color_warning_by_screening_status[ScreeningStatus.ATTENDS_FILM] = COLOR_WARNING_RED
     color_warning_by_screening_status[ScreeningStatus.UNAVAILABLE] = COLOR_WARNING_RED
+    color_warning_by_screening_status[ScreeningStatus.SHOULD_SELL_TICKETS] = COLOR_WARNING_RED
 
     # Define colors that help interesting ratings to stand out.
     interesting_rating_color_attends_film_background = 'blue'
+    interesting_rating_color_should_sell_background = 'blue'
     uninteresting_rating_color = 'grey'
 
     # Define the fields.
@@ -93,7 +100,7 @@ class Screening(models.Model):
     end_dt = models.DateTimeField()
     combination_program = models.ForeignKey(Film, null=True, on_delete=models.SET_NULL,
                                             related_name='combined_screening')
-    subtitles = models.CharField(max_length=24)
+    subtitles = models.CharField(max_length=24, null=True)
     q_and_a = models.BooleanField()
     auto_planned = models.BooleanField(default=False)
 
@@ -199,6 +206,7 @@ class Screening(models.Model):
         # decide the color.
         attends_film = status == self.ScreeningStatus.ATTENDS_FILM
         attends = status == self.ScreeningStatus.ATTENDS
+        should_sell_ticket = status == self.ScreeningStatus.SHOULD_SELL_TICKETS
         rating_is_interesting = max_rating in FilmFanFilmRating.get_interesting_ratings()
         regular_color = self.color_pair_selected_by_screening_status[status]['color']
         if attends:
@@ -206,6 +214,8 @@ class Screening(models.Model):
         elif rating_is_interesting:
             if attends_film:
                 color = Screening.interesting_rating_color_attends_film_background
+            elif should_sell_ticket:
+                color = Screening.interesting_rating_color_should_sell_background
             else:
                 color = regular_color
         else:
@@ -233,7 +243,7 @@ class Attendance(models.Model):
 
     def __str__(self):
         start_time = self.screening.str_start_time()
-        return f'{self.fan} attends {self.screening.str_title} at {start_time}'
+        return f'{self.fan} attends {self.screening.str_title()} at {start_time}'
 
 
 class Ticket(models.Model):
@@ -258,22 +268,8 @@ class Ticket(models.Model):
         return f'Ticket of {self.fan} for {self.screening.str_title()}'
 
 
-def film_rating_strings(screening, current_fan=None):
+def film_rating_strings(screening):
     return screening.film.rating_strings()
-
-
-def get_fan_props_str(screening, current_fan):
-    fans = get_sorted_fan_list(current_fan)
-    initials = []
-    for fan in fans:
-        attending = Attendance.attendances.filter(fan=fan, screening=screening).exists()
-        initial = fan.initial() if attending else fan.initial().lower()
-        rating = fan_rating(fan, screening.film)
-        if rating:
-            initial += str(rating.rating)
-        if attending or rating:
-            initials.append(initial)
-    return ''.join(initials)
 
 
 def filmscreenings(film):

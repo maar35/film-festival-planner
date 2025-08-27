@@ -14,7 +14,7 @@ from django.views.generic import FormView, DetailView, ListView, TemplateView
 from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
 from festival_planner.cookie import Filter, Cookie
-from festival_planner.debug_tools import pr_debug
+from festival_planner.debug_tools import pr_debug, timed_method
 from festival_planner.fragment_keeper import FilmFragmentKeeper
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
@@ -87,7 +87,7 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
 
     def get_success_url(self):
         errors = self.view.unexpected_errors
-        fragment = '#top' if not self.film or errors else FilmFragmentKeeper.fragment_code(self.film.film_id)
+        fragment = '#top' if not self.film or errors else FilmFragmentKeeper.fragment_code(self.film)
         return reverse(self.success_view_name) + fragment
 
     @staticmethod
@@ -177,9 +177,8 @@ class FilmsListView(LoginRequiredMixin, ListView):
         self.subsection_list = Subsection.subsections.all()
         self.fan_list = get_judging_fans()
 
+    @timed_method
     def setup(self, request, *args, **kwargs):
-        pr_debug('start', with_time=True)
-
         super().setup(request, *args, **kwargs)
         self.festival = current_festival(request.session)
 
@@ -190,11 +189,9 @@ class FilmsListView(LoginRequiredMixin, ListView):
         # Define the filters.
         self._setup_filters()
 
-        pr_debug('done', with_time=True)
-
     def dispatch(self, request, *args, **kwargs):
         session = self.request.session
-        self.fragment_keeper = FilmFragmentKeeper('film_id')
+        self.fragment_keeper = FilmFragmentKeeper()
 
         # Ensure the film rating cache is initialized.
         if not PickRating.film_rating_cache:
@@ -212,8 +209,8 @@ class FilmsListView(LoginRequiredMixin, ListView):
 
         return super().dispatch(request, *args, **kwargs)
 
+    @timed_method
     def get_queryset(self):
-        pr_debug('start', with_time=True)
         session = self.request.session
         self.logged_in_fan = current_fan(session)
 
@@ -237,7 +234,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
         # Fill the cache.
         PickRating.film_rating_cache.set_film_rows(session, film_rows)
 
-        pr_debug('done', with_time=True)
         return film_rows
 
     def get_context_data(self, *, object_list=None, **kwargs):
@@ -294,8 +290,8 @@ class FilmsListView(LoginRequiredMixin, ListView):
                                                          action_true='Remove filter')
             self.filters.append(self.subsection_filters[subsection])
 
+    @timed_method
     def _filter_films(self, session):
-        pr_debug('start', with_time=True)
         filter_kwargs = {'festival': self.festival}
         if self.shorts_filter.on(session):
             filter_kwargs['duration__gt'] = self.short_threshold
@@ -311,7 +307,6 @@ class FilmsListView(LoginRequiredMixin, ListView):
                 self.selected_films = self.selected_films.filter(
                     ~Exists(FilmFanFilmRating.film_ratings.filter(film=OuterRef('pk'), film_fan=fan))
                 )
-        pr_debug('done', with_time=True)
 
     @staticmethod
     def _get_query_string_to_select_all_subsections(session):
@@ -484,7 +479,7 @@ class VotesListView(LoginRequiredMixin, ListView):
         session = self.request.session
         self.festival = current_festival(session)
         self.logged_in_fan = current_fan(session)
-        self.fragment_keeper = FilmFragmentKeeper('film_id')
+        self.fragment_keeper = FilmFragmentKeeper()
         VotesView.unexpected_errors = []
 
         # Read the films that were attended.
@@ -609,13 +604,13 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
             'screened_films': screened_films,
             'combination_films': combi_films,
             'metadata': metadata,
-            'fragment': FilmFragmentKeeper.fragment_code(film.film_id),
+            'fragment': FilmFragmentKeeper.fragment_code(film),
             'film_in_cache': in_cache,
             'no_cache': in_cache is None,
             'display_all_query': in_cache is None or self.get_query_string_to_display_all(session),
             'fan_rows': fan_rows,
             'film_title': film.title,
-            'film_screening_props_list': self._get_film_screening_props_list(session, films_for_screenings),
+            'film_screening_props_list': get_filmscreening_props_list(session, films_for_screenings),
             'screening': selected_screening,
             'unexpected_error': self.unexpected_error,
         }
@@ -692,18 +687,6 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         filter_keys = FilmRatingCache.get_active_filter_keys(session)
         display_all_query = Filter.get_display_query_from_keys(filter_keys)
         return display_all_query
-
-    @staticmethod
-    def _get_film_screening_props_list(session, films):
-        film_screening_props_list = []
-        for film in films:
-            film_screening_props = ScreeningStatusGetter.get_filmscreening_props(session, film)
-            film_screening_props_item = {
-                'props': film_screening_props,
-                'title': film.title,
-            }
-            film_screening_props_list.append(film_screening_props_item)
-        return film_screening_props_list
 
 
 class ReviewersView(ListView):
@@ -849,6 +832,18 @@ class ReviewersView(ListView):
         vote_set = set([vote.film for vote in votes])
         judge_set = rating_set & vote_set
         return judge_set
+
+
+def get_filmscreening_props_list(session, films):
+    filmscreening_props_list = []
+    for film in films:
+        filmscreening_props = ScreeningStatusGetter.get_filmscreening_props(session, film)
+        filmscreening_props_item = {
+            'props': filmscreening_props,
+            'title': film.title,
+        }
+        filmscreening_props_list.append(filmscreening_props_item)
+    return filmscreening_props_list
 
 
 def film_fan(request):

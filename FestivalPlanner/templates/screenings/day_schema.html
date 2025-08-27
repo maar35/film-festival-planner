@@ -13,6 +13,8 @@
         <br>
         <a href="{% url 'availabilities:list' %}">Availabilities</a>
         <br>
+        <a href="{% url 'screenings:warnings' %}">Warnings</a>
+        <br>
         <a href="{% url 'screenings:planner' %}">Planner</a>
         <br>
         <a href="{% url 'loader:list_action' %}?label=screenings">Load screenings</a>
@@ -61,11 +63,11 @@
         <span class="label-8rem">
             Selected:
         </span>
-        <span class="modest-dropdown inline-dropdown-addition">
+        <span class="standout-dropdown inline-dropdown-addition">
             <span class="active-text" style="color: var(--modestStandoutColor);">
                 {{ props.selected_screening }}
             </span>
-            <span class="modest-dropdown-content"
+            <span class="standout-dropdown-content"
                   style="min-width:50rem; margin-left: 12rem; background: black; cursor: default;">
                 <table>
                     <tbody>
@@ -110,7 +112,7 @@
                     </tbody>
                 </table>
                 {% with film_screening_props=props.film_screening_props %}
-                    {% include "../includes/film_screenings.html" with film_screening_props=film_screening_props %}
+                    {% include "../includes/film_screenings.html" with film_title=screening.film.title film_screening_props=film_screening_props %}
                 {% endwith %}
             </span>
         </span>
@@ -170,6 +172,15 @@
                     {% with info=prop.info_pair %}
                     <span class="day-schema-screening"
                           style="background: {{ prop.pair.background }}; color: {{ prop.pair.color }}; left: {{ prop.left }}px; width: {{ prop.width }}px; border: 1px solid {{ prop.frame_color }}; border-right: 1px solid {{ prop.section_color }};">
+                        {% if prop.warnings_props %}
+                        <span class="in-screening-dropdown inline-dropdown-addition">
+                            <span class="in-screening-active-text">⚠︎</span>
+                            <span class="in-screening-dropdown-content"
+                                  style="font-size: 0.6rem; animation-name: {% if prop.warnings|length == 1 %} none {% else %} ticker {% endif %};">
+                                {{ prop.warnings|join:", " }}
+                            </span>
+                        </span>
+                        {% endif %}
                         <a style="color: {{ prop.pair.color }};" href="{% url 'screenings:details' prop.screening.id %}">
                             {{ prop.line_1 }}
                         </a>
@@ -177,16 +188,25 @@
                         <span style="color: {{ prop.rating_color }}">{{ prop.auto_planned }}{{ prop.film_rating }}</span>
                         <span class="day-schema-screening-info"
                               style="background: {{ info.background }}; color: {{ info.color }};">
-                            <a style="color: {{ info.color }}" href="{% url 'screenings:day_schema' %}{{ prop.query_string }}{{ prop.fragment }}">
-                                {{ prop.info_spot }}
-                                {% if prop.tickets_warning %}
-                                    <span style="color: {{ prop.warning_color }};">!</span>
-                                {% endif %}
-                                {% if prop.awaiting_confirmation %}
-                                    <span style="color: {{ prop.awaiting_color }};">?</span>
-                                {% endif %}
-                            </a>
+                            <span class="day-schema-screening-info">
+                                <a style="color: {{ info.color }}" href="{% url 'screenings:day_schema' %}{{ prop.schema_querystring }}{{ prop.schema_fragment }}">
+                                    {{ prop.info_spot }}
+                                </a>
+                            </span>
                         </span>
+                            {% if prop.warnings_props %}
+                            <span class="day-schema-screening-warning">
+                                <a style="font-weight: bold;" href="{% url 'screenings:warnings' %}{{ prop.warn_querystring }}{{ prop.warn_fragment }}">
+                                    {% for props in prop.warnings_props %}
+                                        {% if props.small %}
+                                        <small style="color: {{ props.color }}">{{ props.symbol }}</small>
+                                        {% else %}
+                                        <span style="color: {{ props.color }}">{{ props.symbol }}</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                </a>
+                            </span>
+                            {% endif %}
                         {{ prop.line_2 }}
                     </span>
                     {% endwith %}
@@ -200,4 +220,7 @@
     <p>No screenings available for this festival day.</p>
 {% endif %}
 </div>
+
+{% include "../includes/warning_box.html" with stats=stats %}
+
 {% endblock %}

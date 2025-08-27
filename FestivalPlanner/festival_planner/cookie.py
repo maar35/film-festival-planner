@@ -3,6 +3,8 @@ import datetime
 from festivals.models import current_festival
 from screenings.models import Screening
 
+FILTERED_INDICATOR = '🔬'
+
 
 class Cookie:
     """
@@ -12,11 +14,11 @@ class Cookie:
         self._cookie_key = cookie_key
         self._initial_value = initial_value
 
-    def _set_value_from_session(self, session):
+    def _set_value_from_session(self, session, default=None):
         """
         Link the cookie to a session.
         """
-        self.set(session, session.get(self._cookie_key, self._initial_value))
+        self.set(session, session.get(self._cookie_key, default or self._initial_value))
 
     def get_cookie_key(self):
         return self._cookie_key
@@ -29,12 +31,17 @@ class Cookie:
             query_value = request.GET[self._cookie_key]
             self.set(request.session, query_value)
 
+    @staticmethod
+    def get_querystring(**kwargs):
+        query_list = [f'{key}={value}' for key, value in kwargs.items()]
+        return '?' + '&'.join(query_list) if query_list else ''
+
     def get(self, session, default=None):
         """
         Return the cookie value from the session or default if it doesn't exist.
         """
-        self._set_value_from_session(session)
-        value = session.get(self._cookie_key, default)
+        self._set_value_from_session(session, default=default)
+        value = session.get(self._cookie_key)
         return value
 
     def set(self, session, value):
@@ -82,7 +89,7 @@ class Warnings(Alert):
 
 class Filter(Cookie):
     """
-    Provide filtering data on a "on/off" basis.
+    Provide filtering data on an "on/off" basis.
     """
     filtered_by_query = {'display': False, 'hide': True}
     query_by_filtered = {filtered: query for query, filtered in filtered_by_query.items()}
@@ -93,6 +100,9 @@ class Filter(Cookie):
         action_false = action_false or f'Hide {action_subject}'
         self._action_by_filtered = {True: action_true, False: action_false}
 
+    def __str__(self):
+        return f'Filter {self.get_cookie_key()}'
+
     def handle_get_request(self, request):
         """
         Find cookie in a GET request and update its filter on/off value accordingly.
@@ -101,11 +111,6 @@ class Filter(Cookie):
             query_key = request.GET[self._cookie_key]
             filtered = self.filtered_by_query[query_key]
             self.set(request.session, filtered)
-
-    @staticmethod
-    def get_querystring(**kwargs):
-        query_list = [f'{key}={value}' for key, value in kwargs.items()]
-        return '?' + '&'.join(query_list) if query_list else ''
 
     def get_href_filter(self, session, extra_filters=None):
         """
@@ -117,8 +122,8 @@ class Filter(Cookie):
         return self.get_querystring(**kwargs)
 
     @classmethod
-    def get_display_query_from_keys(cls, filter_keys):
-        kwargs = {key: cls.query_by_filtered[False] for key in filter_keys}
+    def get_display_query_from_keys(cls, filter_keys, on=False):
+        kwargs = {key: cls.query_by_filtered[on] for key in filter_keys}
         return cls.get_querystring(**kwargs)
 
     def on(self, session, default=None):
@@ -176,7 +181,7 @@ class FestivalDay:
             day_choices.append((day + factor * delta).strftime(self.day_str_format))
         return day_choices
 
-    def check_session(self, session, last=False):
+    def check_festival_day(self, session, last=False):
         self.festival = current_festival(session)
         day_str = self.day_cookie.get(session)
         if day_str:
@@ -185,7 +190,6 @@ class FestivalDay:
         if not day_str:
             day_str = self.alternative_day_str(last=last)
             self.day_cookie.set(session, day_str)
-        return self.festival
 
     def alternative_day_str(self, last=False):
         try:
@@ -194,3 +198,37 @@ class FestivalDay:
         except Screening.DoesNotExist:
             day_str = self.festival.start_date.isoformat()
         return day_str
+
+
+def get_fan_filter_props(session, queryset, fans, filter_by_fan):
+    obj_field = 'fan'
+    label_by_fan = {fan: fan.name for fan in fans}
+    return get_filter_props(session, queryset, fans, obj_field, filter_by_fan, label_by_fan)
+
+
+def get_filter_props(session, queryset, choice_objects, choice_field, filter_by_obj, label_by_obj):
+    objects_in_list = {getattr(query_obj, choice_field) for query_obj in queryset}
+    filter_on = False
+    obj_filter_choices = []
+    for obj in choice_objects:
+        obj_filter = filter_by_obj[obj]
+        filter_on = obj_filter.on(session)
+        obj_filter_choices_dict = {
+            'label': label_by_obj[obj],
+            'href_filter': obj_filter.get_href_filter(session),
+            'action': obj_filter.action(session),
+            'enabled': obj in objects_in_list,
+            'on': filter_on,
+        }
+        if filter_on:
+            obj_filter_choices_dict['enabled'] = True
+            obj_filter_choices = [obj_filter_choices_dict]
+            break
+        obj_filter_choices.append(obj_filter_choices_dict)
+    obj_filter_props = {
+        'title': choice_field,
+        'header': f'Select {choice_field}',
+        'on': filter_on,
+        'choices': obj_filter_choices,
+    }
+    return obj_filter_props

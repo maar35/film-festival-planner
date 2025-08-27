@@ -8,4 +8,5 @@ urlpatterns = [
     path('<int:pk>/details/', views.ScreeningDetailView.as_view(), name='details'),
     path('planner/', views.PlannerView.as_view(), name='planner'),
     path('calendar/', views.ScreeningCalendarView.as_view(), name='calendar'),
+    path('warnings/', views.ScreeningWarningsView.as_view(), name='warnings'),
 ]

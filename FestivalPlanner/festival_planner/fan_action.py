@@ -17,7 +17,7 @@ class BaseAction:
         """
         Initialize the action cookie now a session can be supplied.
         """
-        # set the cookie.
+        # Set the cookie.
         cookie_key = self._get_cookie_key_from_session(session)
         self.action_cookie = Cookie(cookie_key, initial_value=self.initial_value)
 
@@ -43,6 +43,11 @@ class BaseAction:
         action = self.action_cookie.get()
         action |= kwargs
         self.action_cookie.set(action)
+
+    def add_detail(self, session, line):
+        action = self.action_cookie.get(session)
+        action['updates'].append(line)
+        self.action_cookie.set(session, action)
 
     def get_refreshed_action(self, session):
         # Make sure the cookie is based on the current festival.
@@ -83,10 +88,23 @@ class FanAction(BaseAction):
         # Merge with the standard action items.
         super().init_action(session, **action)
 
-    def add_update(self, session, line):
-        action = self.action_cookie.get(session)
-        action['updates'].append(line)
-        self.action_cookie.set(session, action)
+
+class FixWarningAction(BaseAction):
+    known_keys = {'header', 'updates'}
+
+    def __init__(self, action_key):
+        super().__init__(action_key, self.known_keys, initial_value={})
+
+    def init_action(self, session, **kwargs):
+        # Initialize the action dictionary.
+        header = kwargs.get('header')
+        action = {
+            'header': header,
+            'updates': [],
+        }
+
+        # Merge with the standard action dictionary.
+        super().init_action(session, **action)
 
 
 class RatingAction(BaseAction):

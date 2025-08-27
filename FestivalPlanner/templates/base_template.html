@@ -31,9 +31,25 @@
     .day-schema-time-mark {
         padding: 0 0.5rem;
         border-left: 2px solid {{ festival_color }};
-        background-color: black;
+        background: black;
         position: absolute;
     }
+
+
+
+    /* ----- AS LONG AS CSS IS NOT LOADED ----- */
+
+
+    /* TODO get this working in the project style sheet. */
+    @keyframes ticker {
+        from {
+            transform: translateX(0)
+        }
+        to {
+            transform: translateX(-30rem)
+        }
+    }
+
 </style>
 
 <body>
@@ -123,7 +139,7 @@
 
         {% block log %}
             {% if log.results %}
-                <h3 class="log-header">{{ log.action }} results</h3>
+                <h2 class="log-header">{{ log.action }} results</h2>
                 {% for result in log.results %}
                     <p class="log">{{ result }}</p>
                 {% endfor %}

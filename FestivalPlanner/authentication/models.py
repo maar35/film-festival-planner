@@ -30,6 +30,11 @@ def me():
     return FilmFan.film_fans.get(seq_nr=1) or None
 
 
+def get_fan_by_name(fan_name):
+    fan = FilmFan.film_fans.get(name=fan_name)
+    return fan
+
+
 def get_sorted_fan_list(current_fan, fan_query_set=None):
     """
     Return a list of fans, starting with the current fan, followed by the other fans sorted by name.

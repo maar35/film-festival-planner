@@ -1,4 +1,5 @@
 import datetime
+import re
 from http import HTTPStatus
 
 from django.db import IntegrityError
@@ -7,7 +8,9 @@ from django.urls import reverse
 
 from authentication.models import FilmFan
 from availabilities.models import Availabilities
+from availabilities.views import DAY_START_TIME
 from festival_planner import debug_tools
+from festival_planner.screening_status_getter import ScreeningWarning, ScreeningStatusGetter
 from festivals.models import FestivalBase, Festival, switch_festival, current_festival
 from films.models import Film, FAN_NAMES_BY_FESTIVAL_BASE, LOWEST_PLANNABLE_RATING, FilmFanFilmRating, set_current_fan
 from films.tests import create_film, ViewsTestCase, get_decoded_content
@@ -238,6 +241,15 @@ class ScreeningViewsTests(ViewsTestCase):
         }
         theater = Theater.theaters.create(**theater_kwargs)
 
+        theater_kwargs = {
+            'theater_id': 2,
+            'city': city,
+            'parse_name': 'PalaBiennale',
+            'abbreviation': 'palabi',
+            'priority': Theater.Priority.HIGH,
+        }
+        theater_2 = Theater.theaters.create(**theater_kwargs)
+
         screen_kwargs = {
             'screen_id': 1,
             'theater': theater,
@@ -256,6 +268,33 @@ class ScreeningViewsTests(ViewsTestCase):
         }
         self.screen_b = Screen.screens.create(**screen_kwargs)
 
+        screen_kwargs = {
+            'screen_id': 3,
+            'theater': theater,
+            'parse_name': 'Sala Perla',
+            'abbreviation': '-sp',
+            'address_type': Screen.ScreenAddressType.PHYSICAL,
+        }
+        self.screen_sp = Screen.screens.create(**screen_kwargs)
+
+        screen_kwargs = {
+            'screen_id': 4,
+            'theater': theater_2,
+            'parse_name': 'PalaBiennale',
+            'abbreviation': '-pb',
+            'address_type': Screen.ScreenAddressType.PHYSICAL,
+        }
+        self.screen_pb = Screen.screens.create(**screen_kwargs)
+
+        screen_kwargs = {
+            'screen_id': 5,
+            'theater': theater_2,
+            'parse_name': 'Sala Corinto',
+            'abbreviation': '-sc',
+            'address_type': Screen.ScreenAddressType.PHYSICAL,
+        }
+        self.screen_sc = Screen.screens.create(**screen_kwargs)
+
     def arrange_regular_user_props(self):
         self.fan = self.regular_fan
         logged_in = self.login(self.regular_credentials)
@@ -263,6 +302,7 @@ class ScreeningViewsTests(ViewsTestCase):
 
         request = self.get_regular_fan_request()
         set_current_fan(request)
+        self.session = request.session
 
         switch_festival(self.session, self.festival)
         FAN_NAMES_BY_FESTIVAL_BASE[self.festival.base.mnemonic] = [self.fan.name]
@@ -278,6 +318,11 @@ class ScreeningViewsTests(ViewsTestCase):
             'q_and_a': True,
         }
         screening = Screening.screenings.create(**screening_kwargs)
+        return screening
+
+    def arrange_create_std_screening(self):
+        start_dt = arrange_get_datetime('2024-08-30 11:15')
+        screening = self.arrange_create_screening(self.screen_sg, start_dt)
         return screening
 
     def assert_screening_status(self, response, screening_status, view='day_schema'):
@@ -302,12 +347,6 @@ class DaySchemaViewTests(ScreeningViewsTests):
     def setUp(self):
         super().setUp()
         self.re_warning = r'<span[^>]*>!</span>'
-
-    def arrange_create_std_screening(self):
-
-        start_dt = arrange_get_datetime('2024-08-30 11:15')
-        screening = self.arrange_create_screening(self.screen_sg, start_dt)
-        return screening
 
     def test_screening_in_day_schema(self):
         """
@@ -545,7 +584,8 @@ class DetailsViewTest(ScreeningViewsTests):
         self.assertContains(response, f'<li>Time: Sat 31 Aug 11:30 - 13:24</li>')
         film_list_item = f'<li>Film details: <a href="/films/{film.pk}/details/">{film.title} details</a></li>'
         self.assertContains(response, film_list_item)
-        self.assertContains(response, '<li>Film description: None</li>')
+        re_description = r'<li>Film description:\s+-\s*</li>'
+        self.assertRegex(get_decoded_content(response), re_description)
 
 
 class PlannerViewTests(ScreeningViewsTests):
@@ -648,3 +688,368 @@ class PlannerViewTests(ScreeningViewsTests):
         self.bad_screening = Screening.screenings.get(**self.bad_screening_kwargs)
         self.assertFalse(self.bad_screening.auto_planned)
         self.assertTrue(self.good_screening.auto_planned)
+
+
+class WarningsViewTests(ScreeningViewsTests):
+    re_warning_count = re.compile(
+        r'<div class="[^"]*\bfloating-warning-box\b[^"]*"[^>]*>\s*<a[^>]*>\s*(\d+)\s*warnings</a>'
+    )
+    re_fan_warning = re.compile(r'<td>\s*(\w+)\s*</td>\s*<td[^>]*>([\w ]+)</td>')
+    re_dropdown = re.compile(
+        r'(<div class="sticky-modest-drop-t-head-content".*?Select ([\w ]+).*?</div>)',
+        re.DOTALL
+    )
+    re_enabled = re.compile(r'<a href="[^"]+">\s*([\w ]+)\s*</a>')
+    re_disabled = re.compile(r'<td>\s*<span class="[^"]*\bno-select\b[^"]*"[^>]*>\s*([\w ]+)\s*</span>')
+
+    def setUp(self):
+        super().setUp()
+        film_kwargs = {
+            'festival': self.festival,
+            'film_id': 16,
+            'seq_nr': 32,
+            'sort_title': 'dark globe',
+            'title': 'Dark Globe',
+            'duration': datetime.timedelta(minutes=4),
+            'medium_category': 'events',
+            'url': 'https://www.sicvenezia.it/en/films/dark-globe/',
+        }
+        self.film_2 = Film.films.create(**film_kwargs)
+
+        film_kwargs = {
+            'festival': self.festival,
+            'film_id': 17,
+            'seq_nr': 37,
+            'sort_title': 'blood and sand',
+            'title': 'Blood and Sand',
+            'duration': datetime.timedelta(minutes=125),
+            'medium_category': 'films',
+            'url': 'https://www.labiennale.org/en/cinema/2024/venice-classics/blood-and-sand',
+        }
+        self.film_3 = Film.films.create(**film_kwargs)
+
+        film_kwargs = {
+            'festival': self.festival,
+            'film_id': 18,
+            'seq_nr': 16,
+            'sort_title': 'no sleep till',
+            'title': 'No Sleep Till',
+            'duration': datetime.timedelta(minutes=93),
+            'medium_category': 'films',
+            'url': 'https://www.sicvenezia.it/en/films/no-sleep-till/',
+        }
+        self.film_4 = Film.films.create(**film_kwargs)
+
+    def _get_dropdown_content(self, _content, header):
+        dropdown_groups = self.re_dropdown.findall(_content)
+        dropdown_contents = [g[0] for g in dropdown_groups if g[1] == header]
+        dropdown_content = dropdown_contents[0] if dropdown_contents else None
+        return dropdown_content
+
+    @staticmethod
+    def _arrange_availability(fan, screenings):
+        dates = {screening.start_dt.date() for screening in screenings}
+        for availability_date in dates:
+            availability_kwargs = {
+                'fan': fan,
+                'start_dt': datetime.datetime.combine(availability_date, DAY_START_TIME),
+                'end_dt': datetime.datetime.combine(availability_date, datetime.time(hour=23)),
+            }
+            Availabilities.availabilities.create(**availability_kwargs)
+
+    def _assert_enabled(self, _content, header, choices):
+        dropdown_content = self._get_dropdown_content(_content, header)
+        matches = set(self.re_enabled.findall(dropdown_content))
+        self.assertEqual(matches, set(choices))
+
+    def _assert_disabled(self, _content, header, choices):
+        dropdown_content = self._get_dropdown_content(_content, header)
+        matches = set(self.re_disabled.findall(dropdown_content))
+        self.assertEqual(matches, set(choices))
+
+    def _assert_warning_count(self, content, warning_count):
+        m = self.re_warning_count.search(content)
+        warnings = m.group(1) if m else '0'
+        self.assertEqual(int(warnings), warning_count)
+
+    def _assert_fan_warnings(self, content, fans, warning_types):
+        fan_warnings = set()
+        for fan in fans:
+            for warning_type in warning_types:
+                fan_warnings.add((fan.name, ScreeningWarning.wording_by_warning[warning_type]))
+        matches = set(self.re_fan_warning.findall(content))
+        self.assertEqual(fan_warnings, matches)
+
+    def test_attendance_without_ticket(self):
+        """
+        Attendance without ticket is displayed in the Warnings view.
+        """
+        # Arrange.
+        self.arrange_regular_user_props()
+        screening = self.arrange_create_std_screening()
+        _ = Attendance.attendances.create(fan=self.fan, screening=screening)
+
+        # Act.
+        response = self.client.get(reverse('screenings:warnings'))
+
+        # Assert.
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        displayed_warning_types = [
+            ScreeningWarning.WarningType.NEEDS_TICKET,
+            ScreeningWarning.WarningType.ATTENDS_WHILE_UNAVAILABLE,
+        ]
+        for warning_type in displayed_warning_types:
+            self.assertContains(response, self.fan.name)
+            self.assertContains(response, ScreeningWarning.wording_by_warning[warning_type])
+            self.assertContains(response, ScreeningWarning.symbol_by_warning[warning_type])
+            self.assertContains(response, ScreeningWarning.fix_by_warning[warning_type])
+
+    def test_row_colors(self):
+        """
+        In each row, the warning wording has the designated color,
+        and the warning symbol has the background color associated with the screening status.
+        """
+        def _get_coloring_regex():
+            status_getter = ScreeningStatusGetter(self.session, [screening])
+            attendants = status_getter.get_attendants(screening)
+            status = status_getter.get_screening_status(screening, attendants)
+            symbol_background = Screening.color_pair_by_screening_status[status]['background']
+            wording_color = ScreeningWarning.color_by_warning[warning_type]
+            re_wording_color = wording_color.replace('(', r'\(').replace(')', r'\)')
+            re_symbol_background = symbol_background.replace('(', r'\(').replace(')', r'\)')
+            re_symbol = symbol.replace('?', r'\?')
+            re_coloring = ((f'{self.fan.name}' + r'\s*</td>\s*<td[^>]*color:\s'
+                            + re_wording_color + r'[^>]*>' + f'{wording}' + r'</td>\s*<td[^>]*background:\s')
+                           + re_symbol_background + r'[^>]*>') + r'(\s*<[^/][^>]*>\s*)+' + re_symbol
+            return re_coloring
+
+        # Arrange.
+        self.arrange_regular_user_props()
+        screening = self.arrange_create_std_screening()
+        kwargs = {'fan': self.fan, 'screening': screening}
+        _ = Attendance.attendances.create(**kwargs)
+        _ = Ticket.tickets.create(**kwargs)
+
+        displayed_warning_types = [
+            ScreeningWarning.WarningType.AWAITS_CONFIRMATION,
+            ScreeningWarning.WarningType.ATTENDS_WHILE_UNAVAILABLE,
+        ]
+
+        # Act.
+        response = self.client.get(reverse('screenings:warnings'))
+
+        # Assert.
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        for warning_type in displayed_warning_types:
+            wording = ScreeningWarning.wording_by_warning[warning_type]
+            symbol = ScreeningWarning.symbol_by_warning[warning_type]
+            self.assertContains(response, self.fan.name)
+            self.assertContains(response, wording)
+            self.assertContains(response, symbol)
+            self.assertContains(response, ScreeningWarning.fix_by_warning[warning_type])
+            self.assertRegex(get_decoded_content(response), _get_coloring_regex())
+
+    def test_greyed_out_choices(self):
+        """
+        The Warnings view can be filtered per screening by fan.
+        """
+        # Arrange.
+        self.arrange_regular_user_props()
+        ozzy = FilmFan.film_fans.create(name='Ozzy', seq_nr=2)
+        neil = FilmFan.film_fans.create(name='Neil', seq_nr=3)
+        screening = self.arrange_create_std_screening()
+
+        kwargs_list = [{'fan': fan, 'screening': screening} for fan in [neil, ozzy]]
+        for kwargs in kwargs_list:
+            _ = Attendance.attendances.create(**kwargs)
+
+        displayed_warning_types = [
+            ScreeningWarning.WarningType.NEEDS_TICKET,
+            ScreeningWarning.WarningType.ATTENDS_WHILE_UNAVAILABLE,
+        ]
+        enabled_wordings = [ScreeningWarning.wording_by_warning[w] for w in displayed_warning_types]
+        disabled_warning_types = set(ScreeningWarning.WarningType) - set(displayed_warning_types)
+        disabled_wordings = [ScreeningWarning.wording_by_warning[w] for w in disabled_warning_types]
+
+        # Act.
+        response = self.client.get(reverse('screenings:warnings'))
+
+        # Assert.
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        content = get_decoded_content(response)
+        self._assert_enabled(content, 'fan', [ozzy.name, neil.name])
+        self._assert_disabled(content, 'fan', [self.fan.name, self.admin_fan.name])
+        self._assert_enabled(content, 'warning', enabled_wordings)
+        self._assert_disabled(content, 'warning', disabled_wordings)
+
+    def test_buy_tickets(self):
+        """
+        When needing tickets, a dropdown menu lets you getting them.
+        """
+        # Arrange.
+        self.arrange_regular_user_props()
+        screening = self.arrange_create_std_screening()
+        fans = [self.fan, self.admin_fan]
+
+        kwargs_list = [{'fan': fan, 'screening': screening} for fan in fans]
+        for kwargs in kwargs_list:
+            _ = Attendance.attendances.create(**kwargs)
+
+        warning_types_get = [
+            ScreeningWarning.WarningType.NEEDS_TICKET,
+            ScreeningWarning.WarningType.ATTENDS_WHILE_UNAVAILABLE,
+        ]
+        warning_types_redirect = [
+            ScreeningWarning.WarningType.AWAITS_CONFIRMATION,
+            ScreeningWarning.WarningType.ATTENDS_WHILE_UNAVAILABLE,
+        ]
+
+        get_response = self.client.get(reverse('screenings:warnings'))
+        post_data = {'NEEDS_TICKET::1:': ['Buy ticket for all attendants']}
+
+        # Act.
+        post_response = self.client.post(reverse('screenings:warnings'), data=post_data)
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        get_content = get_decoded_content(get_response)
+        redirect_content = get_decoded_content(redirect_response)
+        self._assert_fan_warnings(get_content, fans, warning_types_get)
+        self._assert_warning_count(get_content, 4)
+        self._assert_fan_warnings(redirect_content, fans, warning_types_redirect)
+        self._assert_warning_count(redirect_content, 4)
+
+    def test_confirm_tickets(self):
+        """
+        When tickets need to be confirmed, a dropdown menu helps a fan to confirm all tickets.
+        """
+        # Arrange.
+        self.arrange_regular_user_props()
+        screening_1 = self.arrange_create_std_screening()
+        start_dt_2 = arrange_get_datetime('2024-08-30 19:15')
+        start_dt_3 = arrange_get_datetime('2024-09-02 14:15')
+        screening_2 = self.arrange_create_screening(self.screen_sc, start_dt_2, film=self.film_2)
+        screening_3 = self.arrange_create_screening(self.screen_sc, start_dt_3, film=self.film_3)
+        screenings = [screening_1, screening_2, screening_3]
+        eric = FilmFan.film_fans.create(name='Eric', seq_nr=4)
+
+        kwargs_list = [{'fan': eric, 'screening': screening} for screening in screenings]
+        for kwargs in kwargs_list:
+            _ = Attendance.attendances.create(**kwargs)
+            _ = Ticket.tickets.create(**kwargs)
+
+        self._arrange_availability(eric, screenings)
+
+        warning_types_get = [ScreeningWarning.WarningType.AWAITS_CONFIRMATION]
+        warning_types_redirect = []
+
+        get_response = self.client.get(reverse('screenings:warnings'))
+        post_data = {'AWAITS_CONFIRMATION:Eric::': ['Confirm all tickets for Eric']}
+
+        # Act.
+        post_response = self.client.post(reverse('screenings:warnings'), data=post_data)
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        get_content = get_decoded_content(get_response)
+        redirect_content = get_decoded_content(redirect_response)
+        self._assert_fan_warnings(get_content, [eric], warning_types_get)
+        self._assert_warning_count(get_content, 3)
+        self._assert_fan_warnings(redirect_content, [eric], warning_types_redirect)
+        self._assert_warning_count(redirect_content, 0)
+
+    def test_fix_attends_overlapping_screenings(self):
+        """
+        When attending overlapping screenings, a dropdown menu allows you to stop attending one.
+        """
+        # Arrange.
+        self.arrange_regular_user_props()
+        start_dt_3 = arrange_get_datetime('2024-09-02 14:15')
+        start_dt_4 = arrange_get_datetime('2024-09-02 14:00')
+        screening_3 = self.arrange_create_screening(self.screen_sc, start_dt_3, film=self.film_3)
+        screening_4 = self.arrange_create_screening(self.screen_sc, start_dt_4, film=self.film_4)
+        screenings = [screening_3, screening_4]
+
+        kwargs_list = [{'fan': self.fan, 'screening': screening} for screening in screenings]
+        for kwargs in kwargs_list:
+            _ = Attendance.attendances.create(**kwargs)
+            _ = Ticket.tickets.create(**kwargs)
+
+        self._arrange_availability(self.fan, screenings)
+
+        warning_types_get = [
+            ScreeningWarning.WarningType.ATTENDS_OVERLAPPING,
+            ScreeningWarning.WarningType.AWAITS_CONFIRMATION,
+        ]
+        warning_types_redirect = [
+            ScreeningWarning.WarningType.SHOULD_SELL_TICKET,
+            ScreeningWarning.WarningType.AWAITS_CONFIRMATION,
+        ]
+        fix_wording = ScreeningWarning.fix_by_warning[warning_types_get[0]]
+
+        get_response = self.client.get(reverse('screenings:warnings'))
+        post_data = {f'ATTENDS_OVERLAPPING:{self.fan.name}:{screening_4.id}:': [fix_wording]}
+
+        # Act.
+        post_response = self.client.post(reverse('screenings:warnings'), data=post_data)
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        get_content = get_decoded_content(get_response)
+        redirect_content = get_decoded_content(redirect_response)
+        self._assert_fan_warnings(get_content, [self.fan], warning_types_get)
+        self._assert_warning_count(get_content, 4)
+        self._assert_fan_warnings(redirect_content, [self.fan], warning_types_redirect)
+        self._assert_warning_count(redirect_content, 2)
+
+    def test_fix_attends_same_film(self):
+        """
+        When fans attend a film more than once, the fix dropdown menu helps them out.
+        """
+        # Arrange.
+        self.arrange_regular_user_props()
+        start_dt_1 = arrange_get_datetime('2024-08-30 20:00')
+        start_dt_2 = arrange_get_datetime('2024-08-31 11:30')
+        screening_1 = self.arrange_create_screening(self.screen_sg, start_dt_1, film=self.film)
+        screening_2 = self.arrange_create_screening(self.screen_pb, start_dt_2, film=self.film)
+        screenings = [screening_1, screening_2]
+        fan = self.admin_fan
+
+        kwargs_list = [{'fan': fan, 'screening': screening} for screening in screenings]
+        for kwargs in kwargs_list:
+            _ = Attendance.attendances.create(**kwargs)
+            ticket = Ticket(confirmed=True, **kwargs)
+            ticket.save()
+
+        self._arrange_availability(fan, screenings)
+
+        warning_types_get = [ScreeningWarning.WarningType.ATTENDS_SAME_FILM]
+        warning_types_redirect = [ScreeningWarning.WarningType.SHOULD_SELL_TICKET]
+        wording = ScreeningWarning.fix_by_warning[warning_types_get[0]]
+
+        get_response = self.client.get(reverse('screenings:warnings'))
+        post_data = {f'ATTENDS_SAME_FILM:{fan.name}::{screening_2.id}': [f'{wording} {screening_2.str_short()}']}
+
+        # Act.
+        post_response = self.client.post(reverse('screenings:warnings'), data=post_data)
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        get_content = get_decoded_content(get_response)
+        redirect_content = get_decoded_content(redirect_response)
+        self._assert_fan_warnings(get_content, [fan], warning_types_get)
+        self._assert_warning_count(get_content, 2)
+        self._assert_fan_warnings(redirect_content, [fan], warning_types_redirect)
+        self._assert_warning_count(redirect_content, 1)

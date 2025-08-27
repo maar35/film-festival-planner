@@ -674,7 +674,7 @@ class ScreeningLoader(SimpleLoader):
         start_dt = datetime.datetime.fromisoformat(row[2]).replace(tzinfo=None)
         end_dt = datetime.datetime.fromisoformat(row[3]).replace(tzinfo=None)
         combination_id = int(row[4]) if row[4] else None
-        subtitles = row[5]
+        subtitles = row[5] or None
         q_and_a = True if row[6] else False
         _ = row[7]      # extra
         if len(self.expected_header) == 7:

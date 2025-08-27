@@ -1,0 +1,127 @@
+{% extends "base_template.html" %}
+
+{% load humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+<h2 class="row col-left-h2"><span>{{ sub_header }}</span></h2>
+<div class="row">
+    <span class="col-right">
+        <a href="{% url 'screenings:day_schema' %}">Day schema</a>
+        <br>
+        <a href="{% url 'films:films' %}">Film ratings</a>
+        <br>
+        <a href="{% url 'availabilities:list' %}">Availabilities</a>
+    </span>
+</div>
+
+{% block errors %}
+    {{ block.super }}
+{% endblock %}
+
+{% block log %}
+    {{ block.super }}
+{% endblock log %}
+
+{% if action.header %}
+    <p>
+        {{ action.header }},
+        {{ action.action_time|naturaltime }}
+    </p>
+    <ul>
+    {% for line in action.updates %}
+        <li>{{ line }}</li>
+    {% endfor %}
+    </ul>
+    <br>
+{% endif %}
+
+{% if warnings %}
+    {% for item in filmscreening_props_list %}
+        {% include "../includes/film_screenings.html" with film_title=item.title film_screening_props=item.props %}
+    {% endfor %}
+    <h3>Warnings</h3>
+    <form method="post">
+    {% csrf_token %}
+    <table style="position: relative; z-index: 1;">
+    <thead>
+    <tr>
+        <th class="sticky-t-head">Title</th>
+        <th class="sticky-t-head">Screening</th>
+        <th class="sticky-t-head">Details</th>
+        {% include "../includes/filtered_header_field.html" with obj_filter_props=fan_filter_props %}
+        {% include "../includes/filtered_header_field.html" with obj_filter_props=warning_filter_props %}
+        <th class="sticky-t-head">Symbol</th>
+        <th class="sticky-t-head">Fix</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for row in warning_rows %}
+        <tr>
+            <td>
+                <a name="{{ row.fragment_name }}"></a>
+                {% ifchanged row.screening.film.title %}
+                {{ row.screening.film.title }}
+                {% endifchanged %}
+            </td>
+            {% if row.screening == screening %}
+            <td style="background: {{ selected_background }};">
+            {% else %}
+            <td>
+            {% endif %}
+                {% ifchanged row.screening %}
+                <a href="{% url 'screenings:day_schema' %}{{ row.schema_querystring }}{{ row.schema_fragment }}">
+                    {{ row.screening.str_short }}
+                </a>
+                {% endifchanged %}
+            </td>
+            <td>
+                {% ifchanged row.screening %}
+                <a href="{% url 'screenings:details' row.screening.id %}">
+                    {{ row.screening.id }}
+                </a>
+                {% endifchanged %}
+            </td>
+            <td> {{ row.fan }} </td>
+            <td style="color: {{ row.wording_color }};">{{ row.warning_wording }}</td>
+            <td style="text-align: center; background: {{ row.background }};">
+                <span class="no-select">
+                    <span style="color: {{ row.color }};">
+                        {{ row.symbol }}
+                    </span>
+                </span>
+            </td>
+            <td class="cell-dropdown">
+                <span class="drop-button">
+                    {{ row.warning_fix }}
+                </span>
+                <div class="cell-dropdown-content">
+                    {% for choice in row.choices %}
+                    {% if choice.submit_name %}
+                        <input type="submit" value="{{ choice.value }}" name="{{ choice.submit_name }}">
+                    {% elif choice.link %}
+                        <a class="link-in-dropdown" href="{{ choice.link }}">{{ choice.value }}</a>
+                    {% else %}
+                        <span class="disabled-input">
+                            <input type="submit" value="{{ choice.value }}" disabled>
+                        </span>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+    </form>
+{% else %}
+    <p>No warnings in {{ festival }}</p>
+{% endif %}
+{% if warnings and not warning_rows %}
+    <p>Warnings hidden by a filter.</p>
+{% endif %}
+<br>
+{% include "../includes/warning_box.html" with stats=stats %}
+{% endblock %}}

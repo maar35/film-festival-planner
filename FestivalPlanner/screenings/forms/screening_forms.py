@@ -4,8 +4,10 @@ from operator import attrgetter
 from django import forms
 from django.db import transaction
 
+from authentication.models import FilmFan
 from festival_planner.cookie import Errors
-from festival_planner.debug_tools import pr_debug, ExceptionTracer
+from festival_planner.debug_tools import pr_debug, ExceptionTracer, timed_method
+from festival_planner.fan_action import FixWarningAction
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_log, initialize_log
 from festivals.models import current_festival
@@ -15,6 +17,7 @@ from screenings.models import Attendance, Screening, get_available_filmscreening
 from theaters.models import Theater
 
 ERRORS = Errors()
+ERRORS_IN_WARNING_FIXES = Errors()
 
 
 class DummyForm(forms.Form):
@@ -137,8 +140,8 @@ class PlannerForm(DummyForm):
     session = None
 
     @classmethod
+    @timed_method
     def auto_plan_screenings(cls, session, eligible_films):
-        pr_debug('start', with_time=True)
         cls.session = session
         cls.tracer = ExceptionTracer()
         cls.reporter = PlannerReporter(session, 'Plan screenings')
@@ -170,7 +173,6 @@ class PlannerForm(DummyForm):
 
         cls.reporter.report(eligible_films)
         add_log(session, f'{cls.planned_screenings_count} screenings planned')
-        pr_debug('done', with_time=True)
         return transaction_committed
 
     @classmethod
@@ -344,10 +346,85 @@ class TicketForm(forms.Form):
         kwargs = {'fan': fan, 'screening': screening}
         try:
             ticket = manager.get(**kwargs)
-        except Ticket.DoesNotExist as e:
+        except Ticket.DoesNotExist:
             ticket = manager.create(**kwargs)
         ticket.confirmed = bool_prop
         ticket.save()
+
+
+class ScreeningWarningsForm(DummyForm):
+    rolled_back_msg = 'Transaction rolled back.'
+    fix_action = FixWarningAction('fix_warning')
+
+    @classmethod
+    def buy_tickets(cls, session, fan_names, screening_ids, wording):
+        committed = cls.fix_ticket_warnings(session, cls._buy_tickets, fan_names, screening_ids, wording)
+        return committed
+
+    @classmethod
+    def confirm_tickets(cls, session, fan_names, screening_ids, wording):
+        committed = cls.fix_ticket_warnings(session, cls._confirm_tickets, fan_names, screening_ids, wording)
+        return committed
+
+    @classmethod
+    def delete_tickets(cls, session, fan_names, screening_ids, wording):
+        committed = cls.fix_ticket_warnings(session, cls._delete_tickets, fan_names, screening_ids, wording)
+        return committed
+
+    @classmethod
+    def delete_attendances(cls, session, fan_names, screening_ids, wording):
+        committed = cls.fix_ticket_warnings(session, cls._unattend_screenings, fan_names, screening_ids, wording)
+        return committed
+
+    @classmethod
+    def fix_ticket_warnings(cls, session, fix_method, fan_names, screening_ids, wording):
+        transaction_committed = True
+        try:
+            with transaction.atomic():
+                tickets, count_by_type = fix_method(fan_names, screening_ids)
+        except Exception as e:
+            transaction_committed = False
+            ERRORS_IN_WARNING_FIXES.set(session, [str(e), cls.rolled_back_msg])
+            add_log(session, f'{e} {cls.rolled_back_msg}')
+        else:
+            cls.fix_action.init_action(session, header=f'{len(tickets)} {wording}')
+            for ticket in tickets:
+                cls.fix_action.add_detail(session, f'{str(ticket)}')
+            if count_by_type:
+                for _type, count in count_by_type.items():
+                    cls.fix_action.add_detail(session, f'{count:5} {_type} objects deleted')
+        return transaction_committed
+
+    @classmethod
+    def _buy_tickets(cls, fan_names, screening_ids):
+        tickets = []
+        for screening_id in screening_ids:
+            screening = Screening.screenings.get(pk=screening_id)
+            for fan_name in fan_names:
+                fan = FilmFan.film_fans.get(name=fan_name)
+                ticket = Ticket.tickets.create(screening=screening, fan=fan)
+                tickets.append(ticket)
+        return tickets, {}
+
+    @classmethod
+    def _confirm_tickets(cls, fan_names, screening_ids):
+        tickets = Ticket.tickets.filter(fan__name__in=fan_names, screening__in=screening_ids)
+        _ = tickets.update(confirmed=True)
+        return tickets, {}
+
+    @classmethod
+    def _delete_tickets(cls, fan_names, screening_ids):
+        tickets = Ticket.tickets.filter(fan__name__in=fan_names, screening__in=screening_ids)
+        org_tickets = list(tickets)
+        _, count_by_type = tickets.delete()
+        return org_tickets, count_by_type
+
+    @classmethod
+    def _unattend_screenings(cls, fan_names, screening_ids):
+        attendances = Attendance.attendances.filter(fan__name__in=fan_names, screening__in=screening_ids)
+        org_attendances = list(attendances)
+        _, count_by_type = attendances.delete()
+        return org_attendances, count_by_type
 
 
 def update_attendance_statuses(update_method, session, screening, changed_pop_by_fan, update_log, manager=None):
