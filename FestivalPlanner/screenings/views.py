@@ -1010,7 +1010,7 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
             link_url = None
         else:
             querystring = Filter.get_display_query_from_keys([f.get_cookie_key() for f in filters], on=True)
-            link_url = '/screenings/warnings' + querystring
+            link_url = querystring
 
         # Create choices for related screenings.
         other_screening_choices = []
