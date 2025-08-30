@@ -815,6 +815,7 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
             'selected_background': COLOR_PAIR_SELECTED['background'],
             'fan_filter_props': self._get_fan_filter_props(),
             'warning_filter_props': self._get_warning_filter_props(),
+            'clear_filters_query': self._get_clear_filters_query(session),
             'filmscreening_props_list': self._get_filmscreening_props_list(),
             'stats': ScreeningWarning.get_warning_stats(base_context['festival'], warnings=self.warnings),
             'log': get_log(session),
@@ -863,6 +864,12 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
             films = self.filtered_films
             filmscreening_props_list = get_filmscreening_props_list(session, films)
         return filmscreening_props_list
+
+    def _get_clear_filters_query(self, session):
+        filter_by_key = self.filter_by_fan | self.filter_by_warning_type
+        active_filter_keys = [f.get_cookie_key() for f in filter_by_key.values() if f.on(session)]
+        clear_query = Filter.get_display_query_from_keys(active_filter_keys, on=False)
+        return clear_query
 
     def _setup_filters(self, session):
         self.filter_by_fan = {}
@@ -990,6 +997,7 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
         return choices
 
     def _get_choices_with_link(self, warning_type, fan, screening):
+        session = self.request.session
         fix_wording = ScreeningWarning.fix_by_warning[warning_type]
 
         # Set up the queryset to select screenings with the given fan and warning.
@@ -997,7 +1005,12 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
         if warning_type == ScreeningWarning.WarningType.ATTENDS_SAME_FILM:
             filters.append(self.filmscreenings_filter)
         link_wording = ScreeningWarning.link_wording_by_ticket_warning[warning_type]
-        querystring = Filter.get_display_query_from_keys([f.get_cookie_key() for f in filters], on=True)
+        link_active = self.filter_by_fan[fan].on(session) and self.filter_by_warning_type[warning_type].on(session)
+        if link_active:
+            link_url = None
+        else:
+            querystring = Filter.get_display_query_from_keys([f.get_cookie_key() for f in filters], on=True)
+            link_url = '/screenings/warnings' + querystring
 
         # Create choices for related screenings.
         other_screening_choices = []
@@ -1013,7 +1026,7 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
             'submit_name': f'{warning_type.name}:{fan.name}:{screening.id}:',
         }] + other_screening_choices + [{
             'value': f'Display {link_wording}',
-            'link': '/screenings/warnings' + querystring
+            'link': link_url,
         }]
 
         return choices
