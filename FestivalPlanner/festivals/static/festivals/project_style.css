@@ -523,17 +523,6 @@ span.up {
 
 /* Dropdown definitions for within a screening representation */
 
-/* - Animate the dropdown text when too long to display in a small frame */
-/* @keyframes ticker {
-    from {
-        transform: translateX(0);
-    }
-    to {
-        transform: translateX(-30rem);
-    }
-}
-Doesn't seem te work from here */
-
 /* - Class definitions for the in-screening dropdown */
 .in-screening-dropdown {
     display: table-cell;
@@ -654,6 +643,13 @@ Doesn't seem te work from here */
 }
 .disabled-right-aligned-input input:hover {
     background: var(--inputBackground);
+}
+
+.hidden-submit {
+    opacity: 0;
+    font-size: xx-small !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 /* Color of disabled element */

@@ -70,7 +70,10 @@ class City(models.Model):
 
     class Meta:
         db_table = 'city'
-        unique_together = ('name', 'country')
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'country'],
+                                    name='unique_name_country')
+        ]
 
     def __str__(self):
         return f'{self.name}'
@@ -106,7 +109,10 @@ class Theater(models.Model):
 
     class Meta:
         db_table = 'theater'
-        unique_together = ('city', 'abbreviation')
+        constraints = [
+            models.UniqueConstraint(fields=['city', 'abbreviation'],
+                                    name='unique_city_abbreviation')
+        ]
 
     def __str__(self):
         return f'{self.abbreviation} {self.city.name}'

@@ -17,36 +17,20 @@
         {% block errors %}
             {{ block.super }}
         {% endblock %}
+        <form method="post">
+        {% csrf_token %}
         <table>
             <tbody>
                 <tr><th>Theater</th><td>{{ theater.parse_name }}</td></tr>
+                <tr><th>Priority</th><td style="color:{{ priority_color }}">{{ priority_label }}</td></tr>
+                <tr><th>Theater PK</th><td>{{ theater.pk }}</td></tr>
                 <tr><th>Theater ID</th><td>{{ theater.theater_id }}</td></tr>
                 <tr><th>City</th><td>{{ theater.city }}</td></tr>
                 <tr><th>Country</th><td>{{ theater.city.country }}</td></tr>
-                <form method="post">
-                {% csrf_token %}
                 <tr><th>Abbreviation</th><td>{{ theater_form.abbreviation }}</td></tr>
-                </form>
-                <tr><th>Priority</th>
-                    <form method="post">
-                    {% csrf_token %}
-                    <td class="dropdown">
-                        <span class="drop-button">
-                            {{ priority_label }}
-                        </span>
-                        <div class="dropdown-content">
-                            {% for choice in priority_choices %}
-                                <input type="submit" value="{{ choice }}" name="priority">
-                            {% endfor %}
-                        </div>
-                    </td>
-                    </form>
-                </tr>
             </tbody>
         </table>
         <br><br>
-        <form method="post">
-        {% csrf_token %}
         <table>
             <thead>
             <tr>
@@ -71,11 +55,10 @@
             {% endfor %}
             </tbody>
         </table>
-        <input type="submit" value="Submit screen abbreviations" style="opacity: 0;" />
+        <input type="submit" value="Submit screen abbreviations" class="hidden-submit"/>
         </form>
     {% else %}
         <h2 class="error">Not allowed</h2>
         <p>Only an admin fan can edit theater data.</p>
     {% endif %}
-    <a href="{% url 'theaters:theaters' %}">Back to theater index</a>
 {% endblock %}

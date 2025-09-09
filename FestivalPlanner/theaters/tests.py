@@ -2,8 +2,9 @@ from http import HTTPStatus
 
 from django.urls import reverse
 
+from authentication.tests import set_up_user_with_fan
 from festivals.tests import create_festival, mock_base_festival_mnemonic
-from films.tests import ViewsTestCase
+from films.tests import ViewsTestCase, get_decoded_content
 from theaters.models import City, Theater, Screen
 
 
@@ -51,19 +52,32 @@ class TheaterViewTests(ViewsTestCase):
 
     def test_list_view_displays_theaters(self):
         # Arrange.
+        _, _, credentials = (set_up_user_with_fan('george', 'twilight'))
         theater_1 = self.arrange_create_theater(1, 'Bellevue Berlin', 'bellevue', Theater.Priority.NO_GO)
         theater_2 = self.arrange_create_theater(2, 'Liebeskammer Berlin', 'kammer', Theater.Priority.HIGH)
+        prio = Theater.Priority
+        re_pre_value = r'<span class="[-a-z]+">\s+'
+        re_post_value = r'\s+</span>'
+        re_current_prio_high = re_pre_value + f'{prio.HIGH.label}' + re_post_value
+        re_current_prio_low = re_pre_value + f'{prio.LOW.label}' + re_post_value
 
         # Act.
-        response = self.client.get(self.theaters_url)
+        get_response = self.client.get(self.theaters_url)
+        post_response = self.client.post(get_response.url, credentials)
+        response = self.client.get(post_response.url)
 
         # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertContains(response, self.city.name)
         self.assertContains(response, theater_1.parse_name)
         self.assertContains(response, theater_2.abbreviation)
-        self.assertNotContains(response, Theater.Priority.LOW.label)
-        self.assertContains(response, Theater.Priority.NO_GO.label)
+        self.assertContains(response, f'<input type="submit" value="{prio.NO_GO.label}" disabled>')
+        self.assertNotContains(response, f'<input type="submit" value="{prio.LOW.label}" disabled>')
+        text = get_decoded_content(response)
+        self.assertRegex(text, re_current_prio_high)
+        self.assertNotRegex(text, re_current_prio_low)
 
     def test_hacker_can_not_display_theater_details(self):
         # Arrange.

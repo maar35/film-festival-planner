@@ -24,7 +24,6 @@ class AvailabilityViewTests(ScreeningViewsTests):
         super().setUp()
         self.arrange_regular_user_props()
         self.jimmie = FilmFan.film_fans.create(name='Jimmie', is_admin=False, seq_nr=3)
-        availability_views.DEFAULT_FAN_NAME = self.jimmie.name
 
     def test_str(self):
         """

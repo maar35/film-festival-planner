@@ -29,7 +29,6 @@ END_TIME_CHOICES = TIME_CHOICES[1:]
 ERRORS_COOKIE = Cookie('form_errors', initial_value=[])
 WARNING_COOKIE = Cookie('warnings', initial_value=[])
 ACTION_COOKIE = Cookie('form_action')
-DEFAULT_FAN_NAME = FilmFan.film_fans.get(seq_nr=1).name
 
 
 def get_festival_dt(date, time):
