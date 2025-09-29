@@ -12,19 +12,19 @@ from django.urls import reverse
 from django.views.generic import FormView, DetailView, ListView, TemplateView
 
 from authentication.models import FilmFan
-from festival_planner.cache import FilmRatingCache
+from festival_planner.cache import FilmRatingCache, FILM_SUBMIT_PREFIX
 from festival_planner.cookie import Filter, Cookie
 from festival_planner.debug_tools import pr_debug, timed_method
 from festival_planner.fragment_keeper import FilmFragmentKeeper
 from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, unset_log, wrap_up_form_errors, application_name, get_log, \
-    initialize_log, add_log, CSV_DIALECT
+    initialize_log, add_log, CSV_DIALECT, get_submit_name, get_data_from_submit
 from festivals.config import Config
 from festivals.models import current_festival
 from films.forms.film_forms import PickRating, UserForm
 from films.models import FilmFanFilmRating, Film, current_fan, get_judging_fans, fan_rating_str, \
-    FilmFanFilmVote, fan_rating
+    FilmFanFilmVote, fan_rating, UNRATED_STR, get_judgement_choices
 from screenings.models import Attendance
 from sections.models import Subsection, Section
 
@@ -124,7 +124,7 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
             return  # Search field committed while empty.
         if submitted_name is not None:
             pr_debug('start update', with_time=True)
-            film_pk, rating_value = submitted_name.strip(self.submit_name_prefix).split('_')
+            film_pk, rating_value = get_data_from_submit(self.submit_name_prefix, submitted_name)
             self.film = Film.films.get(id=film_pk)
             session = self.request.session
             fan = current_fan(session)
@@ -139,7 +139,7 @@ class FilmsView(SharedTemplateReferrerView):
     Film list with updatable ratings.
     """
     template_name = 'films/films.html'
-    submit_name_prefix = 'list_'
+    submit_name_prefix = FILM_SUBMIT_PREFIX
     post_attendance = False
     unexpected_errors = []
 
@@ -330,9 +330,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
 
     def _get_film_row(self, row_nr, film):
         prefix = FilmsView.submit_name_prefix
-        choices = FilmFanFilmRating.Rating.choices
-        fan_ratings = get_fan_ratings(film, self.fan_list, self.logged_in_fan, prefix, choices,
-                                      FilmsView.post_attendance)
+        fan_ratings = get_fan_ratings(film, self.fan_list, self.logged_in_fan, prefix, FilmsView.post_attendance)
         film_rating_row = {
             'film': film,
             'fragment_name': self.fragment_keeper.get_fragment_name(row_nr),
@@ -525,9 +523,8 @@ class VotesListView(LoginRequiredMixin, ListView):
 
     def get_vote_row(self, row_nr, film):
         prefix = VotesView.submit_name_prefix
-        choices = FilmFanFilmVote.choices
         post_attendance = VotesView.post_attendance
-        fan_votes = get_fan_ratings(film, self.fan_list, self.logged_in_fan, prefix, choices, post_attendance)
+        fan_votes = get_fan_ratings(film, self.fan_list, self.logged_in_fan, prefix, post_attendance)
         vote_row = {
             'film': film,
             'duration_str': film.duration_str(),
@@ -554,7 +551,6 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
     template_name = 'films/details.html'
     http_method_names = ['get', 'post']
     submit_name_prefix = 'results_'
-    submit_names = []
     unexpected_error = ''
 
     def dispatch(self, request, *args, **kwargs):
@@ -565,7 +561,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
             submitted_name = list(request.POST.keys())[-1]
             session = self.request.session
             if submitted_name is not None:
-                film_pk, rating_value = submitted_name.strip(self.submit_name_prefix).split('_')
+                film_pk, rating_value = get_data_from_submit(self.submit_name_prefix, submitted_name)
                 film = Film.films.get(id=film_pk)
                 PickRating.update_rating(session, film, current_fan(session), rating_value)
                 return HttpResponseRedirect(reverse('films:details', args=(film_pk,)))
@@ -587,16 +583,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         films_for_screenings = combi_films or [film]
         fans = get_judging_fans()
         logged_in_fan = current_fan(session)
-        fan_rows = []
-        for fan in fans:
-            choices = get_fan_choices(self.submit_name_prefix, film, fan, logged_in_fan, self.submit_names)
-            rating = FilmFanFilmRating.film_ratings.filter(film=film, film_fan=fan).first()
-            fan_rows.append({
-                'fan': fan,
-                'rating_str': fan_rating_str(fan, film),
-                'choices': choices,
-                'rating_label': FilmFanFilmRating.Rating(rating.rating).label if rating else '',
-            })
+        fan_rows = get_fan_props_list(film, fans, logged_in_fan, self.submit_name_prefix)
         in_cache = self.film_is_in_cache(session)
         new_context = {
             'title': 'Film Rating Results',
@@ -850,7 +837,6 @@ def film_fan(request):
     """
     Film fan switching view.
     """
-
     # Preset some parameters.
     title = 'Film Fans'
     form = UserForm(initial={'current_fan': current_fan(request.session)}, auto_id=False)
@@ -883,39 +869,47 @@ def film_fan(request):
     return render(request, 'films/film_fan.html', context)
 
 
-def get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix, choices, post_attendance):
-    film_ratings = []
+def get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix, post_attendance=False):
+    film_rating_props = []
+    choices = get_judgement_choices(post_attendance)
     for fan in fan_list:
         # Set a rating string to display.
         rating_str = fan_rating_str(fan, film, post_attendance)
 
         # Get choices for this fan.
-        choice_dict = [{
-            'value': value,
-            'rating_name': name,
-            'submit_name': f'{submit_name_prefix}{film.id}_{value}'
+        choice_props = [{
+            'display_value': f'{value:2d}  {name}',
+            'submit_name': get_submit_name(submit_name_prefix, film.id, value),
+            'disabled': value == (0 if rating_str == UNRATED_STR else int(rating_str)),
         } for value, name in choices] if fan == logged_in_fan else []
 
         # Append a fan rating dictionary to the list.
-        film_ratings.append({
+        film_rating_props.append({
             'fan': fan,
-            'rating': rating_str,
-            'choices': choice_dict
+            'rating_str': rating_str,
+            'choices': choice_props
         })
-    return film_ratings
+    return film_rating_props
 
 
-def get_fan_choices(submit_name_prefix, film, fan, logged_in_fan, submit_names):
-    # Set the rating choices if this fan is the current fan.
-    choices = []
-    if fan == logged_in_fan:
-        for value, name in FilmFanFilmRating.Rating.choices:
-            choice = {
-                'value': value,
-                'rating_name': name,
-                'submit_name': f'{submit_name_prefix}{film.id}_{value}'
-            }
-            choices.append(choice)
-            submit_names.append(choice['submit_name'])
+def get_fan_props_list(film, fans, logged_in_fan, submit_name_prefix):
+    fan_props_list = get_fan_ratings(film, fans, logged_in_fan, submit_name_prefix)
+    for fan_props in fan_props_list:
+        rating_str = fan_props['rating_str']
+        rating = int(rating_str) if rating_str != UNRATED_STR else 0
+        fan_props['rating_label'] = FilmFanFilmRating.Rating(rating).label
+    return fan_props_list
 
-    return choices
+
+def get_fan_choices(submit_name_prefix, film, fan, logged_in_fan, post_attendance=False):
+    """Get the rating choices if this fan is the current fan."""
+
+    rating_str = fan_rating_str(fan, film, post_attendance)
+    choices = get_judgement_choices(post_attendance)
+    choice_props = [{
+        'display_value': f'{value:2d}  {name}',
+        'submit_name': get_submit_name(submit_name_prefix, film.id, value),
+        'disabled': value == (0 if rating_str == UNRATED_STR else int(rating_str)),
+    } for value, name in choices] if fan == logged_in_fan else []
+
+    return choice_props

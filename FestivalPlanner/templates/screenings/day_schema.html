@@ -67,8 +67,7 @@
             <span class="active-text" style="color: var(--modestStandoutColor);">
                 {{ props.selected_screening }}
             </span>
-            <span class="standout-dropdown-content"
-                  style="min-width:50rem; margin-left: 12rem; background: black; cursor: default;">
+            <span class="standout-dropdown-content">
                 <table>
                     <tbody>
                     <tr>
@@ -112,7 +111,7 @@
                     </tbody>
                 </table>
                 {% with film_screening_props=props.film_screening_props %}
-                    {% include "../includes/film_screenings.html" with film_title=screening.film.title film_screening_props=film_screening_props %}
+                    {% include "../includes/film_screenings.html" with film_title=screening.film.title %}
                 {% endwith %}
             </span>
         </span>

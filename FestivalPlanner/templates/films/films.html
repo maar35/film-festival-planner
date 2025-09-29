@@ -124,11 +124,11 @@
                     <td>{{ row.duration_str }}</td>
                 {% endif %}
                 {% if row.subsection %}
-                    <td class="modest-dropdown">
+                    <td class="simple-dropdown">
                         <span class="active-text" style="color:{{ row.subsection.section.color }};">
                             {{ row.subsection.name }}
                         </span>
-                        <div class="modest-dropdown-content" style="min-width: 350px">
+                        <div class="simple-dropdown-content" style="min-width: 350px">
                             <table style="width: 100%;"><tr><td>
                                 <a href="{% url 'films:films' %}{{ row.subsection_filter.href_filter }}">
                                     {{ row.subsection_filter.action }}
@@ -149,19 +149,10 @@
                 {% endif %}
                 {% for fan_rating in row.fan_ratings %}
                     {% if fan_rating.fan == current_fan %}
-                        <td class="cell-dropdown">
-                            <span class="drop-button">
-                                {{ fan_rating.rating }}
-                            </span>
-                            <div class="cell-dropdown-content">
-                                {% for choice in fan_rating.choices %}
-                                    <input type="submit" value="{{ choice.value | stringformat:'2d' }}  {{ choice.rating_name }}" name="{{ choice.submit_name }}">
-                                {% endfor %}
-                            </div>
-                        </td>
+                        {% include "../includes/cell_dropdown.html" with label_current=fan_rating.rating_str choices=fan_rating.choices %}
                     {% else %}
                         <td style="text-align: center">
-                            {{ fan_rating.rating }}
+                            {{ fan_rating.rating_str }}
                         </td>
                     {% endif %}
                 {% endfor %}

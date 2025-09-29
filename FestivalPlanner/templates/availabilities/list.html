@@ -56,9 +56,7 @@
                     <input type="submit" name="{{ action }}" value="{{ value }}"/>
                 </span>
             {% elif can_submit and confirm %}
-                <span class="disabled-input">
-                    <input type="submit" value="{{ value }}" disabled>
-                </span>
+                <input type="submit" value="{{ value }}" disabled>
             {% elif can_submit %}
                 <input type="submit" name="{{ action }}" value="{{ value }}"/>
             {% else %}

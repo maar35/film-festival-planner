@@ -1025,7 +1025,7 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
             'value': f'{fix_wording}',
             'submit_name': f'{warning_type.name}:{fan.name}:{screening.id}:',
         }] + other_screening_choices + [{
-            'value': f'Display {link_wording}',
+            'value': link_wording,
             'link': link_url,
         }]
 
@@ -1070,12 +1070,13 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
     @staticmethod
     def _get_unavailable_fan_choices(warning_type, fan, screening):
         fix_wording = ScreeningWarning.fix_by_warning[warning_type]
+        link_wording = ScreeningWarning.link_wording_by_ticket_warning[warning_type]
         querystring = Cookie.get_querystring(**{'warning_name': warning_type.name, 'fan_name': fan.name})
         choices = [{
             'value': f'{fix_wording}',
             'submit_name': f'{warning_type.name}:{fan.name}:{screening.id}:',
         }, {
-            'value': 'To availability page',
+            'value': link_wording,
             'link': '/availabilities/list' + querystring,
         }]
         return choices

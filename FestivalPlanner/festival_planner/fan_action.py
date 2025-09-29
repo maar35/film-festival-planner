@@ -128,6 +128,6 @@ class RatingAction(BaseAction):
             'rated_film_id': new_rating.film.id,
         }
 
-        # Merge with the standard actie items.
+        # Merge with the standard action items.
         super().init_action(session, **rating_action)
 

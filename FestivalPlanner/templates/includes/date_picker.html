@@ -2,24 +2,7 @@
 {% csrf_token %}
     <h3>
         <span class="label-8rem">{{ label }}</span>
-        <span class="dropdown inline-dropdown-addition">
-            <span class="drop-button">
-                {{ day }}
-            </span>
-            <div class="dropdown-content">
-                {% for choice in choices %}
-                    {% if choice == day %}
-                        <span class="disabled-right-aligned-input">
-                            <input type="submit" value="{{ choice }}" name="{{ name }}" disabled>
-                        </span>
-                    {% else %}
-                        <span class="right-aligned-input">
-                            <input type="submit" value="{{ choice }}" name="{{ name }}">
-                        </span>
-                    {% endif %}
-                {% endfor %}
-            </div>
-        </span>
+        {% include "../includes/choices_dropdown.html" with current_choice=day submit_name=name right_aligned=True %}
         <span style="margin: 1rem; font-size: 1rem;">
             <span style="margin: 0.5rem;">{% if first_day %} <a href="{% url 'screenings:day_schema' %}?day={{ first_day }}">First</a> {% endif %}</span>
             <span style="margin: 0.5rem;">{% if prev_day %} <a href="{% url 'screenings:day_schema' %}?day={{ prev_day }}">Previous</a> {% endif %}</span>

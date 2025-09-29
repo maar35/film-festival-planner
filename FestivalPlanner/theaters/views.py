@@ -70,7 +70,7 @@ class TheatersListView(LoginRequiredMixin, ListView):
         choices = Theater.Priority.choices
 
         choice_props_list = [{
-            'prio_name': name,
+            'display_value': name,
             'submit_name': f'{submit_name_prefix}{theater.id}_{value}',
             'disabled': value == theater.priority,
         } for value, name in choices]

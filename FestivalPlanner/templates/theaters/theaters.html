@@ -46,22 +46,7 @@
                         </a>
                     </td>
                     <td style="color:{{ row.priority_color }}">{{ row.theater.abbreviation }}</td>
-                    <td class="cell-dropdown">
-                        <span class="drop-button">
-                            {{ row.priority_label }}
-                        </span>
-                        <div class="cell-dropdown-content">
-                            {% for choice in row.priority_choices %}
-                            {% if choice.disabled %}
-                                <span class="disabled-input">
-                                    <input type="submit" value="{{ choice.prio_name }}" disabled>
-                                </span>
-                            {% else %}
-                                <input type="submit" value="{{ choice.prio_name }}" name="{{ choice.submit_name }}">
-                            {% endif %}
-                            {% endfor %}
-                        </div>
-                    </td>
+                    {% include "../includes/cell_dropdown.html" with label_current=row.priority_label choices=row.priority_choices %}
                     <td style="color:{{ row.priority_color }}">{{ row.screen_count }}</td>
                 </tr>
             {% endfor %}

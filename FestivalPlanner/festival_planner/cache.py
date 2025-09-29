@@ -2,11 +2,18 @@ import copy
 import datetime
 
 from festival_planner.debug_tools import pr_debug, timed_method
+from festival_planner.tools import get_submit_name
 from festivals.models import current_festival
 from films.models import rating_str
 
 EXPIRY_HOURS = 24 * 7
 MAX_CACHES = 10
+
+FILM_SUBMIT_PREFIX = 'list_'
+
+
+def get_film_list_submit_name(film, rating_value):
+    return get_submit_name(FILM_SUBMIT_PREFIX, film.id, rating_value)
 
 
 class FilmRatingCache:
@@ -95,7 +102,12 @@ class FilmRatingCache:
                 pr_debug(f'{IndexError.__name__} getting rating for {fan=}')
                 self.errors.append(f'{e} getting rating for {fan=}')
             else:
-                fan_data['rating'] = rating_str(rating_value)
+                fan_data['rating_str'] = rating_str(rating_value)
+                old_choice = [c for c in fan_data['choices'] if c['disabled']][0]
+                old_choice['disabled'] = False
+                submit_name = get_film_list_submit_name(film, rating_value)
+                new_choice = [c for c in fan_data['choices'] if c['submit_name'] == submit_name][0]
+                new_choice['disabled'] = True
 
     @timed_method
     def check_invalidate_caches(self):

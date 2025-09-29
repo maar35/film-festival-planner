@@ -14,12 +14,12 @@
     --warningBlockColor: var(--warningColor);
     --warningBlockShadowColor: steelBlue;
     --inputDisabledColor: lightGrey;
-    --inputDisabledBackground : red;
+    --inputDisabledBackground: red;
     --inputDisabledText: grey;
     --errorBackground: red;
     --warningBackground: var(--warningColor);
     --infoHoverBackground: var(--infoColor);
-    --warningHoverBackground: var(--warningColor);
+    --warningHoverBackground: rgb(255 79 0);
     --stickyBackground: rgb(30 30 30 / .5);
     --tableBackground: rgb(0 0 0 / .6);
     --modestBackground: rgb(0 0 38 / .73);
@@ -121,16 +121,13 @@ a bit larger. */
 input[type=submit] {
     width: 50%;
     font-size: large;
-    background-color: var(--inputBackground);
+    background: var(--inputBackground);
     color: var(--modestStandoutColor);
-    padding: 14px 20px;
     margin: 8px 0;
+    padding: 14px 20px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-}
-input[type=submit]:hover {
-    background-color: var(--hoverBackground);
 }
 
 /* Customize the text and password input widgets as to make the text
@@ -144,14 +141,6 @@ input[type=text] {
     border: none;
     border-radius: 4px;
 }
-input[type=password]:hover,
-input[type=text]:hover {
-    background-color: var(--hoverBackground);
-}
-input[type=password]:focus,
-input[type=text]:focus {
-    background-color: var(--focusBackgrond);
-}
 
 /* Specifics for in-table input widgets */
 input[type=submit].in-table {
@@ -160,9 +149,24 @@ input[type=submit].in-table {
     font-size: small;
     border-radius: 4px;
 }
+
+input[type=submit]:hover,
+input[type=password]:hover,
+input[type=text]:hover,
 input[type=submit].in-table:hover {
-    background-color: var(--hoverBackground);
+    background: var(--hoverBackground);
 }
+
+input[type=password]:focus,
+input[type=text]:focus {
+    background-color: var(--focusBackgrond);
+}
+
+input:disabled {
+    cursor: default;
+    color: var(--inputDisabledColor);
+}
+
 
 /* Include padding and border in the width and height of each element */
 * {
@@ -347,8 +351,12 @@ span.up {
     }
 }
 
+
+/* --- Definitions for dropdowns that present choices --- */
+
 /* The container <div> - needed to position the dropdown content */
-.dropdown {
+.choices-dropdown,
+.cell-dropdown {
     position: relative;
     display: block;
     background: var(--inputBackground);
@@ -357,11 +365,16 @@ span.up {
     width: auto;
     height: auto;
 }
-.dropdown:hover {
-    background-color: var(--hoverBackground);
+.cell-dropdown {
+    display: table-cell;
 }
 
-/* Style The Dropdown Button */
+.choices-dropdown:hover,
+.cell-dropdown:hover {
+    background: var(--hoverBackground);
+}
+
+/* Style the dropdown button */
 .drop-button {
     position: relative;
     color: var(--modestStandoutColor);
@@ -373,206 +386,170 @@ span.up {
     cursor: pointer;
 }
 
-/* Dropdown Content (Hidden by Default) */
-.dropdown-content {
+/* Dropdown content (hidden by default) */
+.choices-dropdown-content,
+.cell-dropdown-content {
     display: none;
     position: absolute;
     cursor: pointer;
-    background-color: var(--inputBackground);
+    background: var(--inputBackground);
     box-shadow: var(--modestBoxShadow);
     width: auto;
-    padding: 6px 8px;
+    padding: .3rem .4rem;
     z-index: 1;
 }
-
-/* Links inside the dropdown */
-.dropdown-content input {
-    color: var(--modestStandoutColor);
-    background-color: var(--inputBackground);
-    width: 100%;
-    margin: 0px;
-    padding: 4px 16px;
-    text-decoration: none;
-    text-align: left;
-    display: block;
+.cell-dropdown-content {
+    top: 30%;
+    left: 70%;
 }
-.dropdown-content input:hover {
-    background-color: var(--hoverBackground)
+
+/* Inputs inside the dropdown */
+.choices-dropdown-content,
+.cell-dropdown-content {
+    input {
+        display: block;
+        width: 100%;
+        padding: .3rem .5rem;
+        margin: 0;
+        text-decoration: none;
+        text-align: left;
+    }
+}
+.choices-dropdown-content,
+.cell-dropdown-content {
+    input:hover {
+        background: var(--hoverBackground)
+    }
 }
 
 /* Show the dropdown menu on hover */
-.dropdown:hover .dropdown-content {
+.choices-dropdown:hover .choices-dropdown-content {
+    display: inline-grid;
+}
+.cell-dropdown:hover .cell-dropdown-content {
     display: inline-grid;
 }
 
 /* Change the background color of the dropdown button when the dropdown content is shown */
-.dropdown:hover .drop-button {
-    background-color: var(--hoverBackground);
+.choices-dropdown:hover,
+.cell-dropdown:hover {
+    .drop-button {
+        background: var(--hoverBackground);
+    }
 }
 
-/* More modest drop down */
-.modest-dropdown {
-    position: relative;
-    display: table-cell;
-    background: var(--modestBackground);
-    text-align: left;
-    margin: auto;
-    width: auto;
-    height: auto;
-}
-.modest-dropdown:hover {
-    background-color: var(--hoverBackground);
-}
-.standout-box-addition {
-    box-shadow: var(--standoutBoxShadow);
-}
-.modest-dropdown-content {
-    display: none;
-    position: absolute;
-    cursor: default;
-    background-color: black;
-    box-shadow: var(--modestBoxShadow);
-    min-width: 200px;
-    padding: 3px 3px;
-    z-index: 2;
-}
-.modest-dropdown:hover .modest-dropdown-content {
-    display: block;
-}
-.active-text {
-    color: var(--linkColor);
-    text-decoration-line: underline;
-    text-decoration-style: dashed;
-}
 
-/* Drop down to stand out from its environment */
-.standout-dropdown {
-    position: relative;
-    display: table-cell;
-    background: var(--modestBackground);
-    text-align: left;
-    margin: auto;
-    width: auto;
-    height: auto;
-}
-.standout-dropdown:hover {
-    background-color: var(--hoverBackground);
-}
-.standout-dropdown-content {
-    display: none;
-    position: absolute;
-    cursor: default;
-    background-color: black;
-    box-shadow: var(--standoutBoxShadow);
-    min-width: 200px;
-    padding: 3px 3px;
-    z-index: 2;
-}
-.standout-dropdown:hover .standout-dropdown-content {
-    display: block;
-}
-
-/* Dropdown definitions for cells within a table */
 .inline-dropdown-addition {
     display: inline !important;
     padding: .5rem;
     font-size: 1rem
 }
-.cell-dropdown {
+.standout-box-addition {
+    box-shadow: var(--standoutBoxShadow);
+}
+
+
+/* Definitions for dropdowns that display a single pane */
+.simple-dropdown,
+.standout-dropdown,
+.in-screening-dropdown {
     position: relative;
     display: table-cell;
-    background-color: var(--inputBackground);
-    text-align: center;
+    background: var(--modestBackground);
+    text-align: left;
     margin: auto;
     width: auto;
     height: auto;
 }
-.cell-dropdown:hover {
-    background-color: var(--hoverBackground);
-}
-.cell-dropdown-content {
-    display: none;
-    position: absolute;
-    cursor: pointer;
-    background-color: var(--inputBackground);
-    box-shadow: var(--modestBoxShadow);
-    min-width: 200px;
-    padding: 6px 8px;
-    z-index: 1;
-}
-.cell-dropdown-content input {
-    color: var(--modestStandoutColor);
-    background-color: var(--inputBackground);
-    width: 100%;
-    margin: 0px;
-    padding: 4px 16px;
-    text-decoration: none;
-    text-align: left;
-    display: block;
-}
-.cell-dropdown-content input:hover {
-    background-color: var(--hoverBackground)
-}
-.cell-dropdown:hover .cell-dropdown-content {
-    display: block;
-}
-.cell-dropdown:hover .drop-button {
-    background-color: var(--hoverBackground);
-}
-
-
-/* Dropdown definitions for within a screening representation */
-
-/* - Class definitions for the in-screening dropdown */
 .in-screening-dropdown {
-    display: table-cell;
-    position: relative;
     background: var(--warningColorYellow);
     font-size: .6rem;
     text-align: center;
-    width: auto;
-    height: auto;
     margin-top: .1rem;
     margin-right: .2rem;
     padding: 0 .1rem 0 .3rem;
-    border-radius: .8rem;
+    border-radius: .8rem;}
+
+.simple-dropdown:hover,
+.standout-dropdown:hover {
+    background: var(--hoverBackground);
 }
 .in-screening-dropdown:hover {
     background: var(--warningBackground);
 }
-.in-screening-dropdown-content {
-    display: none;
-    position: absolute;
-    top: .5rem;
-    cursor: default;
-    background-color: blue;
-    z-index: 2;
-    margin: 0;
-    padding: .1rem .5rem;
-    border-radius: 1rem;
-    animation: ticker 4s linear 800ms;
-}
-.in-screening-dropdown:hover .in-screening-dropdown-content {
-    display: block;
+
+/* Styles for the dropdown button of single pane dropdowns */
+.active-text {
+    color: var(--linkColor);
+    text-decoration-line: underline;
+    text-decoration-style: dashed;
 }
 .in-screening-active-text {
     color: black;
     text-decoration-line: underline;
     text-decoration-style: dashed;
 }
-.link-in-dropdown {
-    color: var(--modestStandoutColor);
-    font-weight: lighter;
-    text-align: left;
-    margin: 0px;
-    padding: 4px 16px;
+
+.simple-dropdown-content,
+.standout-dropdown-content,
+.in-screening-dropdown-content {
+    display: none;
+    position: absolute;
+    top: 70%;
+    left: 30%;
+    cursor: default;
+    background: black;
+    box-shadow: var(--modestBoxShadow);
+    padding: 0.15rem;
+    z-index: 2;
+}
+.standout-dropdown-content {
+    top: 90%;
+    left: 0.5rem;
+    box-shadow: var(--standoutBoxShadow);
+    min-width: 60rem;
+    margin-left: 0.5rem;
+}
+.in-screening-dropdown-content {
+    top: .5rem;
+    background: blue;
+    margin: 0;
+    padding: .1rem .5rem;
+    border-radius: 1rem;
+    z-index: 2;
+    animation: ticker 4s linear 800ms;
+}
+
+.simple-dropdown:hover .simple-dropdown-content {
     display: block;
+}
+.standout-dropdown:hover .standout-dropdown-content {
+    display: block;
+}
+.in-screening-dropdown:hover .in-screening-dropdown-content {
+    display: block;
+}
+
+
+/* - Class definitions for the in-screening dropdown */
+
+.link-in-dropdown {
+    display: block;
+    width: 100%;
+    font-weight: lighter;
+    color: var(--modestStandoutColor);
+    margin: 0;
+    padding: .3rem .5rem;
+    border: none;
+    border-radius: 4px;
+    text-align: left;
 }
 .link-in-dropdown:hover {
     background-color: var(--hoverBackground)
 }
 
 /* Classes for floating elements */
+
 .floating-warning-box {
     position: fixed;
     right: 1rem;
@@ -586,16 +563,6 @@ span.up {
 }
 
 /* Descendant combinators for different input states */
-.disabled-input {
-}
-.disabled-input input{
-    cursor: default;
-    color: var(--inputDisabledColor);
-}
-.disabled-input input:hover {
-    background: var(--inputBackground);
-}
-
 .warning-input {
 }
 .warning-input input {
@@ -607,8 +574,6 @@ span.up {
 .disabled-warning-input {
 }
 .disabled-warning-input input{
-    cursor: default;
-    color: var(--inputDisabledColor);
     background: var(--warningBackground);
 }
 .disabled-warning-input input:hover {
@@ -618,8 +583,6 @@ span.up {
 .disabled-error-input {
 }
 .disabled-error-input input{
-    cursor: default;
-    color: var(--inputDisabledColor);
     background: var(--inputDisabledBackground);
 }
 .disabled-error-input input:hover {
@@ -634,17 +597,13 @@ span.up {
 .right-aligned-input input:hover {
     background: var(--hoverBackground);
 }
-.disabled-right-aligned-input {
-}
-.disabled-right-aligned-input input {
-    cursor: default;
-    color: var(--inputDisabledColor);
-    text-align: right;
-}
-.disabled-right-aligned-input input:hover {
+
+/* Placing this here seems to overwrite the hover rules of dropdown content */
+input[type=submit]:disabled {
     background: var(--inputBackground);
 }
 
+/* Make a submit button transparent ans as small as possible */
 .hidden-submit {
     opacity: 0;
     font-size: xx-small !important;
@@ -652,7 +611,7 @@ span.up {
     margin: 0 !important;
 }
 
-/* Color of disabled element */
+/* Style of disabled element */
 .disabled-color {
     cursor: default;
     font-weight: normal;

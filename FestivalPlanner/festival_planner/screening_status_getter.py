@@ -164,6 +164,12 @@ def get_overlapping_attended_screenings(screening, fan, first_only=True):
     return overlapping_screenings
 
 
+def get_url_text(text):
+    """Replace spaces by no-break spaces."""
+    url_text = text.replace(' ', ' ')
+    return url_text
+
+
 class ScreeningStatusGetter:
     screening_cookie = Cookie('screening')
 
@@ -457,8 +463,9 @@ class ScreeningWarning:
     }
 
     link_wording_by_ticket_warning = {
-        WarningType.ATTENDS_SAME_FILM: 'filmscreenings',
-        WarningType.ATTENDS_OVERLAPPING: 'overlapping screenings',
+        WarningType.ATTENDS_SAME_FILM: get_url_text('Display filmscreenings'),
+        WarningType.ATTENDS_OVERLAPPING: get_url_text('Display overlapping screenings'),
+        WarningType.ATTENDS_WHILE_UNAVAILABLE: get_url_text('To availability page'),
     }
 
     fix_verb_by_warning = {

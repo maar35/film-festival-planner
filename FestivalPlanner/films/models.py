@@ -231,6 +231,7 @@ def fan_rating(fan, film, manager=None):
 
 FIELD_BY_POST_ATTENDANCE = {False: 'rating', True: 'vote'}
 MANAGER_BY_POST_ATTENDANCE = {False: FilmFanFilmRating.film_ratings, True: FilmFanFilmVote.film_votes}
+CHOICES_BY_POST_ATTENDANCE = {False: FilmFanFilmRating.Rating.choices, True: FilmFanFilmVote.choices}
 
 
 def fan_rating_str(fan, film, post_attendance=False):
@@ -238,6 +239,10 @@ def fan_rating_str(fan, film, post_attendance=False):
     field = FIELD_BY_POST_ATTENDANCE[post_attendance]
     rating = fan_rating(fan, film, manager)
     return f'{getattr(rating, field)}' if rating is not None else UNRATED_STR
+
+
+def get_judgement_choices(post_attendance=False):
+    return CHOICES_BY_POST_ATTENDANCE[post_attendance]
 
 
 def rating_str(rating):
