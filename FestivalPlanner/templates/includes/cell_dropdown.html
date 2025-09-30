@@ -1,0 +1,14 @@
+<td class="cell-dropdown">
+    <span class="drop-button">
+        {{ label_current }}
+    </span>
+    <div class="cell-dropdown-content">
+        {% for choice in choices %}
+            {% if choice.disabled %}
+                <input type="submit" value="{{ choice.display_value }}" disabled>
+            {% else %}
+                <input type="submit" value="{{ choice.display_value }}" name="{{ choice.submit_name }}">
+            {% endif %}
+        {% endfor %}
+    </div>
+</td>

@@ -58,18 +58,9 @@
             <td>{{ row.reviewer }}</td>
             {% for fan_vote in row.fan_votes %}
                 {% if fan_vote.fan == current_fan %}
-                    <td class="cell-dropdown">
-                        <span class="drop-button">
-                            {{ fan_vote.rating }}
-                        </span>
-                        <div class="cell-dropdown-content">
-                            {% for choice in fan_vote.choices %}
-                                <input type="submit" value="{{ choice.value | stringformat:'2d' }}  {{ choice.rating_name }}" name="{{ choice.submit_name }}">
-                            {% endfor %}
-                        </div>
-                    </td>
+                    {% include "../includes/cell_dropdown.html" with label_current=fan_vote.rating_str choices=fan_vote.choices %}
                 {% else %}
-                    <td style="text-align: center">{{ fan_vote.rating }}</td>
+                    <td style="text-align: center">{{ fan_vote.rating_str }}</td>
                 {% endif %}
             {% endfor %}
         </tr>

@@ -1,0 +1,20 @@
+<span class="choices-dropdown inline-dropdown-addition">
+    <span class="drop-button">
+        {{ current_choice }}
+    </span>
+    <div class="choices-dropdown-content">
+        {% if right_aligned %}
+        <span class="right-aligned-input">
+        {% endif %}
+        {% for choice in choices %}
+            {% if choice == current_choice %}
+                <input type="submit" value="{{ choice }}" disabled>
+            {% else %}
+                <input type="submit" value="{{ choice }}" name="{{ submit_name }}">
+            {% endif %}
+        {% endfor %}
+        {% if right_aligned %}
+        </span>
+        {% endif %}
+    </div>
+</span>

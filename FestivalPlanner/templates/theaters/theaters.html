@@ -20,6 +20,8 @@
     {% endblock log %}
 
     {% if theater_rows %}
+        <form method="post">
+        {% csrf_token %}
         <table>
             <thead>
                 <tr>
@@ -44,12 +46,13 @@
                         </a>
                     </td>
                     <td style="color:{{ row.priority_color }}">{{ row.theater.abbreviation }}</td>
-                    <td style="color:{{ row.priority_color }}">{{ row.priority_label }}</td>
+                    {% include "../includes/cell_dropdown.html" with label_current=row.priority_label choices=row.priority_choices %}
                     <td style="color:{{ row.priority_color }}">{{ row.screen_count }}</td>
                 </tr>
             {% endfor %}
             </tbody>
         </table>
+        </form>
     {% else %}
         <p>No theaters are loaded</p>
     {% endif %}<br>

@@ -96,6 +96,14 @@ def add_base_context(request, param_dict):
     return base_param_dict | param_dict
 
 
+def get_submit_name(prefix, key, value):
+    return f'{prefix}{key}_{value}'
+
+
+def get_data_from_submit(prefix, submit_name):
+    return submit_name.strip(prefix).split('_')
+
+
 def get_csv_dialect():
     dialect = csv.unix_dialect
     dialect.delimiter = ';'

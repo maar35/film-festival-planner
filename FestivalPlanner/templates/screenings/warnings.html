@@ -109,9 +109,7 @@
                     {% elif choice.link %}
                         <a class="link-in-dropdown" href="{{ choice.link }}">{{ choice.value }}</a>
                     {% else %}
-                        <span class="disabled-input">
-                            <input type="submit" value="{{ choice.value }}" disabled>
-                        </span>
+                        <input type="submit" value="{{ choice.value }}" disabled>
                     {% endif %}
                     {% endfor %}
                 </div>
