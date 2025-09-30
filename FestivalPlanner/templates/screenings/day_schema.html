@@ -64,7 +64,7 @@
             Selected:
         </span>
         <span class="standout-dropdown inline-dropdown-addition">
-            <span class="active-text" style="color: var(--modestStandoutColor);">
+            <span class="header-active-text">
                 {{ props.selected_screening }}
             </span>
             <span class="standout-dropdown-content">
@@ -175,7 +175,7 @@
                         <span class="in-screening-dropdown inline-dropdown-addition">
                             <span class="in-screening-active-text">⚠︎</span>
                             <span class="in-screening-dropdown-content"
-                                  style="font-size: 0.6rem; animation-name: {% if prop.warnings|length == 1 %} none {% else %} ticker {% endif %};">
+                                  style="animation-name: {% if prop.warnings|length == 1 %} none {% else %} ticker {% endif %};">
                                 {{ prop.warnings|join:", " }}
                             </span>
                         </span>
@@ -187,11 +187,9 @@
                         <span style="color: {{ prop.rating_color }}">{{ prop.auto_planned }}{{ prop.film_rating }}</span>
                         <span class="day-schema-screening-info"
                               style="background: {{ info.background }}; color: {{ info.color }};">
-                            <span class="day-schema-screening-info">
-                                <a style="color: {{ info.color }}" href="{% url 'screenings:day_schema' %}{{ prop.schema_querystring }}{{ prop.schema_fragment }}">
-                                    {{ prop.info_spot }}
-                                </a>
-                            </span>
+                            <a style="color: {{ info.color }}" href="{% url 'screenings:day_schema' %}{{ prop.schema_querystring }}{{ prop.schema_fragment }}">
+                                {{ prop.info_spot }}
+                            </a>
                         </span>
                             {% if prop.warnings_props %}
                             <span class="day-schema-screening-warning">

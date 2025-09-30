@@ -236,7 +236,7 @@ input:disabled {
     border-radius: 1rem;
 }
 .day-schema-screening-info:hover {
-    background-color: var(--infoHoverBackground);
+    background-color: var(--infoHoverBackground) !important;
 }
 .day-schema-screening-warning:hover {
     background-color: var(--warningHoverBackground);
@@ -479,15 +479,18 @@ span.up {
 }
 
 /* Styles for the dropdown button of single pane dropdowns */
-.active-text {
-    color: var(--linkColor);
+.active-text,
+.header-active-text,
+.in-screening-active-text {
+    color: var(--regularColor);
     text-decoration-line: underline;
     text-decoration-style: dashed;
 }
+.header-active-text {
+    color: var(--modestStandoutColor);
+}
 .in-screening-active-text {
     color: black;
-    text-decoration-line: underline;
-    text-decoration-style: dashed;
 }
 
 .simple-dropdown-content,
@@ -516,6 +519,7 @@ span.up {
     margin: 0;
     padding: .1rem .5rem;
     border-radius: 1rem;
+    font-size: 0.6rem;
     z-index: 2;
     animation: ticker 4s linear 800ms;
 }

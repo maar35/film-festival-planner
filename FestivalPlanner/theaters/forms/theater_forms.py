@@ -35,7 +35,7 @@ class TheaterScreenDetailsForm(Form):
 
 class TheaterScreenFormSet(BaseFormSet):
     def clean(self):
-        """Checks that no two screens of the same theater have the same abbreviation"""
+        """Check that no two screens of the same theater have the same abbreviation."""
         abbreviations = set()
         for form in self.forms:
             abbreviation = form.cleaned_data.get('screen_abbreviation')
