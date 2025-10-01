@@ -42,6 +42,9 @@
 </ul>
 {% endif %}
 
+<h3>Alternative titles</h3>
+<a href="{% url 'films:titles' film.id %}">Manage alternative titles for this film</a>
+
 <h3>Film details</h3>
 <ul>
     <li>Duration: {{ film.duration }}</li>

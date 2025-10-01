@@ -33,6 +33,7 @@ class Film(models.Model):
     sort_title = models.CharField(max_length=128)
     title = models.CharField(max_length=128)
     title_language = models.CharField(max_length=2)
+    main_title = models.ForeignKey('self', null=True, on_delete=models.SET_NULL)
     subsection = models.ForeignKey(Subsection, null=True, on_delete=models.SET_NULL)
     duration = models.DurationField(null=False)
     medium_category = models.CharField(max_length=32)

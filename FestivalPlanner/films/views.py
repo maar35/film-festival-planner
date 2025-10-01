@@ -22,7 +22,7 @@ from festival_planner.tools import add_base_context, unset_log, wrap_up_form_err
     initialize_log, add_log, CSV_DIALECT, get_submit_name, get_data_from_submit
 from festivals.config import Config
 from festivals.models import current_festival
-from films.forms.film_forms import PickRating, UserForm
+from films.forms.film_forms import PickRating, UserForm, TitlesForm
 from films.models import FilmFanFilmRating, Film, current_fan, get_judging_fans, fan_rating_str, \
     FilmFanFilmVote, fan_rating, UNRATED_STR, get_judgement_choices
 from screenings.models import Attendance
@@ -30,6 +30,35 @@ from sections.models import Subsection, Section
 
 CONSTANTS_CONFIG = Config().config['Constants']
 MAX_SHORT_MINUTES = CONSTANTS_CONFIG['MaxShortMinutes']
+
+
+class FilmsFinder:
+
+    def __init__(self):
+        self.found_films = None
+
+    def search_title(self, session, text):
+        initialize_log(session, action=f'Search "{text}"')
+        festival = current_festival(session)
+        self.found_films = []
+        start_by_film = {}
+        for film in Film.films.filter(festival=festival):
+            start_pos = self.start_position_of_text(film, text)
+            if start_pos is not None:
+                self.found_films.append(film)
+                start_by_film[film] = start_pos
+                add_log(session, film.sort_title)
+        if self.found_films:
+            sorted_tuples = sorted([(f, s, f.sort_title) for f, s in start_by_film.items()], key=itemgetter(1, 2))
+            self.found_films = [f for f, s, t in sorted_tuples]
+        else:
+            add_log(session, f'No title found containing "{text}"')
+
+    @staticmethod
+    def start_position_of_text(film, text):
+        re_search_text = re.compile(f'{text.lower()}')
+        m = re_search_text.search(film.sort_title)
+        return m.start() if m else None
 
 
 class IndexView(TemplateView):
@@ -70,12 +99,12 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
     success_view_name = None
     post_attendance = None
     film = None
-    found_films = None
+    films_finder = FilmsFinder()
 
     def form_valid(self, form):
         search_text = form.cleaned_data[self.SEARCH_KEY]
         if search_text:
-            self.search_title(search_text)
+            self.films_finder.search_title(self.request.session, search_text)
         else:
             self.update_rating(form)
         return super().form_valid(form)
@@ -93,30 +122,6 @@ class BaseFilmsFormView(LoginRequiredMixin, FormView):
     @staticmethod
     def clean_response():
         return HttpResponseRedirect(reverse('films:films'))
-
-    def search_title(self, text):
-        session = self.request.session
-        initialize_log(session, action=f'Search "{text}"')
-        festival = current_festival(session)
-        found_films = []
-        start_by_film = {}
-        for film in Film.films.filter(festival=festival):
-            start_pos = self.start_position_of_text(film, text)
-            if start_pos is not None:
-                found_films.append(film)
-                start_by_film[film] = start_pos
-                add_log(session, film.sort_title)
-        if found_films:
-            sorted_tuples = sorted([(f, s, f.sort_title) for f, s in start_by_film.items()], key=itemgetter(1, 2))
-            BaseFilmsFormView.found_films = [f for f, s, t in sorted_tuples]
-        else:
-            add_log(session, f'No title found containing "{text}"')
-
-    @staticmethod
-    def start_position_of_text(film, text):
-        re_search_text = re.compile(f'{text.lower()}')
-        m = re_search_text.search(film.sort_title)
-        return m.start() if m else None
 
     def update_rating(self, form):
         submitted_name = list(self.request.POST.keys())[-1]
@@ -252,7 +257,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
             'display_shorts_href_filter': self.shorts_filter.get_href_filter(session),
             'display_shorts_action': self.shorts_filter.action(session),
             'display_all_subsections_query': self._get_query_string_to_select_all_subsections(session),
-            'found_films': BaseFilmsFormView.found_films,
+            'found_films': BaseFilmsFormView.films_finder.found_films,
             'action': PickRating.rating_action_by_field[self.class_tag].get_refreshed_action(session),
             'unexpected_errors': FilmsView.unexpected_errors,
             'log': get_log(session)
@@ -517,7 +522,7 @@ class VotesListView(LoginRequiredMixin, ListView):
     def get_film(self, film_id):
         try:
             film = Film.films.get(festival=self.festival, film_id=film_id)
-        except Film.DoesNotExist as e:
+        except Film.DoesNotExist:
             film = None
         return film
 
@@ -584,7 +589,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         fans = get_judging_fans()
         logged_in_fan = current_fan(session)
         fan_rows = get_fan_props_list(film, fans, logged_in_fan, self.submit_name_prefix)
-        in_cache = self.film_is_in_cache(session)
+        in_cache = film_is_in_cache(session, film)
         new_context = {
             'title': 'Film Rating Results',
             'description': self.get_description(film),
@@ -652,19 +657,6 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         metadata = [{'key': k, 'value': v} for k, v in film_metadata.items()]
         film_info = metadata, combi_data, screened_data
         return film_info
-
-    def film_is_in_cache(self, session):
-        """
-        Returns whether the current film is in cache or None if no cache exists.
-        """
-        try:
-            film_rows = PickRating.film_rating_cache.get_film_rows(session)
-        except AttributeError:
-            return None
-        if not film_rows:
-            return None
-        film = self.get_object()
-        return film in [row['film'] for row in film_rows]
 
     @staticmethod
     def get_query_string_to_display_all(session):
@@ -821,6 +813,101 @@ class ReviewersView(ListView):
         return judge_set
 
 
+class TitlesView(SharedTemplateReferrerView):
+    """
+    Refer requests concerning alternative titles of a film.
+    """
+    template_name = 'films/titles.html'
+    films_finder = FilmsFinder()
+    submit_prefix = 'titles_'
+    unexpected_errors = []
+    main_title_film = None
+
+    def __init__(self):
+        super().__init__()
+        self.list_view = TitlesDetailView
+        self.form_view = TitlesFormView
+
+
+class TitlesDetailView(LoginRequiredMixin, DetailView):
+    model = Film
+    template_name = TitlesView.template_name
+    http_method_names = ['get']
+    view = TitlesView
+
+    def get_context_data(self, **kwargs):
+        super_context = super().get_context_data()
+        session = self.request.session
+        self.view.main_title_film = self.object
+        film = self.object
+        in_cache = film_is_in_cache(session, film)
+        new_context = {
+            'title': 'Manage alternative titles',
+            'film': film,
+            'fragment': FilmFragmentKeeper.fragment_code(film),
+            'film_in_cache': in_cache,
+            'no_cache': in_cache is None,
+            'search_form': TitlesForm(),
+            'found_props': self._get_found_props(),
+            'alt_title_films': self._get_alternative_titles(session, film),
+            'form_errors': self.view.unexpected_errors,
+            'log': get_log(session),
+        }
+        self.view.unexpected_errors = []
+        unset_log(session)
+        context = add_base_context(self.request, super_context | new_context)
+        return context
+
+    def _get_found_props(self):
+        found_files = self.view.films_finder.found_films or []
+        props = [{
+            'film': film,
+            'submit_name': get_submit_name(self.view.submit_prefix, 'alt', film.id)
+        } for film in found_files]
+        return props
+
+    @staticmethod
+    def _get_alternative_titles(session, main_title_film):
+        festival = current_festival(session)
+        alt_films = Film.films.filter(festival=festival, main_title=main_title_film)
+        return alt_films
+
+
+class TitlesFormView(LoginRequiredMixin, FormView):
+    template_name = TitlesView.template_name
+    form_class = TitlesForm
+    http_method_names = ['post']
+    view = TitlesView
+
+    @timed_method
+    def form_valid(self, form):
+        search_text = form.cleaned_data[BaseFilmsFormView.SEARCH_KEY]
+        pr_debug(f'{search_text}')
+        if search_text:
+            TitlesView.films_finder.search_title(self.request.session, search_text)
+        else:
+            submit_name = list(self.request.POST.keys())[-1]
+            _, film_id_str = get_data_from_submit(self.view.submit_prefix, submit_name)
+            pr_debug(f'{film_id_str=}')
+            alternative_title_film_id = int(film_id_str)
+            form.update_main_title(alternative_title_film_id, self.view.main_title_film)
+        return super().form_valid(form)
+
+    @timed_method
+    def form_invalid(self, form):
+        session = self.request.session
+        if not get_log(session):
+            initialize_log(session, action='Search alternative title')
+        self.view.unexpected_errors.extend(wrap_up_form_errors(form.errors))
+        self.view.unexpected_errors.append(f'Invalid search term: {self.request.POST["search_text"]}')
+
+        super().form_invalid(form)
+        return HttpResponseRedirect(self.get_success_url())
+
+    def get_success_url(self):
+        return reverse('films:titles', args=[TitlesView.main_title_film.pk])
+
+
 def get_filmscreening_props_list(session, films):
     filmscreening_props_list = []
     for film in films:
@@ -831,6 +918,19 @@ def get_filmscreening_props_list(session, films):
         }
         filmscreening_props_list.append(filmscreening_props_item)
     return filmscreening_props_list
+
+
+def film_is_in_cache(session, film):
+    """
+    Returns whether the current film is in cache or None if no cache exists.
+    """
+    try:
+        film_rows = PickRating.film_rating_cache.get_film_rows(session)
+    except AttributeError:
+        return None
+    if not film_rows:
+        return None
+    return film in [row['film'] for row in film_rows]
 
 
 def film_fan(request):
