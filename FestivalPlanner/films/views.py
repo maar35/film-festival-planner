@@ -269,7 +269,7 @@ class FilmsListView(LoginRequiredMixin, ListView):
     def render_to_response(self, context, **response_kwargs):
         response = super().render_to_response(context, **response_kwargs)
         FilmsView.unexpected_errors = []
-        BaseFilmsFormView.found_films = None
+        BaseFilmsFormView.films_finder.found_films = None
         return response
 
     def _setup_filters(self):
@@ -820,6 +820,8 @@ class TitlesView(SharedTemplateReferrerView):
     template_name = 'films/titles.html'
     films_finder = FilmsFinder()
     submit_prefix = 'titles_'
+    link_submit_name = 'link'
+    unlink_submit_name = 'unlink'
     unexpected_errors = []
     main_title_film = None
 
@@ -841,6 +843,7 @@ class TitlesDetailView(LoginRequiredMixin, DetailView):
         self.view.main_title_film = self.object
         film = self.object
         in_cache = film_is_in_cache(session, film)
+        alt_title_films = self._get_alt_title_films(session, film)
         new_context = {
             'title': 'Manage alternative titles',
             'film': film,
@@ -849,7 +852,8 @@ class TitlesDetailView(LoginRequiredMixin, DetailView):
             'no_cache': in_cache is None,
             'search_form': TitlesForm(),
             'found_props': self._get_found_props(),
-            'alt_title_films': self._get_alternative_titles(session, film),
+            'alt_title_films': alt_title_films,
+            'alt_props': self._get_alt_props(alt_title_films),
             'form_errors': self.view.unexpected_errors,
             'log': get_log(session),
         }
@@ -860,17 +864,24 @@ class TitlesDetailView(LoginRequiredMixin, DetailView):
 
     def _get_found_props(self):
         found_files = self.view.films_finder.found_films or []
-        props = [{
+        found_props = [{
             'film': film,
-            'submit_name': get_submit_name(self.view.submit_prefix, 'alt', film.id)
+            'submit_name': get_submit_name(self.view.submit_prefix, self.view.link_submit_name, film.id)
         } for film in found_files]
-        return props
+        return found_props
 
     @staticmethod
-    def _get_alternative_titles(session, main_title_film):
+    def _get_alt_title_films(session, main_title_film):
         festival = current_festival(session)
-        alt_films = Film.films.filter(festival=festival, main_title=main_title_film)
-        return alt_films
+        alt_title_films = Film.films.filter(festival=festival, main_title=main_title_film)
+        return alt_title_films
+
+    def _get_alt_props(self, alt_title_films):
+        alt_props = [{
+            'alt_film': film,
+            'submit_name': get_submit_name(self.view.submit_prefix, self.view.unlink_submit_name, film.id),
+        } for film in alt_title_films]
+        return alt_props
 
 
 class TitlesFormView(LoginRequiredMixin, FormView):
@@ -879,27 +890,28 @@ class TitlesFormView(LoginRequiredMixin, FormView):
     http_method_names = ['post']
     view = TitlesView
 
-    @timed_method
     def form_valid(self, form):
         search_text = form.cleaned_data[BaseFilmsFormView.SEARCH_KEY]
-        pr_debug(f'{search_text}')
         if search_text:
             TitlesView.films_finder.search_title(self.request.session, search_text)
         else:
+            film_by_operation = {
+                self.view.link_submit_name: self.view.main_title_film,
+                self.view.unlink_submit_name: None,
+            }
             submit_name = list(self.request.POST.keys())[-1]
-            _, film_id_str = get_data_from_submit(self.view.submit_prefix, submit_name)
-            pr_debug(f'{film_id_str=}')
+            operation, film_id_str = get_data_from_submit(self.view.submit_prefix, submit_name)
             alternative_title_film_id = int(film_id_str)
-            form.update_main_title(alternative_title_film_id, self.view.main_title_film)
+            film_arg = film_by_operation[operation]
+            form.update_main_title(alternative_title_film_id, film_arg)
         return super().form_valid(form)
 
-    @timed_method
     def form_invalid(self, form):
         session = self.request.session
         if not get_log(session):
             initialize_log(session, action='Search alternative title')
         self.view.unexpected_errors.extend(wrap_up_form_errors(form.errors))
-        self.view.unexpected_errors.append(f'Invalid search term: {self.request.POST["search_text"]}')
+        self.view.unexpected_errors.append(f'Invalid search terms: {self.request.POST["search_text"]}')
 
         super().form_invalid(form)
         return HttpResponseRedirect(self.get_success_url())

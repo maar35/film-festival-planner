@@ -101,7 +101,7 @@ def get_submit_name(prefix, key, value):
 
 
 def get_data_from_submit(prefix, submit_name):
-    return submit_name.strip(prefix).split('_')
+    return submit_name.removeprefix(prefix).split('_')
 
 
 def get_csv_dialect():

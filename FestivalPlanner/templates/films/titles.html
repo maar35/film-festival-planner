@@ -71,29 +71,38 @@
     {% endif %}
 
     <h3>Alternative titles</h3>
-    {% if alt_title_films %}
-    <table>
-        <thead>
-        <tr>
-            <th>Title</th>
-            <th>PK</th>
-            <th>Category</th>
-            <th>Subsection</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for alt_film in alt_title_films %}
-        <tr>
-            <td>{{ alt_film.title }}</td>
-            <td>{{ alt_film.pk }}</td>
-            <td>{{ alt_film.medium_category }}</td>
-            <td>{{ alt_film.subsection }}</td>
-        </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    {% if alt_props %}
+        <form class="indent" method="post">
+        {% csrf_token %}
+        <table>
+            <thead>
+            <tr>
+                <th>Title</th>
+                <th>PK</th>
+                <th>Category</th>
+                <th>Subsection</th>
+                <th>Unlink</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for prop in alt_props %}
+            {% with alt_film=prop.alt_film %}
+            <tr>
+                <td>{{ alt_film.title }}</td>
+                <td>{{ alt_film.pk }}</td>
+                <td>{{ alt_film.medium_category }}</td>
+                <td>{{ alt_film.subsection }}</td>
+                <td class="with-submit">
+                    <input class="in-table" type="submit" value="Unlink" name="{{ prop.submit_name }}">
+                </td>
+            </tr>
+            {% endwith %}
+            {% endfor %}
+            </tbody>
+        </table>
+        </form>
     {% else %}
-    <div class="indent">{{ film.title }} has no alternative titles</div>
+        <div class="indent">{{ film.title }} has no alternative titles</div>
     {% endif %}
 {% else %}
     <h2 class="error">Not allowed</h2>
