@@ -62,7 +62,7 @@ class AvailabilityDay(FestivalDay):
 
 class AvailabilityView(SharedTemplateReferrerView):
     """
-    Class te receive and forward requests on availabilities.
+    Class to receive and forward requests on availabilities.
     """
     template_name = 'availabilities/list.html'
     initial_start_time = DAY_START_TIME.strftime('%H:%M')

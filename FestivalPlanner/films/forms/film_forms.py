@@ -10,7 +10,7 @@ from festival_planner.cache import FilmRatingCache
 from festival_planner.fan_action import RatingAction
 from festivals.models import rating_action_key, current_festival
 from films.models import FilmFanFilmRating, fan_rating_str, FIELD_BY_POST_ATTENDANCE, \
-    MANAGER_BY_POST_ATTENDANCE
+    MANAGER_BY_POST_ATTENDANCE, Film
 
 SEARCH_TEXT_VALIDATOR = RegexValidator(r'^\w+$', 'Type letters and digits only')
 """
@@ -76,6 +76,20 @@ class PickRating(forms.Form):
 
 class RatingForm(forms.Form):
     fan_rating = forms.ChoiceField(label='Pick a rating', choices=FilmFanFilmRating.Rating.choices)
+
+
+class TitlesForm(forms.Form):
+    search_text = CharField(
+        label='Find a title by entering a snippet of it',
+        required=False,
+        validators=[SEARCH_TEXT_VALIDATOR],
+        min_length=2,
+    )
+
+    @classmethod
+    def update_main_title(cls, alternative_title_film_id, main_film):
+        films = Film.films.filter(id=alternative_title_film_id)
+        _ = films.update(main_title=main_film)
 
 
 def init_rating_action(session, old_rating_str, new_rating, field):

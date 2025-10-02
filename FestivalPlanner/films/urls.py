@@ -4,7 +4,6 @@ from films import views
 
 app_name = 'films'
 urlpatterns = [
-
     # Give access to the active pages.
     path('', views.IndexView.as_view(), name='index'),
 
@@ -22,5 +21,9 @@ urlpatterns = [
     path('votes/', views.VotesView.as_view(), name='votes'),
 
     # Display statistics of reviewers.
-    path('reviewers/', views.ReviewersView.as_view(), name='reviewers')
+    path('reviewers/', views.ReviewersView.as_view(), name='reviewers'),
+
+    # Manage alternative titles of a film.
+    # Example: /films/7741/titles/
+    path('<int:pk>/titles/', views.TitlesView.as_view(), name='titles'),
 ]

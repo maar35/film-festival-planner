@@ -434,6 +434,7 @@ class FilmLoader(SimpleLoader):
     def __init__(self, session, festival):
         super().__init__(session, 'film', self.manager, festival.films_file(), festival=festival)
         self.festival = festival
+        self.main_title = None
         self.delete_disappeared_objects = True
 
     def read_row(self, row):
@@ -465,6 +466,7 @@ class FilmLoader(SimpleLoader):
             'sort_title': sort_title,
             'title': title,
             'title_language': title_language,
+            'main_title': self.main_title,
             'subsection': subsection or None,
             'duration': duration,
             'medium_category': medium_category,

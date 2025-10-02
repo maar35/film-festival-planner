@@ -1,0 +1,111 @@
+{% extends "base_template.html" %}
+
+{% load humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+<h2 class="row col-left-h2">Alternative titles of {{ film.title }}</h2>
+<div class="row">
+    <span class="col-right">
+        <a href="{% url 'films:details' film.id %}">Details of {{ film.title }}</a>
+        <br>
+        {% if film_in_cache %}
+            <a href="{% url 'films:films' %}{{ fragment }}">Ratings of {{ film.title }}</a>
+        {% elif no_cache %}
+            Film not directly addressable in uninitialized film list
+        {% else %}
+            Film is hidden in ratings list <a href="{% url 'films:films' %}{{ display_all_query }}{{ fragment }}">Clear filters</a>
+        {% endif %}
+        <br>
+        <a href="{% url 'films:films' %}">Film ratings</a>
+        <br>
+        <a href="{% url 'screenings:day_schema' %}">Day schema</a>
+    </span>
+</div>
+
+{% if user_is_admin %}
+    {% block errors %}
+        {{ block.super }}
+    {% endblock %}
+
+    {% if log %}
+        <h3 class="log-header">{{ log.action }} results</h3>
+            {% if found_props %}
+                {% for prop in found_props %}
+                {% with film=prop.film %}
+                    <a class="indent" href="{% url 'films:details' film.id %}" >{{ film.title }}</a>
+                    <br>
+                {% endwith %}
+                {% endfor %}
+            {% else %}
+                {% for result in log.results %}
+                    <p class="log">{{ result }}</p>
+                {% endfor %}
+            {% endif %}
+    {% endif %}
+
+    <h3>Search alternative title</h3>
+    <form class="indent" method="post">
+        {% csrf_token %}
+        {{ search_form.as_p }}
+    </form>
+
+    {% if found_props %}
+        <h3> Pick new title</h3>
+        <form class="indent" method="post">
+        {% csrf_token %}
+        {% for prop in found_props %}
+        {% with found_film=prop.film %}
+        <div>
+            {% if found_film == film or found_film in alt_title_films %}
+                <input type="submit" value="{{ found_film.title }}" disabled>
+            {% else %}
+                <input type="submit" value="{{ found_film.title }}" name="{{ prop.submit_name }}">
+            {% endif %}
+        </div>
+        {% endwith %}
+        {% endfor %}
+        </form>
+    {% endif %}
+
+    <h3>Alternative titles</h3>
+    {% if alt_props %}
+        <form class="indent" method="post">
+        {% csrf_token %}
+        <table>
+            <thead>
+            <tr>
+                <th>Title</th>
+                <th>PK</th>
+                <th>Category</th>
+                <th>Subsection</th>
+                <th>Unlink</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for prop in alt_props %}
+            {% with alt_film=prop.alt_film %}
+            <tr>
+                <td>{{ alt_film.title }}</td>
+                <td>{{ alt_film.pk }}</td>
+                <td>{{ alt_film.medium_category }}</td>
+                <td>{{ alt_film.subsection }}</td>
+                <td class="with-submit">
+                    <input class="in-table" type="submit" value="Unlink" name="{{ prop.submit_name }}">
+                </td>
+            </tr>
+            {% endwith %}
+            {% endfor %}
+            </tbody>
+        </table>
+        </form>
+    {% else %}
+        <div class="indent">{{ film.title }} has no alternative titles</div>
+    {% endif %}
+{% else %}
+    <h2 class="error">Not allowed</h2>
+    <p>Only an admin fan can maintain alternative titles.</p>
+{% endif %}
+{% endblock %}
