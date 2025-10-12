@@ -26,18 +26,18 @@
     <table class="no-select">
         <thead>
             <tr>
-                <th class="sticky-t-head" style="vertical-align: text-top;">Reviewer</th>
-                <th class="sticky-t-head" style="vertical-align: text-top;">#Films</th>
-                <th class="sticky-t-head" style="vertical-align: text-top; text-align: center;">
+                <th class="sticky-t-head">Reviewer</th>
+                <th class="sticky-t-head">#Films</th>
+                <th class="sticky-t-head-center">
                     #Judged
                     <br>
                     <a href="{% url 'films:reviewers' %}{{ judged_href_filter }}">{{ judged_filter_action }}</a>
                 </th>
-                <th class="sticky-t-head" style="vertical-align: text-top; text-align: right">Discrepancy avg</th>
+                <th class="sticky-t-head-right">Discrepancy avg</th>
                 {% for fan in fans %}
-                    <th class="sticky-t-head" style="vertical-align: text-top;text-align: right;">{{ fan }}<br>#judged</th>
-                    <th class="sticky-t-head" style="vertical-align: text-top;text-align: right;">{{ fan }}<br>discrepancy avg</th>
-                    <th class="sticky-t-head" style="vertical-align: text-top;text-align: center">{{ fan }}<br>discrepancy min/max</th>
+                    <th class="sticky-t-head-right">{{ fan }}<br>#judged</th>
+                    <th class="sticky-t-head-right">{{ fan }}<br>discrepancy avg</th>
+                    <th class="sticky-t-head-center">{{ fan }}<br>discrepancy min/max</th>
                 {% endfor %}
             </tr>
         </thead>

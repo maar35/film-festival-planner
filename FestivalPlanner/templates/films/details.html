@@ -42,9 +42,6 @@
 </ul>
 {% endif %}
 
-<h3>Alternative titles</h3>
-<a href="{% url 'films:titles' film.id %}">Manage alternative titles for this film</a>
-
 <h3>Film details</h3>
 <ul>
     <li>Duration: {{ film.duration }}</li>
@@ -71,22 +68,22 @@
             <th>Film fan</th>
             <th>Rating</th>
             <th>Meaning</th>
+            {% if screened_films %}<th>Time weighted mean rating</th>{% endif %}
         </tr>
     </thead>
     <tbody>
     {% for fan_row in fan_rows %}
         <tr>
-            <td>
-                {{ fan_row.fan.name }}
-            </td>
+            <td>{{ fan_row.fan.name }}</td>
             {% if fan_row.fan == current_fan %}
                 {% include "../includes/cell_dropdown.html" with label_current=fan_row.rating_str choices=fan_row.choices %}
             {% else %}
-                <td style="text-align: center">
-                {{ fan_row.rating_str }}
-                </td>
-                {% endif %}
+                <td style="text-align: center">{{ fan_row.rating_str }}</td>
+            {% endif %}
             <td>{{ fan_row.rating_label }}</td>
+            {% if screened_films %}
+                <td style="text-align: right">{{ fan_row.mean_rating|default:" - " }}</td>
+            {% endif %}
         </tr>
     {% endfor %}
     </tbody>
@@ -97,4 +94,8 @@
 {% for item in film_screening_props_list %}
     {% include "../includes/film_screenings.html" with film_title=item.title film_screening_props=item.props %}
 {% endfor %}
+
+<br>
+<h3>Alternative titles</h3>
+<a class="indent" href="{% url 'films:titles' film.id %}">Manage alternative titles for this film</a>
 {% endblock %}

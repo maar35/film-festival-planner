@@ -103,11 +103,15 @@ class FilmRatingCache:
                 self.errors.append(f'{e} getting rating for {fan=}')
             else:
                 fan_data['rating_str'] = rating_str(rating_value)
-                old_choice = [c for c in fan_data['choices'] if c['disabled']][0]
-                old_choice['disabled'] = False
+                old_choice_list = [c for c in fan_data['choices'] if c['disabled']]
+                if old_choice_list:
+                    old_choice = old_choice_list[0]
+                    old_choice['disabled'] = False
                 submit_name = get_film_list_submit_name(film, rating_value)
-                new_choice = [c for c in fan_data['choices'] if c['submit_name'] == submit_name][0]
-                new_choice['disabled'] = True
+                new_choice_list = [c for c in fan_data['choices'] if c['submit_name'] == submit_name]
+                if new_choice_list:
+                    new_choice = new_choice_list[0]
+                    new_choice['disabled'] = True
 
     @timed_method
     def check_invalidate_caches(self):

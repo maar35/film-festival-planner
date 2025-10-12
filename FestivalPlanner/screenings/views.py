@@ -23,7 +23,8 @@ from festivals.models import current_festival
 from films.models import current_fan, fan_rating, minutes_str, get_present_fans, Film, FilmFanFilmRating
 from films.views import FilmDetailView, get_filmscreening_props_list
 from screenings.forms.screening_forms import DummyForm, AttendanceForm, PlannerForm, \
-    ScreeningCalendarForm, PlannerSortKeyKeeper, TicketForm, ERRORS, ScreeningWarningsForm, ERRORS_IN_WARNING_FIXES
+    ScreeningCalendarForm, PlannerSortKeyKeeper, TicketForm, ERRORS, ScreeningWarningsForm, ERRORS_IN_WARNING_FIXES, \
+    ELIGIBLE_THEATER_PRIORITIES
 from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, filmscreenings, \
     get_available_filmscreenings, COLOR_PAIR_SCREEN
 from theaters.models import Theater
@@ -614,6 +615,7 @@ class PlannerListView(LoginRequiredMixin, ListView):
             'q_and_a': screening.q_and_a,
             'attendants_str': screening.attendants_str(),
             'available_filmscreening_count': len(get_available_filmscreenings(film, self.fan)),
+            'theater_prio': Theater.Priority(screening.screen.theater.priority).label,
             'duration': screening.duration(),
             'start_dt': screening.start_dt,
             'auto_planned': screening.auto_planned,
@@ -624,7 +626,7 @@ class PlannerListView(LoginRequiredMixin, ListView):
     def _get_sorted_screenings(self, films):
         kwargs = {
             'film__in': films,
-            'screen__theater__priority': Theater.Priority.HIGH,
+            'screen__theater__priority__in': ELIGIBLE_THEATER_PRIORITIES,
         }
         screenings = Screening.screenings.filter(**kwargs)
         fan = current_fan(self.request.session)

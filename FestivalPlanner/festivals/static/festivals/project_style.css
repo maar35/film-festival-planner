@@ -23,6 +23,7 @@
     --infoHoverBackground: var(--infoColor);
     --warningHoverBackground: rgb(255 79 0);
     --stickyBackground: rgb(30 30 30 / .5);
+    --stickyFooterBackground: rgb(10 10 10 / 75%);
     --tableBackground: rgb(0 0 0 / .6);
     --modestBackground: rgb(0 0 38 / .73);
     --screeningBackground: rgb(0 0 0 / .73);
@@ -255,15 +256,22 @@ input:disabled {
     top: 0;
     background-color: var(--stickyBackground);
 }
-.sticky-t-head {
+.sticky-t-head, .sticky-t-head-center, .sticky-t-head-right {
     position: sticky;
     top: 14pt;
     background-color: var(--stickyBackground);
+    vertical-align: text-top;
+}
+.sticky-t-head-center {
+    text-align: center;
+}
+.sticky-t-head-right {
+    text-align: right;
 }
 .sticky-footer {
     position: sticky;
     bottom: 0;
-    background-color: var(--stickyBackground);
+    background-color: var(--stickyFooterBackground);
 }
 .sticky-left {
     position: sticky;

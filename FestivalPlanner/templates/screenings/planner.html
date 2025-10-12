@@ -10,6 +10,8 @@
         <a href="{% url 'screenings:day_schema' %}">Day schema</a>
         <br>
         <a href="{% url 'films:films' %}">Film ratings</a>
+        <br>
+        <a href="{% url 'theaters:theaters' %}">Theaters</a>
     </span>
 </div>
 
@@ -39,11 +41,19 @@
 </p>
 <form method='post'>
     {% csrf_token %}
-    <input type="submit"  name="plan" value="Plan screenings">
-    <br>
-    <span class="warning-input">
-        <input type="submit" name="undo" value="Undo planning"/>
-    </span>
+    {% if planned_screening_count %}
+        <input type="submit" value="Plan screenings" disabled>
+        <br>
+        <span class="warning-input">
+            <input type="submit" name="undo" value="Undo planning">
+        </span>
+    {% else %}
+        <input type="submit" name="plan" value="Plan screenings">
+        <br>
+        <span class="disabled-warning-input">
+            <input style="background: var(--warningBackground);" type="submit" value="Undo planning" disabled>
+        </span>
+    {% endif %}
 </form>
 <br>
 {% if planned_screening_rows %}
@@ -68,7 +78,7 @@
             <tr>
                 <td>
                 {% ifchanged row.start_dt.date %}
-                    {{ row.start_dt.date | date:"D j M Y" }}
+                    <a href="{% url 'screenings:day_schema' %}?day={{ row.start_dt.date | date:'Y-m-d' }}">{{ row.start_dt.date | date:"D j M Y" }}</a>
                 {% endifchanged %}
                 </td>
                 <td>{{ row.start_dt | date:"H:i" }}</td>
@@ -94,15 +104,16 @@
 <table>
     <thead>
     <tr>
-        <th>Screening</th>
-        <th>Available</th>
-        <th style="text-align: center;">Highest film ratings</th>
-        <th>Attendants</th>
-        <th style="text-align: center;">Q&A</th>
-        <th style="text-align: center;">#Available Filmscreenings</th>
-        <th>Duration</th>
-        <th>Start time</th>
-        <th style="text-align: center;">Auto planned</th>
+        <th class="sticky-t-head">Screening</th>
+        <th class="sticky-t-head">Available</th>
+        <th class="sticky-t-head-center">Highest film ratings</th>
+        <th class="sticky-t-head">Attendants</th>
+        <th class="sticky-t-head-center">Q&A</th>
+        <th class="sticky-t-head-center">#Available Filmscreenings</th>
+        <th class="sticky-t-head-center">Theater priority</th>
+        <th class="sticky-t-head">Duration</th>
+        <th class="sticky-t-head">Start time</th>
+        <th class="sticky-t-head-center">Auto planned</th>
     </tr>
     </thead>
     <tbody>
@@ -118,6 +129,7 @@
         <td>{{ row.attendants_str }}</td>
         <td style="text-align: center;">{{ row.q_and_a | yesno:"Q&A,-"}}</td>
         <td style="text-align: center;">{{ row.available_filmscreening_count }}</td>
+        <td style="text-align: center;">{{ row.theater_prio }}</td>
         <td>{{ row.duration }}</td>
         <td>{{ row.start_dt | date:"Y-m-d H:i" }}</td>
         <td style="text-align: center;">{{ row.auto_planned | yesno:"𝛑,-"}}</td>

@@ -18,6 +18,7 @@ from theaters.models import Theater
 
 ERRORS = Errors()
 ERRORS_IN_WARNING_FIXES = Errors()
+ELIGIBLE_THEATER_PRIORITIES = [Theater.Priority.HIGH, Theater.Priority.LOW]
 
 
 class DummyForm(forms.Form):
@@ -31,6 +32,7 @@ class PlannerSortKeyKeeper:
         'second_highest_rating': True,
         'q_and_a': True,
         'filmscreening_count': False,
+        'theater_priority': True,
         'duration': False,
         'start_dt': True,
     }
@@ -45,6 +47,7 @@ class PlannerSortKeyKeeper:
         self.q_and_a = screening.q_and_a
         self.filmscreening_count = len(get_available_filmscreenings(film, fan))
         self.duration = screening.duration()
+        self.theater_priority = screening.screen.theater.priority
         self.start_dt = screening.start_dt
 
     def __repr__(self):
@@ -211,7 +214,7 @@ class PlannerForm(DummyForm):
         kwargs = {
             'film__in': films,
             'auto_planned': auto_planned,
-            'screen__theater__priority': Theater.Priority.HIGH,
+            'screen__theater__priority__in': ELIGIBLE_THEATER_PRIORITIES,
         }
         eligible_screenings = Screening.screenings.filter(**kwargs)
         return eligible_screenings
