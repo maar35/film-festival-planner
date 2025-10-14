@@ -83,13 +83,13 @@
         <table>
             <thead>
                 <tr>
-                    <th class="sticky-t-head">Film</th>
-                    <th class="sticky-t-head">
+                    <th class="sticky">Film</th>
+                    <th class="sticky">
                         Duration
                         <br>
                         <a href="{% url 'films:films' %}{{ display_shorts_href_filter }}">{{ display_shorts_action }}</a>
                     </th>
-                    <th class="sticky-t-head">
+                    <th class="sticky">
                         Subsection
                         {% if display_all_subsections_query %}
                             <br>
@@ -97,7 +97,7 @@
                         {% endif %}
                     </th>
                     {% for fan_header in fan_headers %}
-                        <th class="sticky-t-head">
+                        <th class="sticky">
                             {{ fan_header.fan }}
                             <br>
                             <a href="{% url 'films:films' %}{{ fan_header.href_filter }}">{{ fan_header.action }}</a>

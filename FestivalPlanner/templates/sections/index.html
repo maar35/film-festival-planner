@@ -29,10 +29,10 @@
             <thead>
                 <tr>
                     <th>Subsection</th>
-                    <th style="text-align: right;">#Films</th>
+                    <th class="right">#Films</th>
                     <th>Description</th>
                     <th>Section</th>
-                    <th>ID</th>
+                    <th class="right">ID</th>
                     <th>Color</th>
                 </tr>
             </thead>
@@ -46,7 +46,7 @@
                         </td>
                         <td>{{ row.description }}</td>
                         <td style="background: {{ color }}; color: white">{{ section.name }}</td>
-                        <td style="background: {{ color }}; color: white">{{ section.section_id }}</td>
+                        <td class="right" style="background: {{ color }}; color: white">{{ section.section_id }}</td>
                         <td style="background: {{ color }}; color: white">{{ color }}</td>
                     {% endwith %}
                 </tr>

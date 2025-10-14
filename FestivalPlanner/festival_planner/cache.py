@@ -86,6 +86,13 @@ class FilmRatingCache:
 
     @timed_method
     def update(self, cache_key, film, fan, rating_value):
+        def _update_dropdown_choice(filter_func, new_value=True):
+            choice_list = [c for c in fan_data['choices'] if filter_func(c)]
+            if choice_list:
+                choice = choice_list[0]
+                choice['disabled'] = new_value
+
+        # Get the film rows from cache.
         film_rows = self.cache_by_key[cache_key].get_film_rows()
 
         # Filter out film data.
@@ -102,16 +109,11 @@ class FilmRatingCache:
                 pr_debug(f'{IndexError.__name__} getting rating for {fan=}')
                 self.errors.append(f'{e} getting rating for {fan=}')
             else:
+                # Update changed data.
                 fan_data['rating_str'] = rating_str(rating_value)
-                old_choice_list = [c for c in fan_data['choices'] if c['disabled']]
-                if old_choice_list:
-                    old_choice = old_choice_list[0]
-                    old_choice['disabled'] = False
+                _update_dropdown_choice(lambda c: c['disabled'], new_value=False)
                 submit_name = get_film_list_submit_name(film, rating_value)
-                new_choice_list = [c for c in fan_data['choices'] if c['submit_name'] == submit_name]
-                if new_choice_list:
-                    new_choice = new_choice_list[0]
-                    new_choice['disabled'] = True
+                _update_dropdown_choice(lambda c: c['submit_name'] == submit_name)
 
     @timed_method
     def check_invalidate_caches(self):
