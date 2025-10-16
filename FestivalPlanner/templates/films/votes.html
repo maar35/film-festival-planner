@@ -60,7 +60,7 @@
                 {% if fan_vote.fan == current_fan %}
                     {% include "../includes/cell_dropdown.html" with label_current=fan_vote.rating_str choices=fan_vote.choices %}
                 {% else %}
-                    <td style="text-align: center">{{ fan_vote.rating_str }}</td>
+                    <td class="center">{{ fan_vote.rating_str }}</td>
                 {% endif %}
             {% endfor %}
         </tr>

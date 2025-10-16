@@ -78,11 +78,11 @@
             {% if fan_row.fan == current_fan %}
                 {% include "../includes/cell_dropdown.html" with label_current=fan_row.rating_str choices=fan_row.choices %}
             {% else %}
-                <td style="text-align: center">{{ fan_row.rating_str }}</td>
+                <td class="center">{{ fan_row.rating_str }}</td>
             {% endif %}
             <td>{{ fan_row.rating_label }}</td>
             {% if screened_films %}
-                <td style="text-align: right">{{ fan_row.mean_rating|default:" - " }}</td>
+                <td class="right">{{ fan_row.mean_rating|default:" - " }}</td>
             {% endif %}
         </tr>
     {% endfor %}

@@ -74,19 +74,19 @@
             {% else %}
                 <td>{{ row.reviewer }}</td>
             {% endif %}
-            <td style="text-align: right">{{ row.film_count }}</td>
+            <td class="right">{{ row.film_count }}</td>
             {% if row.judged_count %}
-                <td style="text-align: right">{{ row.judged_count }}</td>
-                <td style="text-align: right">{{ row.avg_discrepancy | stringformat:"5.2f"}}</td>
+                <td class="right">{{ row.judged_count }}</td>
+                <td class="right">{{ row.avg_discrepancy | stringformat:"5.2f"}}</td>
             {% else %}
                 <td></td>
                 <td></td>
             {% endif %}
             {% for judgement in row.fan_judgements %}
                 {% if judgement.judged_count %}
-                    <td style="text-align: right">{{ judgement.judged_count }}</td>
-                    <td style="text-align: right">{{ judgement.avg_discrepancy | stringformat:"5.2f" }}</td>
-                    <td style="text-align: center">{{ judgement.min_discrepancy }}/{{ judgement.max_discrepancy }}</td>
+                    <td class="right">{{ judgement.judged_count }}</td>
+                    <td class="right">{{ judgement.avg_discrepancy | stringformat:"5.2f" }}</td>
+                    <td class="center">{{ judgement.min_discrepancy }}/{{ judgement.max_discrepancy }}</td>
                 {% else %}
                     <td></td>
                     <td></td>

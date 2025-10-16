@@ -41,7 +41,7 @@
                 <tr>
                     {% with section=row.section color=row.section.color %}
                         <td><a href="{{ row.url }}">{{ row.name }}</a></td>
-                        <td style="background: {{ color }}; color: white; text-align: right;">
+                        <td class="right" style="background: {{ color }}; color: white;">
                             {% if row.films_count %} {{ row.films_count }} {% else %} - {% endif %}
                         </td>
                         <td>{{ row.description }}</td>
