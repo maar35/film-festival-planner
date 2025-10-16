@@ -143,12 +143,78 @@ class AzPageParser(HtmlPageParser):
         self.audience = None
         self.qa = None
         self.subtitles = None
-        self.stateStack = self.StateStack(self.print_debug, self.AzParseState.IDLE)
-        self.init_categories()
-        self.init_screening_data()
+        self.state_stack = self.StateStack(self.print_debug, self.AzParseState.IDLE)
+        self._init_categories()
+        self._init_screening_data()
+
+    def feed(self, data):
+        super().feed(data)
+        comment('Assigning Q&A property to the relevant screenings.')
+        QaScreeningKey.update_q_and_a_screenings(self.festival_data)
+
+    def handle_starttag(self, tag, attrs):
+        super().handle_starttag(tag, attrs)
+
+        stack = self.state_stack
+        state = self.AzParseState
+        match [stack.state(), tag, attrs]:
+            case [state.IDLE, 'ul', a] if a and a[0][1] == 'screenings imagine-rows filterable':
+                stack.change(state.IN_LIST)
+            case [state.IN_LIST, 'li', a] if len(a) > 3 and a[0][1] == 'screening item':
+                self.url = a[2][1]
+                self.sort_title = a[3][1]
+                stack.push(state.IN_SCREENING)
+            case [state.IN_SCREENING, 'time', a] if a and a[0][0] == 'datetime':
+                self.start_dt = datetime.datetime.fromisoformat(a[0][1])
+            case [state.IN_SCREENING, 'section', _]:
+                stack.push(state.IN_SECTION)
+            case [state.IN_SECTION, 'div', a] if a and a[0][1].startswith('background-color'):
+                self.section_color = attrs[0][1].split(':')[1]
+            case [state.IN_SCREENING, 'div', a] if a and a[0][1] == 'type':
+                stack.push(state.IN_TYPE)
+            case [state.IN_SCREENING, 'h2', _]:
+                stack.push(state.IN_TITLE)
+            case [state.IN_SCREENING, 'i', a] if a and a[0][1] == 'fa fa-map-marker':
+                stack.push(state.IN_SCREEN)
+            case [state.IN_SCREENING, 'i', a] if a and a[0][1] == 'fa fa-clock-o':
+                stack.push(state.IN_DURATION)
+            case [state.IN_SCREENING, 'i', a] if a and a[0][1] == 'fa fa-map-commenting':
+                stack.push(state.IN_LANGUAGE)
+
+    def handle_endtag(self, tag):
+        super().handle_endtag(tag)
+
+        if self.state_stack.state_is(self.AzParseState.IN_SCREENING) and tag == 'li':
+            self._add_imagine_screening()
+            self.state_stack.pop()
+
+    def handle_data(self, data):
+        super().handle_data(data)
+
+        stack = self.state_stack
+        state = self.AzParseState
+        match stack.state():
+            case state.IN_SECTION if data.strip():
+                self.section_name = data
+                stack.pop()
+            case state.IN_TYPE:
+                self.medium_type = data
+                stack.pop()
+            case state.IN_TITLE:
+                self.title = self.get_title(data)
+                stack.pop()
+            case state.IN_SCREEN:
+                self.screen = self._get_imagine_screen(data)
+                stack.pop()
+            case state.IN_DURATION:
+                self.duration = self.get_duration(data)
+                stack.pop()
+            case state.IN_LANGUAGE:
+                self.subtitles = self.get_subtitles(data)
+                stack.pop()
 
     @staticmethod
-    def init_categories():
+    def _init_categories():
         Film.category_by_string['documentary'] = Film.category_films
         Film.category_by_string['Extra'] = Film.category_films
         Film.category_by_string['feature'] = Film.category_films
@@ -159,7 +225,7 @@ class AzPageParser(HtmlPageParser):
         Film.category_by_string['Workshop'] = Film.category_events
         Film.category_by_string['vr/expanded'] = Film.category_events
 
-    def init_screening_data(self):
+    def _init_screening_data(self):
         self.film = None
         self.url = None
         self.title = None
@@ -183,7 +249,7 @@ class AzPageParser(HtmlPageParser):
         duration = datetime.timedelta(minutes=int(minutes))
         return duration
 
-    def get_imagine_screen(self, data):
+    def _get_imagine_screen(self, data):
         screen_parse_name = data.strip()
         splitter = LocationSplitter.split_location
         return get_screen_from_parse_name(self.festival_data, screen_parse_name, splitter)
@@ -201,7 +267,7 @@ class AzPageParser(HtmlPageParser):
         subtitles = matches.group('subs') if matches else ''
         return subtitles
 
-    def add_film(self):
+    def _add_film(self):
         # Create a new film.
         self.film = self.festival_data.create_film(self.title, self.url)
         if self.film is None:
@@ -209,7 +275,7 @@ class AzPageParser(HtmlPageParser):
         else:
             # Fill details.
             self.film.duration = self.duration
-            self.film.subsection = self.get_subsection()
+            self.film.subsection = self._get_subsection()
             self.film.medium_category = self.medium_type
             if SORTING_FROM_SITE:
                 self.film.sort_string = self.sort_title
@@ -220,7 +286,7 @@ class AzPageParser(HtmlPageParser):
             # Get the film info.
             get_details_of_one_film(self.festival_data, self.film)
 
-    def get_subsection(self):
+    def _get_subsection(self):
         if self.section_name:
             section = self.festival_data.get_section(self.section_name, self.section_color)
             dummy_url = 'https://www.imaginefilmfestival.nl/themas/'
@@ -228,12 +294,12 @@ class AzPageParser(HtmlPageParser):
             return subsection
         return None
 
-    def add_imagine_screening(self):
+    def _add_imagine_screening(self):
         # Get the film.
         try:
             self.film = self.festival_data.get_film_by_key(self.title, self.url)
         except (KeyError, ValueError):
-            self.add_film()
+            self._add_film()
 
         # Calculate the screening's end time.
         duration = self.film.duration
@@ -254,74 +320,7 @@ class AzPageParser(HtmlPageParser):
         )
 
         # Initialize the next round of parsing.
-        self.init_screening_data()
-
-    def feed(self, data):
-        super().feed(data)
-        comment('Assigning Q&A property to the relevant screenings.')
-        QaScreeningKey.update_q_and_a_screenings(self.festival_data)
-
-    def handle_starttag(self, tag, attrs):
-        HtmlPageParser.handle_starttag(self, tag, attrs)
-
-        if self.stateStack.state_is(self.AzParseState.IDLE) and tag == 'ul' and attrs:
-            if attrs[0][1] == 'screenings imagine-rows filterable':
-                self.stateStack.change(self.AzParseState.IN_LIST)
-        elif self.stateStack.state_is(self.AzParseState.IN_LIST) and tag == 'li' and len(attrs) > 3:
-            if attrs[0][1] == 'screening item':
-                self.url = attrs[2][1]
-                self.sort_title = attrs[3][1]
-                self.stateStack.push(self.AzParseState.IN_SCREENING)
-        elif self.stateStack.state_is(self.AzParseState.IN_SCREENING) and tag == 'time' and attrs:
-            if attrs[0][0] == 'datetime':
-                self.start_dt = datetime.datetime.fromisoformat(attrs[0][1])
-        elif self.stateStack.state_is(self.AzParseState.IN_SCREENING) and tag == 'section':
-            self.stateStack.push(self.AzParseState.IN_SECTION)
-        elif self.stateStack.state_is(self.AzParseState.IN_SECTION) and tag == 'div' and attrs:
-            if attrs[0][1].startswith('background-color'):
-                self.section_color = attrs[0][1].split(':')[1]
-        elif self.stateStack.state_is(self.AzParseState.IN_SCREENING) and tag == 'div' and attrs:
-            if attrs[0][1] == 'type':
-                self.stateStack.push(self.AzParseState.IN_TYPE)
-        elif self.stateStack.state_is(self.AzParseState.IN_SCREENING) and tag == 'h2':
-            self.stateStack.push(self.AzParseState.IN_TITLE)
-        elif self.stateStack.state_is(self.AzParseState.IN_SCREENING) and tag == 'i' and attrs:
-            if attrs[0][1] == 'fa fa-map-marker':
-                self.stateStack.push(self.AzParseState.IN_SCREEN)
-            elif attrs[0][1] == 'fa fa-clock-o':
-                self.stateStack.push(self.AzParseState.IN_DURATION)
-            elif attrs[0][1] == 'fa fa-commenting':
-                self.stateStack.push(self.AzParseState.IN_LANGUAGE)
-
-    def handle_endtag(self, tag):
-        HtmlPageParser.handle_endtag(self, tag)
-
-        if self.stateStack.state_is(self.AzParseState.IN_SCREENING) and tag == 'li':
-            self.add_imagine_screening()
-            self.stateStack.pop()
-
-    def handle_data(self, data):
-        HtmlPageParser.handle_data(self, data)
-
-        if self.stateStack.state_is(self.AzParseState.IN_SECTION):
-            if data.strip():
-                self.section_name = data
-                self.stateStack.pop()
-        if self.stateStack.state_is(self.AzParseState.IN_TYPE):
-            self.medium_type = data
-            self.stateStack.pop()
-        elif self.stateStack.state_is(self.AzParseState.IN_TITLE):
-            self.title = self.get_title(data)
-            self.stateStack.pop()
-        elif self.stateStack.state_is(self.AzParseState.IN_SCREEN):
-            self.screen = self.get_imagine_screen(data)
-            self.stateStack.pop()
-        elif self.stateStack.state_is(self.AzParseState.IN_DURATION):
-            self.duration = self.get_duration(data)
-            self.stateStack.pop()
-        elif self.stateStack.state_is(self.AzParseState.IN_LANGUAGE):
-            self.subtitles = self.get_subtitles(data)
-            self.stateStack.pop()
+        self._init_screening_data()
 
 
 class FilmPageParser(HtmlPageParser):
@@ -371,6 +370,141 @@ class FilmPageParser(HtmlPageParser):
         self.combination_urls = []
         self.state_stack = self.StateStack(self.print_debug, self.FilmInfoParseState.IDLE)
         self.print_debug(f"{40 * '-'} ", f"Analysing FILM {film}, {film.url}")
+
+    def handle_starttag(self, tag, attrs):
+        super().handle_starttag(tag, attrs)
+
+        stack = self.state_stack
+        state = self.FilmInfoParseState
+        match [stack.state(), tag, attrs]:
+            case [state.IDLE, 'h2', _]:
+                stack.push(state.AWAITING_SCREENINGS)
+            case [state.IDLE, 'div', a] if a and a[0][1] == 'zmovies-programma':
+                COUNTER.increase('combination programs')
+                stack.push(state.AWAITING_SCREENED_FILMS)
+            case [state.IDLE, 'div', a] if a and a[0][1] == 'nectar-global-section before-footer':
+                stack.change(state.DONE)
+            case [state.IN_SCREENINGS, 'tr', _]:
+                self.screening_start_date = attrs[1][1]
+                stack.push(state.IN_SCREENING)
+            case [state.IN_SCREENING, 'td', a] if a and a[0][1] == 'time':
+                stack.push(state.IN_TIME)
+            case [state.IN_SCREENING, 'td', a] if a and a[0][1] == 'theatre':
+                stack.push(state.IN_SCREEN)
+            case [state.IN_SCREENING, 'td', a] if a and a[0][1] == 'ticket':
+                stack.push(state.AWAITING_TICKET_LINK)
+            case [state.AWAITING_TICKET_LINK, 'a', _]:
+                stack.change(state.IN_TICKETS_LINK)
+            case [state.IDLE, 'div', a] if a and a[0] == ('class', 'container-wrap'):
+                stack.push(state.AWAITING_DESCRIPTION)
+            case [state.AWAITING_DESCRIPTION, 'div', a] if a and a[0] == ('class', 'text'):
+                stack.change(state.IN_DESCRIPTION)
+            case [state.AWAITING_DESCRIPTION, 'div', a] if a and a[0] == ('class', 'w6'):
+                stack.change(state.IN_ALT_ARTICLE)
+            case [state.AWAITING_METADATA, 'div', a] if a and a[0] == ('class', 'meta'):
+                stack.change(state.IN_METADATA)
+            case [state.IN_METADATA, 'div', _]:
+                stack.push(state.IN_METADATA_KEY)
+            case [state.AWAITING_SCREENED_FILMS, 'ul', _]:
+                stack.change(state.IN_SCREENED_FILMS)
+            case [state.IN_SCREENED_FILMS, 'li', _]:
+                self._init_screened_film()
+                stack.push(state.IN_SCREENED_FILM)
+            case [state.IN_SCREENED_FILM, 'a', a] if a and a[0][0] == 'href':
+                self.screened_url = a[0][1]
+                stack.change(state.AWAITING_SCREENED_TITLE)
+            case [state.AWAITING_SCREENED_TITLE, 'h3', _]:
+                stack.push(state.IN_SCREENED_TITLE)
+
+    def handle_endtag(self, tag):
+        super().handle_endtag(tag)
+
+        stack = self.state_stack
+        state = self.FilmInfoParseState
+        match [stack.state(), tag]:
+            case [state.AWAITING_SCREENINGS, 'h2']:
+                stack.pop()
+            case [state.IN_SCREENING, 'tr']:
+                stack.pop()
+            case [state.IN_SCREENINGS, 'table']:
+                stack.pop()
+            case [(state.IN_ARTICLE | state.IN_ALT_ARTICLE), 'p']:
+                self.add_paragraph()
+            case [state.IN_ARTICLE, 'div']:
+                stack.change(state.AWAITING_METADATA)
+            case [state.IN_ALT_ARTICLE, 'div']:
+                self._finish_film_info()
+                stack.pop()
+            case [state.IN_METADATA_VALUE, 'div']:
+                stack.pop()
+            case [state.IN_METADATA, 'div']:
+                self._finish_film_info()
+                stack.pop()
+            case [state.IN_SCREENED_TITLE, 'h3']:
+                stack.pop()
+                stack.change(state.DONE_SCREENED_TITLE)
+            case [state.DONE_SCREENED_TITLE, 'li']:
+                self._add_screened_film()
+                stack.pop()
+            case [state.IN_SCREENED_FILMS, 'ul']:
+                stack.pop()
+
+    def handle_data(self, data):
+        super().handle_data(data)
+
+        stack = self.state_stack
+        state = self.FilmInfoParseState
+        match stack.state():
+            case state.AWAITING_SCREENINGS if data == 'Screenings & Tickets':
+                stack.change(state.IN_SCREENINGS)
+            case state.IN_TIME:
+                self.screening_start_time = data
+                stack.pop()
+            case state.IN_SCREEN:
+                self.screening_screen = data
+                stack.pop()
+            case state.IN_TICKETS_LINK:
+                self.screening_ticket_label = data
+                self._add_qa_record_from_ticket_label()
+                stack.pop()
+            case state.IN_DESCRIPTION if len(data.strip()):
+                self.description = data
+                if not self.description.strip():
+                    COUNTER.increase(f'no description')
+                stack.change(state.IN_ARTICLE)
+            case (state.IN_ARTICLE | state.IN_ALT_ARTICLE):
+                self.article_paragraph += data
+                if 'nagesprek' in data:
+                    self._add_qa_record_from_article(data)
+            case state.IN_METADATA_KEY:
+                self.metadata_key = data.strip()
+                stack.change(state.IN_METADATA_VALUE)
+            case state.IN_METADATA_VALUE:
+                self.film_property_by_label[self.metadata_key] = data.strip()
+            case state.IN_SCREENED_TITLE:
+                self.screened_title = data.strip()
+
+    def add_paragraph(self):
+        paragraph = self.article_paragraph
+        if len(paragraph) > 0:
+            self.article_paragraphs.append(paragraph.strip())
+        self.article_paragraph = ''
+
+    def set_article(self):
+        descr_threshold = 512
+        if len(self.film_property_by_label):
+            properties = [f'{key}: {value}' for (key, value) in self.film_property_by_label.items()]
+            metadata = '\n'.join(properties)
+            self.article_paragraph = metadata
+            self.add_paragraph()
+        if self.article_paragraphs:
+            self.description = self.description or self.article_paragraphs[0]
+            if len(self.description) > descr_threshold:
+                self.description = self.description[:descr_threshold] + '…'
+            self.article = '\n\n'.join(self.article_paragraphs)
+        else:
+            self.description = self.description or ''
+            self.article = ''
 
     def _init_screened_film(self):
         self.screened_title = None
@@ -427,7 +561,7 @@ class FilmPageParser(HtmlPageParser):
             month = self.nl_month_by_name[month_str]
             hour, minute = self.screening_start_time.split(':')     # 13:30
             start_dt = datetime.datetime(FESTIVAL_YEAR, month, int(dom), int(hour), int(minute))
-            screen = self.get_imagine_screen()
+            screen = self._get_imagine_screen()
             COUNTER.increase('q&a from ticket label')
             QaScreeningKey(self.film, start_dt, screen).add()
 
@@ -442,34 +576,12 @@ class FilmPageParser(HtmlPageParser):
             # (without screen as key and with data instead of datetime).
             QaScreeningKey(self.film, start_date).add()
 
-    def get_imagine_screen(self):
+    def _get_imagine_screen(self):
         screen_parse_name = self.screening_screen.strip()
         splitter = LocationSplitter.split_location
         return get_screen_from_parse_name(self.festival_data, screen_parse_name, splitter)
 
-    def add_paragraph(self):
-        paragraph = self.article_paragraph
-        if len(paragraph) > 0:
-            self.article_paragraphs.append(paragraph.strip())
-        self.article_paragraph = ''
-
-    def set_article(self):
-        descr_threshold = 512
-        if len(self.film_property_by_label):
-            properties = [f'{key}: {value}' for (key, value) in self.film_property_by_label.items()]
-            metadata = '\n'.join(properties)
-            self.article_paragraph = metadata
-            self.add_paragraph()
-        if self.article_paragraphs:
-            self.description = self.description or self.article_paragraphs[0]
-            if len(self.description) > descr_threshold:
-                self.description = self.description[:descr_threshold] + '…'
-            self.article = '\n\n'.join(self.article_paragraphs)
-        else:
-            self.description = self.description or ''
-            self.article = ''
-
-    def add_film_info(self):
+    def _add_film_info(self):
         screened_films = self.film.screened_films(self.festival_data)
         if self.description or screened_films:
             article = self.article or self.description
@@ -481,122 +593,9 @@ class FilmPageParser(HtmlPageParser):
                                      metadata=self.film_property_by_label)
                 self.festival_data.filminfos.append(film_info)
 
-    def finish_film_info(self):
+    def _finish_film_info(self):
         self.set_article()
-        self.add_film_info()
-
-    def handle_starttag(self, tag, attrs):
-        HtmlPageParser.handle_starttag(self, tag, attrs)
-
-        stack = self.state_stack
-        state = self.FilmInfoParseState
-        match [stack.state(), tag, attrs]:
-            case [state.IDLE, 'h2', _]:
-                stack.push(state.AWAITING_SCREENINGS)
-            case [state.IDLE, 'div', a] if a and a[0][1] == 'zmovies-programma':
-                COUNTER.increase('combination programs')
-                stack.push(state.AWAITING_SCREENED_FILMS)
-            case [state.IDLE, 'div', a] if a and a[0][1] == 'nectar-global-section before-footer':
-                self.state_stack.change(state.DONE)
-            case [state.IN_SCREENINGS, 'tr', _]:
-                self.screening_start_date = attrs[1][1]
-                stack.push(state.IN_SCREENING)
-            case [state.IN_SCREENING, 'td', a] if a and a[0][1] == 'time':
-                stack.push(state.IN_TIME)
-            case [state.IN_SCREENING, 'td', a] if a and a[0][1] == 'theatre':
-                stack.push(state.IN_SCREEN)
-            case [state.IN_SCREENING, 'td', a] if a and a[0][1] == 'ticket':
-                stack.push(state.AWAITING_TICKET_LINK)
-            case [state.AWAITING_TICKET_LINK, 'a', _]:
-                stack.change(state.IN_TICKETS_LINK)
-            case [state.IDLE, 'div', a] if a and a[0] == ('class', 'container-wrap'):
-                stack.push(state.AWAITING_DESCRIPTION)
-            case [state.AWAITING_DESCRIPTION, 'div', a] if a and a[0] == ('class', 'text'):
-                stack.change(state.IN_DESCRIPTION)
-            case [state.AWAITING_DESCRIPTION, 'div', a] if a and a[0] == ('class', 'w6'):
-                stack.change(state.IN_ALT_ARTICLE)
-            case [state.AWAITING_METADATA, 'div', a] if a and a[0] == ('class', 'meta'):
-                stack.change(state.IN_METADATA)
-            case [state.IN_METADATA, 'div', _]:
-                stack.push(state.IN_METADATA_KEY)
-            case [state.AWAITING_SCREENED_FILMS, 'ul', _]:
-                stack.change(state.IN_SCREENED_FILMS)
-            case [state.IN_SCREENED_FILMS, 'li', _]:
-                self._init_screened_film()
-                stack.push(state.IN_SCREENED_FILM)
-            case [state.IN_SCREENED_FILM, 'a', a] if a and a[0][0] == 'href':
-                self.screened_url = a[0][1]
-                stack.change(state.AWAITING_SCREENED_TITLE)
-            case [state.AWAITING_SCREENED_TITLE, 'h3', _]:
-                stack.push(state.IN_SCREENED_TITLE)
-
-    def handle_endtag(self, tag):
-        HtmlPageParser.handle_endtag(self, tag)
-
-        stack = self.state_stack
-        state = self.FilmInfoParseState
-        match [stack.state(), tag]:
-            case [state.AWAITING_SCREENINGS, 'h2']:
-                stack.pop()
-            case [state.IN_SCREENING, 'tr']:
-                stack.pop()
-            case [state.IN_SCREENINGS, 'table']:
-                stack.pop()
-            case [(state.IN_ARTICLE | state.IN_ALT_ARTICLE), 'p']:
-                self.add_paragraph()
-            case [state.IN_ARTICLE, 'div']:
-                stack.change(state.AWAITING_METADATA)
-            case [state.IN_ALT_ARTICLE, 'div']:
-                self.finish_film_info()
-                stack.pop()
-            case [state.IN_METADATA_VALUE, 'div']:
-                stack.pop()
-            case [state.IN_METADATA, 'div']:
-                self.finish_film_info()
-                stack.pop()
-            case [state.IN_SCREENED_TITLE, 'h3']:
-                stack.pop()
-                stack.change(state.DONE_SCREENED_TITLE)
-            case [state.DONE_SCREENED_TITLE, 'li']:
-                self._add_screened_film()
-                stack.pop()
-            case [state.IN_SCREENED_FILMS, 'ul']:
-                stack.pop()
-
-    def handle_data(self, data):
-        HtmlPageParser.handle_data(self, data)
-
-        stack = self.state_stack
-        state = self.FilmInfoParseState
-        match stack.state():
-            case state.AWAITING_SCREENINGS if data == 'Screenings & Tickets':
-                stack.change(state.IN_SCREENINGS)
-            case state.IN_TIME:
-                self.screening_start_time = data
-                stack.pop()
-            case state.IN_SCREEN:
-                self.screening_screen = data
-                stack.pop()
-            case state.IN_TICKETS_LINK:
-                self.screening_ticket_label = data
-                self._add_qa_record_from_ticket_label()
-                stack.pop()
-            case state.IN_DESCRIPTION if len(data.strip()):
-                self.description = data
-                if not self.description.strip():
-                    COUNTER.increase(f'no description')
-                stack.change(state.IN_ARTICLE)
-            case (state.IN_ARTICLE | state.IN_ALT_ARTICLE):
-                self.article_paragraph += data
-                if 'nagesprek' in data:
-                    self._add_qa_record_from_article(data)
-            case state.IN_METADATA_KEY:
-                self.metadata_key = data.strip()
-                stack.change(state.IN_METADATA_VALUE)
-            case state.IN_METADATA_VALUE:
-                self.film_property_by_label[self.metadata_key] = data.strip()
-            case state.IN_SCREENED_TITLE:
-                self.screened_title = data.strip()
+        self._add_film_info()
 
 
 class LocationSplitter:

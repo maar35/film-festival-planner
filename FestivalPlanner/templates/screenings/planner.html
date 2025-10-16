@@ -74,7 +74,7 @@
             <tr>
                 <td>
                 {% ifchanged row.start_dt.date %}
-                    <a href="{% url 'screenings:day_schema' %}?day={{ row.start_dt.date | date:'Y-m-d' }}">{{ row.start_dt.date | date:"D j M Y" }}</a>
+                    <a href="{% url 'screenings:day_schema' %}?day={{ row.schema_date_str }}">{{ row.schema_date | date:"D j M Y" }}</a>
                 {% endifchanged %}
                 </td>
                 <td>{{ row.start_dt | date:"H:i" }}</td>

@@ -142,8 +142,8 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
     @staticmethod
     def _next_festival_day(session, current_day, day_choices, days):
         next_date = current_day.get_date(session) + datetime.timedelta(days=days)
-        within_festival = next_date.strftime(FestivalDay.day_str_format) in day_choices
-        return next_date.strftime(FestivalDay.date_str_format) if within_festival else None
+        within_festival = FestivalDay.choice_str(next_date) in day_choices
+        return FestivalDay.date_str(next_date) if within_festival else None
 
     def _get_screen_row(self, screen_nr, screen, screenings):
         screening_props = [self._screening_props(s) for s in screenings]
@@ -586,9 +586,12 @@ class PlannerListView(LoginRequiredMixin, ListView):
     def _get_planned_screening_row(self, screening):
         film = screening.film
         fans_rating_str, film_rating_str, _ = screening.film.rating_strings()
+        schema_date = screening.start_dt.date()
         planned_screening_row = {
             'start_dt': screening.start_dt,
             'end_dt': screening.end_dt,
+            'schema_date': schema_date,
+            'schema_date_str': FestivalDay.date_str(schema_date),
             'screen_name': str(screening.screen),
             'film': film,
             'filmscreening_count': filmscreenings(film).count(),

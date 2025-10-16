@@ -254,7 +254,14 @@ input.smaller {
     min-width: 8rem;"
 }
 
-/* Screening day schema grid style */
+/* Styles for the screening day schema */
+.day-nav {
+    margin: 1rem;
+    font-size: 1rem;
+}
+.day-nav-element {
+    margin: 0.5rem;
+}
 .day-schema-border {
     border: var(--screeningBorderWidth) solid var(--screeningBorderColor);
 }
