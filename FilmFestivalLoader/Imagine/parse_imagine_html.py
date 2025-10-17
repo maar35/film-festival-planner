@@ -11,8 +11,6 @@ import os
 import re
 from enum import Enum, auto
 
-from pandas._config.config import is_int
-
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Counter
 from Shared.parse_tools import FileKeeper, HtmlPageParser, try_parse_festival_sites
 from Shared.planner_interface import FilmInfo, FestivalData, Film, get_screen_from_parse_name, AUDIENCE_PUBLIC, \
