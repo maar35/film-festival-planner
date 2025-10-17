@@ -588,7 +588,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         films_for_screenings = combi_films or [film]
         fans = get_judging_fans()
         logged_in_fan = current_fan(session)
-        fan_rows = get_fan_props_list(film, fans, logged_in_fan, self.submit_name_prefix)
+        fan_rows = get_fan_props_list(film, fans, logged_in_fan, self.submit_name_prefix, screened_films)
         in_cache = film_is_in_cache(session, film)
         new_context = {
             'title': 'Film Rating Results',
@@ -1004,13 +1004,39 @@ def get_fan_ratings(film, fan_list, logged_in_fan, submit_name_prefix, post_atte
     return film_rating_props
 
 
-def get_fan_props_list(film, fans, logged_in_fan, submit_name_prefix):
+def get_fan_props_list(film, fans, logged_in_fan, submit_name_prefix, screened_films):
     fan_props_list = get_fan_ratings(film, fans, logged_in_fan, submit_name_prefix)
     for fan_props in fan_props_list:
         rating_str = fan_props['rating_str']
         rating = int(rating_str) if rating_str != UNRATED_STR else 0
         fan_props['rating_label'] = FilmFanFilmRating.Rating(rating).label
+        fan_props['mean_rating'] = get_time_weighted_mean_rating(fan_props['fan'], screened_films)
     return fan_props_list
+
+
+def get_time_weighted_mean_rating(fan, screened_films):
+    if not screened_films:
+        return None
+    film_count = len(screened_films)
+    rated_count = 0
+    rated_minutes = 0
+    total_time_rating = 0
+    total_minutes = 0
+    for film in screened_films:
+        raw_rating = fan_rating(fan, film)
+        rating = raw_rating.rating if raw_rating else 0
+        minutes = film.duration.total_seconds() / 60
+        total_time_rating += rating * minutes
+        rated_count += 1 if rating else 0
+        rated_minutes += minutes if rating else 0
+        total_minutes += minutes
+    mean_rating = total_time_rating / rated_minutes if rated_minutes else 0
+    if rated_count == film_count:
+        mean_rating_str = f'{mean_rating:.2f}'
+    else:
+        minutes_perc = rated_minutes / total_minutes * 100
+        mean_rating_str = f'{rated_minutes:.0f} minutes {f"({minutes_perc:.0f}%)" if rated_minutes else ""} judged - {mean_rating:.2f}'
+    return mean_rating_str
 
 
 def get_fan_choices(submit_name_prefix, film, fan, logged_in_fan, post_attendance=False):

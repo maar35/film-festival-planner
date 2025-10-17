@@ -83,13 +83,13 @@
         <table>
             <thead>
                 <tr>
-                    <th class="sticky-t-head" style="vertical-align: text-top;">Film</th>
-                    <th class="sticky-t-head">
+                    <th class="sticky">Film</th>
+                    <th class="sticky">
                         Duration
                         <br>
                         <a href="{% url 'films:films' %}{{ display_shorts_href_filter }}">{{ display_shorts_action }}</a>
                     </th>
-                    <th class="sticky-t-head" style="vertical-align: text-top;">
+                    <th class="sticky">
                         Subsection
                         {% if display_all_subsections_query %}
                             <br>
@@ -97,7 +97,7 @@
                         {% endif %}
                     </th>
                     {% for fan_header in fan_headers %}
-                        <th class="sticky-t-head">
+                        <th class="sticky">
                             {{ fan_header.fan }}
                             <br>
                             <a href="{% url 'films:films' %}{{ fan_header.href_filter }}">{{ fan_header.action }}</a>
@@ -151,7 +151,7 @@
                     {% if fan_rating.fan == current_fan %}
                         {% include "../includes/cell_dropdown.html" with label_current=fan_rating.rating_str choices=fan_rating.choices %}
                     {% else %}
-                        <td style="text-align: center">
+                        <td class="center">
                             {{ fan_rating.rating_str }}
                         </td>
                     {% endif %}

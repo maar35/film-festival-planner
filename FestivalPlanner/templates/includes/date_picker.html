@@ -3,11 +3,11 @@
     <h3>
         <span class="label-8rem">{{ label }}</span>
         {% include "../includes/choices_dropdown.html" with current_choice=day submit_name=name right_aligned=True %}
-        <span style="margin: 1rem; font-size: 1rem;">
-            <span style="margin: 0.5rem;">{% if first_day %} <a href="{% url 'screenings:day_schema' %}?day={{ first_day }}">First</a> {% endif %}</span>
-            <span style="margin: 0.5rem;">{% if prev_day %} <a href="{% url 'screenings:day_schema' %}?day={{ prev_day }}">Previous</a> {% endif %}</span>
-            <span style="margin: 0.5rem;">{% if next_day %} <a href="{% url 'screenings:day_schema' %}?day={{ next_day }}">Next</a> {% endif %}</span>
-            <span style="margin: 0.5rem;">{% if last_day %} <a href="{% url 'screenings:day_schema' %}?day={{ last_day }}">Last</a> {% endif %}</span>
+        <span class="day-nav">
+            <span class="day-nav-element">{% if first_day %} <a href="{% url 'screenings:day_schema' %}?day={{ first_day }}">First</a> {% endif %}</span>
+            <span class="day-nav-element">{% if prev_day %} <a href="{% url 'screenings:day_schema' %}?day={{ prev_day }}">Previous</a> {% endif %}</span>
+            <span class="day-nav-element">{% if next_day %} <a href="{% url 'screenings:day_schema' %}?day={{ next_day }}">Next</a> {% endif %}</span>
+            <span class="day-nav-element">{% if last_day %} <a href="{% url 'screenings:day_schema' %}?day={{ last_day }}">Last</a> {% endif %}</span>
         </span>
     </h3>
 </form>

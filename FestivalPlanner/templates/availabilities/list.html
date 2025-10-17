@@ -48,33 +48,23 @@
         <form method="post">
             {% csrf_token %}
             {% if warnings and confirm %}
-                <span class="disabled-warning-input">
-                    <input type="submit" value="{{ value }}" disabled>
-                </span>
+                <input class="disabled-warning" type="submit" value="{{ value }}" disabled>
             {% elif warnings %}
-                <span class="warning-input">
-                    <input type="submit" name="{{ action }}" value="{{ value }}"/>
-                </span>
+                <input class="warning" type="submit" name="{{ action }}" value="{{ value }}"/>
             {% elif can_submit and confirm %}
                 <input type="submit" value="{{ value }}" disabled>
             {% elif can_submit %}
                 <input type="submit" name="{{ action }}" value="{{ value }}"/>
             {% else %}
-                <span class="disabled-error-input">
-                    <input type="submit" value="{{ value }}" disabled>
-                </span>
+                <input class="disabled-error" type="submit" value="{{ value }}" disabled>
             {% endif %}
 
             {% if confirm %}
                 <br>
                 <br>
                 <h3 class="log-header">Sure?</h3>
-                <input type="submit" name="{{ action }}_canceled" value="No please cancel"
-                       style="width: 25%;"/>
-                <span class="warning-input">
-                    <input type="submit" name="{{ action }}_confirmed" value="Sure, {{ action }}"
-                           style="width: 25%;"/>
-                </span>
+                <input class="smaller" type="submit" name="{{ action }}_canceled" value="No please cancel">
+                <input class="warning smaller" type="submit" name="{{ action }}_confirmed" value="Sure, {{ action }}">
             {% endif %}
         </form>
         <br>
@@ -88,8 +78,8 @@
         <table>
             <thead>
                 <tr>
-                    <th class="sticky-t-head">Start date</th>
-                    <th class="sticky-t-head">End date</th>
+                    <th class="sticky">Start date</th>
+                    <th class="sticky">End date</th>
                     {% include "../includes/filtered_header_field.html" with obj_filter_props=fan_filter_props %}
                 </tr>
             </thead>

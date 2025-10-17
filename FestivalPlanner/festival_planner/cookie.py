@@ -149,12 +149,20 @@ class Filter(Cookie):
 
 
 class FestivalDay:
-    day_str_format = '%a %Y-%m-%d'
-    date_str_format = day_str_format.split()[1]
+    choice_str_format = '%a %Y-%m-%d'
+    date_str_format = choice_str_format.split()[1]
 
     def __init__(self, cookie_key):
         self.festival = None
         self.day_cookie = Cookie(cookie_key)
+
+    @classmethod
+    def choice_str(cls, date):
+        return date.strftime(cls.choice_str_format)
+
+    @classmethod
+    def date_str(cls, date):
+        return date.strftime(cls.date_str_format)
 
     def get_date(self, session, default=None):
         day_str = self.day_cookie.get(session, default=default)
@@ -166,7 +174,7 @@ class FestivalDay:
 
     def get_str(self, session):
         date = self.get_date(session)
-        return date.strftime(self.day_str_format)
+        return self.choice_str(date)
 
     def set_str(self, session, day_str, is_choice=False):
         day_str = day_str.split()[1] if is_choice else day_str
@@ -178,7 +186,7 @@ class FestivalDay:
         all_days = self.festival.end_date - self.festival.start_date + delta
         day_choices = []
         for factor in range(all_days.days):
-            day_choices.append((day + factor * delta).strftime(self.day_str_format))
+            day_choices.append(self.choice_str(day + factor * delta))
         return day_choices
 
     def check_festival_day(self, session, last=False):

@@ -22,6 +22,7 @@ INTERFACE_DIR = os.path.expanduser(f"~/{config()['Paths']['LoaderSharedDirectory
 COMMON_DATA_DIR = os.path.expanduser(f"~/{config()['Paths']['CommonDataDirectory']}")
 ARTICLES_FILE = os.path.join(INTERFACE_DIR, "articles.txt")
 FILMS_FILE_HEADER = config()['Headers']['FilmsFileHeader']
+AUDIENCE_PUBLIC = 'publiek'
 
 
 def get_screen_from_parse_name(festival_data, screen_parse_name, split_location):
@@ -121,7 +122,7 @@ class Film:
         self.duration = duration
         self.medium_category = medium_category
         self.reviewer = None
-        self.sort_string = self.lower(self.strip_article())
+        self.sort_string = self.sort_str()
 
     def __str__(self):
         return ", ".join([str(self.film_id),
@@ -157,6 +158,9 @@ class Film:
     @staticmethod
     def lower(string):
         return UnicodeMapper.normalize(string).lower()
+
+    def sort_str(self):
+        return self.lower(self.strip_article())
 
     @staticmethod
     def duration_to_minutes(duration):
@@ -372,7 +376,7 @@ class Screen:
 
 
 class Screening:
-    audience_type_public = 'publiek'
+    audience_type_public = AUDIENCE_PUBLIC
 
     def __init__(self, film, screen, start_datetime, end_datetime, qa, extra, audience,
                  combination_program=None, subtitles='', sold_out=None):

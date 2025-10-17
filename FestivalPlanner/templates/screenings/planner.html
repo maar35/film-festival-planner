@@ -10,6 +10,8 @@
         <a href="{% url 'screenings:day_schema' %}">Day schema</a>
         <br>
         <a href="{% url 'films:films' %}">Film ratings</a>
+        <br>
+        <a href="{% url 'theaters:theaters' %}">Theaters</a>
     </span>
 </div>
 
@@ -39,11 +41,15 @@
 </p>
 <form method='post'>
     {% csrf_token %}
-    <input type="submit"  name="plan" value="Plan screenings">
-    <br>
-    <span class="warning-input">
-        <input type="submit" name="undo" value="Undo planning"/>
-    </span>
+    {% if planned_screening_count %}
+        <input type="submit" value="Plan screenings" disabled>
+        <br>
+        <input class="warning" type="submit" name="undo" value="Undo planning">
+    {% else %}
+        <input type="submit" name="plan" value="Plan screenings">
+        <br>
+        <input class="disabled-warning" type="submit" value="Undo planning" disabled>
+    {% endif %}
 </form>
 <br>
 {% if planned_screening_rows %}
@@ -56,11 +62,11 @@
                 <th>End time</th>
                 <th>Screen</th>
                 <th>Film title</th>
-                <th style="text-align: center;">#Filmscreenings</th>
-                <th style="text-align: center;">#Available Filmscreenings</th>
+                <th class="center">#Filmscreenings</th>
+                <th class="center">#Available Filmscreenings</th>
                 <th>Attendants</th>
                 <th>Fan ratings</th>
-                <th style="text-align: center;">Representative rating</th>
+                <th class="center">Representative rating</th>
             </tr>
         </thead>
         <tbody>
@@ -68,18 +74,18 @@
             <tr>
                 <td>
                 {% ifchanged row.start_dt.date %}
-                    {{ row.start_dt.date | date:"D j M Y" }}
+                    <a href="{% url 'screenings:day_schema' %}?day={{ row.schema_date_str }}">{{ row.schema_date | date:"D j M Y" }}</a>
                 {% endifchanged %}
                 </td>
                 <td>{{ row.start_dt | date:"H:i" }}</td>
                 <td>{{ row.end_dt | date:"H:i" }}</td>
                 <td>{{ row.screen_name }}</td>
                 <td>{{ row.film.title }}</td>
-                <td style="text-align: center;">{{ row.filmscreening_count }}</td>
-                <td style="text-align: center;">{{ row.available_filmscreening_count }}</td>
+                <td class="center">{{ row.filmscreening_count }}</td>
+                <td class="center">{{ row.available_filmscreening_count }}</td>
                 <td>{{ row.attendants }}</td>
                 <td>{{ row.fan_ratings_str }}</td>
-                <td style="text-align: center;">{{ row.film_rating_str }}</td>
+                <td class="center">{{ row.film_rating_str }}</td>
             </tr>
         {% endfor %}
         </tbody>
@@ -94,15 +100,16 @@
 <table>
     <thead>
     <tr>
-        <th>Screening</th>
-        <th>Available</th>
-        <th style="text-align: center;">Highest film ratings</th>
-        <th>Attendants</th>
-        <th style="text-align: center;">Q&A</th>
-        <th style="text-align: center;">#Available Filmscreenings</th>
-        <th>Duration</th>
-        <th>Start time</th>
-        <th style="text-align: center;">Auto planned</th>
+        <th class="sticky">Screening</th>
+        <th class="sticky">Available</th>
+        <th class="sticky center">Highest film ratings</th>
+        <th class="sticky">Attendants</th>
+        <th class="sticky center">Q&A</th>
+        <th class="sticky center">#Available Filmscreenings</th>
+        <th class="sticky center">Theater priority</th>
+        <th class="sticky">Duration</th>
+        <th class="sticky">Start time</th>
+        <th class="sticky center">Auto planned</th>
     </tr>
     </thead>
     <tbody>
@@ -114,13 +121,14 @@
             </a>
         </td>
         <td>{{ row.available_fans_str }}</td>
-        <td style="text-align: center;">{{ row.highest_rating }}, {{ row.second_highest_rating }}</td>
+        <td class="center">{{ row.highest_rating }}, {{ row.second_highest_rating }}</td>
         <td>{{ row.attendants_str }}</td>
-        <td style="text-align: center;">{{ row.q_and_a | yesno:"Q&A,-"}}</td>
-        <td style="text-align: center;">{{ row.available_filmscreening_count }}</td>
+        <td class="center">{{ row.q_and_a | yesno:"Q&A,-"}}</td>
+        <td class="center">{{ row.available_filmscreening_count }}</td>
+        <td class="center">{{ row.theater_prio }}</td>
         <td>{{ row.duration }}</td>
         <td>{{ row.start_dt | date:"Y-m-d H:i" }}</td>
-        <td style="text-align: center;">{{ row.auto_planned | yesno:"𝛑,-"}}</td>
+        <td class="center">{{ row.auto_planned | yesno:"𝛑,-"}}</td>
     </tr>
     {% endfor %}
     </tbody>

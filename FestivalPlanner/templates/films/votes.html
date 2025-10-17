@@ -39,11 +39,11 @@
     <table>
         <thead>
             <tr>
-                <th class="sticky-t-head" style="vertical-align: text-top;">Film</th>
-                <th class="sticky-t-head" style="vertical-align: text-top;">Duration</th>
-                <th class="sticky-t-head" style="vertical-align: text-top;">Reviewer</th>
+                <th class="sticky">Film</th>
+                <th class="sticky">Duration</th>
+                <th class="sticky">Reviewer</th>
                 {% for fan in fans %}
-                    <th class="sticky-t-head" style="vertical-align: text-top;">{{ fan }}</th>
+                    <th class="sticky">{{ fan }}</th>
                 {% endfor %}
             </tr>
         </thead>
@@ -60,7 +60,7 @@
                 {% if fan_vote.fan == current_fan %}
                     {% include "../includes/cell_dropdown.html" with label_current=fan_vote.rating_str choices=fan_vote.choices %}
                 {% else %}
-                    <td style="text-align: center">{{ fan_vote.rating_str }}</td>
+                    <td class="center">{{ fan_vote.rating_str }}</td>
                 {% endif %}
             {% endfor %}
         </tr>

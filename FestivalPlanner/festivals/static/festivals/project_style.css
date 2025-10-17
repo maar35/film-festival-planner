@@ -23,6 +23,7 @@
     --infoHoverBackground: var(--infoColor);
     --warningHoverBackground: rgb(255 79 0);
     --stickyBackground: rgb(30 30 30 / .5);
+    --stickyFooterBackground: rgb(10 10 10 / 75%);
     --tableBackground: rgb(0 0 0 / .6);
     --modestBackground: rgb(0 0 38 / .73);
     --screeningBackground: rgb(0 0 0 / .73);
@@ -88,9 +89,16 @@ td {
     padding: 10px;
     border-collapse: collapse;
     background-color: var(--tableBackground);
+    vertical-align: text-top;
 }
 th.active {
     padding: 0 8px;
+}
+th.center, td.center {
+    text-align: center;
+}
+th.right, td.right {
+    text-align: right;
 }
 
 /* Table cell style when containing an input widget */
@@ -100,6 +108,12 @@ td.with-submit {
 td.with-submit-center {
     padding: 0 8px;
     text-align: center
+}
+thead.sticky, tr.sticky, th.sticky {
+    position: sticky;
+    top: 14pt;
+    z-index: 3;
+    background-color: var(--stickyBackground);
 }
 
 /* Customize the select widget. */
@@ -166,11 +180,34 @@ input[type=text]:focus {
     background-color: var(--focusBackgrond);
 }
 
+input.warning {
+    background: var(--warningBackground);
+}
+input.warning:hover {
+    background: var(--warningHoverBackground);
+}
+
 input:disabled {
     cursor: default;
     color: var(--inputDisabledColor);
 }
 
+input.disabled-warning {
+    background: var(--warningBackground) !important;
+}
+input.disabled-warning:hover {
+    background: var(--warningBackground);
+}
+input.disabled-error {
+    background: var(--inputDisabledBackground) !important;
+}
+input.disabled-error:hover {
+    background: var(--inputDisabledBackground);
+}
+
+input.smaller {
+    width: 25%;
+}
 
 /* Include padding and border in the width and height of each element */
 * {
@@ -217,7 +254,14 @@ input:disabled {
     min-width: 8rem;"
 }
 
-/* Screening day schema grid style */
+/* Styles for the screening day schema */
+.day-nav {
+    margin: 1rem;
+    font-size: 1rem;
+}
+.day-nav-element {
+    margin: 0.5rem;
+}
 .day-schema-border {
     border: var(--screeningBorderWidth) solid var(--screeningBorderColor);
 }
@@ -255,15 +299,11 @@ input:disabled {
     top: 0;
     background-color: var(--stickyBackground);
 }
-.sticky-t-head {
-    position: sticky;
-    top: 14pt;
-    background-color: var(--stickyBackground);
-}
+
 .sticky-footer {
     position: sticky;
     bottom: 0;
-    background-color: var(--stickyBackground);
+    background-color: var(--stickyFooterBackground);
 }
 .sticky-left {
     position: sticky;
@@ -296,6 +336,7 @@ input:disabled {
 .sticky-modest-drop-t-head:hover .sticky-modest-drop-t-head-content {
     display: block;
 }
+
 
 /* ----- Special constructs ----- */
 
@@ -405,7 +446,7 @@ span.up {
     box-shadow: var(--modestBoxShadow);
     width: auto;
     padding: .3rem .4rem;
-    z-index: 1;
+    z-index: 4;
 }
 .cell-dropdown-content {
     top: 30%;
@@ -418,6 +459,7 @@ span.up {
     input {
         display: block;
         width: 100%;
+        z-index: 4;
         padding: .3rem .5rem;
         margin: 0;
         text-decoration: none;
@@ -514,7 +556,7 @@ span.up {
     background: black;
     box-shadow: var(--modestBoxShadow);
     padding: 0.15rem;
-    z-index: 2;
+    z-index: 4;
 }
 .standout-dropdown-content {
     top: 90%;
@@ -544,9 +586,6 @@ span.up {
     display: block;
 }
 
-
-/* - Class definitions for the in-screening dropdown */
-
 .link-in-dropdown {
     display: block;
     width: 100%;
@@ -562,12 +601,14 @@ span.up {
     background-color: var(--hoverBackground)
 }
 
+
 /* Classes for floating elements */
 
 .floating-warning-box {
     position: fixed;
     right: 1rem;
     top: 1.2rem;
+    z-index: 4;
     padding: .5rem;
     background: var(--warningColorYellow);
     border-radius: 1rem;
@@ -577,32 +618,6 @@ span.up {
 }
 
 /* Descendant combinators for different input states */
-.warning-input {
-}
-.warning-input input {
-    background: var(--warningBackground);
-}
-.warning-input input:hover {
-    background: var(--warningHoverBackground);
-}
-.disabled-warning-input {
-}
-.disabled-warning-input input{
-    background: var(--warningBackground);
-}
-.disabled-warning-input input:hover {
-    background: var(--warningBackground);
-}
-
-.disabled-error-input {
-}
-.disabled-error-input input{
-    background: var(--inputDisabledBackground);
-}
-.disabled-error-input input:hover {
-    background: var(--inputDisabledBackground);
-}
-
 .right-aligned-input {
 }
 .right-aligned-input input {
