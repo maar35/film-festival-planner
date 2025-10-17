@@ -11,6 +11,8 @@ import os
 import re
 from enum import Enum, auto
 
+from pandas._config.config import is_int
+
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Counter
 from Shared.parse_tools import FileKeeper, HtmlPageParser, try_parse_festival_sites
 from Shared.planner_interface import FilmInfo, FestivalData, Film, get_screen_from_parse_name, AUDIENCE_PUBLIC, \
@@ -612,34 +614,30 @@ class LocationSplitter:
         elif location.startswith('Louis Hartlooper Complex'):
             city_name = 'Utrecht'
 
-        parts = location.split()
+        location_words = location.split()
         screen_abbreviation = ''
-        parts.extend(['', ''])
-        match [parts[0], parts[1], parts[2]]:
-            case ['Hal', 'West', number]:
+        location_words.extend(['', '', ''])
+        match [location_words[0], location_words[1], location_words[2], location_words[3]]:
+            case ['Hal', 'West', number, '']:
                 theater_parse_name = 'Hal West (VR)'
                 screen_abbreviation = number
-            case ['Lab-1', number, _]:
+            case ['LAB111' | 'Lab-1', number, '', '']:
                 theater_parse_name = 'LAB111'
                 screen_abbreviation = number
-            case ['OT', '301', _]:
+            case ['OT', '301', '', '']:
                 theater_parse_name = 'OT 301'
+            case ['SPUI', '25', '', '']:
+                theater_parse_name = location
+                screen_abbreviation = default_screen_abbreviation
+            case ['OBA', 'Oosterdok', 'OBA', 'Theater']:
+                theater_parse_name = ' '.join(location_words[:2])
+                screen_abbreviation = ' '.join(location_words[2:])
+            case [_, _, _, _] if num_match:
+                theater_parse_name = num_match.group(1)
+                screen_abbreviation = num_match.group(2)
             case _:
-                if location == 'SPUI 25':
-                    theater_parse_name = location
-                    screen_abbreviation = default_screen_abbreviation
-                elif location == 'OBA Oosterdok OBA Theater':
-                    location_words = location.split()
-                    theater_parse_name = ' '.join(location_words[:2])
-                    screen_abbreviation = ' '.join(location_words[2:])
-                elif num_match:
-                    theater_parse_name = num_match.group(1)
-                    screen_abbreviation = num_match.group(2)
-                elif location.startswith('LAB111 '):
-                    theater_parse_name = 'LAB111'
-                    screen_abbreviation = location.split()[1]
-                else:
-                    screen_abbreviation = default_screen_abbreviation
+                screen_abbreviation = default_screen_abbreviation
+
         return city_name, theater_parse_name, screen_abbreviation or default_screen_abbreviation
 
 
