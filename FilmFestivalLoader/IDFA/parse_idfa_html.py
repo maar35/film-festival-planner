@@ -14,13 +14,12 @@ import os
 import re
 from enum import Enum, auto
 from typing import Dict
-from urllib.parse import urlparse
 
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Counter
 from Shared.parse_tools import FileKeeper, HtmlPageParser, try_parse_festival_sites
 from Shared.planner_interface import FestivalData, Screening, Film, FilmInfo, ScreenedFilm, get_screen_from_parse_name, \
     ScreeningKey, AUDIENCE_PUBLIC
-from Shared.web_tools import UrlFile, iri_slug_to_url
+from Shared.web_tools import UrlFile
 
 FESTIVAL = 'IDFA'
 FESTIVAL_CITY = 'Amsterdam'
@@ -39,14 +38,14 @@ AZ_PAGE_COUNT = 1
 # URL information.
 FESTIVAL_HOSTNAME = 'https://festival.idfa.nl'
 AZ_PATH = '/collectie/?A_TO_Z_TYPE=Publiek&A_TO_Z_TYPE=New+Media'       # '&page=9
-# AZ_PATH = '/collectie/?A_TO_Z_TYPE=Publiek'
-# PATHWAYS_PATH = 'https://festival.idfa.nl/festivalgids/wegwijzers/?utm_source=IDFA+Nieuwsbrieven&utm_campaign=da6f086be8-EMAIL_CAMPAIGN_2025_10_10_08_01&utm_medium=email&utm_term=0_-da6f086be8-69724581'
+# PATHWAYS_URL = 'https://festival.idfa.nl/festivalgids/wegwijzers/?utm_source=IDFA+Nieuwsbrieven&utm_campaign=da6f086be8-EMAIL_CAMPAIGN_2025_10_10_08_01&utm_medium=email&utm_term=0_-da6f086be8-69724581'
+# PATHWAYS_PATH = '/festivalgids/wegwijzers/'
 PATHWAYS_PATH = ('/festivalgids/wegwijzers/?utm_source=IDFA+Nieuwsbrieven'
                  '&utm_campaign=da6f086be8-EMAIL_CAMPAIGN_2025_10_10_08_01&utm_medium=email'
                  '&utm_term=0_-da6f086be8-69724581')
-SECTIONS_PATH = '/festivalgids/competities-en-andere-programmas/'
-SECTION_PATH = PATHWAYS_PATH
-# SECTION_PATH = '/festivalgids/wegwijzers/'
+# SECTIONS_PATH = '/festivalgids/competities-en-andere-programmas/'
+SECTIONS_PATH = '/collectie/?SHOW_TYPE=Publiek&page=1&tabIndex=2'
+# SECTION_PATH = PATHWAYS_PATH
 
 # Application tools.
 ERROR_COLLECTOR = ErrorCollector()
@@ -63,11 +62,11 @@ COLOR_BY_SECTION_ID = {
     7: 'HotPink',
     8: 'Khaki',
     9: 'LightSeaGreen',
-    10: 'DarkSeaGreen',
+    10: 'DarkOliveGreen',
     11: 'OliveDrab',
     12: 'Olive',
-    13: 'hotPink',
-    14: 'violet',
+    13: 'YellowGreen',
+    14: 'DarkSeaGreen',
     15: 'limeGreen',
     16: 'fuchsia',
     17: 'DarkMagenta',
@@ -83,7 +82,8 @@ COLOR_BY_SECTION_ID = {
     27: 'PapayaWhip',
     28: 'PeachPuff',
     29: 'crimson',
-    30: '',
+    30: 'hotPink',
+    31: 'violet',
 }
 
 
@@ -137,14 +137,15 @@ def parse_idfa_sites(festival_data):
     # comment('Trying new AZ pege(s)')
     # load_az_pages(festival_data)
 
-    # comment('Parsing section pages.')
-    # get_pathways(festival_data, SECTIONS_PATH, 'sections.html')
+    comment('Parsing section pages.')
+    get_theme_parts(festival_data, SECTIONS_PATH, 'sections.html')
 
     comment('Parsing pathway pages.')
-    get_pathways(festival_data, PATHWAYS_PATH, 'pathways.html')
+    get_theme_parts(festival_data, PATHWAYS_PATH, 'pathways.html')
 
     comment(f'Listing the {len(SectionsKeeper.section_titles)} found sections')
-    print(f'\n@@@ {"\n@@@ ".join([s for s in SectionsKeeper.section_titles])}')
+    for section_title in SectionsKeeper.section_titles:
+        print(f'@@@ {section_title}')
 
     # comment('Parsing film pages')
     # FilmDetailsReader(festival_data).get_film_details()
@@ -190,27 +191,32 @@ def load_az_pages(festival_data):
 #             FilmEnumeratedPageParser(festival_data, url).feed(film_html)
 
 
-def get_pathways(festival_data, theme_path, target_file):
-    pathway_url = FESTIVAL_HOSTNAME + theme_path
-    pathway_file = os.path.join(FILE_KEEPER.webdata_dir, target_file)
-    url_file = UrlFile(pathway_url, pathway_file, ERROR_COLLECTOR, DEBUG_RECORDER, byte_count=200)
-    comment_ = f'Downloading {pathway_url}'
-    pathway_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=comment_)
-    if pathway_html:
-        comment(f'Analysing sections page, encoding={url_file.encoding}')
-        PathwaysPageParser(festival_data).feed(pathway_html)
+def get_theme_parts(festival_data, theme_path, target_file):
+    theme_url = FESTIVAL_HOSTNAME + theme_path
+    theme_file = os.path.join(FILE_KEEPER.webdata_dir, target_file)
+    url_file = UrlFile(theme_url, theme_file, ERROR_COLLECTOR, DEBUG_RECORDER, byte_count=200)
+    theme_str = target_file.split('.')[0]
+    comment_ = f'Downloading {theme_str} theme from {theme_url}'
+    theme_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=comment_)
+    if theme_html:
+        comment(f'Analysing {theme_str} theme page, encoding={url_file.encoding}')
+        ThemePartsPageParser(festival_data, theme_str).feed(theme_html)
 
 
-def get_films_by_pathway(festival_data, pathway_urls):
+def get_films_by_theme(festival_data, theme_urls, theme_str):
     """Read the films from each of the given pathway URLs."""
-    for i, pathway_url in enumerate(pathway_urls):
-        pathway_file = FILE_KEEPER.numbered_webdata_file('pathway', i)
-        url_file = UrlFile(pathway_url, pathway_file, ERROR_COLLECTOR, DEBUG_RECORDER, byte_count=200)
-        comment_ = f'Downloading {pathway_url} as to find the sections of the encountered films'
-        pathway_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=comment_)
-        if pathway_html:
-            comment(f'Analysing pathway page {i}, encoding={url_file.encoding}')
-            FilmsFromPathwayPageParser(festival_data, pathway_url).feed(pathway_html)
+    for i, theme_url in enumerate(theme_urls):
+        theme_file = FILE_KEEPER.numbered_webdata_file(theme_str, i)
+        url_file = UrlFile(theme_url, theme_file, ERROR_COLLECTOR, DEBUG_RECORDER, byte_count=200)
+        comment_ = f'Downloading {theme_url} as to find the {theme_str} parts of the encountered films'
+        theme_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=comment_)
+        if theme_html:
+            comment(f'Analysing {theme_str} page {i}, encoding={url_file.encoding}')
+            print(f'@@@ {theme_str=}')
+            if theme_str == 'sections':
+                FilmsFromSectionPageParser(festival_data, theme_url).feed(theme_html)
+            else:
+                FilmsFromPathwayPageParser(festival_data, theme_url).feed(theme_html)
 
 
 def get_one_film(festival_data, title, url):
@@ -231,7 +237,7 @@ def get_one_film(festival_data, title, url):
             FilmPageParser(festival_data, film).feed(film_html)
 
 
-def get_readable_pathway_str(pathway_url):
+def get_readable_theme_str(pathway_url):
     pathway_str = pathway_url.split('/')[-2]  # .replace('_', ' ')
     return pathway_str
 
@@ -241,8 +247,10 @@ def get_section_from_pathway_film(festival_data, title, url, pathway_url):
     # Check if the fim is already not loaded.
     try:
         _ = festival_data.get_film_by_key(title, url)
+    except KeyError:
+        DEBUG_RECORDER.add('New film.')
     except ValueError:
-        pass
+        DEBUG_RECORDER.add('Known film not yet parsed.')
     else:
         comment(f'Existing film {title} not parsed.')
         return
@@ -255,9 +263,37 @@ def get_section_from_pathway_film(festival_data, title, url, pathway_url):
     comment_at_download = f'Downloading pathway film {title} data from {url}'
     film_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=comment_at_download)
     if film_html:
-        pathway_str = get_readable_pathway_str(pathway_url)
+        pathway_str = get_readable_theme_str(pathway_url)
         print(f'Analysing page of "{title}" from {pathway_str} pathway, encoding={url_file.encoding}')
         PathwayFilmParser(festival_data, pathway_str, title, url).feed(film_html)
+
+
+class AzPageParser(HtmlPageParser):
+    class AzParseState(Enum):
+        IDLE = auto()
+        IN_ARTICLE = auto()
+
+    def __init__(self, festival_data, debugger=None):
+        HtmlPageParser.__init__(self, festival_data, debugger or DEBUG_RECORDER, 'AZ', debugging=DEBUGGING)
+        self.sorting_from_site = False
+        self.film = None
+        self.state_stack = self.StateStack(self.print_debug, self.AzParseState.IDLE)
+
+    def handle_starttag(self, tag, attrs):
+        HtmlPageParser.handle_starttag(self, tag, attrs)
+
+        if self.state_stack.state_is(self.AzParseState.IDLE) and tag == 'article':
+            self.state_stack.push(self.AzParseState.IN_ARTICLE)
+            COUNTER.increase('az-counters')
+
+    def handle_endtag(self, tag):
+        HtmlPageParser.handle_endtag(self, tag)
+
+        if self.state_stack.state_is(self.AzParseState.IN_ARTICLE) and tag == 'article':
+            self.state_stack.pop()
+
+    def handle_data(self, data):
+        HtmlPageParser.handle_data(self, data)
 
 
 class SectionsKeeper:
@@ -281,6 +317,435 @@ class SectionsKeeper:
         # cls.section_title_by_url[] = section_title
         COUNTER.increase('sections')
         return True
+
+
+class ThemePartsPageParser(HtmlPageParser):
+    """Parse the given theme overview page for theme URLs."""
+    class ThemePartsParseState(Enum):
+        AWAITING_URL = auto()
+        AWAITING_THEME_PART_TITLE = auto()
+        AFTER_THEME_PART_TITLE = auto()
+        DONE = auto()
+
+    def __init__(self, festival_data, theme_str):
+        super().__init__(festival_data, DEBUG_RECORDER, 'TP', debugging=DEBUGGING)
+        self.theme_str = theme_str
+        self.theme_urls = []
+        self.theme_name_by_url = {}
+        self.theme_url = None
+        self.theme_name = None
+        self.print_debug(self.headed_bar(header=f'THEME {theme_str}'))
+        self.state_stack = self.StateStack(self.print_debug, self.ThemePartsParseState.AWAITING_URL)
+
+    def feed(self, data):
+        super().feed(data)
+
+        comment(f'Finding films per {self.theme_str} theme ({len(self.theme_urls)} {self.theme_str}s)')
+        get_films_by_theme(self.festival_data, self.theme_urls, self.theme_str)
+
+    def handle_starttag(self, tag, attrs):
+        super().handle_starttag(tag, attrs)
+
+        stack = self.state_stack
+        state = self.ThemePartsParseState
+        match [stack.state(), tag, attrs]:
+            case [state.AWAITING_URL, 'a', a] if len(a) > 1 and a[1][1].startswith('/section/'):
+                self.theme_url = FESTIVAL_HOSTNAME + a[1][1]
+                self.theme_urls.append(self.theme_url)
+                stack.push(state.AWAITING_THEME_PART_TITLE)
+            case [state.AWAITING_THEME_PART_TITLE, 'img', a] if a and a[0][0] == 'alt':
+                self.theme_name = a[0][1]
+                _ = SectionsKeeper.add_section_props(self.theme_name)
+                self.theme_name_by_url[self.theme_url] = self.theme_name
+                self._add_section()
+            case [state.AWAITING_URL, 'footer', _]:
+                stack.change(state.DONE)
+
+    def handle_endtag(self, tag):
+        super().handle_endtag(tag)
+
+        stack = self.state_stack
+        state = self.ThemePartsParseState
+        match [stack.state(), tag]:
+            case [state.AWAITING_THEME_PART_TITLE, 'img']:
+                stack.change(state.AFTER_THEME_PART_TITLE)
+            case [state.AFTER_THEME_PART_TITLE, 'a']:
+                self._init_theme_part()
+                stack.pop()
+
+    def _init_theme_part(self):
+        self.theme_url = None
+        self.theme_name = None
+
+    def _add_section(self):
+        DEBUG_RECORDER.add(f'ADD SECTION {self.theme_name}, {self.theme_url}')
+        section = self.festival_data.get_section(self.theme_name, color_by_id=COLOR_BY_SECTION_ID)
+        if section:
+            COUNTER.increase('subsection added')
+            self.subsection = self.festival_data.get_subsection(self.theme_name, self.theme_url, section)
+
+
+class OldThemePartsPageParser(HtmlPageParser):
+    """Parse the pathway overview page for pathway URLs."""
+    class PathwayParseState(Enum):
+        AWAITING_URL = auto()
+        DONE = auto()
+
+    def __init__(self, festival_data):
+        super().__init__(festival_data, DEBUG_RECORDER, 'TP', debugging=DEBUGGING)
+        self.section_urls = []
+        self.pathway_urls = []
+        # self.theme_urls = []
+        self.state_stack = self.StateStack(self.print_debug, self.PathwayParseState.AWAITING_URL)
+
+    def feed(self, data):
+        super().feed(data)
+
+        comment(f'Finding films per section ({len(self.section_urls)} sections)')
+        # get_films_by_section(self.festival_data, self.section_urls)
+        get_films_by_theme(self.festival_data, self.section_urls, 'sections')
+
+        comment(f'Finding films per pathway ({len(self.pathway_urls)} pathways)')
+        get_films_by_theme(self.festival_data, self.pathway_urls, 'pathways')
+
+    def handle_starttag(self, tag, attrs):
+        HtmlPageParser.handle_starttag(self, tag, attrs)
+
+        stack = self.state_stack
+        state = self.PathwayParseState
+        section_url_start = 'https://festival.idfa.nl/section/'
+        section_url_start_alt = 'https://festival.idfa.nl/en/section/'
+        url_start = 'https://festival.idfa.nl/pathways'
+        url_start_alt = 'https://festival.idfa.nl/nl/pathways'
+        match [stack.state(), tag, attrs]:
+            case [state.AWAITING_URL, 'a', a] if len(a) > 1 and a[1][1].startswith(section_url_start):
+                self._add_section(a[1][1])
+            case [state.AWAITING_URL, 'a', a] if len(a) > 1 and a[1][1].startswith(section_url_start_alt):
+                self._add_section(a[1][1])
+            case [state.AWAITING_URL, 'a', a] if len(a) > 1 and a[1][1].startswith(url_start):
+                self._add_pathway(a[1][1])
+            case [state.AWAITING_URL, 'a', a] if len(a) > 1 and a[1][1].startswith(url_start_alt):
+                self._add_pathway(a[1][1])
+            case [state.AWAITING_URL, 'footer', _]:
+                stack.change(state.DONE)
+
+    def _add_section(self, url):
+        self.section_urls.append(url)
+        DEBUG_RECORDER.add(f'ADDING SECTION URL {url}')
+        COUNTER.increase('sections')
+
+    def _add_pathway(self, url):
+        self.pathway_urls.append(url)
+        DEBUG_RECORDER.add(f'ADDING PATHWAY URL {url}')
+        COUNTER.increase('pathways')
+
+    # def _add_theme(self, url):
+    #     theme = url.split('/')[-3]
+    #     if theme == 'section':
+    #         self._add_section(url)
+    #     elif theme == 'pathways':
+    #         self._add_pathway(url)
+    #     else:
+    #         ERROR_COLLECTOR.add('Unexpected theme', f'{theme}')
+
+
+class FilmsFromSectionPageParser(HtmlPageParser):
+    """Laad the films from given pathway URL. Find the sections in each film."""
+    class SectionFilmsParseState(Enum):
+        IDLE = auto()
+        AWAITING_SECTION_TITLE = auto()
+        IN_SECTION_NAME = auto()
+        AWAITING_SECTION_DESCRIPTION = auto()
+        IN_SECTION_DESCRIPTION_ALT = auto()
+        IN_SECTION_DESCRIPTION = auto()
+        AWAITING_FILM = auto()
+        APPROACHING_FILM = auto()
+        IN_FILM = auto()
+        IN_FILM_URL = auto()
+        IN_FILM_TITLE = auto()
+        DONE = auto()
+
+    def __init__(self, festival_data, section_url):
+        super().__init__(festival_data, DEBUG_RECORDER, 'FFS', debugging=DEBUGGING)
+        self.section_url = section_url
+        self.section_name = None
+        self.section_description = None
+
+        # Initialize film properties.
+        self.film_url = None
+        self.film_title = None
+
+        self._draw_headed_bar(get_readable_theme_str(section_url))
+        self.state_stack = self.StateStack(self.print_debug, self.SectionFilmsParseState.IDLE)
+
+    def handle_starttag(self, tag, attrs):
+        super().handle_starttag(tag, attrs)
+
+        stack = self.state_stack
+        state = self.SectionFilmsParseState
+        match [stack.state(), tag, attrs]:
+            case [state.IDLE, 'a', a] if a and a[0][1].startswith('/section/'):
+                stack.change(state.AWAITING_SECTION_TITLE)
+            case [state.AWAITING_SECTION_TITLE, 'span', a] if a:
+                self.section_name = a[0][1]
+                stack.change(state.AWAITING_SECTION_DESCRIPTION)
+            case [state.AWAITING_SECTION_DESCRIPTION, 'p', a] if a and a[0] == ('index', '0'):
+                stack.change(state.IN_SECTION_DESCRIPTION)
+            case [state.AWAITING_SECTION_DESCRIPTION, 'div', a] if a and a[0][1] == 'ey43j5h0 css-uu0j5i-Body-Body':
+                stack.change(state.IN_SECTION_DESCRIPTION_ALT)
+            case [state.AWAITING_FILM, 'article', _]:
+                stack.push(state.IN_FILM)
+            case [state.IN_FILM, 'a', a] if a and a[0][0] == 'href':
+                self.film_url = FESTIVAL_HOSTNAME + a[0][1]
+                stack.push(state.IN_FILM_URL)
+            case [state.IN_FILM_URL, 'img', a] if a and a[0][0] == 'alt':
+                self.film_title = a[0][1]
+                stack.push(state.IN_FILM_TITLE)
+            case [state.AWAITING_FILM, 'footer', _]:
+                stack.change(state.DONE)
+
+    def handle_endtag(self, tag):
+        super().handle_endtag(tag)
+
+        stack = self.state_stack
+        state = self.SectionFilmsParseState
+        match [stack.state(), tag]:
+            case [state.IN_SECTION_DESCRIPTION, 'p']:
+                stack.change(state.AWAITING_FILM)
+            case [state.IN_SECTION_DESCRIPTION_ALT, 'div']:
+                stack.change(state.AWAITING_FILM)
+            case [state.IN_FILM_TITLE, 'img']:
+                stack.pop()
+            case [state.IN_FILM_URL, 'a']:
+                stack.pop()
+            case [state.IN_FILM, 'article']:
+                comment(f'Ready to read film "{self.film_title}" from {self.film_url}')
+                self._read_film()
+                stack.pop()
+
+    def handle_data(self, data):
+        super().handle_data(data)
+
+        stack = self.state_stack
+        state = self.SectionFilmsParseState
+        match stack.state():
+            case state.IN_SECTION_DESCRIPTION | state.IN_SECTION_DESCRIPTION_ALT:
+                self.section_description = data
+
+    def _init_film_props(self):
+        self.film_url = None
+        self.film_title = None
+
+    def _draw_headed_bar(self, section_str):
+        print(f'{self.headed_bar(header=section_str)}')
+        self.print_debug(self.headed_bar(header=section_str))
+
+    def _read_film(self):
+        comment(f'About to parse film "{self.film_title}" from {self.film_url}')
+        get_section_from_pathway_film(self.festival_data, self.film_title, self.film_url, self.section_url)
+        self._init_film_props()
+
+
+class FilmsFromPathwayPageParser(HtmlPageParser):
+    """Laad the films from given pathway URL. Find the sections in each film."""
+    class FilmsParseState(Enum):
+        AWAITING_TITLE = auto()
+        IN_TITLE = auto()
+        AWAITING_DESCR = auto()
+        IN_DESCR = auto()
+        AWAITING_FILM_URL = auto()
+        IN_FILM_URL = auto()
+        AWAITING_FILM_TITLE = auto()
+        IN_FILM_TITLE = auto()
+        IN_FILM_PROPERTIES = auto()
+        IN_FILM_PROPERTY = auto()
+        DONE = auto()
+
+    sections_by_film = {}
+
+    def __init__(self, festival_data, pathway_url):
+        super().__init__(festival_data, DEBUG_RECORDER, 'FFP', debugging=DEBUGGING)
+        self.pathway_url = pathway_url
+
+        # Initialize film data.
+        self.film_url = None
+        self.film_title = None
+        self.section_title = None
+        self.section_name = None
+        self.subsection = None
+        self.film_property_by_label = None
+        self.metadata_key = None
+        # self.film = None
+        # self.film_duration = None
+        # self._init_film_data()
+
+        # Draw a bar with section info.
+        self.draw_headed_bar(get_readable_theme_str(pathway_url))
+
+        # Initialize the state stack.
+        self.state_stack = self.StateStack(self.print_debug, self.FilmsParseState.AWAITING_TITLE)
+
+    def handle_starttag(self, tag, attrs):
+        HtmlPageParser.handle_starttag(self, tag, attrs)
+
+        stack = self.state_stack
+        state = self.FilmsParseState
+        match [stack.state(), tag, attrs]:
+            case [state.AWAITING_TITLE, 'title', _]:
+                stack.change(state.IN_TITLE)
+            case [state.AWAITING_DESCR, 'meta', a] if len(a) > 1 and a[0][1] == 'description':
+                self.description = a[1][1]
+                stack.change(state.AWAITING_FILM_URL)
+            case [state.AWAITING_FILM_URL, 'a', a] if a and a[0][0] == 'href' and a[0][1].startswith(FESTIVAL_HOSTNAME):
+                self.film_url = a[0][1]
+                COUNTER.increase('film URLs')
+                stack.change(state.AWAITING_FILM_TITLE)
+            case [state.AWAITING_FILM_TITLE, 'img', a] if len(a) > 2 and a[0][0] == 'alt':
+                self.film_title = a[0][1]
+                self._read_film()
+                stack.change(state.AWAITING_FILM_URL)
+            case [state.AWAITING_FILM_URL, 'footer', _]:
+                stack.change(state.DONE)
+
+        # if stack.state_is(state.AWAITING_TITLE) and tag == 'meta' and len(attrs) == 2:
+        #     if attrs[0] == ('property', 'og:description') and attrs[1][0] == 'content':
+        #         stack.change(state.IN_TITLE)
+        # elif stack.state_is(state.IN_TITLE) and tag == 'span' and len(attrs):
+        #     if attrs[0][0] == 'title':
+        #         self.section_name = attrs[0][1].strip()
+        #         stack.change(state.AWAITING_DESCR)
+        # elif stack.state_is(state.AWAITING_DESCR) and tag == 'div' and len(attrs) == 1:
+        #     if attrs[0] == ('class', 'ey43j5h0 css-uu0j5i-Body-Body'):
+        #         stack.change(state.IN_DESCR)
+        # elif stack.state_is(state.AWAITING_FILM_URL) and tag == 'article' and len(attrs):
+        #     if attrs[0] == ('class', 'eqiw4yk1 css-scrfvs-Container-Container'):
+        #         stack.push(state.IN_FILM_URL)
+        # elif stack.state_is(state.AWAITING_DESCR) and tag == 'article' and len(attrs):
+        #     if attrs[0] == ('class', 'eqiw4yk1 css-scrfvs-Container-Container'):
+        #         self.subsection = self.get_subsection()
+        #         COUNTER.increase('no description')
+        #         stack.push(state.IN_FILM_URL)
+        # elif stack.state_is(state.IN_FILM_URL) and tag == 'a' and len(attrs):
+        #     if attrs[0][0] == 'href':
+        #         slug = attrs[0][1]
+        #         self.film_url = FESTIVAL_HOSTNAME + slug    # Use literal slug, iri codes are not well understood.
+        #         # COUNTER.increase('film URLs')
+        #         stack.change(state.AWAITING_FILM_TITLE)
+        # elif stack.state_is(state.AWAITING_FILM_TITLE) and tag == 'h2' and len(attrs) == 3:
+        #     if attrs[0] == ('variant', '4') and attrs[1] == ('clamp', '2'):
+        #         stack.change(state.IN_FILM_TITLE)
+        # elif stack.state_is(state.IN_FILM_PROPERTIES):
+        #     if tag == 'div' and len(attrs) and attrs[0][0] == 'data-meta':
+        #         self.metadata_key = attrs[0][1]
+        #         stack.change(state.IN_FILM_PROPERTY)
+        # elif stack.state_is(state.AWAITING_FILM_URL) and tag == 'footer':
+        #     stack.change(state.DONE)
+
+    def handle_endtag(self, tag):
+        HtmlPageParser.handle_endtag(self, tag)
+
+        stack = self.state_stack
+        state = self.FilmsParseState
+        match [stack.state(), tag]:
+            case [state.IN_TITLE, 'title']:
+                stack.change(state.AWAITING_DESCR)
+
+        if stack.state_is(state.IN_FILM_PROPERTY) and tag == 'div':
+            stack.change(state.IN_FILM_PROPERTIES)
+        elif stack.state_is(state.IN_FILM_PROPERTIES) and tag == 'div':
+            self.reset_film_parsing()
+
+    def handle_data(self, data):
+        HtmlPageParser.handle_data(self, data)
+
+        stack = self.state_stack
+        state = self.FilmsParseState
+        match stack.state():
+            case state.IN_TITLE:
+                self.section_title = data.split('|')[-1].strip()
+
+        # if stack.state_is(state.IN_DESCR):
+        #     if not data.startswith('.css'):
+        #         section_description = data
+        #         self.subsection = self._get_subsection(section_description)
+        #         stack.change(state.AWAITING_FILM_URL)
+        #     else:
+        #         COUNTER.increase('sections with css data')
+        # elif stack.state_is(state.IN_FILM_TITLE):
+        #     self.film_title = data
+        #     COUNTER.increase('film title')
+        #     stack.change(state.IN_FILM_PROPERTIES)
+        # elif stack.state_is(state.IN_FILM_PROPERTY):
+        #     self.film_property_by_label[self.metadata_key] = data
+
+    def _read_film(self):
+        comment(f'About to parse film {self.film_title} from {self.film_url}')
+        # get_one_film(self.festival_data, self.film_title, self.film_url)
+        get_section_from_pathway_film(self.festival_data, self.film_title, self.film_url, self.pathway_url)
+        self._init_film_data()
+
+    def _init_film_data(self):
+        self.film_url = None
+        self.film_title = None
+        self.section_title = None
+        self.section_name = None
+        self.subsection = None
+        self.film_property_by_label = {}
+        self.metadata_key = None
+        # self.film = None
+        # self.film_duration = None
+
+    def reset_film_parsing(self):
+        DEBUG_RECORDER.add('RESET FILM PARSING, is pop() OK?')
+        self.state_stack.pop()
+        # self.set_duration()
+        # self.add_film()
+        self._init_film_data()
+
+    def draw_headed_bar(self, section_str):
+        print(f'{self.headed_bar(header=section_str)}')
+        self.print_debug(self.headed_bar(header=section_str))
+
+    def _get_subsection(self, section_description=None):
+        if self.section_name:
+            section = self.festival_data.get_section(self.section_name)
+            try:
+                section.color = COLOR_BY_SECTION_ID[section.section_id]
+            except KeyError as e:
+                ERROR_COLLECTOR.add(e, f'No color for section {section.name}')
+            subsection = self.festival_data.get_subsection(section.name, self.pathway_url, section)
+            subsection.description = section_description or section.name
+            return subsection
+        return None
+
+    # def add_film(self):
+    #     # Create a new film.
+    #     self.film = self.festival_data.create_film(self.film_title, self.film_url)
+    #     if self.film is None:
+    #         try:
+    #             self.film = self.festival_data.get_film_by_key(self.film_title, self.film_url)
+    #         except KeyError:
+    #             ERROR_COLLECTOR.add(f'Could not create film:', f'{self.film_title} ({self.film_url})')
+    #         else:
+    #             self.sections_by_film[self.film].append(self.subsection)
+    #     else:
+    #         # Fill details.
+    #         self.film.duration = self.film_duration
+    #         self.film.subsection = self.subsection
+    #         self.film.medium_category = Film.category_by_string['films']
+    #         self.sections_by_film[self.film] = [self.subsection]
+    #
+    #         # Add the film to the list.
+    #         self.festival_data.films.append(self.film)
+
+    # def set_duration(self):
+    #     try:
+    #         film_length = self.film_property_by_label['length']
+    #     except KeyError:
+    #         minutes = 0
+    #     else:
+    #         minutes = int(film_length.split(' ')[0])  # '84 min'
+    #     self.film_duration = datetime.timedelta(minutes=minutes)
 
 
 class PathwayFilmParser(HtmlPageParser):
@@ -428,7 +893,10 @@ class PathwayFilmParser(HtmlPageParser):
         self.festival_data.filminfos.append(film_info)
 
     def _get_duration(self):
-        duration_str = self.film_property_by_label['length']        # "96 min"
+        try:
+            duration_str = self.film_property_by_label['length']        # "96 min"
+        except KeyError:
+            duration_str = '0'
         minutes = int(duration_str.split()[0])
         return datetime.timedelta(minutes=minutes)
 
@@ -693,34 +1161,6 @@ class PathwayFilmParser(HtmlPageParser):
 #                 self.state_stack.pop()
 
 
-class AzPageParser(HtmlPageParser):
-    class AzParseState(Enum):
-        IDLE = auto()
-        IN_ARTICLE = auto()
-
-    def __init__(self, festival_data, debugger=None):
-        HtmlPageParser.__init__(self, festival_data, debugger or DEBUG_RECORDER, 'AZ', debugging=DEBUGGING)
-        self.sorting_from_site = False
-        self.film = None
-        self.state_stack = self.StateStack(self.print_debug, self.AzParseState.IDLE)
-
-    def handle_starttag(self, tag, attrs):
-        HtmlPageParser.handle_starttag(self, tag, attrs)
-
-        if self.state_stack.state_is(self.AzParseState.IDLE) and tag == 'article':
-            self.state_stack.push(self.AzParseState.IN_ARTICLE)
-            COUNTER.increase('az-counters')
-
-    def handle_endtag(self, tag):
-        HtmlPageParser.handle_endtag(self, tag)
-
-        if self.state_stack.state_is(self.AzParseState.IN_ARTICLE) and tag == 'article':
-            self.state_stack.pop()
-
-    def handle_data(self, data):
-        HtmlPageParser.handle_data(self, data)
-
-
 # class FilmDetailsReader:
 #     def __init__(self, festival_data):
 #         self.festival_data = festival_data
@@ -738,261 +1178,6 @@ class AzPageParser(HtmlPageParser):
 #                 print(f'Analysing film page, encoding={url_file.encoding}')
 #                 corrected_url = None if url == film.url else url
 #                 FilmPageParser(self.festival_data, film, sections, corrected_url=corrected_url).feed(film_html)
-
-
-class PathwaysPageParser(HtmlPageParser):
-    """Parse the pathway overview page for pathway URLs."""
-    class PathwayParseState(Enum):
-        AWAITING_URL = auto()
-        DONE = auto()
-
-    def __init__(self, festival_date):
-        super().__init__(festival_date, DEBUG_RECORDER, 'PW', debugging=DEBUGGING)
-        self.section_urls = []
-        self.pathway_urls = []
-        self.state_stack = self.StateStack(self.print_debug, self.PathwayParseState.AWAITING_URL)
-
-    def feed(self, data):
-        super().feed(data)
-        # comment('Finding films per section')
-        # get_films_by_section(self.festival_data, self.section_urls)
-        comment('Finding films per pathway')
-        get_films_by_pathway(self.festival_data, self.pathway_urls)
-
-    def handle_starttag(self, tag, attrs):
-        HtmlPageParser.handle_starttag(self, tag, attrs)
-
-        stack = self.state_stack
-        state = self.PathwayParseState
-        url_start = 'https://festival.idfa.nl/pathways'
-        url_start_alt = 'https://festival.idfa.nl/nl/pathways'
-        match [stack.state(), tag, attrs]:
-            case [state.AWAITING_URL, 'a', a] if len(a) > 1 and a[1][1].startswith(url_start):
-                self._add_theme(a[1][1])
-            case [state.AWAITING_URL, 'a', a] if len(a) > 1 and a[1][1].startswith(url_start_alt):
-                self._add_theme(a[1][1])
-            case [state.AWAITING_URL, 'footer', _]:
-                stack.change(state.DONE)
-
-    def _add_pathway(self, url):
-        self.pathway_urls.append(url)
-        DEBUG_RECORDER.add(f'ADDING PATHWAY URL {url}')
-        COUNTER.increase('pathways')
-
-    def _add_section(self, url):
-        self.section_urls.append(url)
-        COUNTER.increase('sections')
-
-    def _add_theme(self, url):
-        theme = url.split('/')[-3]
-        if theme == 'section':
-            self._add_section(url)
-        elif theme == 'pathways':
-            self._add_pathway(url)
-        else:
-            ERROR_COLLECTOR.add('Unexpected theme', f'{theme}')
-
-
-class FilmsFromPathwayPageParser(HtmlPageParser):
-    """Laad the films from given pathway URL. Find the sections in each film."""
-    class FilmsParseState(Enum):
-        AWAITING_TITLE = auto()
-        IN_TITLE = auto()
-        AWAITING_DESCR = auto()
-        IN_DESCR = auto()
-        AWAITING_FILM_URL = auto()
-        IN_FILM_URL = auto()
-        AWAITING_FILM_TITLE = auto()
-        IN_FILM_TITLE = auto()
-        IN_FILM_PROPERTIES = auto()
-        IN_FILM_PROPERTY = auto()
-        DONE = auto()
-
-    sections_by_film = {}
-
-    def __init__(self, festival_data, pathway_url):
-        super().__init__(festival_data, DEBUG_RECORDER, 'FFP', debugging=DEBUGGING)
-        self.pathway_url = pathway_url
-
-        # Initialize film data.
-        self.film_url = None
-        self.film_title = None
-        self.section_title = None
-        self.section_name = None
-        self.subsection = None
-        self.film_property_by_label = None
-        self.metadata_key = None
-        # self.film = None
-        # self.film_duration = None
-        # self._init_film_data()
-
-        # Draw a bar with section info.
-        self.draw_headed_bar(get_readable_pathway_str(pathway_url))
-
-        # Initialize the state stack.
-        self.state_stack = self.StateStack(self.print_debug, self.FilmsParseState.AWAITING_TITLE)
-
-    def handle_starttag(self, tag, attrs):
-        HtmlPageParser.handle_starttag(self, tag, attrs)
-
-        stack = self.state_stack
-        state = self.FilmsParseState
-        match [stack.state(), tag, attrs]:
-            case [state.AWAITING_TITLE, 'title', _]:
-                stack.change(state.IN_TITLE)
-            case [state.AWAITING_DESCR, 'meta', a] if len(a) > 1 and a[0][1] == 'description':
-                self.description = a[1][1]
-                stack.change(state.AWAITING_FILM_URL)
-            case [state.AWAITING_FILM_URL, 'a', a] if a and a[0][0] == 'href' and a[0][1].startswith(FESTIVAL_HOSTNAME):
-                self.film_url = a[0][1]
-                COUNTER.increase('film URLs')
-                stack.change(state.AWAITING_FILM_TITLE)
-            case [state.AWAITING_FILM_TITLE, 'img', a] if len(a) > 2 and a[0][0] == 'alt':
-                self.film_title = a[0][1]
-                self._read_film()
-                stack.change(state.AWAITING_FILM_URL)
-            case [state.AWAITING_FILM_URL, 'footer', _]:
-                stack.change(state.DONE)
-
-        # if stack.state_is(state.AWAITING_TITLE) and tag == 'meta' and len(attrs) == 2:
-        #     if attrs[0] == ('property', 'og:description') and attrs[1][0] == 'content':
-        #         stack.change(state.IN_TITLE)
-        # elif stack.state_is(state.IN_TITLE) and tag == 'span' and len(attrs):
-        #     if attrs[0][0] == 'title':
-        #         self.section_name = attrs[0][1].strip()
-        #         stack.change(state.AWAITING_DESCR)
-        # elif stack.state_is(state.AWAITING_DESCR) and tag == 'div' and len(attrs) == 1:
-        #     if attrs[0] == ('class', 'ey43j5h0 css-uu0j5i-Body-Body'):
-        #         stack.change(state.IN_DESCR)
-        # elif stack.state_is(state.AWAITING_FILM_URL) and tag == 'article' and len(attrs):
-        #     if attrs[0] == ('class', 'eqiw4yk1 css-scrfvs-Container-Container'):
-        #         stack.push(state.IN_FILM_URL)
-        # elif stack.state_is(state.AWAITING_DESCR) and tag == 'article' and len(attrs):
-        #     if attrs[0] == ('class', 'eqiw4yk1 css-scrfvs-Container-Container'):
-        #         self.subsection = self.get_subsection()
-        #         COUNTER.increase('no description')
-        #         stack.push(state.IN_FILM_URL)
-        # elif stack.state_is(state.IN_FILM_URL) and tag == 'a' and len(attrs):
-        #     if attrs[0][0] == 'href':
-        #         slug = attrs[0][1]
-        #         self.film_url = FESTIVAL_HOSTNAME + slug    # Use literal slug, iri codes are not well understood.
-        #         # COUNTER.increase('film URLs')
-        #         stack.change(state.AWAITING_FILM_TITLE)
-        # elif stack.state_is(state.AWAITING_FILM_TITLE) and tag == 'h2' and len(attrs) == 3:
-        #     if attrs[0] == ('variant', '4') and attrs[1] == ('clamp', '2'):
-        #         stack.change(state.IN_FILM_TITLE)
-        # elif stack.state_is(state.IN_FILM_PROPERTIES):
-        #     if tag == 'div' and len(attrs) and attrs[0][0] == 'data-meta':
-        #         self.metadata_key = attrs[0][1]
-        #         stack.change(state.IN_FILM_PROPERTY)
-        # elif stack.state_is(state.AWAITING_FILM_URL) and tag == 'footer':
-        #     stack.change(state.DONE)
-
-    def handle_endtag(self, tag):
-        HtmlPageParser.handle_endtag(self, tag)
-
-        stack = self.state_stack
-        state = self.FilmsParseState
-        match [stack.state(), tag]:
-            case [state.IN_TITLE, 'title']:
-                stack.change(state.AWAITING_DESCR)
-
-        if stack.state_is(state.IN_FILM_PROPERTY) and tag == 'div':
-            stack.change(state.IN_FILM_PROPERTIES)
-        elif stack.state_is(state.IN_FILM_PROPERTIES) and tag == 'div':
-            self.reset_film_parsing()
-
-    def handle_data(self, data):
-        HtmlPageParser.handle_data(self, data)
-
-        stack = self.state_stack
-        state = self.FilmsParseState
-        match stack.state():
-            case state.IN_TITLE:
-                self.section_title = data.split('|')[-1].strip()
-
-        # if stack.state_is(state.IN_DESCR):
-        #     if not data.startswith('.css'):
-        #         section_description = data
-        #         self.subsection = self._get_subsection(section_description)
-        #         stack.change(state.AWAITING_FILM_URL)
-        #     else:
-        #         COUNTER.increase('sections with css data')
-        # elif stack.state_is(state.IN_FILM_TITLE):
-        #     self.film_title = data
-        #     COUNTER.increase('film title')
-        #     stack.change(state.IN_FILM_PROPERTIES)
-        # elif stack.state_is(state.IN_FILM_PROPERTY):
-        #     self.film_property_by_label[self.metadata_key] = data
-
-    def _read_film(self):
-        comment(f'About to parse film {self.film_title} from {self.film_url}')
-        # get_one_film(self.festival_data, self.film_title, self.film_url)
-        get_section_from_pathway_film(self.festival_data, self.film_title, self.film_url, self.pathway_url)
-        self._init_film_data()
-
-    def _init_film_data(self):
-        self.film_url = None
-        self.film_title = None
-        self.section_title = None
-        self.section_name = None
-        self.subsection = None
-        self.film_property_by_label = {}
-        self.metadata_key = None
-        # self.film = None
-        # self.film_duration = None
-
-    def reset_film_parsing(self):
-        DEBUG_RECORDER.add('RESET FILM PARSING, is pop() OK?')
-        self.state_stack.pop()
-        # self.set_duration()
-        # self.add_film()
-        self._init_film_data()
-
-    def draw_headed_bar(self, section_str):
-        print(f'{self.headed_bar(header=section_str)}')
-        self.print_debug(self.headed_bar(header=section_str))
-
-    def _get_subsection(self, section_description=None):
-        if self.section_name:
-            section = self.festival_data.get_section(self.section_name)
-            try:
-                section.color = COLOR_BY_SECTION_ID[section.section_id]
-            except KeyError as e:
-                ERROR_COLLECTOR.add(e, f'No color for section {section.name}')
-            subsection = self.festival_data.get_subsection(section.name, self.pathway_url, section)
-            subsection.description = section_description or section.name
-            return subsection
-        return None
-
-    # def add_film(self):
-    #     # Create a new film.
-    #     self.film = self.festival_data.create_film(self.film_title, self.film_url)
-    #     if self.film is None:
-    #         try:
-    #             self.film = self.festival_data.get_film_by_key(self.film_title, self.film_url)
-    #         except KeyError:
-    #             ERROR_COLLECTOR.add(f'Could not create film:', f'{self.film_title} ({self.film_url})')
-    #         else:
-    #             self.sections_by_film[self.film].append(self.subsection)
-    #     else:
-    #         # Fill details.
-    #         self.film.duration = self.film_duration
-    #         self.film.subsection = self.subsection
-    #         self.film.medium_category = Film.category_by_string['films']
-    #         self.sections_by_film[self.film] = [self.subsection]
-    #
-    #         # Add the film to the list.
-    #         self.festival_data.films.append(self.film)
-
-    # def set_duration(self):
-    #     try:
-    #         film_length = self.film_property_by_label['length']
-    #     except KeyError:
-    #         minutes = 0
-    #     else:
-    #         minutes = int(film_length.split(' ')[0])  # '84 min'
-    #     self.film_duration = datetime.timedelta(minutes=minutes)
 
 
 class FilmPageParser(HtmlPageParser):
