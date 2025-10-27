@@ -10,6 +10,8 @@
         <div class="row">
             <span class="col-right">
                 <a href="{% url 'theaters:theaters' %}">Theater index</a>
+                <br>
+                <a href="{% url 'loader:list_action' %}?label=screenings">Load screenings</a>
             </span>
         </div>
 
@@ -44,7 +46,11 @@
         <br>
         <form method="post">
             {% csrf_token %}
-            <input type="submit"; value="Insert new {{ objects_label }}">
+            {% if button_enabled %}
+                <input type="submit" value="Insert new {{ objects_label }}">
+            {% else %}
+                <input type="submit" value="Insert new {{ objects_label }}" disabled>
+            {% endif %}
         </form>
     {% else %}
         <h2 class="error">Not allowed</h2>

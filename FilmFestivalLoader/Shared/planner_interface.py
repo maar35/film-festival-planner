@@ -58,7 +58,7 @@ def write_lists(festival_data, write_film_list, write_other_lists):
     if write_other_lists:
         festival_data.write_film_ids()
         festival_data.write_csv_filminfo()
-        festival_data.write_xml_filminfo()
+        # festival_data.write_xml_filminfo()
         festival_data.write_yaml_filminfo()
         festival_data.write_new_cities()
         festival_data.write_new_theaters()

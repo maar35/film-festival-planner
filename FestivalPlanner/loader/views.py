@@ -2,6 +2,7 @@ import os
 from operator import attrgetter
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import MultipleObjectsReturned
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
@@ -150,6 +151,7 @@ class NewTheaterDataListView(ListView):
             'screen_abbr': screen.abbreviation,
             'address_type': screen.address_type.label,
             'screen_color': self.color(Screen, Screen.screens, **{'parse_name': screen.parse_name}),
+            'button_enabled': len(NewTheaterDataView.new_screens),
         }
         return new_screen_item
 
@@ -157,6 +159,8 @@ class NewTheaterDataListView(ListView):
         exists = True
         try:
             _ = manager.get(**kwargs)
+        except MultipleObjectsReturned:
+            exists = True
         except cls.DoesNotExist:
             exists = False
         color = self.color_by_exists[exists]
