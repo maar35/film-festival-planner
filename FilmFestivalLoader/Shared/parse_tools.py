@@ -11,7 +11,7 @@ import os
 from html.parser import HTMLParser
 
 from Shared.application_tools import comment, config
-from Shared.planner_interface import Screening, write_lists
+from Shared.planner_interface import Screening, write_lists, AUDIENCE_PUBLIC
 
 
 def try_parse_festival_sites(parser, festival_data, error_collector, debug_recorder, festival=None, counter=None):
@@ -45,8 +45,7 @@ def try_parse_festival_sites(parser, festival_data, error_collector, debug_recor
     # Display custom statistics.
     if counter is not None:
         comment('Custom statistics')
-        for label, count in counter.count_by_label.items():
-            print(f'{label}: {count}')
+        print(f'{counter}')
 
     # Write parsed information.
     write_lists(festival_data, write_film_list, write_other_lists)
@@ -232,7 +231,7 @@ class HtmlPageParser(BaseHtmlPageParser):
         film = screening.film
         start_dt = screening.start_datetime
         end_dt = screening.end_datetime
-        if display and screening.audience == 'publiek':
+        if display and screening.audience == AUDIENCE_PUBLIC:
             print()
             print(f"---SCREENING OF {film.title}")
             print(f"--  screen:     {screening.screen}")
