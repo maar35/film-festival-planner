@@ -585,7 +585,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         combi_films = [Film.films.get(film_id=d['film_id'], festival=festival) for d in combi_data]
         screened_films = [Film.films.get(film_id=d['film_id'], festival=festival) for d in screened_data]
         selected_screening = ScreeningStatusGetter.get_selected_screening(self.request)
-        films_for_screenings = combi_films or [film]
+        films_for_screenings = combi_films + [film]
         fans = get_judging_fans()
         logged_in_fan = current_fan(session)
         fan_rows = get_fan_props_list(film, fans, logged_in_fan, self.submit_name_prefix, screened_films)

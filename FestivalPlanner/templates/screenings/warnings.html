@@ -54,6 +54,7 @@
     <thead>
     <tr>
         <th class="sticky">Title</th>
+        <th class="sticky">Webpage</th>
         <th class="sticky">Screening</th>
         <th class="sticky">Details</th>
         {% include "../includes/filtered_header_field.html" with obj_filter_props=fan_filter_props %}
@@ -69,6 +70,11 @@
                 <a name="{{ row.fragment_name }}"></a>
                 {% ifchanged row.screening.film.title %}
                 {{ row.screening.film.title }}
+                {% endifchanged %}
+            </td>
+            <td>
+                {% ifchanged row.screening.film.title %}
+                <a href="{{ row.screening.film.url }}">www</a>
                 {% endifchanged %}
             </td>
             {% if row.screening == screening %}

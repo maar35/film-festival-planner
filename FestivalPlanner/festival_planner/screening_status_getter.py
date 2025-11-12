@@ -291,9 +291,11 @@ class ScreeningStatusGetter:
 
     def _available_fans(self, screening):
         available_fan_ids = []
-        for fan, available_by_screening in self.keeper.available_by_screening_by_fan.items():
-            if screening in available_by_screening and available_by_screening[screening]:
-                available_fan_ids.append(fan.id)
+        a_by_f_list = [a_by_f for s, a_by_f in self.keeper.available_by_screening_by_fan.items() if s == screening]
+        for available_by_fan in a_by_f_list:
+            for fan, available in available_by_fan.items():
+                if available:
+                    available_fan_ids.append(fan.id)
         fan_query_set = FilmFan.film_fans.filter(id__in=available_fan_ids)
         return get_sorted_fan_list(self.fan, fan_query_set=fan_query_set)
 

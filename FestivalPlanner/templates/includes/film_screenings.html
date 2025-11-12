@@ -1,3 +1,4 @@
+{% if film_screening_props %}
 <br>
 <h3>All screenings of <span style="color: {{ festival_color }};">{{ film_title }}</span></h3>
 <table style="min-width: 30%">
@@ -51,10 +52,11 @@
             {% endfor %}
             {% if not prop.ticket_holders_props %} - {% endif %}
         </td>
-        <td>{% if prop.confirmed_ticket_holders %} {{ prop.confirmed_ticket_holders|join:", " }} {% else %} - {% endif %}</td>
-        <td>{% if prop.available_fans %} {{ prop.available_fans }} {% else %} - {% endif %}</td>
-        <td>{% if prop.q_and_a %} {{ prop.q_and_a }} {% else %} - {% endif %}</td>
+        <td>{{ prop.confirmed_ticket_holders | join:", " | default:"-" }}</td>
+        <td>{{ prop.available_fans|default:"-" }}</td>
+        <td>{{ prop.q_and_a|default:"-" }}</td>
     </tr>
     {% endfor %}
     </tbody>
 </table>
+{% endif %}
