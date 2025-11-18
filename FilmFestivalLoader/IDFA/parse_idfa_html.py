@@ -516,6 +516,7 @@ class FilmsFromPathwayPageParser(HtmlPageParser):
     def _reset_film_parsing(self):
         stack_dump = f'RESET FILM PARSING\n{str(self.state_stack)}'
         broadcast(stack_dump, DEBUG_RECORDER)
+        ERROR_COLLECTOR.add('STOPPED PARSING A SCREENING', f'{str(self.screening)}')
         self._init_film_data()
 
 
