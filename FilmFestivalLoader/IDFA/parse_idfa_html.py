@@ -15,7 +15,7 @@ import re
 from enum import Enum, auto
 from typing import Dict
 
-from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Counter
+from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Counter, broadcast
 from Shared.parse_tools import FileKeeper, HtmlPageParser, try_parse_festival_sites
 from Shared.planner_interface import FestivalData, Screening, FilmInfo, ScreenedFilm, get_screen_from_parse_name, \
     AUDIENCE_PUBLIC
@@ -131,6 +131,11 @@ def setup_counters():
         COUNTER.start('az-counters')
 
 
+def get_readable_theme_str(pathway_url):
+    pathway_str = pathway_url.split('/')[-2]
+    return pathway_str
+
+
 def parse_idfa_sites(festival_data):
     if TRY_AZ_PAGES:
         comment('Trying new AZ pege(s)')
@@ -170,6 +175,7 @@ def load_az_pages(festival_data):
 
 
 def get_theme_parts(festival_data, theme_path, target_file):
+    """Read the sub-themes from the given theme page."""
     theme_url = FESTIVAL_HOSTNAME + theme_path
     theme_file = os.path.join(FILE_KEEPER.webdata_dir, target_file)
     url_file = UrlFile(theme_url, theme_file, ERROR_COLLECTOR, DEBUG_RECORDER, byte_count=200)
@@ -196,11 +202,6 @@ def get_films_by_theme(festival_data, theme_urls, theme_str):
                     FilmsFromSectionPageParser(festival_data, theme_url).feed(theme_html)
                 case(_):
                     FilmsFromPathwayPageParser(festival_data, theme_url).feed(theme_html)
-
-
-def get_readable_theme_str(pathway_url):
-    pathway_str = pathway_url.split('/')[-2]  # .replace('_', ' ')
-    return pathway_str
 
 
 def get_film_from_theme_part_page(festival_data, film_title, film_url, theme_part_url, use_section_keeper=True):
@@ -231,8 +232,7 @@ def get_film_from_theme_part_page(festival_data, film_title, film_url, theme_par
     if film_html:
         message = (f'Analysing page of "{film_title}" from theme "{theme_str}", '
                    f'parsed from "{theme_film_file}" encoding={url_file.encoding}')
-        print(message)
-        DEBUG_RECORDER.add(message)
+        broadcast(message, DEBUG_RECORDER)
         if use_section_keeper:
             FilmPageParser(festival_data, theme_str, film_title, film_url).feed(film_html)
         else:
@@ -262,9 +262,6 @@ class AzPageParser(HtmlPageParser):
 
         if self.state_stack.state_is(self.AzParseState.IN_ARTICLE) and tag == 'article':
             self.state_stack.pop()
-
-    def handle_data(self, data):
-        super().handle_data(data)
 
 
 class ThemePartsPageParser(HtmlPageParser):
@@ -488,11 +485,10 @@ class FilmsFromPathwayPageParser(HtmlPageParser):
         match [stack.state(), tag]:
             case [state.IN_TITLE, 'title']:
                 stack.change(state.AWAITING_DESCR)
-
-        if stack.state_is(state.IN_FILM_PROPERTY) and tag == 'div':
-            stack.change(state.IN_FILM_PROPERTIES)
-        elif stack.state_is(state.IN_FILM_PROPERTIES) and tag == 'div':
-            self.reset_film_parsing()
+            case [state.IN_FILM_PROPERTY, 'div']:
+                stack.change(state.IN_FILM_PROPERTIES)
+            case [state.IN_FILM_PROPERTIES, 'div']:
+                self._reset_film_parsing()
 
     def handle_data(self, data):
         HtmlPageParser.handle_data(self, data)
@@ -517,14 +513,10 @@ class FilmsFromPathwayPageParser(HtmlPageParser):
         self.film_property_by_label = {}
         self.metadata_key = None
 
-    def reset_film_parsing(self):
-        DEBUG_RECORDER.add('RESET FILM PARSING, is pop() OK?')
-        self.state_stack.pop()
+    def _reset_film_parsing(self):
+        stack_dump = f'RESET FILM PARSING\n{str(self.state_stack)}'
+        broadcast(stack_dump, DEBUG_RECORDER)
         self._init_film_data()
-
-    def draw_headed_bar(self, section_str):
-        print(f'{self.headed_bar(header=section_str)}')
-        self.print_debug(self.headed_bar(header=section_str))
 
 
 class FilmPageParser(HtmlPageParser):
@@ -555,6 +547,7 @@ class FilmPageParser(HtmlPageParser):
         DONE = auto()
 
     nl_month_by_name: Dict[str, int] = {'november': 11}
+    re_title = re.compile(r'Onderdeel van (.*)')  # "Onderdeel van Shorts: Manufactured Control"
 
     def __init__(self, festival_data, theme_str, film_title, film_url, debug_prefix=None):
         debug_prefix = debug_prefix or 'PFP'
@@ -677,9 +670,7 @@ class FilmPageParser(HtmlPageParser):
             case state.IN_TIME:
                 self._set_screening_times(data)
             case state.IN_LOCATION:
-                if self._set_idfa_screen(data):
-                    self._add_screening()
-                    DEBUG_RECORDER.add(f'SCREEN: {data=}, {self.screen=}')
+                if self._added_screening(data):
                     stack.pop(2)  # Pop stack twice to get back to "AWAITING_SCREENINGS".
             case state.IN_SUBTITLES:
                 self.subtitles = data.strip()
@@ -700,7 +691,7 @@ class FilmPageParser(HtmlPageParser):
             DEBUG_RECORDER.add(f'FOUND SECTIONS {data}')
             section_titles = [section_title.strip() for section_title in data.split(sep=',')]
             self.film_property_by_label['sections'].extend(section_titles)
-            self.section_title = section_titles[0]      # TODO: handle case that titles > 1
+            self.section_title = section_titles[0]
         else:
             self.film_property_by_label[self.metadata_key] = data
 
@@ -712,6 +703,7 @@ class FilmPageParser(HtmlPageParser):
             self.film.subsection = self.subsection
 
     def _get_medium_category(self):
+        """Get category from e.g. 'https://festival.idfa.nl/film/4e98a274-4110-4b21-a09f-732759e6ee9f/32-meters/'"""
         category_str = self.film_url.split('/')[3]
         return CATEGORY_BY_STR[category_str]
 
@@ -818,13 +810,10 @@ class FilmPageParser(HtmlPageParser):
 
     def _handle_combination_data(self, data):
         # Find a combination title in the data.
-        re_title = re.compile(r'Onderdeel van (.*)')    # "Onderdeel van Shorts: Manufactured Control"
-        m = re_title.match(data)
-        if m:
-            combi_title = m.group(1)
+        m = self.re_title.match(data)
+        combi_title = m.group(1) if m else None
+        if combi_title:
             COUNTER.increase('combinations')
-        else:
-            combi_title = None
 
         # Try to get a combination URL.
         try:
@@ -867,6 +856,13 @@ class FilmPageParser(HtmlPageParser):
         splitter = LocationSplitter.split_location
         self.screen = get_screen_from_parse_name(self.festival_data, screen_parse_name, splitter)
         return True
+
+    def _added_screening(self, data):
+        can_add = self._set_idfa_screen(data)
+        if can_add:
+            self._add_screening()
+            DEBUG_RECORDER.add(f'SCREEN: {data=}, {self.screen=}')
+        return can_add
 
 
 class CombinationFilmPageParser(FilmPageParser):
@@ -937,16 +933,14 @@ class CombinationFilmPageParser(FilmPageParser):
             case state.IN_TIME:
                 self._set_screening_times(data)
             case state.IN_LOCATION:
-                if self._set_idfa_screen(data):
-                    self._add_screening()
-                    DEBUG_RECORDER.add(f'SCREEN: {data=}, {self.screen=}')
+                if self._added_screening(data):
                     stack.pop(2)  # Pop stack twice to get back to "AWAITING_SCREENINGS".
             case state.IN_SUB_HEADER:
                 if data == 'Tickets & Tijden':
                     stack.pop()
                 else:
                     self._add_combinations()
-                    stack.change(state.DONE)  # TODO: This could be the starting point for parsing screened films.
+                    stack.change(state.DONE)
 
 
 class LocationSplitter:

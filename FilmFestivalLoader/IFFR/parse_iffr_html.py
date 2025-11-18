@@ -6,7 +6,7 @@ import re
 from enum import Enum, auto
 from urllib.error import HTTPError
 
-from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Config, Counter
+from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Config, Counter, broadcast
 from Shared.parse_tools import FileKeeper, try_parse_festival_sites, HtmlPageParser
 from Shared.planner_interface import FilmInfo, Screening, ScreenedFilmType, FestivalData, Film, \
     get_screen_from_parse_name, link_screened_film, ScreeningKey
@@ -442,8 +442,7 @@ class SubsectionPageParser(HtmlPageParser):
             if self.film.title in COMBINATION_FILM_TITLES:
                 self.film.medium_category = 'events'
             self.film.subsection = self.subsection
-            print(f'Adding FILM: {self.film_title} - {self.film.medium_category}')
-            DEBUG_RECORDER.add(f'Adding FILM: {self.film_title} - {self.film.medium_category}')
+            broadcast(f'Adding FILM: {self.film_title} - {self.film.medium_category}', DEBUG_RECORDER)
             self.festival_data.films.append(self.film)
             COUNTER.increase('films')
 

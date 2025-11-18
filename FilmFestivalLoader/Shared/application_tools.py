@@ -26,6 +26,11 @@ def pr_info(*args):
         print(*args)
 
 
+def broadcast(message, debugger):
+    print(message)
+    debugger.add(message)
+
+
 class Config:
     config = None
     config_path = os.path.expanduser('~/Projects/FilmFestivalPlanner/Configs/common.yml')

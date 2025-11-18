@@ -195,6 +195,27 @@ class TicketModelTests(ScreeningModelTests):
         self.assertRaises(IntegrityError, ticket_2.save)
 
 
+class ScreeningToolsTests(TestCase):
+    """ Other tests than model tets ot view tests."""
+    def test_dict_of_dict_items(self):
+        """
+        Taking the items() of a dictionary of dictionaries as in ScreeningStatusGetter works.
+        """
+        # Arrange.
+        a_by_x_by_y = {'x': {}, 'ex': {}}
+
+        # Act.
+        a_by_x_by_y['x']['y'] = 'ay'
+        a_by_x_by_y['x']['eye'] = 'an eye'
+        a_by_x_by_y['ex']['y'] = 'aex y'
+
+        # Assert.
+        values = [{'y': 'ay', 'eye': 'an eye'}, {'y': 'aex y'}]
+        self.assertEqual(set(a_by_x_by_y.keys()), {'x', 'ex'})
+        self.assertEqual(list(a_by_x_by_y.values()), values)
+        self.assertEqual(list(a_by_x_by_y.items()), [('x', values[0]), ('ex', values[1])])
+
+
 class ScreeningViewsTests(ViewsTestCase):
 
     def setUp(self):

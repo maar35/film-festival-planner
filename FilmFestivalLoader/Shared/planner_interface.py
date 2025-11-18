@@ -58,7 +58,6 @@ def write_lists(festival_data, write_film_list, write_other_lists):
     if write_other_lists:
         festival_data.write_film_ids()
         festival_data.write_csv_filminfo()
-        # festival_data.write_xml_filminfo()
         festival_data.write_yaml_filminfo()
         festival_data.write_new_cities()
         festival_data.write_new_theaters()
@@ -927,17 +926,21 @@ class FestivalData:
         pr_info(f'Done writing {len(data)} records to {self.filminfo_csv_file}.')
 
     def write_xml_filminfo(self):
+        """
+        Writes XML for use in C# planner code.
+        Currently unused since Microsoft Visual Studio doesn't work for this project.
+        """
         info_count = 0
         film_infos = Tree.Element('FilmInfos')
         for filminfo in [i for i in self.filminfos if self.film_can_go_to_planner(i.film_id)]:
             info_count += 1
-            id = str(filminfo.film_id)
+            id_ = str(filminfo.film_id)
             article = filminfo.article
             if filminfo.metadata:
                 article += f'\n\n{filminfo.format_metadata()}'
             descr = filminfo.description
             info = Tree.SubElement(film_infos, 'FilmInfo',
-                                   FilmId=id,
+                                   FilmId=id_,
                                    FilmArticle=article,
                                    FilmDescription=descr,
                                    InfoStatus='Complete')

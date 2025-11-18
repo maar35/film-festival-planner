@@ -10,7 +10,7 @@ import inspect
 import os
 from html.parser import HTMLParser
 
-from Shared.application_tools import comment, config
+from Shared.application_tools import comment, config, broadcast
 from Shared.planner_interface import Screening, write_lists, AUDIENCE_PUBLIC
 
 
@@ -169,8 +169,7 @@ class BaseHtmlPageParser(HTMLParser):
 
     def draw_headed_bar(self, header_str):
         header = self.headed_bar(header=header_str)
-        print(header)
-        self.print_debug(header)
+        broadcast(header, self.debug_recorder)
 
     def print_debug(self, str1, str2=''):
         if self.debugging:
