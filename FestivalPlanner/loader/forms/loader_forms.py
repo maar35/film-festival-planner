@@ -1118,7 +1118,7 @@ class AttendanceDumper(BaseDumper):
 
     def object_row(self, attendance):
         attending_fans = [self.field_by_bool[attendance.fan.name == fan_name] for fan_name in self.fan_names]
-        ticket_bought = Ticket.tickets.filter(screening=attendance.sceening, fan=attendance.fan)
+        ticket_bought = Ticket.tickets.filter(screening=attendance.screening, fan=attendance.fan)
         field_by_index = {
             0: attendance.screening.film.film_id,
             1: attendance.screening.screen.screen_id,

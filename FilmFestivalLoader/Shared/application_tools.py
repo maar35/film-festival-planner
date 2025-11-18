@@ -26,6 +26,11 @@ def pr_info(*args):
         print(*args)
 
 
+def broadcast(message, debugger):
+    print(message)
+    debugger.add(message)
+
+
 class Config:
     config = None
     config_path = os.path.expanduser('~/Projects/FilmFestivalPlanner/Configs/common.yml')
@@ -41,6 +46,10 @@ class Counter:
 
     def __init__(self):
         pass
+
+    def __str__(self):
+        lines = [f'{label:24}: {count}' for label, count in self.count_by_label.items()]
+        return '\n'.join(lines)
 
     def start(self, label):
         self.count_by_label[label] = 0

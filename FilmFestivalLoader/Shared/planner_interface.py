@@ -58,7 +58,6 @@ def write_lists(festival_data, write_film_list, write_other_lists):
     if write_other_lists:
         festival_data.write_film_ids()
         festival_data.write_csv_filminfo()
-        festival_data.write_xml_filminfo()
         festival_data.write_yaml_filminfo()
         festival_data.write_new_cities()
         festival_data.write_new_theaters()
@@ -582,9 +581,6 @@ class FestivalData:
                 raise ValueError(f'Key ({key}) found, but no film found with film ID ({film_id})')
         return films[0]
 
-    def get_filmid(self, url):
-        return self.get_film_by_key(None, url).film_id
-
     def get_film_by_id(self, film_id):
         films = [f for f in self.films if f.film_id == film_id]
         if len(films) > 0:
@@ -592,20 +588,26 @@ class FestivalData:
         return None
 
     def get_section(self, name, color=None, color_by_id=None):
+        def _get_color(section_id, color_):
+            if color_by_id and not color_:
+                try:
+                    color_ = color_by_id[section_id]
+                except KeyError:
+                    color_ = None
+            return color_
+
         if name is None:
             return None
+
         try:
             section = self.section_by_name[name]
         except KeyError:
             self.curr_section_id += 1
-            if color_by_id and not color:
-                try:
-                    color = color_by_id[self.curr_section_id]
-                except KeyError:
-                    color = None
-            section = Section(self.curr_section_id, name, color=color)
+            section = Section(self.curr_section_id, name)
             self.section_by_name[name] = section
             self.section_by_id[section.section_id] = section
+
+        section.color = _get_color(section.section_id, color)
         return section
 
     def get_subsection(self, name, url, section):
@@ -617,6 +619,9 @@ class FestivalData:
             self.curr_subsection_id += 1
             subsection = Subsection(self.curr_subsection_id, section, name, url)
             self.subsection_by_name[name] = subsection
+        else:
+            subsection.url = url
+            subsection.section = section
         return subsection
 
     def get_city_by_name(self, city_name, country=None):
@@ -921,17 +926,21 @@ class FestivalData:
         pr_info(f'Done writing {len(data)} records to {self.filminfo_csv_file}.')
 
     def write_xml_filminfo(self):
+        """
+        Writes XML for use in C# planner code.
+        Currently unused since Microsoft Visual Studio doesn't work for this project.
+        """
         info_count = 0
         film_infos = Tree.Element('FilmInfos')
         for filminfo in [i for i in self.filminfos if self.film_can_go_to_planner(i.film_id)]:
             info_count += 1
-            id = str(filminfo.film_id)
+            id_ = str(filminfo.film_id)
             article = filminfo.article
             if filminfo.metadata:
                 article += f'\n\n{filminfo.format_metadata()}'
             descr = filminfo.description
             info = Tree.SubElement(film_infos, 'FilmInfo',
-                                   FilmId=id,
+                                   FilmId=id_,
                                    FilmArticle=article,
                                    FilmDescription=descr,
                                    InfoStatus='Complete')
