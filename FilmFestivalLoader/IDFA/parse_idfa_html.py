@@ -15,7 +15,9 @@ import re
 from enum import Enum, auto
 from typing import Dict
 
-from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Counter, broadcast
+import yaml
+
+from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Counter, broadcast, pr_info, Config
 from Shared.parse_tools import FileKeeper, HtmlPageParser, try_parse_festival_sites
 from Shared.planner_interface import FestivalData, Screening, FilmInfo, ScreenedFilm, get_screen_from_parse_name, \
     AUDIENCE_PUBLIC
@@ -32,37 +34,17 @@ DISPLAY_ADDED_SCREENING = False
 
 # Files.
 FILE_KEEPER = FileKeeper(FESTIVAL, FESTIVAL_YEAR)
+LOCAL_CONFIG = Config(FILE_KEEPER.local_config_file).config
 AZ_PAGE_COUNT = 11
 COMBI_DATA_PATH = os.path.join(FILE_KEEPER.plandata_dir, 'combination_data.csv')
 
 # URL information.
 FESTIVAL_HOSTNAME = 'https://festival.idfa.nl'
-AZ_PATH = ('/collectie/?SHOW_TYPE=Publiek&SHOW_TYPE=New+Media&page=1&tabIndex=1'
-           '&A_TO_Z_TYPE=Publiek&A_TO_Z_TYPE=New+Media')
-PATHWAYS_PATH = ('/festivalgids/wegwijzers/?utm_source=IDFA+Nieuwsbrieven'
-                 '&utm_campaign=da6f086be8-EMAIL_CAMPAIGN_2025_10_10_08_01&utm_medium=email'
-                 '&utm_term=0_-da6f086be8-69724581')
-SECTIONS_PATH = '/collectie/?SHOW_TYPE=Publiek&page=1&tabIndex=2'
 
 # Application tools.
 ERROR_COLLECTOR = ErrorCollector()
 DEBUG_RECORDER = DebugRecorder(FILE_KEEPER.debug_file)
 COUNTER = Counter()
-
-URL_PATH_BY_COMBINATION_TITLE = {
-    'Shorts: Current Future – My Other Universe': '/composition/e3f5df85-615e-4a0a-9989-2dd64e4d7d3e/'
-                                                  'shorts:-current-future-my-other-universe/',
-    'Shorts: All Eyes On ...': '/composition/cbf7e566-4284-488f-95f2-9c1c62a431d7/shorts:-all-eyes-on-...',
-    'Shorts: Passages': '/composition/9a65302c-0f2d-41f5-82ee-36fc75e7e201/shorts:-passages/',
-    'Shorts: Inhospitable Landscapes': '/composition/83822564-582e-4e4f-9baf-3723c9e50711/'
-                                       'shorts:-inhospitable-landscapes/',
-    'VPRO Previewdag': '/composition/5fa798cc-e1d7-41fe-8d76-4bd169ecebb2/vpro-previewdag/',
-    'de Volkskrantdag': '/composition/a2952457-010e-4075-8c32-7adb2a336b6d/de-volkskrantdag/',
-    'de Groene Amsterdammerdag': '/composition/3f214e7d-1063-40ee-8138-fcd8970ca5c6/de-groene-amsterdammerdag/',
-    'Lessons from a Calf & Pride of Place': '/composition/6e52c5e7-97f9-451e-b53f-166cf5ab3cda/'
-                                            'lessons-from-a-calf-and-pride-of-place/',
-    'Shorts: Paradocs': '/composition/425558f7-1df8-474e-bb96-8bb26acbd3bc/shorts:-paradocs/',
-}
 
 CATEGORY_BY_STR = {
     'film': 'films',
@@ -142,15 +124,13 @@ def parse_idfa_sites(festival_data):
         load_az_pages(festival_data)
 
     comment(f'Parsing combination films.')
-    for title, path in URL_PATH_BY_COMBINATION_TITLE.items():
-        url = FESTIVAL_HOSTNAME + path
-        get_film_from_theme_part_page(festival_data, title, url, 'combinations/', use_section_keeper=False)
+    get_combination_films(festival_data)
 
     comment('Parsing section pages.')
-    get_theme_parts(festival_data, SECTIONS_PATH, 'sections.html')
+    get_theme_parts(festival_data, 'SectionsPath', 'sections.html')
 
     comment('Parsing pathway pages.')
-    get_theme_parts(festival_data, PATHWAYS_PATH, 'pathways.html')
+    get_theme_parts(festival_data, 'PathwaysPath', 'pathways.html')
 
     comment(f'Write combination data to {COMBI_DATA_PATH}.')
     CombinationsKeeper.write_combination_data(festival_data)
@@ -160,7 +140,8 @@ def parse_idfa_sites(festival_data):
 
 
 def load_az_pages(festival_data):
-    az_url_base = FESTIVAL_HOSTNAME + AZ_PATH
+    az_path = LOCAL_CONFIG['Paths']['AzPath']
+    az_url_base = FESTIVAL_HOSTNAME + az_path
     for page_number in range(1, AZ_PAGE_COUNT + 1):
         debug_file = os.path.join(os.path.dirname(FILE_KEEPER.debug_file), f'debug_{page_number:02d}.txt')
         debugger = DebugRecorder(debug_file)
@@ -174,8 +155,15 @@ def load_az_pages(festival_data):
         debugger.write_debug()
 
 
-def get_theme_parts(festival_data, theme_path, target_file):
+def get_combination_films(festival_data):
+    for title, path in LOCAL_CONFIG['UrlpathByCombinationTitle'].items():
+        url = FESTIVAL_HOSTNAME + path
+        get_film_from_theme_part_page(festival_data, title, url, 'combinations/', use_section_keeper=False)
+
+
+def get_theme_parts(festival_data, theme_path_key, target_file):
     """Read the sub-themes from the given theme page."""
+    theme_path = LOCAL_CONFIG['Paths'][theme_path_key]
     theme_url = FESTIVAL_HOSTNAME + theme_path
     theme_file = os.path.join(FILE_KEEPER.webdata_dir, target_file)
     url_file = UrlFile(theme_url, theme_file, ERROR_COLLECTOR, DEBUG_RECORDER, byte_count=200)
@@ -548,6 +536,7 @@ class FilmPageParser(HtmlPageParser):
         DONE = auto()
 
     nl_month_by_name: Dict[str, int] = {'november': 11}
+    path_by_combi_title = LOCAL_CONFIG['UrlpathByCombinationTitle']
     re_title = re.compile(r'Onderdeel van (.*)')  # "Onderdeel van Shorts: Manufactured Control"
 
     def __init__(self, festival_data, theme_str, film_title, film_url, debug_prefix=None):
@@ -818,7 +807,7 @@ class FilmPageParser(HtmlPageParser):
 
         # Try to get a combination URL.
         try:
-            combi_url = FESTIVAL_HOSTNAME + URL_PATH_BY_COMBINATION_TITLE[combi_title]
+            combi_url = FESTIVAL_HOSTNAME + self.path_by_combi_title[combi_title]
         except KeyError:
             combi_url = None
 
@@ -1051,8 +1040,6 @@ class IdfaScreening(Screening):
 
 
 class IdfaData(FestivalData):
-    duplicates_by_screening = {}
-
     def __init__(self, directory, common_data_dir=None):
         super().__init__(FESTIVAL_CITY, directory, common_data_dir=common_data_dir)
         self.compilation_by_url = {}
@@ -1064,18 +1051,7 @@ class IdfaData(FestivalData):
         return True
 
     def screening_can_go_to_planner(self, screening):
-        can_go = screening.is_public()
-
-        if can_go:
-            try:
-                self.duplicates_by_screening[screening] += 1
-            except KeyError:
-                self.duplicates_by_screening[screening] = 0
-
-        if can_go:
-            included = self.included_in_combi(screening)
-            can_go = not included
-
+        can_go = screening.is_public() and not self.included_in_combi(screening)
         return can_go
 
     def included_in_combi(self, screening):

@@ -11,6 +11,7 @@ import inspect
 import yaml
 
 SUPPRESS_INFO_PRINTS = False
+COMMON_CONFIG_PATH = os.path.expanduser('~/Projects/FilmFestivalPlanner/Configs/common.yml')
 
 
 def config():
@@ -33,9 +34,9 @@ def broadcast(message, debugger):
 
 class Config:
     config = None
-    config_path = os.path.expanduser('~/Projects/FilmFestivalPlanner/Configs/common.yml')
 
-    def __init__(self):
+    def __init__(self, path=None):
+        self.config_path = path or COMMON_CONFIG_PATH
         with open(self.config_path, 'r') as stream:
             self.config = yaml.safe_load(stream)
 
