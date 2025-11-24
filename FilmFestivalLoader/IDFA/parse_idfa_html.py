@@ -127,10 +127,10 @@ def parse_idfa_sites(festival_data):
     get_combination_films(festival_data)
 
     comment('Parsing section pages.')
-    get_theme_parts(festival_data, 'PathwaysPath', 'sections.html')
+    get_theme_parts(festival_data, 'SectionsPath', 'sections.html')
 
     comment('Parsing pathway pages.')
-    get_theme_parts(festival_data, 'SectionsPath', 'pathways.html')
+    get_theme_parts(festival_data, 'PathwaysPath', 'pathways.html')
 
     comment(f'Write combination data to {COMBI_DATA_PATH}.')
     CombinationsKeeper.write_combination_data(festival_data)
