@@ -33,7 +33,7 @@ MTMF_TICKETS_HOSTNAME = 'https://tickets.moviesthatmatter.nl'
 
 # Application tools.
 ERROR_COLLECTOR = ErrorCollector()
-DEBUG_RECORDER = DebugRecorder(FILE_KEEPER.debug_file)
+DEBUG_RECORDER = DebugRecorder(FILE_KEEPER.debug_file, active=DEBUGGING)
 COUNTER = Counter()
 
 
@@ -278,7 +278,7 @@ class FilmPageParser(HtmlPageParser):
     screened_film_urls_by_film_id = {}
 
     def __init__(self, festival_data, url):
-        HtmlPageParser.__init__(self, festival_data, DEBUG_RECORDER, 'F', debugging=DEBUGGING)
+        HtmlPageParser.__init__(self, festival_data, DEBUG_RECORDER, 'F')
         self.url = url
         self.festival_data = festival_data
         self.print_debug(self.bar, f'Analysing film URL {url}')
@@ -546,7 +546,7 @@ class ScreeningsPageParser(HtmlPageParser):
     en_month_by_name: Dict[str, int] = {'Mar': 3, 'Apr': 4}
 
     def __init__(self, iffr_data, film, subtitles):
-        HtmlPageParser.__init__(self, iffr_data, DEBUG_RECORDER, 'S', debugging=DEBUGGING)
+        HtmlPageParser.__init__(self, iffr_data, DEBUG_RECORDER, 'S')
         self.film = film
         self.subtitles = subtitles
         self.print_debug(self.bar, f"Analysing screenings of {film}, {film.url}")
@@ -743,7 +743,7 @@ class ShoppingCartPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, film, sequence_nr):
-        HtmlPageParser.__init__(self, festival_data, DEBUG_RECORDER, 'SC', debugging=DEBUGGING)
+        HtmlPageParser.__init__(self, festival_data, DEBUG_RECORDER, 'SC')
         self.film = film
         self.sequence_nr = sequence_nr
         self.state_stack = self.StateStack(self.print_debug, self.ShoppingCartState.IDLE)
@@ -790,7 +790,7 @@ class TheaterScreenPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, film, url):
-        HtmlPageParser.__init__(self, festival_data, DEBUG_RECORDER, 'TS', debugging=DEBUGGING)
+        HtmlPageParser.__init__(self, festival_data, DEBUG_RECORDER, 'TS')
         self.print_debug(self.bar, f'Analysing screening location of FILM {film}, {url}')
         self.stateStack = self.StateStack(self.print_debug, self.ScreensParseState.IDLE)
         self.current_screen = None
