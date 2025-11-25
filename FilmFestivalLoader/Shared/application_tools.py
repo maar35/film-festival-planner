@@ -91,18 +91,20 @@ class ErrorCollector:
 
 class DebugRecorder:
 
-    def __init__(self, debug_file):
+    def __init__(self, debug_file, active=True):
         self.debug_file = debug_file
+        self.active = active
         self.debug_lines = []
 
     def __str__(self):
         return "\n".join(self.debug_lines) + "\n"
 
     def add(self, line):
-        self.debug_lines.append(line)
+        if self.active:
+            self.debug_lines.append(line)
 
     def write_debug(self):
-        if len(self.debug_lines) > 0:
+        if self.debug_lines:
             time_stamp = datetime.now().isoformat(' ') + '\n'
             with open(self.debug_file, 'w') as f:
                 f.write(time_stamp + str(self))

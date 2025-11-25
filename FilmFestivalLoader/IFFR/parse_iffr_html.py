@@ -80,7 +80,7 @@ IFFR_HOSTNAME = "https://iffr.com"
 
 # Application tools.
 ERROR_COLLECTOR = ErrorCollector()
-DEBUG_RECORDER = DebugRecorder(FILE_KEEPER.debug_file)
+DEBUG_RECORDER = DebugRecorder(FILE_KEEPER.debug_file, active=DEBUGGING)
 COUNTER = Counter()
 
 
@@ -250,7 +250,7 @@ class AzPageParser(HtmlPageParser):
     film_id_by_title = {}
 
     def __init__(self, festival_data):
-        super().__init__(festival_data, DEBUG_RECORDER, 'AZ', debugging=DEBUGGING)
+        super().__init__(festival_data, DEBUG_RECORDER, 'AZ')
         self.config = Config().config
         self.max_short_duration = datetime.timedelta(minutes=self.config['Constants']['MaxShortMinutes'])
         self.film = None
@@ -406,7 +406,7 @@ class SubsectionPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, subsection):
-        super().__init__(festival_data, DEBUG_RECORDER, 'SEC', debugging=DEBUGGING)
+        super().__init__(festival_data, DEBUG_RECORDER, 'SEC')
         self.festival_data = festival_data
         self.subsection = subsection
         self.film = None
@@ -523,7 +523,6 @@ class FilmInfoPageParser(HtmlPageParser):
         IN_PROPERTY_VALUE = auto()
         DONE = auto()
 
-    debugging = DEBUGGING
     re_reviewer = re.compile(r'–\s(?P<reviewer>[^–0-9]+?)$')
     re_num_screen = re.compile(r'^(?P<theater>.*?)\s+(?P<number>\d+)$')
     re_separator = re.compile(r'^(?P<theater>.*?)\s+-\s+(?P<room>[^-]+)$')
@@ -531,7 +530,7 @@ class FilmInfoPageParser(HtmlPageParser):
     can_go_by_screening = None
 
     def __init__(self, festival_data, film, charset):
-        super().__init__(festival_data, DEBUG_RECORDER, 'FI', self.debugging)
+        super().__init__(festival_data, DEBUG_RECORDER, 'FI')
         self.festival_data = festival_data
         self.film = film
         self.reviewer = None

@@ -43,7 +43,7 @@ FESTIVAL_HOSTNAME = 'https://festival.idfa.nl'
 
 # Application tools.
 ERROR_COLLECTOR = ErrorCollector()
-DEBUG_RECORDER = DebugRecorder(FILE_KEEPER.debug_file)
+DEBUG_RECORDER = DebugRecorder(FILE_KEEPER.debug_file, active=DEBUGGING)
 COUNTER = Counter()
 
 CATEGORY_BY_STR = {
@@ -233,7 +233,7 @@ class AzPageParser(HtmlPageParser):
         IN_ARTICLE = auto()
 
     def __init__(self, festival_data, debugger=None):
-        super().__init__(festival_data, debugger or DEBUG_RECORDER, 'AZ', debugging=DEBUGGING)
+        super().__init__(festival_data, debugger or DEBUG_RECORDER, 'AZ')
         self.sorting_from_site = False
         self.film = None
         self.state_stack = self.StateStack(self.print_debug, self.AzParseState.IDLE)
@@ -261,7 +261,7 @@ class ThemePartsPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, theme_str):
-        super().__init__(festival_data, DEBUG_RECORDER, 'TP', debugging=DEBUGGING)
+        super().__init__(festival_data, DEBUG_RECORDER, 'TP')
         self.theme_str = theme_str
         self.theme_urls = []
         self.theme_name_by_url = {}
@@ -331,7 +331,7 @@ class FilmsFromSectionPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, section_url):
-        super().__init__(festival_data, DEBUG_RECORDER, 'FFS', debugging=DEBUGGING)
+        super().__init__(festival_data, DEBUG_RECORDER, 'FFS')
         self.section_url = section_url
         self.section_name = None
         self.section_description = None
@@ -425,7 +425,7 @@ class FilmsFromPathwayPageParser(HtmlPageParser):
     sections_by_film = {}
 
     def __init__(self, festival_data, pathway_url):
-        super().__init__(festival_data, DEBUG_RECORDER, 'FFP', debugging=DEBUGGING)
+        super().__init__(festival_data, DEBUG_RECORDER, 'FFP')
         self.pathway_url = pathway_url
 
         # Initialize film data.
@@ -541,7 +541,7 @@ class FilmPageParser(HtmlPageParser):
 
     def __init__(self, festival_data, theme_str, film_title, film_url, debug_prefix=None):
         debug_prefix = debug_prefix or 'PFP'
-        super().__init__(festival_data, DEBUG_RECORDER, debug_prefix, debugging=DEBUGGING)
+        super().__init__(festival_data, DEBUG_RECORDER, debug_prefix)
         self.festival_data = festival_data
         self.film_title = film_title
         self.film_url = film_url
