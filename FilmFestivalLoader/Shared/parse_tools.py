@@ -80,6 +80,7 @@ class FileKeeper:
         # Define filenames.
         self.az_file_unnumbered = os.path.join(self.webdata_dir, "azpage.html")
         self.debug_file = os.path.join(self.plandata_dir, "debug.txt")
+        self.local_config_file = os.path.join(self.plandata_dir, "local_config.yml")
 
         # Make sure that relevant directories exist.
         if not os.path.isdir(self.festival_dir):
