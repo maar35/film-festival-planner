@@ -83,7 +83,7 @@ class UnicodeMapper:
         return normalized_str
 
 
-class Article:
+class LanguageArticles:
 
     def __init__(self, language_articles_tuple):
         self.language = language_articles_tuple[0]
@@ -106,7 +106,11 @@ class Film:
         'combinations': category_combinations,
         'events': category_events,
     }
-    minutes_mark = "′"
+    standard_quote = "'"        # Apostrophe
+    minutes_mark = "′"          # Prime
+    right_single_quote = '’'    # Right single quotation mark
+    quote_likes = standard_quote + right_single_quote + minutes_mark
+    article_separators = " " + quote_likes
     articles_by_language = {}
     language_by_title = {}
     re_alpha = re.compile(r'^[a-zA-Z]')
@@ -194,19 +198,22 @@ class Film:
 
     def strip_article(self):
         title = self.title
-        start_indices = [i for i in [title.find(" "), title.find("'")] if i >= 0]
+        indices = [title.find(c) for c in self.article_separators]
+        start_indices = [i for i in indices if i >= 0]
         try:
             i = min(start_indices)
         except ValueError:
             return title
         else:
-            if title[i] == "'":
+            if title[i] in self.quote_likes:
+                quote_like = title[i]
+                title = title.replace(quote_like, self.standard_quote)
                 i += 1
             first = title[:i]
             rest = title[i:].lstrip()
         if not self.articles_by_language[self.title_language].is_article(first):
             return title
-        return "{}, {}".format(rest, first)
+        return f'{rest}, {first}'
 
 
 class ScreenedFilmType(Enum):
@@ -688,8 +695,8 @@ class FestivalData:
 
     def read_articles(self):
         with open(ARTICLES_FILE) as f:
-            articles = [Article(self.split_rec(line, ":")) for line in f]
-        Film.articles_by_language = dict([(a.key(), a) for a in articles])
+            articles = [LanguageArticles(self.split_rec(line, ":")) for line in f]
+        Film.articles_by_language = {a.key(): a for a in articles}
 
     def read_film_ids(self):
         try:

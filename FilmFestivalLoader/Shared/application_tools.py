@@ -49,7 +49,7 @@ class Counter:
         pass
 
     def __str__(self):
-        lines = [f'{label:24}: {count}' for label, count in self.count_by_label.items()]
+        lines = [f'{label:30}: {count}' for label, count in self.count_by_label.items()]
         return '\n'.join(lines)
 
     def start(self, label):
