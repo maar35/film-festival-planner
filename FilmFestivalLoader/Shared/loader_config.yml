@@ -1,0 +1,62 @@
+articles:
+    de: !!python/object:Shared.planner_interface.LanguageArticles
+        articles:
+        - das
+        - der
+        - die
+        - ein
+        - eine
+        - eines
+        language: de
+    en: !!python/object:Shared.planner_interface.LanguageArticles
+        articles:
+        - a
+        - an
+        - the
+        language: en
+    es: !!python/object:Shared.planner_interface.LanguageArticles
+        articles:
+        - el
+        - la
+        - las
+        - los
+        - un
+        - una
+        language: es
+    fr: !!python/object:Shared.planner_interface.LanguageArticles
+        articles:
+        - d'
+        - l'
+        - la
+        - le
+        - les
+        - un
+        - une
+        language: fr
+    it: !!python/object:Shared.planner_interface.LanguageArticles
+        articles:
+        - il
+        - l'
+        - la
+        - le
+        - un
+        - una
+        language: it
+    nl: !!python/object:Shared.planner_interface.LanguageArticles
+        articles:
+        - de
+        - een
+        - het
+        language: nl
+    pt: !!python/object:Shared.planner_interface.LanguageArticles
+        articles:
+        - a
+        - o
+        - um
+        - uma
+        language: pt
+    vn: !!python/object:Shared.planner_interface.LanguageArticles
+        articles:
+        - "c\xE1i"
+        - "N\xF3"
+        language: vn
