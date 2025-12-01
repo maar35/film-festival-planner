@@ -87,10 +87,6 @@ def parse_iffr_sites(festival_data):
     :param festival_data: planner_interface.festival_data object.
     :return: None
     """
-    # yaml_object = {'articles': Film.articles_by_language}
-    # with open(FILE_KEEPER.shared_config_file, 'w') as stream:
-    #     yaml.dump(yaml_object, stream, encoding='utf-8', indent=4)
-
     if TRY_AZ_PAGES:
         comment('Parsing AZ pages.')
         get_films(festival_data)

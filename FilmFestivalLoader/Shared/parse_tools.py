@@ -54,7 +54,6 @@ def try_parse_festival_sites(parser, festival_data, error_collector, debug_recor
 class FileKeeper:
     basedir = os.path.expanduser(f'~/{config()["Paths"]["FestivalRootDirectory"]}')
     common_data_dir = os.path.expanduser(f'~/{config()["Paths"]["CommonDataDirectory"]}')
-    shared_dir = os.path.expanduser(f"~/{config()['Paths']['LoaderSharedDirectory']}")
 
     def __init__(self, festival, year, basedir=None):
         """
@@ -81,7 +80,6 @@ class FileKeeper:
         # Define filenames.
         self.az_file_unnumbered = os.path.join(self.webdata_dir, "azpage.html")
         self.debug_file = os.path.join(self.plandata_dir, "debug.txt")
-        self.shared_config_file = os.path.join(self.shared_dir, "loader_config.yml")
         self.local_config_file = os.path.join(self.plandata_dir, "local_config.yml")
 
         # Make sure that relevant directories exist.

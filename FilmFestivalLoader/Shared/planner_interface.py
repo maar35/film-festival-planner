@@ -16,10 +16,13 @@ from unicodedata import normalize
 
 import yaml
 
-from Shared.application_tools import config, pr_info
+from Shared.application_tools import config, pr_info, Config
 
 INTERFACE_DIR = os.path.expanduser(f"~/{config()['Paths']['LoaderSharedDirectory']}")
 COMMON_DATA_DIR = os.path.expanduser(f"~/{config()['Paths']['CommonDataDirectory']}")
+LOADER_SHARED_DIR = os.path.expanduser(f"~/{config()['Paths']['LoaderSharedDirectory']}")
+SHARED_CONFIG = Config(os.path.join(LOADER_SHARED_DIR, 'loader_config.yml')).config
+
 ARTICLES_FILE = os.path.join(INTERFACE_DIR, "articles.txt")
 FILMS_FILE_HEADER = config()['Headers']['FilmsFileHeader']
 AUDIENCE_PUBLIC = 'publiek'
@@ -85,15 +88,39 @@ class UnicodeMapper:
 
 class LanguageArticles:
 
-    def __init__(self, language_articles_tuple):
-        self.language = language_articles_tuple[0]
-        self.articles = language_articles_tuple[1].split()
+    standard_quote = "'"        # Apostrophe
+    minutes_mark = "′"          # Prime
+    right_single_quote = '’'    # Right single quotation mark
+    quote_likes = standard_quote + right_single_quote + minutes_mark
+    article_separators = " " + quote_likes
+    articles_by_language = SHARED_CONFIG['articles']
 
-    def key(self):
-        return self.language
+    @classmethod
+    def strip_article(cls, title, language):
+        indices = [title.find(c) for c in cls.article_separators]
+        start_indices = [i for i in indices if i >= 0]
+        try:
+            i = min(start_indices)
+        except ValueError:
+            return title
+        else:
+            if title[i] in cls.quote_likes:
+                quote_like = title[i]
+                title = title.replace(quote_like, cls.standard_quote)
+                i += 1
+            first = title[:i]
+            rest = title[i:].lstrip()
+        if not LanguageArticles.is_article(first, language):
+            return title
+        return f'{rest}, {first}'
 
-    def is_article(self, word):
-        return word.lower() in self.articles
+    @classmethod
+    def is_article(cls, word, language):
+        try:
+            articles = cls.articles_by_language[language]
+        except KeyError as e:
+            raise KeyError(f'{e}: Language {language} not found in articles dictionary')
+        return word.lower() in articles
 
 
 class Film:
@@ -106,14 +133,7 @@ class Film:
         'combinations': category_combinations,
         'events': category_events,
     }
-    standard_quote = "'"        # Apostrophe
-    minutes_mark = "′"          # Prime
-    right_single_quote = '’'    # Right single quotation mark
-    quote_likes = standard_quote + right_single_quote + minutes_mark
-    article_separators = " " + quote_likes
-    articles_by_language = {}
     language_by_title = {}
-    re_alpha = re.compile(r'^[a-zA-Z]')
 
     def __init__(self, seq_nr, film_id, title, url, duration=None, medium_category=None):
         self.seq_nr = seq_nr
@@ -123,6 +143,7 @@ class Film:
         self.title_language = self.language()
         self.subsection = None
         self.duration = duration
+        self.minutes_mark = LanguageArticles.minutes_mark
         self.medium_category = medium_category
         self.reviewer = None
         self.sort_string = self.sort_str()
@@ -165,6 +186,9 @@ class Film:
     def sort_str(self):
         return self.lower(self.strip_article())
 
+    def strip_article(self):
+        return LanguageArticles.strip_article(self.title, self.title_language)
+
     @staticmethod
     def duration_to_minutes(duration):
         return int(duration.total_seconds() / 60)
@@ -195,25 +219,6 @@ class Film:
 
     def screened_films(self, festival_data):
         return self.film_info(festival_data).screened_films
-
-    def strip_article(self):
-        title = self.title
-        indices = [title.find(c) for c in self.article_separators]
-        start_indices = [i for i in indices if i >= 0]
-        try:
-            i = min(start_indices)
-        except ValueError:
-            return title
-        else:
-            if title[i] in self.quote_likes:
-                quote_like = title[i]
-                title = title.replace(quote_like, self.standard_quote)
-                i += 1
-            first = title[:i]
-            rest = title[i:].lstrip()
-        if not self.articles_by_language[self.title_language].is_article(first):
-            return title
-        return f'{rest}, {first}'
 
 
 class ScreenedFilmType(Enum):
@@ -522,7 +527,6 @@ class FestivalData:
         self.new_screens_file = os.path.join(self.common_data_dir, 'new_screens.csv')
         self.screenings_file = os.path.join(plandata_dir, 'screenings.csv')
         self.film_seqnr = 0
-        self.read_articles()
         self.read_sections()
         self.read_subsections()
         self.read_cities()
@@ -692,11 +696,6 @@ class FestivalData:
     def split_rec(line, sep):
         end = sep + '\r\n'
         return line.rstrip(end).split(sep)
-
-    def read_articles(self):
-        with open(ARTICLES_FILE) as f:
-            articles = [LanguageArticles(self.split_rec(line, ":")) for line in f]
-        Film.articles_by_language = {a.key(): a for a in articles}
 
     def read_film_ids(self):
         try:
