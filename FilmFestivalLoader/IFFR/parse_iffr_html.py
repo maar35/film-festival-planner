@@ -599,7 +599,7 @@ class FilmInfoPageParser(HtmlPageParser):
                 stack.change(state.DONE)
 
             # Screenings part.
-            case [state.IN_ARTICLE | state.DONE_ARTICLE, 'div', a] if a and a[0] == ('id', 'vertoningen'):
+            case [state.IN_ARTICLE | state.DONE_ARTICLE, 'div', a] if ('id', 'vertoningen') in a:
                 stack.change(state.DONE_ARTICLE)
                 stack.push(state.AWAITING_SCREENINGS)
             case [state.AWAITING_SCREENINGS, 'ul', _]:
@@ -681,7 +681,7 @@ class FilmInfoPageParser(HtmlPageParser):
             case state.IN_PARAGRAPH | state.IN_EMPHASIS:
                 self.add_article_text(data)
             case state.IN_REVIEWER:
-                self.get_reviewer(data)
+                self._get_reviewer(data)
 
             # Screenings part.
             case state.IN_TIMES:
@@ -692,7 +692,7 @@ class FilmInfoPageParser(HtmlPageParser):
             case state.IN_LOCATION:
                 self.location = data
             case state.IN_SCREENING_PROP:
-                self.set_screening_prop(data.strip())
+                self._set_screening_prop(data.strip())
                 if data.strip():
                     stack.change(state.AWAITING_SCREENING_PROP)
 
@@ -702,13 +702,13 @@ class FilmInfoPageParser(HtmlPageParser):
             case state.IN_PROPERTY_VALUE:
                 self.film_property_by_label[self.metadata_key] = data.strip()
 
-    def init_screening_data(self):
+    def _init_screening_data(self):
         self.start_dt_str = None
         self.end_dt_str = None
         self.screening_times_str = None
         self.location = None
 
-    def get_reviewer(self, data):
+    def _get_reviewer(self, data):
         if has_category(self.film, Film.category_films) or self.film.title in COMBINATION_FILM_TITLES:
             m = self.re_reviewer.match(data)
             if m:
@@ -718,7 +718,7 @@ class FilmInfoPageParser(HtmlPageParser):
             else:
                 DEBUG_RECORDER.add(f'{self.film.title}: No reviewer found in {data}')
 
-    def add_iffr_screening(self):
+    def _add_iffr_screening(self):
         # Update film duration.
         self._update_film_duration()
 
@@ -728,7 +728,7 @@ class FilmInfoPageParser(HtmlPageParser):
 
         # Get the screen.
         location = self.location or self.vod_screen
-        screen = get_screen_from_parse_name(self.festival_data, location, self.split_location)
+        screen = get_screen_from_parse_name(self.festival_data, location, self._split_location)
 
         # Create the screening.
         q_and_a = ''
@@ -740,10 +740,10 @@ class FilmInfoPageParser(HtmlPageParser):
         self.add_screening(iffr_screening, display=DISPLAY_ADDED_SCREENING)
 
         COUNTER.increase('screenings')
-        self.init_screening_data()
+        self._init_screening_data()
 
     @classmethod
-    def split_location(cls, location):
+    def _split_location(cls, location):
         city_name = FESTIVAL_CITY
         theater_parse_name = None
         screen_abbreviation = 'zaal'
@@ -822,6 +822,19 @@ class FilmInfoPageParser(HtmlPageParser):
             minutes = '0'
         self.film.duration = datetime.timedelta(minutes=int(minutes))
 
+    def _set_screening_prop(self, data):
+        if 'Video on demand' in data:
+            self.location = self.vod_screen
+            self._add_iffr_screening()
+        elif 'Fysiek' in data:
+            self._add_iffr_screening()
+        elif 'QA' in data:
+            self.screening.q_and_a = data
+        elif 'ondertiteld' in data:
+            self.screening.subtitles = data
+        elif 'Press' in data:
+            self.screening.audience = 'industry'
+
     @classmethod
     def set_combinations(cls, festival_data):
         combi_list = [s for s in festival_data.screenings if s.film_is_combi()]
@@ -847,19 +860,6 @@ class FilmInfoPageParser(HtmlPageParser):
                     link_screened_film(festival_data, film, main_film, main_film_info, screened_film_type)
                 COUNTER.increase('combinations from screenings')
                 COUNTER.increase(screened_film_type.name)
-
-    def set_screening_prop(self, data):
-        if 'Video on demand' in data:
-            self.location = self.vod_screen
-            self.add_iffr_screening()
-        elif 'Fysiek' in data:
-            self.add_iffr_screening()
-        elif 'QA' in data:
-            self.screening.q_and_a = data
-        elif 'ondertiteld' in data:
-            self.screening.subtitles = data
-        elif 'Press' in data:
-            self.screening.audience = 'industry'
 
 
 class IffrScreening(Screening):
