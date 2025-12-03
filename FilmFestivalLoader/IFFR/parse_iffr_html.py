@@ -6,12 +6,10 @@ import re
 from enum import Enum, auto
 from urllib.error import HTTPError
 
-import yaml
-
 from Shared.application_tools import ErrorCollector, DebugRecorder, comment, Config, Counter, broadcast
 from Shared.parse_tools import FileKeeper, try_parse_festival_sites, HtmlPageParser
 from Shared.planner_interface import FilmInfo, Screening, ScreenedFilmType, FestivalData, Film, \
-    get_screen_from_parse_name, link_screened_film, ScreeningKey
+    get_screen_from_parse_name, link_screened_film
 from Shared.web_tools import UrlFile, iri_slug_to_url, fix_json, paths_eq
 
 FESTIVAL = 'IFFR'
@@ -19,6 +17,7 @@ FESTIVAL_YEAR = 2026
 FESTIVAL_CITY = 'Rotterdam'
 
 ALWAYS_DOWNLOAD = False
+DOWNLOAD_SUBSECTIONS = False
 DEBUGGING = True
 DISPLAY_ADDED_SCREENING = True
 TRY_AZ_PAGES = False
@@ -36,10 +35,12 @@ ERROR_COLLECTOR = ErrorCollector()
 DEBUG_RECORDER = DebugRecorder(FILE_KEEPER.debug_file, active=DEBUGGING)
 COUNTER = Counter()
 
+# Config items.
 MAX_PAGES = LOCAL_CONFIG['scalars']['max_pages']
 COMBINATION_FILM_TITLES = LOCAL_CONFIG['combination_film_titles']
 REVIEWER_BY_ALIAS = LOCAL_CONFIG['reviewers']
 LANGUAGE_BY_TITLE = LOCAL_CONFIG['title_languages']
+SPECIALS = LOCAL_CONFIG['specials']
 
 
 def main():
@@ -94,6 +95,9 @@ def parse_iffr_sites(festival_data):
     comment('Parsing subsection pages.')
     get_subsection_details(festival_data)
 
+    comment('Parsing specials')
+    get_specials(festival_data)
+
     comment('Parsing events.')
     get_events(festival_data)
 
@@ -110,6 +114,23 @@ def get_films(festival_data):
     if az_html:
         comment(f'Analysing AZ page, encoding={url_file.encoding}')
         AzPageParser(festival_data).feed(az_html)
+
+
+def get_specials(festival_data):
+    section = festival_data.section_by_name['Specials']
+    medium_category = 'events'
+    print(f'SPECIALS: {SPECIALS},\nitems: {SPECIALS.items()}')
+    for name, props in SPECIALS.items():
+        subsection_url = IFFR_HOSTNAME + props['path']
+        subsection = festival_data.get_subsection(name, subsection_url, section)
+        subsection.description = props['description']
+        for film_title, film_path in props['events'].items():
+            film_url = IFFR_HOSTNAME + film_path
+            film = festival_data.add_film(film_title, film_url, medium_category=medium_category)
+            if film:
+                film.subsection = subsection
+            else:
+                broadcast(f'EXISTING FILM: {film_title} - {film_url}', DEBUG_RECORDER)
 
 
 def get_events(festival_data):
@@ -138,8 +159,8 @@ def get_film_details(festival_data, category, category_name, always_download=ALW
 
 
 def get_subsection_details(festival_data):
-    _ = get_subsections(festival_data)
-    for subsection in festival_data.subsection_by_name.values():
+    config_subsections = get_subsections(festival_data)
+    for subsection in config_subsections:
         found_films = True
         page_num = 0
         while found_films and page_num < MAX_PAGES:
@@ -175,8 +196,9 @@ def get_subsection_page_details(festival_data, subsection, page_number):
             COUNTER.increase('not found subsection urls')
         return False
 
+    download = DOWNLOAD_SUBSECTIONS or ALWAYS_DOWNLOAD
     comment_at_download = f'Downloading {subsection.name} page: {paged_url}, encoding: {url_file.encoding}'
-    subsection_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=comment_at_download)
+    subsection_html = url_file.get_text(always_download=download, comment_at_download=comment_at_download)
     film_count = 0
     if subsection_html is not None:
         encoding_str = f'encoding={url_file.encoding}'
@@ -690,7 +712,7 @@ class FilmInfoPageParser(HtmlPageParser):
         if has_category(self.film, Film.category_films) or self.film.title in COMBINATION_FILM_TITLES:
             m = self.re_reviewer.match(data)
             if m:
-                self.reviewer = m.group('reviewer')
+                self.reviewer = m.group('reviewer').strip()
                 if self.reviewer in REVIEWER_BY_ALIAS:
                     self.reviewer = REVIEWER_BY_ALIAS[self.reviewer]
             else:

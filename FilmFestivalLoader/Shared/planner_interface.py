@@ -574,8 +574,9 @@ class FestivalData:
             case [True, True]:
                 # Update existing film.
                 film = self.get_film_by_key(title, url)
-                film.duration = duration or film.duration
-                film.medium_category = medium_category or film.medium_category
+                if film:
+                    film.duration = duration
+                    film.medium_category = medium_category
             case _:
                 film = None
         return film
@@ -588,9 +589,13 @@ class FestivalData:
             raise KeyError(f'Key ({key}) not found in film dictionary')
         else:
             films = [film for film in self.films if film.film_id == film_id]
-            if len(films) == 0:
-                raise ValueError(f'Key ({key}) found, but no film found with film ID ({film_id})')
-        return films[0]
+            if films:
+                film = films[0]
+            else:
+                film = self.create_film(title, url)
+                if film:
+                    self.films.append(film)
+        return film
 
     def get_film_by_id(self, film_id):
         films = [f for f in self.films if f.film_id == film_id]
