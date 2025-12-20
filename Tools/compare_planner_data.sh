@@ -8,7 +8,6 @@ declare -r files="
     sections.csv
     subsections.csv
     filminfo.csv
-    filminfo.xml
     filminfo.yml
 "
 declare -r film_file=films.csv

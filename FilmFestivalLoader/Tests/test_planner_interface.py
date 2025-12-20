@@ -220,6 +220,42 @@ class SortTitlesTestCase(PlannerInterfaceBaseTestCase):
         # Assert.
         self.assertEqual(sorted_characters, expected_sorted)
 
+    def test_article_stripping_quote(self):
+        """ A recognized article should be stripped of the beginning of the to be sorted title """
+        # Arrange.
+        expected_title = "Amour Toujours, L'"
+        title = "L'Amour Toujours"
+        film_args = [
+            title,
+            'https://iffr.com/nl/iffr/2026/films/lamour-toujour',
+        ]
+        film = self.festival_data.add_film(*film_args)
+        film.title_language = 'fr'
+
+        # Act.
+        new_title = film.strip_article()
+
+        # Assert.
+        self.assertEqual(new_title, expected_title)
+
+    def test_article_stripping_alt_quote(self):
+        """ A recognized article should be stripped of the beginning of the to be sorted title """
+        # Arrange.
+        expected_title = "étranger, L'"
+        title = 'L’étranger'
+        film_args = [
+            title,
+            'https://iffr.com/nl/iffr/2026/films/létranger',
+        ]
+        film = self.festival_data.add_film(*film_args)
+        film.title_language = 'fr'
+
+        # Act.
+        new_title = film.strip_article()
+
+        # Assert.
+        self.assertEqual(new_title, expected_title)
+
 
 if __name__ == '__main__':
     unittest.main()
