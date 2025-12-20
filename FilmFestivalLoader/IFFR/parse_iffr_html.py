@@ -24,6 +24,7 @@ TRY_AZ_PAGES = False
 
 # Files.
 FILE_KEEPER = FileKeeper(FESTIVAL, FESTIVAL_YEAR)
+FESTIVAL_CONFIG = Config(FILE_KEEPER.festival_config_file).config
 LOCAL_CONFIG = Config(FILE_KEEPER.local_config_file).config
 
 # URL information.
@@ -40,7 +41,6 @@ MAX_PAGES = LOCAL_CONFIG['scalars']['max_pages']
 COMBINATION_FILM_TITLES = LOCAL_CONFIG['combination_film_titles']
 REVIEWER_BY_ALIAS = LOCAL_CONFIG['reviewers']
 LANGUAGE_BY_TITLE = LOCAL_CONFIG['title_languages']
-SPECIALS = LOCAL_CONFIG['specials']
 
 
 def main():
@@ -95,9 +95,6 @@ def parse_iffr_sites(festival_data):
     comment('Parsing subsection pages.')
     get_subsection_details(festival_data)
 
-    comment('Parsing specials')
-    get_specials(festival_data)
-
     comment('Parsing events.')
     get_events(festival_data)
 
@@ -114,23 +111,6 @@ def get_films(festival_data):
     if az_html:
         comment(f'Analysing AZ page, encoding={url_file.encoding}')
         AzPageParser(festival_data).feed(az_html)
-
-
-def get_specials(festival_data):
-    section = festival_data.section_by_name['Specials']
-    medium_category = 'events'
-    print(f'SPECIALS: {SPECIALS},\nitems: {SPECIALS.items()}')
-    for name, props in SPECIALS.items():
-        subsection_url = IFFR_HOSTNAME + props['path']
-        subsection = festival_data.get_subsection(name, subsection_url, section)
-        subsection.description = props['description']
-        for film_title, film_path in props['events'].items():
-            film_url = IFFR_HOSTNAME + film_path
-            film = festival_data.add_film(film_title, film_url, medium_category=medium_category)
-            if film:
-                film.subsection = subsection
-            else:
-                broadcast(f'EXISTING FILM: {film_title} - {film_url}', DEBUG_RECORDER)
 
 
 def get_events(festival_data):
@@ -532,8 +512,6 @@ class FilmInfoPageParser(HtmlPageParser):
         DONE = auto()
 
     re_reviewer = re.compile(r'–\s(?P<reviewer>[^–0-9]+?)$')
-    re_num_screen = re.compile(r'^(?P<theater>.*?)\s+(?P<number>\d+)$')
-    re_separator = re.compile(r'^(?P<theater>.*?)\s+-\s+(?P<room>[^-]+)$')
     vod_screen = 'Video on demand 1'
     can_go_by_screening = None
 
@@ -728,7 +706,8 @@ class FilmInfoPageParser(HtmlPageParser):
 
         # Get the screen.
         location = self.location or self.vod_screen
-        screen = get_screen_from_parse_name(self.festival_data, location, self._split_location)
+        splitter = LocationSplitter.split_location
+        screen = get_screen_from_parse_name(self.festival_data, location, splitter)
 
         # Create the screening.
         q_and_a = ''
@@ -741,36 +720,6 @@ class FilmInfoPageParser(HtmlPageParser):
 
         COUNTER.increase('screenings')
         self._init_screening_data()
-
-    @classmethod
-    def _split_location(cls, location):
-        city_name = FESTIVAL_CITY
-        theater_parse_name = None
-        screen_abbreviation = 'zaal'
-        one_room_theaters = ['SKVR Centrum', 'V2', 'BRUTUS', 'Frank Taal Galerie', 'OX.Space', 'OX.Space',
-                             'Secret locations', 'HAKA-gebouw', 'JOEY RAMONE', 'Oude Luxor',
-                             'Station Rotterdam Centraal', 'Depot Boijmans Van Beuningen']
-        if not location:
-            COUNTER.increase('no location')
-        if location in one_room_theaters:
-            theater_parse_name = location
-        elif location.startswith('de Doelen') or location.startswith('De Doelen'):
-            theater_parse_name = 'de Doelen'
-            screen_abbreviation = ' '.join(location.split()[2:])
-        elif location.startswith('TR Schouwburg'):
-            theater_parse_name = 'Schouwburg'
-            screen_abbreviation = ' '.join(location.split()[2:])
-        elif location.startswith('WORM'):
-            theater_parse_name = 'WORM'
-            screen_abbreviation = ' '.join(location.split()[1:])
-        if not theater_parse_name:
-            for regex in [cls.re_num_screen, cls.re_separator]:
-                match = regex.match(location)
-                if match:
-                    theater_parse_name = match.group(1)
-                    screen_abbreviation = match.group(2)
-                    break
-        return city_name, theater_parse_name, screen_abbreviation
 
     @staticmethod
     def _same_day(data):
@@ -860,6 +809,43 @@ class FilmInfoPageParser(HtmlPageParser):
                     link_screened_film(festival_data, film, main_film, main_film_info, screened_film_type)
                 COUNTER.increase('combinations from screenings')
                 COUNTER.increase(screened_film_type.name)
+
+
+class LocationSplitter:
+    re_num_screen = re.compile(r'^(?P<theater>.*?)\s+(?P<number>\d+)$')
+    re_separator = re.compile(r'^(?P<theater>.*?)\s+[-–]\s+(?P<room>[^-]+)$')
+    one_room_theaters = FESTIVAL_CONFIG['one_room_theaters']
+
+    @classmethod
+    def split_location(cls, location):
+        city_name = FESTIVAL_CITY
+        theater_parse_name = None
+        screen_abbreviation = 'zaal'
+        if not location:
+            COUNTER.increase('no location')
+
+        match location.split():
+            case _ if location in cls.one_room_theaters:
+                theater_parse_name = location
+            case location_parts if location.startswith('de Doelen') or location.startswith('De Doelen'):
+                theater_parse_name = 'de Doelen'
+                screen_abbreviation = location_parts[2:]
+            case location_parts if location.startswith('TR Schouwburg'):
+                theater_parse_name = 'Schouwburg'
+                screen_abbreviation = location_parts[2:]
+            case location_parts if location.startswith('WORM'):
+                theater_parse_name = 'WORM'
+                screen_abbreviation = location_parts[1:]
+
+        if not theater_parse_name:
+            for regex in [cls.re_num_screen, cls.re_separator]:
+                match = regex.match(location)
+                if match:
+                    theater_parse_name = match.group(1)
+                    screen_abbreviation = match.group(2)
+                    break
+
+        return city_name, theater_parse_name, screen_abbreviation
 
 
 class IffrScreening(Screening):

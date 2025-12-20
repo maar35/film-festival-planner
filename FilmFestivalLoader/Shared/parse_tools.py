@@ -17,6 +17,7 @@ from Shared.planner_interface import Screening, write_lists, AUDIENCE_PUBLIC
 def try_parse_festival_sites(parser, festival_data, error_collector, debug_recorder, festival=None, counter=None):
     # Set defaults when necessary.
     festival = 'festival' if festival is None else festival
+    start_time = datetime.datetime.now()
 
     # Try parsing the websites.
     write_film_list = False
@@ -38,7 +39,7 @@ def try_parse_festival_sites(parser, festival_data, error_collector, debug_recor
     debug_recorder.write_debug()
 
     # Display errors when found.
-    if error_collector.error_count() > 0:
+    if error_collector.error_count():
         comment('Encountered some errors:')
         print(error_collector)
 
@@ -49,6 +50,10 @@ def try_parse_festival_sites(parser, festival_data, error_collector, debug_recor
 
     # Write parsed information.
     write_lists(festival_data, write_film_list, write_other_lists)
+
+    # Display a closing message.
+    duration = datetime.datetime.now() - start_time
+    comment(f'Done - {duration.seconds}" - {error_collector.error_count()} errors.')
 
 
 class FileKeeper:
@@ -72,15 +77,16 @@ class FileKeeper:
 
         # Define formats.
         self.generic_numbered_file_format = '{:03}.html'
-        self.az_file_format = os.path.join(self.webdata_dir, "az_page_{:02}.html")
-        self.film_file_format = os.path.join(self.webdata_dir, "film_page_{:03d}.html")
-        self.screenings_file_format = os.path.join(self.webdata_dir, "screenings_{:03d}_{:02d}.html")
-        self.details_file_format = os.path.join(self.webdata_dir, "details_{:03d}_{:02d}.html")
+        self.az_file_format = os.path.join(self.webdata_dir, 'az_page_{:02}.html')
+        self.film_file_format = os.path.join(self.webdata_dir, 'film_page_{:03d}.html')
+        self.screenings_file_format = os.path.join(self.webdata_dir, 'screenings_{:03d}_{:02d}.html')
+        self.details_file_format = os.path.join(self.webdata_dir, 'details_{:03d}_{:02d}.html')
 
         # Define filenames.
-        self.az_file_unnumbered = os.path.join(self.webdata_dir, "azpage.html")
-        self.debug_file = os.path.join(self.plandata_dir, "debug.txt")
-        self.local_config_file = os.path.join(self.plandata_dir, "local_config.yml")
+        self.az_file_unnumbered = os.path.join(self.webdata_dir, 'azpage.html')
+        self.debug_file = os.path.join(self.plandata_dir, 'debug.txt')
+        self.festival_config_file = os.path.join(self.festival_dir, 'festival_config.yml')
+        self.local_config_file = os.path.join(self.plandata_dir, 'local_config.yml')
 
         # Make sure that relevant directories exist.
         if not os.path.isdir(self.festival_dir):

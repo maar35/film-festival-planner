@@ -132,10 +132,15 @@ class NewTheaterDataListView(ListView):
         )
 
     def get_context_data(self, *args, **kwargs):
-        context = add_base_context(self.request, super().get_context_data(**kwargs))
-        context['title'] = 'Merge New Screens'
-        context['log'] = get_log(self.request.session)
-        context['objects_label'] = NewTheaterDataView.current_objects_label()
+        super_context = super().get_context_data(**kwargs)
+        new_context = {
+            'title': 'Merge New Screens',
+            'log': get_log(self.request.session),
+            'objects_label': NewTheaterDataView.current_objects_label(),
+            'button_enabled': len(NewTheaterDataView.new_screens),
+        }
+        context = add_base_context(self.request, super_context | new_context)
+
         return context
 
     def get_new_screen_item(self, screen):
@@ -151,7 +156,6 @@ class NewTheaterDataListView(ListView):
             'screen_abbr': screen.abbreviation,
             'address_type': screen.address_type.label,
             'screen_color': self.color(Screen, Screen.screens, **{'parse_name': screen.parse_name}),
-            'button_enabled': len(NewTheaterDataView.new_screens),
         }
         return new_screen_item
 

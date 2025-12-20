@@ -662,7 +662,7 @@ class FestivalData:
 
     def get_theater(self, city_name, name):
         city = self.get_city_by_name(city_name)
-        name = name or f'{city.name}-theater'
+        name = name or f'{city.name}-unrecognized theater'
         theater_key = (city.city_id, name)
         try:
             theater = self.theater_by_location[theater_key]
