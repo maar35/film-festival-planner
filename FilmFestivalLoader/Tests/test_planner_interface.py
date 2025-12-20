@@ -221,7 +221,7 @@ class SortTitlesTestCase(PlannerInterfaceBaseTestCase):
         self.assertEqual(sorted_characters, expected_sorted)
 
     def test_article_stripping_quote(self):
-        """ A recognized article should be stripped of the beginning of the to be sorted title """
+        """ A recognized article should be stripped off the beginning of the to be sorted title """
         # Arrange.
         expected_title = "Amour Toujours, L'"
         title = "L'Amour Toujours"
@@ -239,7 +239,7 @@ class SortTitlesTestCase(PlannerInterfaceBaseTestCase):
         self.assertEqual(new_title, expected_title)
 
     def test_article_stripping_alt_quote(self):
-        """ A recognized article should be stripped of the beginning of the to be sorted title """
+        """ A recognized article should be stripped off the beginning of the to be sorted title """
         # Arrange.
         expected_title = "étranger, L'"
         title = 'L’étranger'

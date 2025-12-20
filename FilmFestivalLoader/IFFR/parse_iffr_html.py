@@ -724,7 +724,6 @@ class FilmInfoPageParser(HtmlPageParser):
     @staticmethod
     def _same_day(data):
         components = data.split()
-        same_day = None
         match len(components):
             case 8:     # Maandag 3 februari 2025 | 19.30 - 21.34
                 same_day = True
