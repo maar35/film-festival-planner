@@ -160,7 +160,7 @@ class BaseHtmlPageParser(HTMLParser):
         def is_at_bottom(self):
             return len(self.stack) == 1
 
-    def __init__(self, debug_recorder, debug_prefix, debugging=False):
+    def __init__(self, debug_recorder, debug_prefix):
         HTMLParser.__init__(self)
         self.debug_recorder = debug_recorder
         self.debug_prefix = debug_prefix
