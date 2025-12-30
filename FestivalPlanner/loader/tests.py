@@ -13,7 +13,7 @@ import theaters
 from festival_planner import debug_tools
 from festival_planner.tools import initialize_log, unset_log, CSV_DIALECT
 from festivals.tests import create_festival, mock_base_festival_mnemonic
-from films.models import FilmFanFilmRating, Film, FAN_NAMES_BY_FESTIVAL_BASE
+from films.models import FilmFanFilmRating, Film, FAN_NAMES_BY_FESTIVAL_BASE, UNRATED_RATING
 from films.tests import create_film, ViewsTestCase, get_request_with_session, new_film
 from films.views import FilmsView
 from loader.forms.loader_forms import FilmLoader, RatingLoader, CityDumper, TheaterDumper, ScreenDumper, \
@@ -26,7 +26,7 @@ from theaters.models import City, new_cities_path, new_theaters_path, new_screen
 
 
 def create_rating(film, fan, rating):
-    return FilmFanFilmRating.film_ratings.create(film=film, film_fan=fan, rating=rating)
+    return FilmFanFilmRating.film_ratings.create(film=film, film_fan=fan, rating=rating, original_rating=UNRATED_RATING)
 
 
 def serialize_film(film):
@@ -42,7 +42,7 @@ def serialize_film(film):
         duration_str,
         film.medium_category,
         film.reviewer or '',
-        film.url
+        film.url,
     ]
     return fields
 
@@ -52,6 +52,7 @@ def serialize_rating(rating):
         str(rating.film_id),
         rating.film_fan.name,
         str(rating.rating),
+        str(rating.original_rating),
     ]
     return fields
 

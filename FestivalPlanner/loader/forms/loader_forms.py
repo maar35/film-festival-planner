@@ -6,7 +6,6 @@ from django.db import IntegrityError, transaction
 from django.forms import Form, BooleanField, SlugField
 
 from authentication.models import FilmFan
-from festival_planner.cache import FilmRatingCache
 from festival_planner.debug_tools import pr_debug
 from festival_planner.tools import initialize_log, add_log, CSV_DIALECT
 from festivals.config import Config
@@ -434,7 +433,6 @@ class FilmLoader(SimpleLoader):
     def __init__(self, session, festival):
         super().__init__(session, 'film', self.manager, festival.films_file(), festival=festival)
         self.festival = festival
-        self.main_title = None
         self.delete_disappeared_objects = True
 
     def read_row(self, row):
@@ -449,6 +447,15 @@ class FilmLoader(SimpleLoader):
         reviewer = (row[8]).strip() or None
         url = row[9]
 
+        # Get the main title if the film already exists.
+        try:
+            existing_film = Film.films.get(festival=self.festival, film_id=film_id)
+        except Film.DoesNotExist:
+            main_title = None
+        else:
+            main_title = existing_film.main_title
+
+        # Get the subsection.
         subsection = None
         if subsection_id:
             """
@@ -466,7 +473,7 @@ class FilmLoader(SimpleLoader):
             'sort_title': sort_title,
             'title': title,
             'title_language': title_language,
-            'main_title': self.main_title,
+            'main_title': main_title,
             'subsection': subsection or None,
             'duration': duration,
             'medium_category': medium_category,
@@ -477,14 +484,14 @@ class FilmLoader(SimpleLoader):
 
 
 class RatingLoader(SimpleLoader):
-    expected_header = ['filmid', 'filmfan', 'rating']
+    expected_header = ['filmid', 'filmfan', 'rating', 'original_rating']
     key_fields = ['film', 'film_fan']
     manager = FilmFanFilmRating.film_ratings
 
     def __init__(self, session, festival):
         file = festival.ratings_file()
-        super().__init__(session, 'rating', self.manager, file, file_required=False,
-                         festival=festival, festival_pk='film__festival__pk')
+        kwargs = {'file_required': False, 'festival': festival, 'festival_pk': 'film__festival__pk'}
+        super().__init__(session, 'rating', self.manager, file, **kwargs)
         self.festival = festival
         self.delete_disappeared_objects = True
 
@@ -492,6 +499,7 @@ class RatingLoader(SimpleLoader):
         film_id = int(row[0])
         film_fan_name = row[1]
         rating = int(row[2])
+        original_rating = int(row[3])
 
         film = self.get_foreign_key(Film, Film.films, **{'festival_id': self.festival.id, 'film_id': film_id})
         if not film:
@@ -505,6 +513,7 @@ class RatingLoader(SimpleLoader):
             'film': film,
             'film_fan': film_fan,
             'rating': rating,
+            'original_rating': original_rating
         }
         yield value_by_field
 
@@ -1076,7 +1085,9 @@ class FanBackupDumper(BaseDumper):
 
 class RatingBackupDumper(BaseDumper):
     manager = FilmFanFilmRating.film_ratings
-    header = ['id', 'festival_mnemonic', 'festival_year', 'festival_edition', 'film_id', 'fan', 'rating']
+    header = [
+        'id', 'festival_mnemonic', 'festival_year', 'festival_edition', 'film_id', 'fan', 'rating', 'original_rating'
+    ]
 
     def __init__(self, session):
         super().__init__(session, 'rating', self.manager, self.header)
@@ -1090,6 +1101,7 @@ class RatingBackupDumper(BaseDumper):
             rating.film.film_id,
             rating.film_fan.name,
             rating.rating,
+            rating.original_rating,
         ]
 
 
@@ -1102,7 +1114,7 @@ class RatingDumper(BaseDumper):
         PickRating.invalidate_festival_caches(session)
 
     def object_row(self, rating):
-        yield [rating.film.film_id, rating.film_fan.name, rating.rating]
+        yield [rating.film.film_id, rating.film_fan.name, rating.rating, rating.original_rating]
 
 
 class AttendanceDumper(BaseDumper):

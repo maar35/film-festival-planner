@@ -25,7 +25,8 @@ from festivals.models import current_festival, FestivalBase, Festival
 from festivals.tests import create_festival
 from films import views, models
 from films.forms.film_forms import PickRating
-from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR, minutes_str
+from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR, minutes_str, \
+    UNRATED_RATING
 from films.views import FilmsView, FilmDetailView, MAX_SHORT_MINUTES, BaseFilmsFormView, FilmsListView, ReviewersView
 from loader.views import RatingDumperView
 from sections.models import Subsection, Section
@@ -97,6 +98,23 @@ def new_film(film_id, title, minutes, seq_nr=-1, festival=None):
                 sort_title=title, title_language='en', medium_category='films',
                 reviewer='kijA', url='https://pff.us/film/title-from-parameters/')
     return film
+
+
+def get_rating_kwargs(film=None, film_fan=None, rating=UNRATED_RATING, original_rating=UNRATED_RATING):
+    kwargs = {'film': film, 'film_fan': film_fan, 'rating': rating, 'original_rating': original_rating}
+    return kwargs
+
+
+def new_rating(film=None, film_fan=None, rating=UNRATED_RATING, original_rating=UNRATED_RATING):
+    kwargs = get_rating_kwargs(film=film, film_fan=film_fan, rating=rating, original_rating=original_rating)
+    rating_object = FilmFanFilmRating(**kwargs)
+    return rating_object
+
+
+def create_rating(film=None, film_fan=None, rating=UNRATED_RATING, original_rating=UNRATED_RATING):
+    kwargs = get_rating_kwargs(film=film, film_fan=film_fan, rating=rating, original_rating=original_rating)
+    rating_object = FilmFanFilmRating.film_ratings.create(**kwargs)
+    return rating_object
 
 
 def get_session_with_fan(fan):
@@ -208,7 +226,7 @@ class RatingModelTests(BaseJudgementModelTests):
                     duration=timedelta(minutes=666))
         film.save()
         fan = me()
-        rating = FilmFanFilmRating(film=film, film_fan=fan, rating=rating_value)
+        rating = new_rating(film=film, film_fan=fan, rating=rating_value)
         rating.save()
 
         # Act.
@@ -231,8 +249,8 @@ class RatingModelTests(BaseJudgementModelTests):
         film_2 = Film(festival_id=festival_2.id, film_id=1, seq_nr=1, title='Movie Two', duration=timedelta(minutes=77))
         film_1.save()
         film_2.save()
-        rating_1 = FilmFanFilmRating(film=film_1, film_fan=fan, rating=rating_value)
-        rating_2 = FilmFanFilmRating(film=film_2, film_fan=fan, rating=rating_value)
+        rating_1 = new_rating(film=film_1, film_fan=fan, rating=rating_value)
+        rating_2 = new_rating(film=film_2, film_fan=fan, rating=rating_value)
         rating_1.save()
 
         # Act.
@@ -595,7 +613,7 @@ class FilmDetailsViewTests(ViewsTestCase):
 
         saved_film = create_film(film_id=6002, title='A Few More Adventures', minutes=116)
         rating_value = 8
-        FilmFanFilmRating.film_ratings.create(film=saved_film, film_fan=fan, rating=rating_value)
+        _ = create_rating(film=saved_film, film_fan=fan, rating=rating_value)
         models.FANS_IN_RATINGS_TABLE.append(self.regular_fan.name)
         models.FANS_IN_RATINGS_TABLE.append(self.admin_fan.name)
 
@@ -645,7 +663,7 @@ class FilmDetailsViewTests(ViewsTestCase):
         film = create_film(film_id=1999, title='The Prince and the Price', minutes=98)
         rating_value = 6
         new_rating_value = 0
-        FilmFanFilmRating.film_ratings.create(film=film, film_fan=fan, rating=rating_value)
+        _ = create_rating(film=film, film_fan=fan, rating=rating_value)
         rating = FilmFanFilmRating.film_ratings.get(film=film, film_fan=fan)
         self.assertEqual(rating.rating, rating_value)
 
@@ -655,7 +673,8 @@ class FilmDetailsViewTests(ViewsTestCase):
         post_response = self.client.post(reverse('films:details', args=[film.pk]), data=post_data)
 
         # Assert.
-        self.assertEqual(post_response.status_code, HTTPStatus.FOUND, f'Unexpected POST response of {FilmDetailView.__name__}')
+        message = f'Unexpected POST response of {FilmDetailView.__name__}'
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND, message)
         self.assertURLEqual(post_response.url, reverse('films:details', args=[film.id]))
         self.assertContains(post_response, self.regular_fan.name)
         self.assertContains(post_response, self.admin_fan.name)
@@ -884,7 +903,7 @@ class FilmListViewTests(ViewsTestCase):
         film = create_film(film_id=1948, title='Big Brothers', minutes=110)
         fan = self.regular_fan
         old_rating_value = 8
-        FilmFanFilmRating.film_ratings.create(film=film, film_fan=fan, rating=old_rating_value)
+        _ = create_rating(film=film, film_fan=fan, rating=old_rating_value)
         new_rating_value = 3
         new_rating_name = get_rating_name(new_rating_value)
 
@@ -919,7 +938,7 @@ class FilmListViewTests(ViewsTestCase):
         film = create_film(film_id=1999, title='The Prince and the Price', minutes=98)
         rating_value = 6
         new_rating_value = 0
-        FilmFanFilmRating.film_ratings.create(film=film, film_fan=fan, rating=rating_value)
+        create_rating(film=film, film_fan=fan, rating=rating_value)
         rating = FilmFanFilmRating.film_ratings.get(film=film, film_fan=fan)
 
         post_data = self.arrange_get_rating_post_data(film, rating_value=new_rating_value)
@@ -1234,9 +1253,9 @@ class ReviewersViewTests(ViewsTestCase):
         fan = self.regular_fan
 
         rating = FilmFanFilmRating.Rating
-        FilmFanFilmRating.film_ratings.create(film=self.film_patience_1, film_fan=fan, rating=rating.MEDIOCRE)
-        FilmFanFilmRating.film_ratings.create(film=self.film_patience_2, film_fan=fan, rating=rating.BELOW_MEDIOCRE)
-        FilmFanFilmRating.film_ratings.create(film=self.film_cannes_2, film_fan=fan, rating=rating.VERY_GOOD)
+        create_rating(film=self.film_patience_1, film_fan=fan, rating=rating.MEDIOCRE)
+        create_rating(film=self.film_patience_2, film_fan=fan, rating=rating.BELOW_MEDIOCRE)
+        create_rating(film=self.film_cannes_2, film_fan=fan, rating=rating.VERY_GOOD)
         FilmFanFilmVote.film_votes.create(film=self.film_cannes_2, film_fan=fan, vote=rating.GOOD)
 
         self.arrange_set_reviewer(self.film_patience_1, self.reviewer_patience)

@@ -42,6 +42,23 @@
 </ul>
 {% endif %}
 
+{% if alt_films %}
+    <h3>Alternative titles</h3>
+    <ul>
+        {% for alt_film in alt_films %}
+        <li>
+            <a href="{% url 'films:details' alt_film.id %}">{{ alt_film.title }}</a>
+            {% if not alt_film.main_title %} - main film {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% if film.main_title %}
+        <a class="indent" href="{% url 'films:titles' film.main_title.id %}">manage alternative titles of {{ film.main_title.title }}</a>
+    {% else %}
+        <a class="indent" href="{% url 'films:titles' film.id %}">Manage alternative titles</a>
+    {% endif %}
+{% endif %}
+
 <h3>Film details</h3>
 <ul>
     <li>Duration: {{ film.duration }}</li>
@@ -97,7 +114,9 @@
     {% include "../includes/film_screenings.html" with film_title=item.title film_screening_props=item.props %}
 {% endfor %}
 
-<br>
-<h3>Alternative titles</h3>
-<a class="indent" href="{% url 'films:titles' film.id %}">Manage alternative titles for this film</a>
+{% if not alt_films %}
+    <br>
+    <h3>Alternative titles</h3>
+        <a class="indent" href="{% url 'films:titles' film.id %}">Manage alternative titles</a>
+{%  endif %}
 {% endblock %}

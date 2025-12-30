@@ -3,14 +3,17 @@ from datetime import datetime
 
 from django import forms
 from django.core.validators import RegexValidator
+from django.db import transaction, IntegrityError
 from django.forms import CharField
 
 from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
+from festival_planner.debug_tools import pr_debug
 from festival_planner.fan_action import RatingAction
+from festival_planner.tools import add_log
 from festivals.models import rating_action_key, current_festival
-from films.models import FilmFanFilmRating, fan_rating_str, FIELD_BY_POST_ATTENDANCE, \
-    MANAGER_BY_POST_ATTENDANCE, Film
+from films.models import fan_rating_str, FIELD_BY_POST_ATTENDANCE, \
+    MANAGER_BY_POST_ATTENDANCE, Film, FilmFanFilmRating, UNRATED_RATING, CLASS_BY_POST_ATTENDANCE
 
 SEARCH_TEXT_VALIDATOR = RegexValidator(r'^\w+$', 'Type letters and digits only')
 """
@@ -43,28 +46,63 @@ class PickRating(forms.Form):
     @classmethod
     def update_rating(cls, session, film, fan, rating_value, post_attendance=False):
         field = FIELD_BY_POST_ATTENDANCE[post_attendance]
-        manager = MANAGER_BY_POST_ATTENDANCE[post_attendance]
         old_rating_str = fan_rating_str(fan, film, post_attendance=post_attendance)
+        new_rating = None
 
-        # Update the indicated rating.
-        new_rating, created = manager.update_or_create(
-            film=film,
-            film_fan=fan,
-            defaults={field: rating_value},
-        )
-
-        # Remove zero-ratings (unrated).
-        kwargs = {'film': film, 'film_fan': fan, field: 0}
-        zero_ratings = manager.filter(**kwargs)
-        if len(zero_ratings) > 0:
-            zero_ratings.delete()
+        # Account for possible alternative titles.
+        alternative_films = cls.get_alternative_films(film, post_attendance)
+        for alt_film in alternative_films:
+            new_rating = cls.update_one_rating(session, alt_film, fan, rating_value, post_attendance)
 
         # Prepare the rating change being displayed.
         init_rating_action(session, old_rating_str, new_rating, field)
 
+    @classmethod
+    def update_one_rating(cls, session, film, fan, rating_value, post_attendance=False):
+        field = FIELD_BY_POST_ATTENDANCE[post_attendance]
+        manager = MANAGER_BY_POST_ATTENDANCE[post_attendance]
+
+        # Remember original rating if applicable.
+        org_rating = None
+        if not post_attendance:
+            rating = FilmFanFilmRating.film_ratings.filter(film=film, film_fan=fan).first()
+            org_rating = rating.original_rating if rating else UNRATED_RATING
+
+        # Update the indicated rating.
+        upd_kwargs = {
+            'film': film,
+            'film_fan': fan,
+            'defaults': {field: rating_value},
+        }
+        if not post_attendance:
+            upd_kwargs['defaults'] |= {'original_rating': org_rating}
+        new_rating, created = manager.update_or_create(**upd_kwargs)
+
+        # Remove zero-ratings (unrated), for post_attendance False, also consider original rating.
+        zero_kwargs = {'film': film, 'film_fan': fan, field: UNRATED_RATING}
+        if not post_attendance:
+            zero_kwargs |= {'original_rating': UNRATED_RATING}
+        zero_ratings = manager.filter(**zero_kwargs)
+        if zero_ratings.count():
+            zero_ratings.delete()
+
         # Update cache if applicable.
         if not post_attendance and cls.film_rating_cache:
             cls.film_rating_cache.update_festival_caches(session, film, fan, rating_value)
+
+        return new_rating
+
+    @classmethod
+    def get_alternative_films(cls, film, post_attendance):
+        if post_attendance:
+            return [film]
+
+        manager = Film.films
+        main_film = film.main_title
+        default_film = main_film if main_film else film
+        alternative_films = {default_film}
+        alternative_films |= set(list(manager.filter(main_title=default_film)))
+        return alternative_films
 
     @classmethod
     def invalidate_festival_caches(cls, session, errors=None):
@@ -72,10 +110,6 @@ class PickRating(forms.Form):
         if not PickRating.film_rating_cache:
             PickRating.film_rating_cache = FilmRatingCache(session, errors)
         PickRating.film_rating_cache.invalidate_festival_caches(current_festival(session))
-
-
-class RatingForm(forms.Form):
-    fan_rating = forms.ChoiceField(label='Pick a rating', choices=FilmFanFilmRating.Rating.choices)
 
 
 class TitlesForm(forms.Form):
@@ -87,9 +121,72 @@ class TitlesForm(forms.Form):
     )
 
     @classmethod
-    def update_main_title(cls, alternative_title_film_id, main_film):
-        films = Film.films.filter(id=alternative_title_film_id)
-        _ = films.update(main_title=main_film)
+    def update_main_title(cls, session, alternative_title_film_id, main_film):
+        # Set the main title of the film with an alternative title.
+        film_ = Film.films.filter(id=alternative_title_film_id)
+        _ = film_.update(main_title=main_film)
+
+        # Set the ratings of the alt film to those of the main film
+        # after saving the original ratings.
+        manager = FilmFanFilmRating.film_ratings
+        alt_film = list(film_)[0]
+        alt_ratings = manager.filter(film_id=alternative_title_film_id)
+        if main_film:
+            # Alternative title is being linked to main film.
+            try:
+                with transaction.atomic():
+                    cls._link_alt_film_to_main_film(session, alt_film, main_film, alt_ratings)
+            except IntegrityError as e:
+                handle_exception(session, e, alt_film)
+        else:
+            # Alternative title is being unlinked from main film.
+            try:
+                with transaction.atomic():
+                    # Save ratings of alt film.
+                    for alt_rating in alt_ratings:
+                        rating = alt_rating.original_rating
+                        alt_rating.original_rating = UNRATED_RATING
+                        alt_rating.save()
+                        fan = alt_rating.film_fan
+                        _ = PickRating.update_one_rating(session, alt_film, fan, rating)
+            except IntegrityError as e:
+                handle_exception(session, e, alt_ratings)
+
+    @classmethod
+    def _link_alt_film_to_main_film(cls, session, alt_film, main_film, alt_ratings):
+        manager = FilmFanFilmRating.film_ratings
+        main_ratings = manager.filter(film=main_film)
+        alt_fans = [r.film_fan for r in alt_ratings]
+        main_fans = [r.film_fan for r in main_ratings]
+        fans = set(alt_fans) | set(main_fans)
+        for fan in fans:
+            match fan:
+                case f if f in alt_fans and f in main_fans:
+                    # Fan has ratings for both films.
+                    cls._save_alt_rating(alt_ratings, f)
+                    main_rating = main_ratings.get(film_fan=f)
+                    _ = PickRating.update_one_rating(session, alt_film, f, main_rating.rating)
+                case f if f in alt_fans and f not in main_fans:
+                    # Fan has only ratings for the alternative title.
+                    cls._save_alt_rating(alt_ratings, f)
+                    _ = PickRating.update_one_rating(session, alt_film, f, UNRATED_RATING)
+                case f if f not in alt_fans and f in main_fans:
+                    # Fan has only ratings for the main film.
+                    main_rating = main_ratings.get(film_fan=f)
+                    _ = PickRating.update_one_rating(session, alt_film, f, main_rating.rating)
+
+    @classmethod
+    def _save_alt_rating(cls, alt_ratings, fan):
+        alt_rating = alt_ratings.get(film_fan=fan)
+        alt_rating.original_rating = alt_rating.rating
+        alt_rating.save()
+
+
+def handle_exception(session, exception, obj):
+    add_log(session, f'"{obj}" not processed.')
+    add_log(session, f'Exception: {exception}')
+    add_log(session, 'Database rolled back.')
+    raise Exception(exception)
 
 
 def init_rating_action(session, old_rating_str, new_rating, field):

@@ -12,7 +12,8 @@ from availabilities.views import DAY_START_TIME
 from festival_planner import debug_tools
 from festival_planner.screening_status_getter import ScreeningWarning, ScreeningStatusGetter
 from festivals.models import FestivalBase, Festival, switch_festival, current_festival
-from films.models import Film, FAN_NAMES_BY_FESTIVAL_BASE, LOWEST_PLANNABLE_RATING, FilmFanFilmRating, set_current_fan
+from films.models import Film, FAN_NAMES_BY_FESTIVAL_BASE, LOWEST_PLANNABLE_RATING, FilmFanFilmRating, set_current_fan, \
+    UNRATED_RATING
 from films.tests import create_film, ViewsTestCase, get_decoded_content
 from films.views import MAX_SHORT_MINUTES
 from screenings.models import Screening, Attendance, Ticket
@@ -401,6 +402,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
             film=self.film,
             film_fan=self.fan,
             rating=FilmFanFilmRating.Rating.MEDIOCRE,
+            original_rating=UNRATED_RATING,
         )
         dull_color = Screening.uninteresting_rating_color
         _ = self.arrange_create_std_screening()
@@ -631,6 +633,7 @@ class PlannerViewTests(ScreeningViewsTests):
             'film': film,
             'film_fan': fan,
             'rating': rating,
+            'original_rating': UNRATED_RATING,
         }
         film_rating = FilmFanFilmRating.film_ratings.create(**kwargs)
         return film_rating

@@ -24,7 +24,7 @@ from festivals.config import Config
 from festivals.models import current_festival
 from films.forms.film_forms import PickRating, UserForm, TitlesForm
 from films.models import FilmFanFilmRating, Film, current_fan, get_judging_fans, fan_rating_str, \
-    FilmFanFilmVote, fan_rating, UNRATED_STR, get_judgement_choices
+    FilmFanFilmVote, fan_rating, UNRATED_STR, get_judgement_choices, film_fan_film_rating_by_fan
 from screenings.models import Attendance
 from sections.models import Subsection, Section
 
@@ -35,7 +35,7 @@ MAX_SHORT_MINUTES = CONSTANTS_CONFIG['MaxShortMinutes']
 class FilmsFinder:
 
     def __init__(self):
-        self.found_films = None
+        self.found_films = []
 
     def search_title(self, session, text):
         initialize_log(session, action=f'Search "{text}"')
@@ -584,24 +584,26 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         festival = current_festival(session)
         combi_films = [Film.films.get(film_id=d['film_id'], festival=festival) for d in combi_data]
         screened_films = [Film.films.get(film_id=d['film_id'], festival=festival) for d in screened_data]
+        alt_films = get_alt_title_films(session, film)
         selected_screening = ScreeningStatusGetter.get_selected_screening(self.request)
-        films_for_screenings = combi_films + [film]
+        films_for_screenings = set(combi_films + list(alt_films) + [film])
         fans = get_judging_fans()
         logged_in_fan = current_fan(session)
         fan_rows = get_fan_props_list(film, fans, logged_in_fan, self.submit_name_prefix, screened_films)
         in_cache = film_is_in_cache(session, film)
         new_context = {
-            'title': 'Film Rating Results',
+            'title': 'Film Details',
             'description': self.get_description(film),
             'screened_films': screened_films,
             'combination_films': combi_films,
+            'alt_films': alt_films,
             'metadata': metadata,
             'fragment': FilmFragmentKeeper.fragment_code(film),
             'film_in_cache': in_cache,
             'no_cache': in_cache is None,
             'display_all_query': in_cache is None or self.get_query_string_to_display_all(session),
             'fan_rows': fan_rows,
-            'film_title': film.title,
+            'film': film,
             'film_screening_props_list': get_filmscreening_props_list(session, films_for_screenings),
             'screening': selected_screening,
             'unexpected_error': self.unexpected_error,
@@ -843,7 +845,7 @@ class TitlesDetailView(LoginRequiredMixin, DetailView):
         self.view.main_title_film = self.object
         film = self.object
         in_cache = film_is_in_cache(session, film)
-        alt_title_films = self._get_alt_title_films(session, film)
+        alt_title_films = get_alt_title_films(session, film)
         new_context = {
             'title': 'Manage alternative titles',
             'film': film,
@@ -863,25 +865,27 @@ class TitlesDetailView(LoginRequiredMixin, DetailView):
         return context
 
     def _get_found_props(self):
-        found_files = self.view.films_finder.found_films or []
+        found_films = self.view.films_finder.found_films
         found_props = [{
             'film': film,
+            'ratings': self._get_ratings(film),
             'submit_name': get_submit_name(self.view.submit_prefix, self.view.link_submit_name, film.id)
-        } for film in found_files]
+        } for film in found_films]
         return found_props
-
-    @staticmethod
-    def _get_alt_title_films(session, main_title_film):
-        festival = current_festival(session)
-        alt_title_films = Film.films.filter(festival=festival, main_title=main_title_film)
-        return alt_title_films
 
     def _get_alt_props(self, alt_title_films):
         alt_props = [{
             'alt_film': film,
+            'ratings': self._get_ratings(film),
             'submit_name': get_submit_name(self.view.submit_prefix, self.view.unlink_submit_name, film.id),
         } for film in alt_title_films]
         return alt_props
+
+    @staticmethod
+    def _get_ratings(film):
+        ratings = FilmFanFilmRating.film_ratings.filter(film=film)
+        ratings_str = '|'.join([r.str_fan_rating(include_org=True) for r in ratings])
+        return ratings_str
 
 
 class TitlesFormView(LoginRequiredMixin, FormView):
@@ -903,13 +907,10 @@ class TitlesFormView(LoginRequiredMixin, FormView):
             operation, film_id_str = get_data_from_submit(self.view.submit_prefix, submit_name)
             alternative_title_film_id = int(film_id_str)
             film_arg = film_by_operation[operation]
-            form.update_main_title(alternative_title_film_id, film_arg)
+            form.update_main_title(self.request.session, alternative_title_film_id, film_arg)
         return super().form_valid(form)
 
     def form_invalid(self, form):
-        session = self.request.session
-        if not get_log(session):
-            initialize_log(session, action='Search alternative title')
         self.view.unexpected_errors.extend(wrap_up_form_errors(form.errors))
         self.view.unexpected_errors.append(f'Invalid search terms: {self.request.POST["search_text"]}')
 
@@ -917,7 +918,7 @@ class TitlesFormView(LoginRequiredMixin, FormView):
         return HttpResponseRedirect(self.get_success_url())
 
     def get_success_url(self):
-        return reverse('films:titles', args=[TitlesView.main_title_film.pk])
+        return self.request.path
 
 
 def get_filmscreening_props_list(session, films):
@@ -930,6 +931,17 @@ def get_filmscreening_props_list(session, films):
         }
         filmscreening_props_list.append(filmscreening_props_item)
     return filmscreening_props_list
+
+
+def get_alt_title_films(session, film):
+    filter_ = Film.films.filter
+    festival = current_festival(session)
+    if film.main_title:
+        alt_title_films = filter_(id=film.main_title.id) | filter_(festival=festival, main_title=film.main_title)
+    else:
+        other_films = filter_(festival=festival, main_title=film)
+        alt_title_films = filter_(id=film.id) | other_films if other_films else []
+    return alt_title_films
 
 
 def film_is_in_cache(session, film):

@@ -25,7 +25,7 @@
     <li>Screen: {{ screening.screen }}</li>
     <li>Time: {{ screening.start_dt|date:"D j M H:i" }} - {{ screening.end_dt|date:"H:i" }}</li>
     <li>Film details: <a href="{% url 'films:details' screening.film.id %}">{{ screening.film.title }} details</a></li>
-    <li>Film website: <a href="{{ screening.film.url }}">{{ screening.film.title }}</a></li>
+    <li>Film website: <a href="{{ screening.film.url }}">{{ screening.film.title }} website</a></li>
     <li>Film description: {{ film_description|default_if_none:" - " }}</li>
     <li>Screening duration: {{ duration }} ({{ minutes }})</li>
     <li>Subtitles: {{ screening.subtitles|default_if_none:" - " }}</li>
