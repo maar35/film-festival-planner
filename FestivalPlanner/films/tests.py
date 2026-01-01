@@ -100,19 +100,19 @@ def new_film(film_id, title, minutes, seq_nr=-1, festival=None):
     return film
 
 
-def get_rating_kwargs(film=None, film_fan=None, rating=UNRATED_RATING, original_rating=UNRATED_RATING):
+def get_rating_kwargs(film, film_fan, rating=UNRATED_RATING, original_rating=UNRATED_RATING):
     kwargs = {'film': film, 'film_fan': film_fan, 'rating': rating, 'original_rating': original_rating}
     return kwargs
 
 
-def new_rating(film=None, film_fan=None, rating=UNRATED_RATING, original_rating=UNRATED_RATING):
-    kwargs = get_rating_kwargs(film=film, film_fan=film_fan, rating=rating, original_rating=original_rating)
+def new_rating(film, film_fan, rating=UNRATED_RATING, original_rating=UNRATED_RATING):
+    kwargs = get_rating_kwargs(film, film_fan, rating=rating, original_rating=original_rating)
     rating_object = FilmFanFilmRating(**kwargs)
     return rating_object
 
 
-def create_rating(film=None, film_fan=None, rating=UNRATED_RATING, original_rating=UNRATED_RATING):
-    kwargs = get_rating_kwargs(film=film, film_fan=film_fan, rating=rating, original_rating=original_rating)
+def create_rating(film, film_fan, rating=UNRATED_RATING, original_rating=UNRATED_RATING):
+    kwargs = get_rating_kwargs(film, film_fan, rating=rating, original_rating=original_rating)
     rating_object = FilmFanFilmRating.film_ratings.create(**kwargs)
     return rating_object
 
@@ -219,14 +219,14 @@ class RatingModelTests(BaseJudgementModelTests):
         Rating 7 has meaning INDECISIVE.
         """
         # Arrange.
-        rating_value = 7
+        rating_value = FilmFanFilmRating.Rating.INDECISIVE
         rating_meaning = 'Indecisive'
         festival = create_festival('IDFA', self.city, '2022-07-17', '2022-07-27')
         film = Film(festival_id=festival.id, film_id=-1, seq_nr=-1, title='A Test Movie',
                     duration=timedelta(minutes=666))
         film.save()
         fan = me()
-        rating = new_rating(film=film, film_fan=fan, rating=rating_value)
+        rating = new_rating(film, fan, rating=rating_value)
         rating.save()
 
         # Act.
@@ -242,15 +242,15 @@ class RatingModelTests(BaseJudgementModelTests):
         """
         # Arrange.
         fan = me()
-        rating_value = 7
+        rating_value = FilmFanFilmRating.Rating.INDECISIVE
         festival_1 = create_festival('IDFA', self.city, '2021-07-17', '2021-07-27')
         festival_2 = create_festival('MTMF', self.city, '2022-04-17', '2022-04-27')
         film_1 = Film(festival_id=festival_1.id, film_id=1, seq_nr=1, title='Test Movie', duration=timedelta(minutes=6))
         film_2 = Film(festival_id=festival_2.id, film_id=1, seq_nr=1, title='Movie Two', duration=timedelta(minutes=77))
         film_1.save()
         film_2.save()
-        rating_1 = new_rating(film=film_1, film_fan=fan, rating=rating_value)
-        rating_2 = new_rating(film=film_2, film_fan=fan, rating=rating_value)
+        rating_1 = new_rating(film_1, fan, rating=rating_value)
+        rating_2 = new_rating(film_2, fan, rating=rating_value)
         rating_1.save()
 
         # Act.
@@ -612,8 +612,8 @@ class FilmDetailsViewTests(ViewsTestCase):
         _ = self.get_regular_fan_request()
 
         saved_film = create_film(film_id=6002, title='A Few More Adventures', minutes=116)
-        rating_value = 8
-        _ = create_rating(film=saved_film, film_fan=fan, rating=rating_value)
+        rating_value = FilmFanFilmRating.Rating.GOOD
+        _ = create_rating(saved_film, fan, rating=rating_value)
         models.FANS_IN_RATINGS_TABLE.append(self.regular_fan.name)
         models.FANS_IN_RATINGS_TABLE.append(self.admin_fan.name)
 
@@ -661,9 +661,9 @@ class FilmDetailsViewTests(ViewsTestCase):
         fan = self.regular_fan
 
         film = create_film(film_id=1999, title='The Prince and the Price', minutes=98)
-        rating_value = 6
+        rating_value = FilmFanFilmRating.Rating.MEDIOCRE
         new_rating_value = 0
-        _ = create_rating(film=film, film_fan=fan, rating=rating_value)
+        _ = create_rating(film, fan, rating=rating_value)
         rating = FilmFanFilmRating.film_ratings.get(film=film, film_fan=fan)
         self.assertEqual(rating.rating, rating_value)
 
@@ -902,8 +902,8 @@ class FilmListViewTests(ViewsTestCase):
         # Arrange.
         film = create_film(film_id=1948, title='Big Brothers', minutes=110)
         fan = self.regular_fan
-        old_rating_value = 8
-        _ = create_rating(film=film, film_fan=fan, rating=old_rating_value)
+        old_rating_value = FilmFanFilmRating.Rating.GOOD
+        _ = create_rating(film, fan, rating=old_rating_value)
         new_rating_value = 3
         new_rating_name = get_rating_name(new_rating_value)
 
@@ -936,9 +936,9 @@ class FilmListViewTests(ViewsTestCase):
         fan = self.regular_fan
 
         film = create_film(film_id=1999, title='The Prince and the Price', minutes=98)
-        rating_value = 6
+        rating_value = FilmFanFilmRating.Rating.MEDIOCRE
         new_rating_value = 0
-        create_rating(film=film, film_fan=fan, rating=rating_value)
+        _ = create_rating(film, fan, rating=rating_value)
         rating = FilmFanFilmRating.film_ratings.get(film=film, film_fan=fan)
 
         post_data = self.arrange_get_rating_post_data(film, rating_value=new_rating_value)
@@ -1253,9 +1253,9 @@ class ReviewersViewTests(ViewsTestCase):
         fan = self.regular_fan
 
         rating = FilmFanFilmRating.Rating
-        create_rating(film=self.film_patience_1, film_fan=fan, rating=rating.MEDIOCRE)
-        create_rating(film=self.film_patience_2, film_fan=fan, rating=rating.BELOW_MEDIOCRE)
-        create_rating(film=self.film_cannes_2, film_fan=fan, rating=rating.VERY_GOOD)
+        create_rating(self.film_patience_1, fan, rating=rating.MEDIOCRE)
+        create_rating(self.film_patience_2, fan, rating=rating.BELOW_MEDIOCRE)
+        create_rating(self.film_cannes_2, fan, rating=rating.VERY_GOOD)
         FilmFanFilmVote.film_votes.create(film=self.film_cannes_2, film_fan=fan, vote=rating.GOOD)
 
         self.arrange_set_reviewer(self.film_patience_1, self.reviewer_patience)

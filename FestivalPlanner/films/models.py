@@ -12,7 +12,6 @@ MIN_ALARM_RATING_DIFF = 3
 constants = Config().config['Constants']
 LOWEST_PLANNABLE_RATING = constants['LowestPlannableRating']
 HIGHEST_NOT_PLANNABLE_RATING = constants['HighestNotPlannableRating']
-UNRATED_RATING = constants['UnratedRating']
 FAN_NAMES_BY_FESTIVAL_BASE = {
     'IFFR': ['Maarten', 'Adrienne', 'Manfred', 'Piggel', 'Rijk', 'Martin'],
     'MTMF': ['Maarten', 'Adrienne', 'Manfred'],
@@ -131,9 +130,6 @@ class FilmFanFilmRating(models.Model):
         org_rating = f'.{self.original_rating}' if include_org else ''
         return f'{self.film_fan.initial()}{self.rating}{org_rating}'
 
-    def str_fan_org_rating(self):
-        return f'{self.film_fan.initial()}{self.rating}'
-
     @classmethod
     def get_not_plannable_ratings(cls):
         return cls.Rating.values[:HIGHEST_NOT_PLANNABLE_RATING]
@@ -160,6 +156,13 @@ class FilmFanFilmVote(models.Model):
 
     def __str__(self):
         return f"{self.film} - {self.film_fan.initial()}{self.vote}"
+
+
+UNRATED_RATING = FilmFanFilmRating.Rating.UNRATED
+CLASS_BY_POST_ATTENDANCE = {False: FilmFanFilmRating, True: FilmFanFilmVote}
+FIELD_BY_POST_ATTENDANCE = {False: 'rating', True: 'vote'}
+MANAGER_BY_POST_ATTENDANCE = {False: FilmFanFilmRating.film_ratings, True: FilmFanFilmVote.film_votes}
+CHOICES_BY_POST_ATTENDANCE = {False: FilmFanFilmRating.Rating.choices, True: FilmFanFilmVote.choices}
 
 
 def minutes_str(duration):
@@ -233,28 +236,11 @@ def fan_rating(fan, film, manager=None):
     return rating
 
 
-CLASS_BY_POST_ATTENDANCE = {False: FilmFanFilmRating, True: FilmFanFilmVote}
-FIELD_BY_POST_ATTENDANCE = {False: 'rating', True: 'vote'}
-MANAGER_BY_POST_ATTENDANCE = {False: FilmFanFilmRating.film_ratings, True: FilmFanFilmVote.film_votes}
-CHOICES_BY_POST_ATTENDANCE = {False: FilmFanFilmRating.Rating.choices, True: FilmFanFilmVote.choices}
-
-
 def fan_rating_str(fan, film, post_attendance=False):
     manager = MANAGER_BY_POST_ATTENDANCE[post_attendance]
     field = FIELD_BY_POST_ATTENDANCE[post_attendance]
     rating = fan_rating(fan, film, manager)
     return f'{getattr(rating, field)}' if rating is not None else UNRATED_STR
-
-
-def film_fan_film_rating_by_fan(film):
-    if not film:
-        return {}
-
-    film_ratings = FilmFanFilmRating.film_ratings.get(film=film)
-    film_rating_by_fan = {}
-    for film_rating in film_ratings:
-        film_rating_by_fan[film_rating.film_fan] = film_rating
-    return film_rating_by_fan
 
 
 def get_judgement_choices(post_attendance=False):

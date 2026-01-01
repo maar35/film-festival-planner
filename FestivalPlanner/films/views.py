@@ -24,7 +24,7 @@ from festivals.config import Config
 from festivals.models import current_festival
 from films.forms.film_forms import PickRating, UserForm, TitlesForm
 from films.models import FilmFanFilmRating, Film, current_fan, get_judging_fans, fan_rating_str, \
-    FilmFanFilmVote, fan_rating, UNRATED_STR, get_judgement_choices, film_fan_film_rating_by_fan
+    FilmFanFilmVote, fan_rating, UNRATED_STR, get_judgement_choices
 from screenings.models import Attendance
 from sections.models import Subsection, Section
 

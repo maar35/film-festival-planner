@@ -8,12 +8,11 @@ from django.forms import CharField
 
 from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
-from festival_planner.debug_tools import pr_debug
 from festival_planner.fan_action import RatingAction
 from festival_planner.tools import add_log
 from festivals.models import rating_action_key, current_festival
 from films.models import fan_rating_str, FIELD_BY_POST_ATTENDANCE, \
-    MANAGER_BY_POST_ATTENDANCE, Film, FilmFanFilmRating, UNRATED_RATING, CLASS_BY_POST_ATTENDANCE
+    MANAGER_BY_POST_ATTENDANCE, Film, FilmFanFilmRating, UNRATED_RATING
 
 SEARCH_TEXT_VALIDATOR = RegexValidator(r'^\w+$', 'Type letters and digits only')
 """
@@ -49,7 +48,7 @@ class PickRating(forms.Form):
         old_rating_str = fan_rating_str(fan, film, post_attendance=post_attendance)
         new_rating = None
 
-        # Account for possible alternative titles.
+        # Account for possible alternative titles. These always include the given film.
         alternative_films = cls.get_alternative_films(film, post_attendance)
         for alt_film in alternative_films:
             new_rating = cls.update_one_rating(session, alt_film, fan, rating_value, post_attendance)
@@ -94,6 +93,7 @@ class PickRating(forms.Form):
 
     @classmethod
     def get_alternative_films(cls, film, post_attendance):
+        """Return the given film, plus alternative titles if any, as a list"""
         if post_attendance:
             return [film]
 
@@ -162,16 +162,16 @@ class TitlesForm(forms.Form):
         for fan in fans:
             match fan:
                 case f if f in alt_fans and f in main_fans:
-                    # Fan has ratings for both films.
+                    # Fan has rated both films.
                     cls._save_alt_rating(alt_ratings, f)
                     main_rating = main_ratings.get(film_fan=f)
                     _ = PickRating.update_one_rating(session, alt_film, f, main_rating.rating)
                 case f if f in alt_fans and f not in main_fans:
-                    # Fan has only ratings for the alternative title.
+                    # Fan has only rated the alternative title.
                     cls._save_alt_rating(alt_ratings, f)
                     _ = PickRating.update_one_rating(session, alt_film, f, UNRATED_RATING)
                 case f if f not in alt_fans and f in main_fans:
-                    # Fan has only ratings for the main film.
+                    # Fan has only rated the main film.
                     main_rating = main_ratings.get(film_fan=f)
                     _ = PickRating.update_one_rating(session, alt_film, f, main_rating.rating)
 
