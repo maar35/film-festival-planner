@@ -1187,6 +1187,133 @@ class FilmListViewTests(ViewsTestCase):
         self.assertContains(redirect_response, film_4.title)
 
 
+class AlternativeTitlesViewTests(ViewsTestCase):
+    def setUp(self):
+        super().setUp()
+        festival = create_std_festival()
+
+        # Create some films with titles matching the search string.
+        self.film_1 = create_film(163, 'Providence and the Guitar', 125, festival=festival)
+        kwargs = {'minutes': 0, 'festival': festival}
+        self.film_2 = create_film(283, 'Opening Night 2026: Providence and the Guitar', **kwargs)
+        self.film_3 = create_film(284, 'Opening Night 2026: Providence and the Guitar + Party', **kwargs)
+        self.film_4 = create_film(666, 'Guitars ′n′ Roses', 115, festival=festival)
+
+    @staticmethod
+    def arrange_post_data_link(film):
+        return {f'titles_link_{film.pk}': [film.title]}
+
+    @staticmethod
+    def arrange_post_data_unlink(film):
+        return {f'titles_unlink_{film.pk}': [film.title]}
+
+    @staticmethod
+    def assert_get(film):
+        return Film.films.get(id=film.id)
+
+    @staticmethod
+    def assert_get_re_table(film):
+        corrected_title = film.title.replace("+", r"\+")
+        return re.compile(r'<td><a [^>]+>' + f'{corrected_title}' + r'</a>\s*</td>')
+
+    def assert_film_in_table(self, response, film):
+        re_table = self.assert_get_re_table(film)
+        self.assertRegex(get_decoded_content(response), re_table)
+
+    def assert_film_not_in_table(self, response, film):
+        re_table = self.assert_get_re_table(film)
+        self.assertNotRegex(get_decoded_content(response), re_table)
+
+    def test_find_candidate_titles(self):
+        """
+        Films starting with or containing a text snippet that is entered in the search box are displayed as links.
+        """
+        # Arrange.
+        _ = self.get_admin_request()
+        post_data = {BaseFilmsFormView.SEARCH_KEY: ['guitar']}
+
+        # Create e regex that proves that the films are found, represented as links,
+        # and sorted by relevance.
+        found_films_str = \
+            r'<h3[^>]*>Search[^>]+results</h3>\s*' \
+            + r'<span>\s*<a [^>]*>' + f'{self.film_4.title}' + r'</a>[^<]*\s*</span>\s*<br>\s*' \
+            + r'<span>\s*<a [^>]*>' + f'{self.film_1.title}' + r'</a>[^<]*\s*</span>\s*<br>\s*' \
+            + r'<span>\s*<a [^>]*>' + f'{self.film_2.title}' + r'</a>[^<]*\s*</span>\s*<br>\s*' \
+            + r'<span>\s*<a [^>]*>' + f'{self.film_3.title.replace("+", r"\+")}' + r'</a>[^<]*\s*</span>\s*<br>\s*' \
+            + f'<h3>[^<]+</h3>'
+        found_films_re = re.compile(found_films_str)
+
+        # Act.
+        post_response = self.client.post(reverse('films:titles', args=[self.film_1.pk]), post_data)
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        self.assertRegex(get_decoded_content(redirect_response), found_films_re)
+        self.assertContains(redirect_response, f'"{self.film_1.title}" disabled')
+        self.assertNotContains(redirect_response, f'"{self.film_2.title}" disabled')
+
+    def test_link_alternative_film(self):
+        """
+        An admin can link an alternative film to the main film.
+        """
+        # Arrange.
+        _ = self.get_admin_request()
+        path = reverse('films:titles', args=[self.film_1.pk])
+        post_data_search = {BaseFilmsFormView.SEARCH_KEY: ['guitar']}
+        post_data_link = self.arrange_post_data_link(self.film_2)
+
+        # Act.
+        search_response = self.client.post(path, post_data_search)
+        search_redirect_response = self.client.get(search_response.url)
+        link_response = self.client.post(path, post_data_link)
+        link_redirect_response = self.client.get(link_response.url)
+
+        # Assert.
+        self.assertEqual(search_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(search_redirect_response.status_code, HTTPStatus.OK)
+        self.assertEqual(link_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(link_redirect_response.status_code, HTTPStatus.OK)
+        self.assertEqual(self.assert_get(self.film_2).main_title, self.film_1)
+        self.assertContains(link_redirect_response, f'"{self.film_2.title}" disabled')
+
+    def test_unlink_alternative_film(self):
+        """
+        An admin can unlink an alternative film from the main film.
+        """
+        # Arrange.
+        _ = self.get_admin_request()
+        path = reverse('films:titles', args=[self.film_1.pk])
+        self.film_2.main_title = self.film_1
+        self.film_2.save()
+        self.film_3.main_title = self.film_1
+        self.film_3.save()
+        self.film_4.main_title = self.film_1
+        self.film_4.save()
+        post_data = self.arrange_post_data_unlink(self.film_4)
+
+        # Act.
+        get_response = self.client.get(path)
+        post_response = self.client.post(path, post_data)
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assert_film_in_table(get_response, self.film_1)
+        self.assert_film_in_table(get_response, self.film_2)
+        self.assert_film_in_table(get_response, self.film_3)
+        self.assert_film_in_table(get_response, self.film_4)
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        self.assertEqual(self.assert_get(self.film_2).main_title, self.film_1)
+        self.assertIsNone(self.assert_get(self.film_4).main_title)
+        self.assert_film_in_table(redirect_response, self.film_1)
+        self.assert_film_in_table(redirect_response, self.film_2)
+        self.assert_film_in_table(redirect_response, self.film_3)
+        self.assert_film_not_in_table(redirect_response, self.film_4)
+
+
 class ReviewersViewTests(ViewsTestCase):
     def setUp(self):
         super().setUp()
