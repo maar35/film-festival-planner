@@ -117,6 +117,10 @@ def create_rating(film, film_fan, rating=UNRATED_RATING, original_rating=UNRATED
     return rating_object
 
 
+def correct_for_re(text):
+    return text.replace("+", r"\+")
+
+
 def get_session_with_fan(fan):
     session_store = import_module(settings.SESSION_ENGINE).SessionStore
     session = session_store()
@@ -1198,22 +1202,23 @@ class AlternativeTitlesViewTests(ViewsTestCase):
         self.film_2 = create_film(283, 'Opening Night 2026: Providence and the Guitar', **kwargs)
         self.film_3 = create_film(284, 'Opening Night 2026: Providence and the Guitar + Party', **kwargs)
         self.film_4 = create_film(666, 'Guitars ′n′ Roses', 115, festival=festival)
+        self.film_5 = create_film(117, 'Guided Heroes', 85, festival=festival)
 
     @staticmethod
-    def arrange_post_data_link(film):
+    def arrange_get_post_data_link(film):
         return {f'titles_link_{film.pk}': [film.title]}
 
     @staticmethod
-    def arrange_post_data_unlink(film):
+    def arrange_get_post_data_unlink(film):
         return {f'titles_unlink_{film.pk}': [film.title]}
 
     @staticmethod
-    def assert_get(film):
+    def assert_get_from_db(film):
         return Film.films.get(id=film.id)
 
     @staticmethod
     def assert_get_re_table(film):
-        corrected_title = film.title.replace("+", r"\+")
+        corrected_title = correct_for_re(film.title)
         return re.compile(r'<td><a [^>]+>' + f'{corrected_title}' + r'</a>\s*</td>')
 
     def assert_film_in_table(self, response, film):
@@ -1239,7 +1244,7 @@ class AlternativeTitlesViewTests(ViewsTestCase):
             + r'<span>\s*<a [^>]*>' + f'{self.film_4.title}' + r'</a>[^<]*\s*</span>\s*<br>\s*' \
             + r'<span>\s*<a [^>]*>' + f'{self.film_1.title}' + r'</a>[^<]*\s*</span>\s*<br>\s*' \
             + r'<span>\s*<a [^>]*>' + f'{self.film_2.title}' + r'</a>[^<]*\s*</span>\s*<br>\s*' \
-            + r'<span>\s*<a [^>]*>' + f'{self.film_3.title.replace("+", r"\+")}' + r'</a>[^<]*\s*</span>\s*<br>\s*' \
+            + r'<span>\s*<a [^>]*>' + f'{correct_for_re(self.film_3.title)}' + r'</a>[^<]*\s*</span>\s*<br>\s*' \
             + f'<h3>[^<]+</h3>'
         found_films_re = re.compile(found_films_str)
 
@@ -1253,6 +1258,7 @@ class AlternativeTitlesViewTests(ViewsTestCase):
         self.assertRegex(get_decoded_content(redirect_response), found_films_re)
         self.assertContains(redirect_response, f'"{self.film_1.title}" disabled')
         self.assertNotContains(redirect_response, f'"{self.film_2.title}" disabled')
+        self.assertNotContains(redirect_response, self.film_5.title)
 
     def test_link_alternative_film(self):
         """
@@ -1262,7 +1268,7 @@ class AlternativeTitlesViewTests(ViewsTestCase):
         _ = self.get_admin_request()
         path = reverse('films:titles', args=[self.film_1.pk])
         post_data_search = {BaseFilmsFormView.SEARCH_KEY: ['guitar']}
-        post_data_link = self.arrange_post_data_link(self.film_2)
+        post_data_link = self.arrange_get_post_data_link(self.film_2)
 
         # Act.
         search_response = self.client.post(path, post_data_search)
@@ -1275,7 +1281,7 @@ class AlternativeTitlesViewTests(ViewsTestCase):
         self.assertEqual(search_redirect_response.status_code, HTTPStatus.OK)
         self.assertEqual(link_response.status_code, HTTPStatus.FOUND)
         self.assertEqual(link_redirect_response.status_code, HTTPStatus.OK)
-        self.assertEqual(self.assert_get(self.film_2).main_title, self.film_1)
+        self.assertEqual(self.assert_get_from_db(self.film_2).main_title, self.film_1)
         self.assertContains(link_redirect_response, f'"{self.film_2.title}" disabled')
 
     def test_unlink_alternative_film(self):
@@ -1291,7 +1297,7 @@ class AlternativeTitlesViewTests(ViewsTestCase):
         self.film_3.save()
         self.film_4.main_title = self.film_1
         self.film_4.save()
-        post_data = self.arrange_post_data_unlink(self.film_4)
+        post_data = self.arrange_get_post_data_unlink(self.film_4)
 
         # Act.
         get_response = self.client.get(path)
@@ -1306,8 +1312,8 @@ class AlternativeTitlesViewTests(ViewsTestCase):
         self.assert_film_in_table(get_response, self.film_4)
         self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
         self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
-        self.assertEqual(self.assert_get(self.film_2).main_title, self.film_1)
-        self.assertIsNone(self.assert_get(self.film_4).main_title)
+        self.assertEqual(self.assert_get_from_db(self.film_2).main_title, self.film_1)
+        self.assertIsNone(self.assert_get_from_db(self.film_4).main_title)
         self.assert_film_in_table(redirect_response, self.film_1)
         self.assert_film_in_table(redirect_response, self.film_2)
         self.assert_film_in_table(redirect_response, self.film_3)
