@@ -25,7 +25,8 @@ from festivals.models import current_festival, FestivalBase, Festival
 from festivals.tests import create_festival
 from films import views, models
 from films.forms.film_forms import PickRating
-from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR, minutes_str
+from films.models import Film, FilmFanFilmRating, get_rating_name, FilmFanFilmVote, UNRATED_STR, minutes_str, \
+    UNRATED_RATING
 from films.views import FilmsView, FilmDetailView, MAX_SHORT_MINUTES, BaseFilmsFormView, FilmsListView, ReviewersView
 from loader.views import RatingDumperView
 from sections.models import Subsection, Section
@@ -97,6 +98,27 @@ def new_film(film_id, title, minutes, seq_nr=-1, festival=None):
                 sort_title=title, title_language='en', medium_category='films',
                 reviewer='kijA', url='https://pff.us/film/title-from-parameters/')
     return film
+
+
+def get_rating_kwargs(film, film_fan, rating=UNRATED_RATING, original_rating=UNRATED_RATING):
+    kwargs = {'film': film, 'film_fan': film_fan, 'rating': rating, 'original_rating': original_rating}
+    return kwargs
+
+
+def new_rating(film, film_fan, rating=UNRATED_RATING, original_rating=UNRATED_RATING):
+    kwargs = get_rating_kwargs(film, film_fan, rating=rating, original_rating=original_rating)
+    rating_object = FilmFanFilmRating(**kwargs)
+    return rating_object
+
+
+def create_rating(film, film_fan, rating=UNRATED_RATING, original_rating=UNRATED_RATING):
+    kwargs = get_rating_kwargs(film, film_fan, rating=rating, original_rating=original_rating)
+    rating_object = FilmFanFilmRating.film_ratings.create(**kwargs)
+    return rating_object
+
+
+def correct_for_re(text):
+    return text.replace("+", r"\+")
 
 
 def get_session_with_fan(fan):
@@ -201,14 +223,14 @@ class RatingModelTests(BaseJudgementModelTests):
         Rating 7 has meaning INDECISIVE.
         """
         # Arrange.
-        rating_value = 7
+        rating_value = FilmFanFilmRating.Rating.INDECISIVE
         rating_meaning = 'Indecisive'
         festival = create_festival('IDFA', self.city, '2022-07-17', '2022-07-27')
         film = Film(festival_id=festival.id, film_id=-1, seq_nr=-1, title='A Test Movie',
                     duration=timedelta(minutes=666))
         film.save()
         fan = me()
-        rating = FilmFanFilmRating(film=film, film_fan=fan, rating=rating_value)
+        rating = new_rating(film, fan, rating=rating_value)
         rating.save()
 
         # Act.
@@ -224,15 +246,15 @@ class RatingModelTests(BaseJudgementModelTests):
         """
         # Arrange.
         fan = me()
-        rating_value = 7
+        rating_value = FilmFanFilmRating.Rating.INDECISIVE
         festival_1 = create_festival('IDFA', self.city, '2021-07-17', '2021-07-27')
         festival_2 = create_festival('MTMF', self.city, '2022-04-17', '2022-04-27')
         film_1 = Film(festival_id=festival_1.id, film_id=1, seq_nr=1, title='Test Movie', duration=timedelta(minutes=6))
         film_2 = Film(festival_id=festival_2.id, film_id=1, seq_nr=1, title='Movie Two', duration=timedelta(minutes=77))
         film_1.save()
         film_2.save()
-        rating_1 = FilmFanFilmRating(film=film_1, film_fan=fan, rating=rating_value)
-        rating_2 = FilmFanFilmRating(film=film_2, film_fan=fan, rating=rating_value)
+        rating_1 = new_rating(film_1, fan, rating=rating_value)
+        rating_2 = new_rating(film_2, fan, rating=rating_value)
         rating_1.save()
 
         # Act.
@@ -594,8 +616,8 @@ class FilmDetailsViewTests(ViewsTestCase):
         _ = self.get_regular_fan_request()
 
         saved_film = create_film(film_id=6002, title='A Few More Adventures', minutes=116)
-        rating_value = 8
-        FilmFanFilmRating.film_ratings.create(film=saved_film, film_fan=fan, rating=rating_value)
+        rating_value = FilmFanFilmRating.Rating.GOOD
+        _ = create_rating(saved_film, fan, rating=rating_value)
         models.FANS_IN_RATINGS_TABLE.append(self.regular_fan.name)
         models.FANS_IN_RATINGS_TABLE.append(self.admin_fan.name)
 
@@ -643,9 +665,9 @@ class FilmDetailsViewTests(ViewsTestCase):
         fan = self.regular_fan
 
         film = create_film(film_id=1999, title='The Prince and the Price', minutes=98)
-        rating_value = 6
+        rating_value = FilmFanFilmRating.Rating.MEDIOCRE
         new_rating_value = 0
-        FilmFanFilmRating.film_ratings.create(film=film, film_fan=fan, rating=rating_value)
+        _ = create_rating(film, fan, rating=rating_value)
         rating = FilmFanFilmRating.film_ratings.get(film=film, film_fan=fan)
         self.assertEqual(rating.rating, rating_value)
 
@@ -655,7 +677,8 @@ class FilmDetailsViewTests(ViewsTestCase):
         post_response = self.client.post(reverse('films:details', args=[film.pk]), data=post_data)
 
         # Assert.
-        self.assertEqual(post_response.status_code, HTTPStatus.FOUND, f'Unexpected POST response of {FilmDetailView.__name__}')
+        message = f'Unexpected POST response of {FilmDetailView.__name__}'
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND, message)
         self.assertURLEqual(post_response.url, reverse('films:details', args=[film.id]))
         self.assertContains(post_response, self.regular_fan.name)
         self.assertContains(post_response, self.admin_fan.name)
@@ -883,8 +906,8 @@ class FilmListViewTests(ViewsTestCase):
         # Arrange.
         film = create_film(film_id=1948, title='Big Brothers', minutes=110)
         fan = self.regular_fan
-        old_rating_value = 8
-        FilmFanFilmRating.film_ratings.create(film=film, film_fan=fan, rating=old_rating_value)
+        old_rating_value = FilmFanFilmRating.Rating.GOOD
+        _ = create_rating(film, fan, rating=old_rating_value)
         new_rating_value = 3
         new_rating_name = get_rating_name(new_rating_value)
 
@@ -917,9 +940,9 @@ class FilmListViewTests(ViewsTestCase):
         fan = self.regular_fan
 
         film = create_film(film_id=1999, title='The Prince and the Price', minutes=98)
-        rating_value = 6
+        rating_value = FilmFanFilmRating.Rating.MEDIOCRE
         new_rating_value = 0
-        FilmFanFilmRating.film_ratings.create(film=film, film_fan=fan, rating=rating_value)
+        _ = create_rating(film, fan, rating=rating_value)
         rating = FilmFanFilmRating.film_ratings.get(film=film, film_fan=fan)
 
         post_data = self.arrange_get_rating_post_data(film, rating_value=new_rating_value)
@@ -1168,6 +1191,135 @@ class FilmListViewTests(ViewsTestCase):
         self.assertContains(redirect_response, film_4.title)
 
 
+class AlternativeTitlesViewTests(ViewsTestCase):
+    def setUp(self):
+        super().setUp()
+        festival = create_std_festival()
+
+        # Create some films with titles matching the search string.
+        self.film_1 = create_film(163, 'Providence and the Guitar', 125, festival=festival)
+        kwargs = {'minutes': 0, 'festival': festival}
+        self.film_2 = create_film(283, 'Opening Night 2026: Providence and the Guitar', **kwargs)
+        self.film_3 = create_film(284, 'Opening Night 2026: Providence and the Guitar + Party', **kwargs)
+        self.film_4 = create_film(666, 'Guitars ′n′ Roses', 115, festival=festival)
+        self.film_5 = create_film(117, 'Guided Heroes', 85, festival=festival)
+
+    @staticmethod
+    def arrange_get_post_data_link(film):
+        return {f'titles_link_{film.pk}': [film.title]}
+
+    @staticmethod
+    def arrange_get_post_data_unlink(film):
+        return {f'titles_unlink_{film.pk}': [film.title]}
+
+    @staticmethod
+    def assert_get_from_db(film):
+        return Film.films.get(id=film.id)
+
+    @staticmethod
+    def assert_get_re_table(film):
+        corrected_title = correct_for_re(film.title)
+        return re.compile(r'<td><a [^>]+>' + f'{corrected_title}' + r'</a>\s*</td>')
+
+    def assert_film_in_table(self, response, film):
+        re_table = self.assert_get_re_table(film)
+        self.assertRegex(get_decoded_content(response), re_table)
+
+    def assert_film_not_in_table(self, response, film):
+        re_table = self.assert_get_re_table(film)
+        self.assertNotRegex(get_decoded_content(response), re_table)
+
+    def test_find_candidate_titles(self):
+        """
+        Films starting with or containing a text snippet that is entered in the search box are displayed as links.
+        """
+        # Arrange.
+        _ = self.get_admin_request()
+        post_data = {BaseFilmsFormView.SEARCH_KEY: ['guitar']}
+
+        # Create e regex that proves that the films are found, represented as links,
+        # and sorted by relevance.
+        found_films_str = \
+            r'<h3[^>]*>Search[^>]+results</h3>\s*' \
+            + r'<span>\s*<a [^>]*>' + f'{self.film_4.title}' + r'</a>[^<]*\s*</span>\s*<br>\s*' \
+            + r'<span>\s*<a [^>]*>' + f'{self.film_1.title}' + r'</a>[^<]*\s*</span>\s*<br>\s*' \
+            + r'<span>\s*<a [^>]*>' + f'{self.film_2.title}' + r'</a>[^<]*\s*</span>\s*<br>\s*' \
+            + r'<span>\s*<a [^>]*>' + f'{correct_for_re(self.film_3.title)}' + r'</a>[^<]*\s*</span>\s*<br>\s*' \
+            + f'<h3>[^<]+</h3>'
+        found_films_re = re.compile(found_films_str)
+
+        # Act.
+        post_response = self.client.post(reverse('films:titles', args=[self.film_1.pk]), post_data)
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        self.assertRegex(get_decoded_content(redirect_response), found_films_re)
+        self.assertContains(redirect_response, f'"{self.film_1.title}" disabled')
+        self.assertNotContains(redirect_response, f'"{self.film_2.title}" disabled')
+        self.assertNotContains(redirect_response, self.film_5.title)
+
+    def test_link_alternative_film(self):
+        """
+        An admin can link an alternative film to the main film.
+        """
+        # Arrange.
+        _ = self.get_admin_request()
+        path = reverse('films:titles', args=[self.film_1.pk])
+        post_data_search = {BaseFilmsFormView.SEARCH_KEY: ['guitar']}
+        post_data_link = self.arrange_get_post_data_link(self.film_2)
+
+        # Act.
+        search_response = self.client.post(path, post_data_search)
+        search_redirect_response = self.client.get(search_response.url)
+        link_response = self.client.post(path, post_data_link)
+        link_redirect_response = self.client.get(link_response.url)
+
+        # Assert.
+        self.assertEqual(search_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(search_redirect_response.status_code, HTTPStatus.OK)
+        self.assertEqual(link_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(link_redirect_response.status_code, HTTPStatus.OK)
+        self.assertEqual(self.assert_get_from_db(self.film_2).main_title, self.film_1)
+        self.assertContains(link_redirect_response, f'"{self.film_2.title}" disabled')
+
+    def test_unlink_alternative_film(self):
+        """
+        An admin can unlink an alternative film from the main film.
+        """
+        # Arrange.
+        _ = self.get_admin_request()
+        path = reverse('films:titles', args=[self.film_1.pk])
+        self.film_2.main_title = self.film_1
+        self.film_2.save()
+        self.film_3.main_title = self.film_1
+        self.film_3.save()
+        self.film_4.main_title = self.film_1
+        self.film_4.save()
+        post_data = self.arrange_get_post_data_unlink(self.film_4)
+
+        # Act.
+        get_response = self.client.get(path)
+        post_response = self.client.post(path, post_data)
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assert_film_in_table(get_response, self.film_1)
+        self.assert_film_in_table(get_response, self.film_2)
+        self.assert_film_in_table(get_response, self.film_3)
+        self.assert_film_in_table(get_response, self.film_4)
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        self.assertEqual(self.assert_get_from_db(self.film_2).main_title, self.film_1)
+        self.assertIsNone(self.assert_get_from_db(self.film_4).main_title)
+        self.assert_film_in_table(redirect_response, self.film_1)
+        self.assert_film_in_table(redirect_response, self.film_2)
+        self.assert_film_in_table(redirect_response, self.film_3)
+        self.assert_film_not_in_table(redirect_response, self.film_4)
+
+
 class ReviewersViewTests(ViewsTestCase):
     def setUp(self):
         super().setUp()
@@ -1234,9 +1386,9 @@ class ReviewersViewTests(ViewsTestCase):
         fan = self.regular_fan
 
         rating = FilmFanFilmRating.Rating
-        FilmFanFilmRating.film_ratings.create(film=self.film_patience_1, film_fan=fan, rating=rating.MEDIOCRE)
-        FilmFanFilmRating.film_ratings.create(film=self.film_patience_2, film_fan=fan, rating=rating.BELOW_MEDIOCRE)
-        FilmFanFilmRating.film_ratings.create(film=self.film_cannes_2, film_fan=fan, rating=rating.VERY_GOOD)
+        create_rating(self.film_patience_1, fan, rating=rating.MEDIOCRE)
+        create_rating(self.film_patience_2, fan, rating=rating.BELOW_MEDIOCRE)
+        create_rating(self.film_cannes_2, fan, rating=rating.VERY_GOOD)
         FilmFanFilmVote.film_votes.create(film=self.film_cannes_2, film_fan=fan, vote=rating.GOOD)
 
         self.arrange_set_reviewer(self.film_patience_1, self.reviewer_patience)

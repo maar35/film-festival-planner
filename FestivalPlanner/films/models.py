@@ -25,7 +25,6 @@ class Film(models.Model):
     """
     Film table.
     """
-
     # Define the fields.
     festival = models.ForeignKey(Festival, on_delete=models.CASCADE)
     film_id = models.IntegerField()
@@ -60,7 +59,6 @@ class Film(models.Model):
         The representative rating string is the highest rating, with a question
         mark added when the lowest rating significantly differs.
         """
-
         ordered_ratings = FilmFanFilmRating.film_ratings.filter(film=self).order_by('rating')
 
         # Get a summary of fans and their ratings.
@@ -85,7 +83,6 @@ class FilmFanFilmRating(models.Model):
     Film Fan Film Rating table.
     This rating is an estimate in advance, used to choose which films to see in a festival.
     """
-
     class Rating(models.IntegerChoices):
         UNRATED = 0
         ALREADY_SEEN = 1
@@ -103,6 +100,7 @@ class FilmFanFilmRating(models.Model):
     film = models.ForeignKey(Film, on_delete=models.CASCADE)
     film_fan = models.ForeignKey(FilmFan, on_delete=models.CASCADE)
     rating = models.IntegerField(choices=Rating.choices)
+    original_rating = models.IntegerField(choices=Rating.choices)
 
     # Define a manager.
     film_ratings = models.Manager()
@@ -128,8 +126,9 @@ class FilmFanFilmRating(models.Model):
     def get_interesting_ratings(cls):
         return [cls.Rating.UNRATED] + cls.get_eligible_ratings()
 
-    def str_fan_rating(self):
-        return f'{self.film_fan.initial()}{self.rating}'
+    def str_fan_rating(self, include_org=False):
+        org_rating = f'.{self.original_rating}' if include_org else ''
+        return f'{self.film_fan.initial()}{self.rating}{org_rating}'
 
     @classmethod
     def get_not_plannable_ratings(cls):
@@ -157,6 +156,13 @@ class FilmFanFilmVote(models.Model):
 
     def __str__(self):
         return f"{self.film} - {self.film_fan.initial()}{self.vote}"
+
+
+UNRATED_RATING = FilmFanFilmRating.Rating.UNRATED
+CLASS_BY_POST_ATTENDANCE = {False: FilmFanFilmRating, True: FilmFanFilmVote}
+FIELD_BY_POST_ATTENDANCE = {False: 'rating', True: 'vote'}
+MANAGER_BY_POST_ATTENDANCE = {False: FilmFanFilmRating.film_ratings, True: FilmFanFilmVote.film_votes}
+CHOICES_BY_POST_ATTENDANCE = {False: FilmFanFilmRating.Rating.choices, True: FilmFanFilmVote.choices}
 
 
 def minutes_str(duration):
@@ -228,11 +234,6 @@ def fan_rating(fan, film, manager=None):
     ratings = manager.filter(**kwargs)
     rating = ratings.get(**kwargs) if ratings.exists() else None
     return rating
-
-
-FIELD_BY_POST_ATTENDANCE = {False: 'rating', True: 'vote'}
-MANAGER_BY_POST_ATTENDANCE = {False: FilmFanFilmRating.film_ratings, True: FilmFanFilmVote.film_votes}
-CHOICES_BY_POST_ATTENDANCE = {False: FilmFanFilmRating.Rating.choices, True: FilmFanFilmVote.choices}
 
 
 def fan_rating_str(fan, film, post_attendance=False):
