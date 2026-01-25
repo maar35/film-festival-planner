@@ -111,7 +111,7 @@
                     </tbody>
                 </table>
                 {% with film_screening_props=props.film_screening_props %}
-                    {% include "../includes/film_screenings.html" with film_title=screening.film.title %}
+                    {% include "../includes/film_screenings.html" with film=screening.film %}
                 {% endwith %}
             </span>
         </span>

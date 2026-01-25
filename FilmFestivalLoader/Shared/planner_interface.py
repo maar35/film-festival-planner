@@ -9,7 +9,6 @@ Created on Sat Oct 10 18:13:42 2020
 """
 import csv
 import os
-import re
 import xml.etree.ElementTree as Tree
 from enum import Enum, auto
 from unicodedata import normalize
@@ -27,6 +26,10 @@ ARTICLES_FILE = os.path.join(INTERFACE_DIR, "articles.txt")
 FILMS_FILE_HEADER = config()['Headers']['FilmsFileHeader']
 AUDIENCE_PUBLIC = 'publiek'
 
+CATEGORY_FIELD_FILMS = 'films'
+CATEGORY_FIELD_COMBINATIONS = 'combinations'
+CATEGORY_FIELD_EVENTS = 'events'
+
 
 def get_screen_from_parse_name(festival_data, screen_parse_name, split_location):
     city_name, theater_parse_name, screen_abbreviation = split_location(screen_parse_name)
@@ -42,7 +45,10 @@ def get_screen_from_parse_name(festival_data, screen_parse_name, split_location)
 def link_screened_film(festival_data, sub_film, main_film, main_film_info=None, screened_film_type=None):
     sub_film_info = sub_film.film_info(festival_data)
     sub_film_info.combination_films.append(main_film)
-    screened_film = ScreenedFilm(sub_film.film_id, sub_film.title, sub_film_info.description, screened_film_type)
+    screened_film_type = screened_film_type if screened_film_type else ScreenedFilmType.PART_OF_COMBINATION_PROGRAM
+    kwargs = {'screened_film_type': screened_film_type}
+    screened_film = ScreenedFilm(sub_film.film_id, sub_film.title, sub_film_info.description, **kwargs)
+    main_film.medium_type = 'events'
     main_film_info = main_film_info or main_film.film_info(festival_data)
     main_film_info.screened_films.append(screened_film)
 
@@ -129,9 +135,9 @@ class Film:
     category_combinations = "CombinedProgrammes"
     category_events = "Events"
     category_by_string = {
-        'films': category_films,
-        'combinations': category_combinations,
-        'events': category_events,
+        CATEGORY_FIELD_FILMS: category_films,
+        CATEGORY_FIELD_COMBINATIONS: category_combinations,
+        CATEGORY_FIELD_EVENTS: category_events,
     }
     language_by_title = {}
 

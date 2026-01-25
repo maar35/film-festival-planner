@@ -339,6 +339,7 @@ class ScreeningStatusGetter:
             'confirmed_ticket_holders': self._get_confirmed_ticket_holders_props(film_screening),
             'available_fans': ', '.join([fan.name for fan in available_fans]),
             'q_and_a': film_screening.str_q_and_a(),
+            'extra': film_screening.combination_program,
             'query_string': Filter.get_querystring(**{'day': day, 'screening': film_screening.pk}),
             'fragment': ScreenFragmentKeeper.fragment_code(film_screening.screen),
         }

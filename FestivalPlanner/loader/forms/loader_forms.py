@@ -687,7 +687,8 @@ class ScreeningLoader(SimpleLoader):
         combination_id = int(row[4]) if row[4] else None
         subtitles = row[5] or None
         q_and_a = True if row[6] else False
-        _ = row[7]      # extra
+        extra = row[7]  # extra
+        # TODO: Support screened films instead of combination program (which indicates no export to Planner).
         if len(self.expected_header) == 7:
             _ = row[8]  # sold_out
 

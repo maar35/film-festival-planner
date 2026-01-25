@@ -161,7 +161,7 @@ class BaseHtmlPageParser(HTMLParser):
             return len(self.stack) == 1
 
     def __init__(self, debug_recorder, debug_prefix):
-        HTMLParser.__init__(self)
+        super().__init__()
         self.debug_recorder = debug_recorder
         self.debug_prefix = debug_prefix
         self.debugging = debug_recorder.active
@@ -208,7 +208,7 @@ class HtmlPageParser(BaseHtmlPageParser):
     festival_data = None
 
     def __init__(self, festival_data, debug_recorder, debug_prefix, debugging=False):
-        BaseHtmlPageParser.__init__(self, debug_recorder, debug_prefix)
+        super().__init__(debug_recorder, debug_prefix)
         self.festival_data = festival_data
 
         # Remember the screening.
