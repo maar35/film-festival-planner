@@ -684,20 +684,26 @@ class ScreeningLoader(SimpleLoader):
         screen_id = int(row[1])
         start_dt = datetime.datetime.fromisoformat(row[2]).replace(tzinfo=None)
         end_dt = datetime.datetime.fromisoformat(row[3]).replace(tzinfo=None)
-        combination_id = int(row[4]) if row[4] else None
+        _ = row[4]      # Combination program.
         subtitles = row[5] or None
         q_and_a = True if row[6] else False
-        extra = row[7]  # extra
-        # TODO: Support screened films instead of combination program (which indicates no export to Planner).
+        extra = row[7]
+        # TODO: Support screened films instead of combination program (which indicates no export to Planner!).
         if len(self.expected_header) == 7:
             _ = row[8]  # sold_out
 
         film = self.get_foreign_key(Film, Film.films, **{'festival': self.festival, 'film_id': film_id})
         screen = self.get_foreign_key(Screen, Screen.screens, **{'screen_id': screen_id})
-        combination_program = None
-        if combination_id is not None:
-            kwargs = {'festival': self.festival, 'film_id': combination_id}
-            combination_program = Film.films.filter(**kwargs).first()
+        if not film or not screen:
+            yield None
+
+        extra_film = None
+        if extra:
+            extra_film_ids = [int(id_str) for id_str in extra.split('|')]
+            extra_kwargs = {'festival': self.festival, 'film_id__in': extra_film_ids}
+            extra_film = Film.films.filter(**extra_kwargs).first()
+        # TODO: change database as to support extra screenings instead of a combination program.
+
         try:
             existing_screening = Screening.screenings.get(film=film, screen=screen, start_dt=start_dt)
         except Screening.DoesNotExist:
@@ -705,15 +711,12 @@ class ScreeningLoader(SimpleLoader):
         else:
             auto_planned = existing_screening.auto_planned
 
-        if not film or not screen:
-            yield None
-
         value_by_field = {
             'film': film,
             'screen': screen,
             'start_dt': start_dt,
             'end_dt': end_dt,
-            'combination_program': combination_program or None,
+            'combination_program': extra_film or None,
             'subtitles': subtitles,
             'q_and_a': q_and_a,
             'auto_planned': auto_planned,

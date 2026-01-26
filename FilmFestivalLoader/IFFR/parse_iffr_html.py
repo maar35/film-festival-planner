@@ -806,7 +806,7 @@ class FilmInfoPageParser(HtmlPageParser):
         screen = get_screen_from_parse_name(self.festival_data, location, splitter)
 
         # Check for extra's.
-        extra = ', '.join(self.extra_titles)
+        extra = self._get_extra()
         combi_program = self._get_combination_program()
 
         # Create the screening.
@@ -825,6 +825,11 @@ class FilmInfoPageParser(HtmlPageParser):
     def _add_extra_title(self, extra_title):
         if extra_title != self.film.title:
             self.extra_titles.append(extra_title)
+
+    def _get_extra(self):
+        extra_film_ids = [self._get_film_by_title(t).film_id for t in self.extra_titles]
+        extra = '|'.join([str(id_) for id_ in extra_film_ids])
+        return extra
 
     def _get_combination_program(self):
         if self.film.medium_category == CATEGORY_FIELD_EVENTS:
