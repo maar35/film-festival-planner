@@ -688,7 +688,7 @@ class ScreeningLoader(SimpleLoader):
         subtitles = row[5] or None
         q_and_a = True if row[6] else False
         extra = row[7]
-        # TODO: Support screened films instead of combination program (which indicates no export to Planner!).
+        # TODO: Support screened films instead of combination program (#457).
         if len(self.expected_header) == 7:
             _ = row[8]  # sold_out
 
@@ -700,9 +700,9 @@ class ScreeningLoader(SimpleLoader):
         extra_film = None
         if extra:
             extra_film_ids = [int(id_str) for id_str in extra.split('|')]
-            extra_kwargs = {'festival': self.festival, 'film_id__in': extra_film_ids}
-            extra_film = Film.films.filter(**extra_kwargs).first()
-        # TODO: change database as to support extra screenings instead of a combination program.
+            kwargs = {'festival': self.festival, 'film_id__in': extra_film_ids}
+            extra_film = Film.films.filter(**kwargs).first()
+        # TODO: change database as to support extra screenings instead of a combination program (#457).
 
         try:
             existing_screening = Screening.screenings.get(film=film, screen=screen, start_dt=start_dt)
@@ -716,7 +716,7 @@ class ScreeningLoader(SimpleLoader):
             'screen': screen,
             'start_dt': start_dt,
             'end_dt': end_dt,
-            'combination_program': extra_film or None,
+            'combination_program': extra_film or None,  # See #457 for explanation extra vs combi.
             'subtitles': subtitles,
             'q_and_a': q_and_a,
             'auto_planned': auto_planned,

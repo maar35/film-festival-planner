@@ -75,10 +75,11 @@ def setup_counters():
     COUNTER.start('multiple subsections')
     COUNTER.start('no reviewer found')
     COUNTER.start('unexpected sentinel')
+    COUNTER.start('combined screenings')
     for screened_film_type in ScreenedFilmType:
         COUNTER.start(screened_film_type.name)
-    COUNTER.start('combinations from screenings')
     COUNTER.start('combinations from website')
+    COUNTER.start('combinations from screenings')
     COUNTER.start('no location')
 
 
@@ -139,7 +140,9 @@ def get_film_details(festival_data, category, category_name, always_download=ALW
         if film_html is not None:
             print(f'Analysing html file {film.film_id} of {category_name} {film.title}')
             FilmInfoPageParser(festival_data, film, url_file.encoding).feed(film_html)
-    # FilmInfoPageParser.set_combinations(festival_data)
+    # FilmInfoPageParser.set_combinations(festival_data) -> Keep this
+    # code since it's very simple and could be preferred in future
+    # editions of IFFR.
 
 
 def get_subsection_details(festival_data):
@@ -805,14 +808,14 @@ class FilmInfoPageParser(HtmlPageParser):
         splitter = LocationSplitter.split_location
         screen = get_screen_from_parse_name(self.festival_data, location, splitter)
 
-        # Check for extra's.
+        # Check for combination screenings ("extra" contains the extra films being screened).
         extra = self._get_extra()
         combi_program = self._get_combination_program()
 
         # Create the screening.
         q_and_a = ''
         args = [self.film, screen, start_dt, end_dt, q_and_a, extra, Screening.audience_type_public]
-        kwargs = {'combination_program': combi_program, 'screened_film_type': None, 'sold_out': None}
+        kwargs = {'combination_program': combi_program, 'screened_film_type': self.screened_film_type, 'sold_out': None}
         iffr_screening = IffrScreening(*args, **kwargs)
         self.screening = iffr_screening
 
@@ -862,17 +865,17 @@ class FilmInfoPageParser(HtmlPageParser):
 
     def _link_directly_combined(self, sub_film, main_film, main_film_info):
         if main_film.film_id not in [f.film_id for f in main_film_info.screened_films]:
-            screened_film_type = ScreenedFilmType.DIRECTLY_COMBINED
-            kwargs = {'main_film_info': self.film_info, 'screened_film_type': screened_film_type}
+            self.screened_film_type = ScreenedFilmType.DIRECTLY_COMBINED
+            kwargs = {'main_film_info': self.film_info, 'screened_film_type': self.screened_film_type}
             link_screened_film(self.festival_data, sub_film, main_film, **kwargs)
-            COUNTER.increase(screened_film_type.name)
+            COUNTER.increase('combined screenings')
+            COUNTER.increase(self.screened_film_type.name)
 
     def _add_screened_film(self):
         kwargs = {'medium_category': CATEGORY_FIELD_FILMS}
         sub_film = self.festival_data.add_film(self.screened_film_title, self.screened_film_url, **kwargs)
         if sub_film:
             link_screened_film(self.festival_data, sub_film, self.film, main_film_info=self.film_info)
-            COUNTER.increase(ScreenedFilmType.PART_OF_COMBINATION_PROGRAM.name)
         self._init_screened_film_data()
         self.film_is_combi = True
 
@@ -970,7 +973,7 @@ class FilmInfoPageParser(HtmlPageParser):
                 screened_films = [s.film for s in coinciding_screenings]
                 for film in screened_films:
                     link_screened_film(festival_data, film, main_film, main_film_info, screened_film_type)
-                COUNTER.increase('combinations from screenings')
+                COUNTER.increase('combined screenings')
                 COUNTER.increase(screened_film_type.name)
 
 
