@@ -447,7 +447,7 @@ class ScreeningDetailView(LoginRequiredMixin, SingleObjectMixin, FormView):
             'minutes': minutes_str(duration),
             'film_description': FilmDetailView.get_description(self.screening.film),
             'fan_props': fan_props,
-            'film_title': self.screening.film.title,
+            'film': self.screening.film,
             'film_screening_props': self._get_filmscreening_props(),
         }
         context = add_base_context(self.request, super_context | new_context)
@@ -834,7 +834,7 @@ class ScreeningWarningsListView(LoginRequiredMixin, ProfiledListView):
 
     @classmethod
     def get_sort_key(cls, row):
-        return row['screening'].film.sort_title, row['screening'].start_dt, row['fan'].name
+        return row['screening'].start_dt, row['screening'].film.sort_title, row['fan'].name
 
     def _get_warning_details(self, warning):
         screening = warning.screening

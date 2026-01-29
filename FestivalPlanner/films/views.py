@@ -927,7 +927,7 @@ def get_filmscreening_props_list(session, films):
         filmscreening_props = ScreeningStatusGetter.get_filmscreening_props(session, film)
         filmscreening_props_item = {
             'props': filmscreening_props,
-            'title': film.title,
+            'film': film,
         }
         filmscreening_props_list.append(filmscreening_props_item)
     return filmscreening_props_list

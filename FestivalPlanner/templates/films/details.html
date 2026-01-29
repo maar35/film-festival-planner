@@ -111,7 +111,7 @@
 <br>
 
 {% for item in film_screening_props_list %}
-    {% include "../includes/film_screenings.html" with film_title=item.title film_screening_props=item.props %}
+    {% include "../includes/film_screenings.html" with film=item.film film_screening_props=item.props %}
 {% endfor %}
 
 {% if not alt_films %}

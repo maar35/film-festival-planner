@@ -189,7 +189,7 @@ class HtmlCharsetParser(BaseHtmlPageParser):
     default_charset = None
 
     def __init__(self, debug_recorder):
-        BaseHtmlPageParser.__init__(self, debug_recorder, 'CH', debugging=False)
+        super().__init__(debug_recorder, 'CH')
         self.state_stack = self.StateStack(self.print_debug, self.CharsetParseState.AWAITING_CHARSET)
         self.charset = None
 

@@ -40,7 +40,7 @@
 
 {% if warnings %}
     {% for item in filmscreening_props_list %}
-        {% include "../includes/film_screenings.html" with film_title=item.title film_screening_props=item.props %}
+        {% include "../includes/film_screenings.html" with film=item.film film_screening_props=item.props %}
     {% endfor %}
     <h3>Warnings</h3>
     {% if clear_filters_query %}
@@ -53,10 +53,10 @@
     <table style="position: relative; z-index: 1;">
     <thead>
     <tr>
-        <th class="sticky">Title</th>
-        <th class="sticky">Webpage</th>
         <th class="sticky">Screening</th>
         <th class="sticky">Details</th>
+        <th class="sticky">Title</th>
+        <th class="sticky">Webpage</th>
         {% include "../includes/filtered_header_field.html" with obj_filter_props=fan_filter_props %}
         {% include "../includes/filtered_header_field.html" with obj_filter_props=warning_filter_props %}
         <th class="sticky">Symbol</th>
@@ -66,17 +66,6 @@
     <tbody>
     {% for row in warning_rows %}
         <tr>
-            <td>
-                <a name="{{ row.fragment_name }}"></a>
-                {% ifchanged row.screening.film.title %}
-                {{ row.screening.film.title }}
-                {% endifchanged %}
-            </td>
-            <td>
-                {% ifchanged row.screening.film.title %}
-                <a href="{{ row.screening.film.url }}">www</a>
-                {% endifchanged %}
-            </td>
             {% if row.screening == screening %}
             <td style="background: {{ selected_background }};">
             {% else %}
@@ -93,6 +82,17 @@
                 <a href="{% url 'screenings:details' row.screening.id %}">
                     {{ row.screening.id }}
                 </a>
+                {% endifchanged %}
+            </td>
+            <td>
+                <a name="{{ row.fragment_name }}"></a>
+                {% ifchanged row.screening.film.title %}
+                {{ row.screening.film.title }}
+                {% endifchanged %}
+            </td>
+            <td>
+                {% ifchanged row.screening.film.title %}
+                <a href="{{ row.screening.film.url }}">www</a>
                 {% endifchanged %}
             </td>
             <td> {{ row.fan }} </td>

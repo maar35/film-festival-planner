@@ -1,12 +1,13 @@
 {% if film_screening_props %}
 <br>
-<h3>All screenings of <span style="color: {{ festival_color }};">{{ film_title }}</span></h3>
+<h3>All screenings of <span style="color: {{ festival_color }};">{{ film.title }}</span> {{ film.fans_rating_string }}</h3>
 <table style="min-width: 30%">
     <thead>
     <tr>
         <th>Screening</th>
         <th>Details</th>
         <th>Status</th>
+        <th>Extra</th>
         <th>Attendants</th>
         <th>Tickets</th>
         <th>Confirmed</th>
@@ -31,6 +32,9 @@
         </td>
         <td style="background: {{ prop.pair.background }}; color: {{ prop.pair.color }};">
             {{ prop.status.label }}
+        </td>
+        <td>
+            {{ prop.extra | default:"-" }}
         </td>
         <td>
             {% for attendant_props in prop.attendants_props %}

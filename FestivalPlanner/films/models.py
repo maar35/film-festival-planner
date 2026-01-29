@@ -73,6 +73,10 @@ class Film(models.Model):
 
         return fans_rating_str, film_rating_str, max_rating
 
+    def fans_rating_string(self):
+        fans_rating_str = self.rating_strings()[0]
+        return fans_rating_str
+
     def rating_string(self):
         film_rating_str = self.rating_strings()[1]
         return film_rating_str
