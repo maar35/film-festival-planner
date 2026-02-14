@@ -40,7 +40,8 @@ COUNTER = Counter()
 # Config items.
 MAX_PAGES = LOCAL_CONFIG['scalars']['max_pages']
 COMBINATION_FILM_TITLES = LOCAL_CONFIG['combination_film_titles']
-REVIEWER_BY_ALIAS = LOCAL_CONFIG['reviewers']
+REVIEWER_BY_ALIAS = LOCAL_CONFIG['reviewer_by_alias']
+REVIEWER_BY_TITLE = LOCAL_CONFIG['reviewer_by_title']
 LANGUAGE_BY_TITLE = LOCAL_CONFIG['title_languages']
 MAX_SHORT_DURATION = datetime.timedelta(minutes=COMMON_CONFIG['Constants']['MaxShortMinutes'])
 
@@ -761,10 +762,9 @@ class FilmInfoPageParser(HtmlPageParser):
                 self.location = data
             case state.IN_EXTRA_FILM if not self.film_is_combi:
                 self._add_extra_title(data.strip())
-            case state.IN_SCREENING_PROP:
+            case state.IN_SCREENING_PROP if data.strip():
                 self._set_screening_prop(data.strip())
-                if data.strip():
-                    stack.change(state.AWAITING_SCREENING_PROP)
+                stack.change(state.AWAITING_SCREENING_PROP)
 
     def _init_screened_film_data(self):
         self.screened_film_url = None
@@ -792,6 +792,8 @@ class FilmInfoPageParser(HtmlPageParser):
                         self.reviewer = d
                     case d if d in REVIEWER_BY_ALIAS.keys():
                         self.reviewer = REVIEWER_BY_ALIAS[d]
+                    case _ if self.film.title in REVIEWER_BY_TITLE.keys():
+                        self.reviewer = REVIEWER_BY_TITLE[self.film.title]
                     case _:
                         DEBUG_RECORDER.add(f'{self.film.title}: No reviewer found in {data}')
 

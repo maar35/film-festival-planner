@@ -41,6 +41,7 @@
             <tr>
                 <th class="sticky">Film</th>
                 <th class="sticky">Duration</th>
+                <th class="sticky">Medium Category</th>
                 <th class="sticky">Reviewer</th>
                 {% for fan in fans %}
                     <th class="sticky">{{ fan }}</th>
@@ -55,6 +56,7 @@
                 <a href="{{ row.film.url }}">{{ row.film.title }}</a>
             </td>
             <td>{{ row.duration_str }}</td>
+            <td>{{ row.film.medium_category }}</td>
             <td>{{ row.reviewer }}</td>
             {% for fan_vote in row.fan_votes %}
                 {% if fan_vote.fan == current_fan %}

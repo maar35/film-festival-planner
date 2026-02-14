@@ -10,6 +10,11 @@ Paths:
     CommonDataDirectory: Documents/Film/CommonFestivalData
     LoaderSharedDirectory: Projects/FilmFestivalPlanner/FilmFestivalLoader/Shared
 
+MediumCategories:
+    Films: Films
+    Combinations: CombinedProgrammes
+    Events: Events
+
 Headers:
     FilmsFileHeader:
         - seq-nr

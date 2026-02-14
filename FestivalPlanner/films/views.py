@@ -22,7 +22,7 @@ from festival_planner.tools import add_base_context, unset_log, wrap_up_form_err
     initialize_log, add_log, CSV_DIALECT, get_submit_name, get_data_from_submit
 from festivals.config import Config
 from festivals.models import current_festival
-from films.forms.film_forms import PickRating, UserForm, TitlesForm
+from films.forms.film_forms import PickRating, UserForm, TitlesForm, UPDATE_WARNING
 from films.models import FilmFanFilmRating, Film, current_fan, get_judging_fans, fan_rating_str, \
     FilmFanFilmVote, fan_rating, UNRATED_STR, get_judgement_choices
 from screenings.models import Attendance
@@ -856,10 +856,12 @@ class TitlesDetailView(LoginRequiredMixin, DetailView):
             'found_props': self._get_found_props(),
             'alt_title_films': alt_title_films,
             'alt_props': self._get_alt_props(alt_title_films),
+            'warnings': UPDATE_WARNING.get(session),
             'form_errors': self.view.unexpected_errors,
             'log': get_log(session),
         }
         self.view.unexpected_errors = []
+        UPDATE_WARNING.remove(session)
         unset_log(session)
         context = add_base_context(self.request, super_context | new_context)
         return context
@@ -907,7 +909,7 @@ class TitlesFormView(LoginRequiredMixin, FormView):
             operation, film_id_str = get_data_from_submit(self.view.submit_prefix, submit_name)
             alternative_title_film_id = int(film_id_str)
             film_arg = film_by_operation[operation]
-            form.update_main_title(self.request.session, alternative_title_film_id, film_arg)
+            form.update_alternative_film(self.request.session, alternative_title_film_id, film_arg)
         return super().form_valid(form)
 
     def form_invalid(self, form):
