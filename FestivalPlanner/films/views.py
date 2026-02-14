@@ -907,7 +907,7 @@ class TitlesFormView(LoginRequiredMixin, FormView):
             operation, film_id_str = get_data_from_submit(self.view.submit_prefix, submit_name)
             alternative_title_film_id = int(film_id_str)
             film_arg = film_by_operation[operation]
-            form.update_main_title(self.request.session, alternative_title_film_id, film_arg)
+            form.update_alternative_film(self.request.session, alternative_title_film_id, film_arg)
         return super().form_valid(form)
 
     def form_invalid(self, form):

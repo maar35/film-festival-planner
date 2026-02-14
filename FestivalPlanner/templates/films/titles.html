@@ -19,12 +19,17 @@
         <br>
         <a href="{% url 'films:films' %}">Film ratings</a>
         <br>
+        <a href="{% url 'films:votes' %}">Film votes</a>
+        <br>
         <a href="{% url 'screenings:day_schema' %}">Day schema</a>
     </span>
 </div>
 
 {% if user_is_admin %}
     {% block errors %}
+        {{ block.super }}
+    {% endblock %}
+    {% block warnings %}
         {{ block.super }}
     {% endblock %}
 
@@ -84,6 +89,7 @@
                 <th>PK</th>
                 <th>Category</th>
                 <th>Subsection</th>
+                <th>Reviewer</th>
                 <th>Ratings</th>
                 <th>Unlink</th>
             </tr>
@@ -96,6 +102,7 @@
                 <td>{{ alt_film.pk }}</td>
                 <td>{{ alt_film.medium_category }}</td>
                 <td>{{ alt_film.subsection }}</td>
+                <td>{{ alt_film.reviewer | default_if_none:" - " }}</td>
                 <td>{{ prop.ratings }}</td>
                 <td class="with-submit">
                     {% if alt_film.main_title %}

@@ -20,6 +20,7 @@ from Shared.application_tools import config, pr_info, Config
 INTERFACE_DIR = os.path.expanduser(f"~/{config()['Paths']['LoaderSharedDirectory']}")
 COMMON_DATA_DIR = os.path.expanduser(f"~/{config()['Paths']['CommonDataDirectory']}")
 LOADER_SHARED_DIR = os.path.expanduser(f"~/{config()['Paths']['LoaderSharedDirectory']}")
+INTERFACE_MEDIUM_CATEGORIES = config()['MediumCategories']
 SHARED_CONFIG = Config(os.path.join(LOADER_SHARED_DIR, 'loader_config.yml')).config
 
 ARTICLES_FILE = os.path.join(INTERFACE_DIR, "articles.txt")
@@ -131,9 +132,9 @@ class LanguageArticles:
 
 class Film:
 
-    category_films = "Films"
-    category_combinations = "CombinedProgrammes"
-    category_events = "Events"
+    category_films = INTERFACE_MEDIUM_CATEGORIES['Films']
+    category_combinations = INTERFACE_MEDIUM_CATEGORIES['Combinations']
+    category_events = INTERFACE_MEDIUM_CATEGORIES['Events']
     category_by_string = {
         CATEGORY_FIELD_FILMS: category_films,
         CATEGORY_FIELD_COMBINATIONS: category_combinations,

@@ -10,10 +10,12 @@ from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
 from festival_planner.fan_action import RatingAction
 from festival_planner.tools import add_log
+from festivals.config import Config
 from festivals.models import rating_action_key, current_festival
 from films.models import fan_rating_str, FIELD_BY_POST_ATTENDANCE, \
     MANAGER_BY_POST_ATTENDANCE, Film, FilmFanFilmRating, UNRATED_RATING
 
+MEDIUM_CATEGORY_EVENT = Config().config['MediumCategories']['Events']
 SEARCH_TEXT_VALIDATOR = RegexValidator(r'^\w+$', 'Type letters and digits only')
 """
 No spaces allowed (yet) to discourage entering articles while searching and
@@ -121,7 +123,7 @@ class TitlesForm(forms.Form):
     )
 
     @classmethod
-    def update_main_title(cls, session, alternative_title_film_id, main_film):
+    def update_alternative_film(cls, session, alternative_title_film_id, main_film):
         # Set the main title of the film with an alternative title.
         film_ = Film.films.filter(id=alternative_title_film_id)
         _ = film_.update(main_title=main_film)
@@ -129,7 +131,7 @@ class TitlesForm(forms.Form):
         # Set the ratings of the alt film to those of the main film
         # after saving the original ratings.
         manager = FilmFanFilmRating.film_ratings
-        alt_film = list(film_)[0]
+        alt_film = film_.first()
         alt_ratings = manager.filter(film_id=alternative_title_film_id)
         if main_film:
             # Alternative title is being linked to main film.
@@ -142,18 +144,17 @@ class TitlesForm(forms.Form):
             # Alternative title is being unlinked from main film.
             try:
                 with transaction.atomic():
-                    # Save ratings of alt film.
-                    for alt_rating in alt_ratings:
-                        rating = alt_rating.original_rating
-                        alt_rating.original_rating = UNRATED_RATING
-                        alt_rating.save()
-                        fan = alt_rating.film_fan
-                        _ = PickRating.update_one_rating(session, alt_film, fan, rating)
+                    cls._unlink_alt_film(session, alt_film, alt_ratings)
             except IntegrityError as e:
                 handle_exception(session, e, alt_ratings)
 
     @classmethod
     def _link_alt_film_to_main_film(cls, session, alt_film, main_film, alt_ratings):
+        # Set the reviewer of the alt film.
+        kwargs = {'id': alt_film.id, 'reviewer': None, 'medium_category': MEDIUM_CATEGORY_EVENT}
+        Film.films.filter(**kwargs).update(reviewer=main_film.reviewer)
+
+        # Set de ratings of the alt film.
         manager = FilmFanFilmRating.film_ratings
         main_ratings = manager.filter(film=main_film)
         alt_fans = [r.film_fan for r in alt_ratings]
@@ -174,6 +175,20 @@ class TitlesForm(forms.Form):
                     # Fan has only rated the main film.
                     main_rating = main_ratings.get(film_fan=f)
                     _ = PickRating.update_one_rating(session, alt_film, f, main_rating.rating)
+
+    @classmethod
+    def _unlink_alt_film(cls, session, alt_film, alt_ratings):
+        # Set reviewer of alt film to None.
+        alt_film.reviewer = None if alt_film.medium_category == MEDIUM_CATEGORY_EVENT else alt_film.reviewer
+        alt_film.save()
+
+        # Save ratings of alt film.
+        for alt_rating in alt_ratings:
+            rating = alt_rating.original_rating
+            alt_rating.original_rating = UNRATED_RATING
+            alt_rating.save()
+            fan = alt_rating.film_fan
+            _ = PickRating.update_one_rating(session, alt_film, fan, rating)
 
     @classmethod
     def _save_alt_rating(cls, alt_ratings, fan):
