@@ -8,6 +8,7 @@ from django.forms import CharField
 
 from authentication.models import FilmFan
 from festival_planner.cache import FilmRatingCache
+from festival_planner.cookie import Warnings
 from festival_planner.fan_action import RatingAction
 from festival_planner.tools import add_log
 from festivals.config import Config
@@ -15,6 +16,7 @@ from festivals.models import rating_action_key, current_festival
 from films.models import fan_rating_str, FIELD_BY_POST_ATTENDANCE, \
     MANAGER_BY_POST_ATTENDANCE, Film, FilmFanFilmRating, UNRATED_RATING
 
+UPDATE_WARNING = Warnings()
 MEDIUM_CATEGORY_EVENT = Config().config['MediumCategories']['Events']
 SEARCH_TEXT_VALIDATOR = RegexValidator(r'^\w+$', 'Type letters and digits only')
 """
@@ -130,29 +132,30 @@ class TitlesForm(forms.Form):
 
         # Set the ratings of the alt film to those of the main film
         # after saving the original ratings.
-        manager = FilmFanFilmRating.film_ratings
         alt_film = film_.first()
+        manager = FilmFanFilmRating.film_ratings
         alt_ratings = manager.filter(film_id=alternative_title_film_id)
-        if main_film:
-            # Alternative title is being linked to main film.
-            try:
-                with transaction.atomic():
+        obj_by_linked = {True: alt_film, False: alt_ratings}
+        try:
+            with transaction.atomic():
+                if main_film:
+                    # Alternative title is being linked to main film.
                     cls._link_alt_film_to_main_film(session, alt_film, main_film, alt_ratings)
-            except IntegrityError as e:
-                handle_exception(session, e, alt_film)
-        else:
-            # Alternative title is being unlinked from main film.
-            try:
-                with transaction.atomic():
+                else:
+                    # Alternative title is being unlinked from main film.
                     cls._unlink_alt_film(session, alt_film, alt_ratings)
-            except IntegrityError as e:
-                handle_exception(session, e, alt_ratings)
+        except IntegrityError as e:
+            obj = obj_by_linked[main_film]
+            handle_exception(session, e, obj)
 
     @classmethod
     def _link_alt_film_to_main_film(cls, session, alt_film, main_film, alt_ratings):
         # Set the reviewer of the alt film.
         kwargs = {'id': alt_film.id, 'reviewer': None, 'medium_category': MEDIUM_CATEGORY_EVENT}
-        Film.films.filter(**kwargs).update(reviewer=main_film.reviewer)
+        update_count = Film.films.filter(**kwargs).update(reviewer=main_film.reviewer)
+        if not update_count:
+            warning = [f'Reviewer ({alt_film.reviewer}) of alternative title ({alt_film.title}) not updated']
+            UPDATE_WARNING.set(session, warning)
 
         # Set de ratings of the alt film.
         manager = FilmFanFilmRating.film_ratings
@@ -179,7 +182,8 @@ class TitlesForm(forms.Form):
     @classmethod
     def _unlink_alt_film(cls, session, alt_film, alt_ratings):
         # Set reviewer of alt film to None.
-        alt_film.reviewer = None if alt_film.medium_category == MEDIUM_CATEGORY_EVENT else alt_film.reviewer
+        if alt_film.medium_category == MEDIUM_CATEGORY_EVENT:
+            alt_film.reviewer = None
         alt_film.save()
 
         # Save ratings of alt film.

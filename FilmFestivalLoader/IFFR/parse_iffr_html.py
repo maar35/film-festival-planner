@@ -40,7 +40,7 @@ COUNTER = Counter()
 # Config items.
 MAX_PAGES = LOCAL_CONFIG['scalars']['max_pages']
 COMBINATION_FILM_TITLES = LOCAL_CONFIG['combination_film_titles']
-REVIEWER_BY_ALIAS = LOCAL_CONFIG['reviewers']
+REVIEWER_BY_ALIAS = LOCAL_CONFIG['reviewer_by_alias']
 REVIEWER_BY_TITLE = LOCAL_CONFIG['reviewer_by_title']
 LANGUAGE_BY_TITLE = LOCAL_CONFIG['title_languages']
 MAX_SHORT_DURATION = datetime.timedelta(minutes=COMMON_CONFIG['Constants']['MaxShortMinutes'])
