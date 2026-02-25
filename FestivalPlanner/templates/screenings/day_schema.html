@@ -54,8 +54,6 @@
     <br>
 {% endif %}
 
-{% include "../includes/date_picker.html" with label=day_label day=day choices=day_choices name="day" %}
-
 {% if selected_screening_props %}
 <div>
     {% with props=selected_screening_props %}
@@ -125,10 +123,11 @@
 {% if screen_rows or availability_props %}
     <table class="day-schema-border">
         <thead>
-        <tr class="sticky">
-            <th class="day-schema-border">Screen</th>
-            <th class="day-schema-border"
-                style="position: relative; vertical-align: text-top;">
+        <tr class="sticky-top">
+            <th class="day-schema-border sticky-left-header">
+                Screen
+            </th>
+            <th class="day-schema-header-row">
                 {% for time in timescale %}
                     <span class="day-schema-time-mark" style="left: {{ time.left }}px">{{ time.text }}</span>
                 {% endfor %}
@@ -138,30 +137,28 @@
         <tbody>
         {% for prop in availability_props %}
         <tr class="day-schema-border">
-            <td class="sticky-left"
-                style="border: var(--screeningBorderWidth) solid var(--screeningBorderColor);">
-            <small>
-            </small>
+            <td class="sticky-left-row">
+                <small>
+                </small>
             </td>
             <td class="day-schema-row"
                 style="min-width: {{ row.total_width }}px;">
-            <small>
+                <small>
                 {% for period in prop.periods %}
-                    <span class="day-schema-screening"
-                          style="left: {{ period.left }}px; width: {{ period.width }}px; height: 1rem; border-bottom: 1px solid {{ festival_color }};">
+                    <span class="day-schema-availability-period"
+                          style="left: {{ period.left }}px; width: {{ period.width }}px; border-bottom: 1px solid {{ festival_color }};">
                         {{ prop.fan }} {{ period.start_dt|date:"H:i" }} - {{ period.end_dt|date:"H:i" }}
                     </span>
                 {% endfor %}
-            </small>
+                </small>
             </td>
         </tr>
         {% endfor %}
 
         {% for row in screen_rows %}
-        <tr class="day-schema-border"
-            style="vertical-align: text-top;">
-            <td class="sticky-left"
-                style="border: var(--screeningBorderWidth) solid var(--screeningBorderColor); z-index: 3; color: {{ row.color }}; background: {{ row.background }}">
+        <tr class=".day-schema-screen-header">
+            <td class="sticky-left-header"
+                style="color: {{ row.color }}; background: {{ row.background }}">
                 <a name="{{ row.fragment_name }}"></a>
                 {{ row.screen }}
             </td>
@@ -193,7 +190,7 @@
                         </span>
                             {% if prop.warnings_props %}
                             <span class="day-schema-screening-warning">
-                                <a style="font-weight: bold;" href="{% url 'screenings:warnings' %}{{ prop.warn_querystring }}{{ prop.warn_fragment }}">
+                                <a class="link-bold" href="{% url 'screenings:warnings' %}{{ prop.warn_querystring }}{{ prop.warn_fragment }}">
                                     {% for props in prop.warnings_props %}
                                         {% if props.small %}
                                         <small style="color: {{ props.color }}">{{ props.symbol }}</small>
@@ -216,6 +213,12 @@
 {% else %}
     <p>No screenings available for this festival day.</p>
 {% endif %}
+</div>
+
+<div class="floating-box-left no-select">
+    <small>
+    {% include "../includes/date_picker.html" with day=day choices=day_choices name="day" %}
+    </small>
 </div>
 
 {% include "../includes/warning_box.html" with stats=stats %}

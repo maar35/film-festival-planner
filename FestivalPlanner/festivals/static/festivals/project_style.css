@@ -19,6 +19,7 @@
     --inputDisabledBackground: red;
     --inputDisabledText: grey;
     --errorBackground: red;
+    --navBackground: rgb(219 207 176 / 0.6);
     --warningBackground: var(--warningColor);
     --infoHoverBackground: var(--infoColor);
     --warningHoverBackground: rgb(255 79 0);
@@ -109,11 +110,11 @@ td.with-submit-center {
     padding: 0 8px;
     text-align: center
 }
-thead.sticky, tr.sticky, th.sticky {
+thead.sticky, tr.sticky, th.sticky, .sticky-top {
     position: sticky;
     top: 14pt;
-    z-index: 3;
     background-color: var(--stickyBackground);
+    z-index: 3;
 }
 
 /* Customize the select widget. */
@@ -262,14 +263,21 @@ input.smaller {
 .day-nav-element {
     margin: 0.5rem;
 }
-.day-schema-border {
+.day-schema-border, .day-schema-header-row, .day-schema-screen-header {
     border: var(--screeningBorderWidth) solid var(--screeningBorderColor);
+}
+.day-schema-header-row, .day-schema-screen-header {
+    vertical-align: text-top;
+}
+.day-schema-header-row {
+    position: relative;
 }
 .day-schema-row {
     background-color: var(--screeningBackground);
     position: relative;
 }
-.day-schema-screening {
+.day-schema-screening,
+.day-schema-availability-period {
     padding: 0 .5rem;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -279,6 +287,9 @@ input.smaller {
     top: 0px;
     bottom: 0px;
     /* left should be defined in the template because it is variable */
+}
+.day-schema-availability-period {
+    height: 1rem;
 }
 .day-schema-screening-info,
 .day-schema-screening-warning {
@@ -299,16 +310,24 @@ input.smaller {
     top: 0;
     background-color: var(--stickyBackground);
 }
-
+.sticky-top {
+    top: -0.5rem;
+}
 .sticky-footer {
     position: sticky;
     bottom: 0;
-    background-color: var(--stickyFooterBackground);
+    background: var(--stickyFooterBackground);
 }
-.sticky-left {
+.sticky-left, .sticky-left-header, .sticky-left-row {
     position: sticky;
     left: 0;
-    background-color: var(--stickyBackground);
+    background: var(--stickyBackground);
+}
+.sticky-left-header, .sticky-left-row {
+    border: var(--screeningBorderWidth) solid var(--screeningBorderColor);
+}
+.sticky-left-header {
+    z-index: 3;
 }
 .sticky-modest-drop-t-head {
     position: sticky;
@@ -604,17 +623,35 @@ span.up {
 
 /* Classes for floating elements */
 
-.floating-warning-box {
+.floating-box-left, .floating-warning-box {
     position: fixed;
-    right: 1rem;
     top: 1.2rem;
+    border-radius: 1rem;
     z-index: 4;
+}
+.floating-box-left {
+    left: 1rem;
+    padding: .2rem 1rem;
+    background: var(--navBackground);
+}
+.floating-warning-box {
+    right: 1rem;
     padding: .5rem;
     background: var(--warningColorYellow);
-    border-radius: 1rem;
+}
+.floating-box-left:hover {
+    background: var(--warningColorYellow);
 }
 .floating-warning-box:hover {
     background: var(--warningColor);
+}
+
+/* Deviating link colors */
+.link-black {
+    color: black;
+}
+.link-bold {
+    font-weight: bold;
 }
 
 /* Descendant combinators for different input states */
