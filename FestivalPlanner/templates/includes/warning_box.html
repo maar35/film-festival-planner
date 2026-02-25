@@ -1,8 +1,8 @@
 {% if stats.count %}
-<div class="floating-warning-box no-select">
-    <a style="color: black;" href="{% url 'screenings:warnings' %}"> {{ stats.count }} warnings</a>
+<div class="fixed-warning-box no-select">
+    <a class="link-black" href="{% url 'screenings:warnings' %}"> {{ stats.count }} warnings</a>
     <br>
-    <small style="color: black">
+    <small class="link-black">
     {% for symbol in stats.symbols %}
         {{ symbol.count }}
         <span style="color: {{ stats.color }};">{{ symbol.symbol }}</span>
