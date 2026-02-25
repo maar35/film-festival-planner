@@ -123,7 +123,7 @@
 {% if screen_rows or availability_props %}
     <table class="day-schema-border">
         <thead>
-        <tr class="sticky-top">
+        <tr class="sticky-top-no-margin">
             <th class="day-schema-border sticky-left-header">
                 Screen
             </th>
@@ -215,7 +215,7 @@
 {% endif %}
 </div>
 
-<div class="floating-box-left no-select">
+<div class="fixed-nav-box no-select">
     <small>
     {% include "../includes/date_picker.html" with day=day choices=day_choices name="day" %}
     </small>

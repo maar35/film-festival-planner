@@ -89,7 +89,7 @@ th,
 td {
     padding: 10px;
     border-collapse: collapse;
-    background-color: var(--tableBackground);
+    background: var(--tableBackground);
     vertical-align: text-top;
 }
 th.active {
@@ -110,17 +110,20 @@ td.with-submit-center {
     padding: 0 8px;
     text-align: center
 }
-thead.sticky, tr.sticky, th.sticky, .sticky-top {
+thead.sticky, tr.sticky, th.sticky, tr.sticky-top-no-margin {
     position: sticky;
     top: 14pt;
-    background-color: var(--stickyBackground);
+    background: var(--stickyBackground);
     z-index: 3;
+}
+tr.sticky-top-no-margin {
+    top: -0.5rem;
 }
 
 /* Customize the select widget. */
 select {
     font-size: large;
-    background-color: var(--inputBackground);
+    background: var(--inputBackground);
     color: var(--modestStandoutColor);
     padding: 14px 20px;
     margin: 8px 0 !important;
@@ -129,10 +132,10 @@ select {
     cursor: pointer;
 }
 select:hover {
-    background-color: var(--hoverBackground);
+    background: var(--hoverBackground);
 }
 select:focus {
-    background-color: var(--focusBackgrond);
+    background: var(--focusBackgrond);
 }
 
 /* Completely customize the submit widget, among other things make it
@@ -154,7 +157,7 @@ larger and to create harmony with the submit widget. */
 input[type=password],
 input[type=text] {
     font-size: large;
-    background-color: var(--inputBackground);
+    background: var(--inputBackground);
     color: var(--modestStandoutColor);
     padding: 7px 20px;
     border: none;
@@ -178,7 +181,7 @@ input[type=submit].in-table:hover {
 
 input[type=password]:focus,
 input[type=text]:focus {
-    background-color: var(--focusBackgrond);
+    background: var(--focusBackgrond);
 }
 
 input.warning {
@@ -252,7 +255,7 @@ input.smaller {
 /* Form styles */
 .label-8rem {
     display: inline-block;
-    min-width: 8rem;"
+    min-width: 8rem;
 }
 
 /* Styles for the screening day schema */
@@ -273,7 +276,7 @@ input.smaller {
     position: relative;
 }
 .day-schema-row {
-    background-color: var(--screeningBackground);
+    background: var(--screeningBackground);
     position: relative;
 }
 .day-schema-screening,
@@ -282,7 +285,7 @@ input.smaller {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    background-color: var(--screeningBackground);
+    background: var(--screeningBackground);
     position: absolute;
     top: 0px;
     bottom: 0px;
@@ -298,20 +301,17 @@ input.smaller {
     border-radius: 1rem;
 }
 .day-schema-screening-info:hover {
-    background-color: var(--infoHoverBackground) !important;
+    background: var(--infoHoverBackground) !important;
 }
 .day-schema-screening-warning:hover {
-    background-color: var(--warningHoverBackground);
+    background: var(--warningHoverBackground);
 }
 
 /* Sticky styles */
 .sticky-index {
     position: sticky;
     top: 0;
-    background-color: var(--stickyBackground);
-}
-.sticky-top {
-    top: -0.5rem;
+    background: var(--stickyBackground);
 }
 .sticky-footer {
     position: sticky;
@@ -332,7 +332,7 @@ input.smaller {
 .sticky-modest-drop-t-head {
     position: sticky;
     top: 14pt;
-    background-color: var(--stickyBackground);
+    background: var(--stickyBackground);
     display: table-cell;
     text-align: left;
     margin: auto;
@@ -340,13 +340,13 @@ input.smaller {
     height: auto;
 }
 .sticky-modest-drop-t-head:hover {
-    background-color: var(--hoverBackground);
+    background: var(--hoverBackground);
 }
 .sticky-modest-drop-t-head-content {
     display: none;
     position: absolute;
     cursor: default;
-    background-color: black;
+    background: black;
     box-shadow: var(--modestBoxShadow);
     min-width: 200px;
     padding: 6px 8px;
@@ -617,32 +617,31 @@ span.up {
     text-align: left;
 }
 .link-in-dropdown:hover {
-    background-color: var(--hoverBackground)
+    background: var(--hoverBackground)
 }
 
 
-/* Classes for floating elements */
-
-.floating-box-left, .floating-warning-box {
+/* Classes for fixed elements */
+.fixed-nav-box, .fixed-warning-box {
     position: fixed;
     top: 1.2rem;
     border-radius: 1rem;
     z-index: 4;
 }
-.floating-box-left {
+.fixed-nav-box {
     left: 1rem;
     padding: .2rem 1rem;
     background: var(--navBackground);
 }
-.floating-warning-box {
+.fixed-warning-box {
     right: 1rem;
     padding: .5rem;
     background: var(--warningColorYellow);
 }
-.floating-box-left:hover {
+.fixed-nav-box:hover {
     background: var(--warningColorYellow);
 }
-.floating-warning-box:hover {
+.fixed-warning-box:hover {
     background: var(--warningColor);
 }
 
