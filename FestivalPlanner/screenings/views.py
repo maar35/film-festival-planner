@@ -670,6 +670,14 @@ class ScreeningCalendarListView(LoginRequiredMixin, ListView):
     template_name = ScreeningCalendarView.template_name
     http_method_names = ['get']
     context_object_name = 'attended_screening_rows'
+    status_getter = None
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        session = self.request.session
+        festival = current_festival(session)
+        festival_screenings = Screening.screenings.filter(film__festival=festival)
+        self.status_getter = ScreeningStatusGetter(session, festival_screenings)
 
     def get_queryset(self):
         manager = Attendance.attendances
@@ -694,14 +702,22 @@ class ScreeningCalendarListView(LoginRequiredMixin, ListView):
         unset_log(session)
         return add_base_context(self.request, super_context | new_context)
 
-    @staticmethod
-    def _get_attendance_row(attendance):
+    def _get_attendance_row(self, attendance):
         screening = attendance.screening
+        status, pair = self._screening_color_pair(screening, screening.attending_fans())
         attendance_row = {
             'screening': screening,
             'attendants': screening.attendants_str(),
+            'status_label': status.label,
+            'color_pair': pair,
+            'ratings': screening.film.fans_rating_string(),
+            'filmscreening_count': screening.filmscreening_count(),
         }
         return attendance_row
+
+    def _screening_color_pair(self, screening, attendants):
+        status = self.status_getter.get_screening_status(screening, attendants)
+        return status, Screening.color_pair_by_screening_status[status]
 
 
 class ScreeningCalendarFormView(LoginRequiredMixin, FormView):

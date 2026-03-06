@@ -961,8 +961,10 @@ class ScreenDumper(BaseDumper):
 
 
 class CalendarDumper(BaseDumper):
+    FOR_AGENDA = True
+    TAIL_BY_AGENDA = {True: ['url', 'notes'], False: ['attendants', 'status', 'ratings', 'filmscreening_count']}
     manager = None
-    header = ['title', 'location', 'start_time', 'end_time', 'url', 'notes']
+    header = ['title', 'location', 'start_time', 'end_time'] + TAIL_BY_AGENDA[FOR_AGENDA]
 
     def __init__(self, session):
         super().__init__(session, 'calendar', self.manager, header=self.header)
@@ -975,9 +977,15 @@ class CalendarDumper(BaseDumper):
             screening.screen.theater.parse_name,
             screening.start_dt.strftime(dt_fmt),
             screening.end_dt.strftime(dt_fmt),
+        ] + ([
             screening.film.url,
             self._get_notes(obj),
-        ]
+        ] if self.FOR_AGENDA else [
+            obj['attendants'],
+            obj['status_label'],
+            obj['ratings'],
+            obj['filmscreening_count'],
+        ])
 
     @staticmethod
     def _get_notes(obj):

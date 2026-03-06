@@ -34,6 +34,9 @@
                 <th>Screen</th>
                 <th>Film title</th>
                 <th>Attendants</th>
+                <th>Status</th>
+                <th>Ratings</th>
+                <th>#Screenings</th>
             </tr>
         </thead>
         <tbody>
@@ -48,8 +51,13 @@
                     <td>{{ screening.start_dt | date:"H:i" }}</td>
                     <td>{{ screening.end_dt | date:"H:i" }}</td>
                     <td>{{ screening.screen.parse_name }}</td>
-                    <td>{{ screening.film.title }}</td>
+                    <td><a href="{% url 'films:details' screening.film.pk %}">{{ screening.film.title }}</a></td>
                     <td>{{ screening.attendants_str }}</td>
+                    <td style="background: {{ row.color_pair.background }}; color: {{ row.color_pair.color }};">
+                        {{ row.status_label }}
+                    </td>
+                    <td>{{ row.ratings }}</td>
+                    <td>{{ row.filmscreening_count }}</td>
                 {% endwith %}
             </tr>
         {% endfor %}
