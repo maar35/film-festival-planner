@@ -563,6 +563,8 @@ class FestivalData:
     def create_film(self, title, url, duration=None, medium_category=None):
         film_id = self.new_film_id(self.film_key(title, url))
         if film_id not in [f.film_id for f in self.films]:
+            if not title:
+                raise ValueError(film_id)
             self.film_seqnr += 1
             self.title_by_film_id[film_id] = title
             self.film_id_by_url[url] = film_id
