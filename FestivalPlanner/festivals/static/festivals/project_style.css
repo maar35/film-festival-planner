@@ -294,11 +294,18 @@ input.smaller {
 .day-schema-availability-period {
     height: 1rem;
 }
+.sold_out,
 .day-schema-screening-info,
 .day-schema-screening-warning {
     margin-right: .1rem;
     padding: 0 .1rem 0 .5rem;
     border-radius: 1rem;
+}
+.sold_out {
+    background: rgb(176 79 38);
+    color: var(--warningColorYellow);
+    font-weight: bold;
+    padding-right: .5rem;
 }
 .day-schema-screening-info:hover {
     background: var(--infoHoverBackground) !important;

@@ -684,13 +684,11 @@ class ScreeningLoader(SimpleLoader):
         screen_id = int(row[1])
         start_dt = datetime.datetime.fromisoformat(row[2]).replace(tzinfo=None)
         end_dt = datetime.datetime.fromisoformat(row[3]).replace(tzinfo=None)
-        _ = row[4]      # Combination program.
+        _ = row[4]      # Combination program ID.
         subtitles = row[5] or None
         q_and_a = True if row[6] else False
         extra = row[7]
-        # TODO: Support screened films instead of combination program (#457).
-        if len(self.expected_header) == 7:
-            _ = row[8]  # sold_out
+        sold_out = True if row[8] else False
 
         film = self.get_foreign_key(Film, Film.films, **{'festival': self.festival, 'film_id': film_id})
         screen = self.get_foreign_key(Screen, Screen.screens, **{'screen_id': screen_id})
@@ -720,6 +718,7 @@ class ScreeningLoader(SimpleLoader):
             'subtitles': subtitles,
             'q_and_a': q_and_a,
             'auto_planned': auto_planned,
+            'sold_out': sold_out,
         }
         yield value_by_field
 

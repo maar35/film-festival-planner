@@ -177,6 +177,9 @@
                             </span>
                         </span>
                         {% endif %}
+                        {% if prop.screening.sold_out %}
+                            <span class="sold_out">Sold out</span>
+                        {% endif %}
                         <a style="color: {{ prop.pair.color }};" href="{% url 'screenings:details' prop.screening.id %}">
                             {{ prop.line_1 }}
                         </a>
