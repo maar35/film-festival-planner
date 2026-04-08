@@ -1,5 +1,5 @@
 import unittest
-from unittest import TestCase, skip
+from unittest import TestCase
 
 from MTMF.parse_mtmf_html import FilmPageParser, MtmfData, FilmUrlFinder, COUNTER, setup_counters
 from Tests.AuxiliaryClasses.test_film import BaseFilmTestCase

@@ -34,9 +34,8 @@ DEBUG_RECORDER = DebugRecorder(FILE_KEEPER.debug_file, active=DEBUGGING)
 COUNTER = Counter()
 
 # Experiment.
-TRY_PER_DAY = False
-PER_DAY_2026_03_21 = 'https://moviesthatmatter.nl/festival/programma/?tab=Programma%20per%20dag&datum=za%2021%20maart'
-TROUW_PATH = 'https://moviesthatmatter.nl/festival/specials/trouw/'
+TRY_EXPERIMENT = False
+EXPERIMENT_TROUW_PATH = 'https://moviesthatmatter.nl/festival/specials/trouw/'
 
 
 def main():
@@ -82,9 +81,9 @@ def parse_mtmf_sites(festival_data):
     :param festival_data: planner_interface.festival_data object
     :return: None
     """
-    # Try program per day.
-    if TRY_PER_DAY:
-        get_per_day_films()
+    if TRY_EXPERIMENT:
+        # Facilitate experiments.
+        experiment_get_trouw_films()
     else:
         # Set up a film url finder.
         url_finder = FilmUrlFinder(festival_data)
@@ -106,15 +105,16 @@ def parse_mtmf_sites(festival_data):
         ScreeningsPageParser.recover_sold_out_screens(festival_data)
 
 
-def get_per_day_films():
-    for id_, day_url in enumerate([TROUW_PATH]):
+def experiment_get_trouw_films():
+    """Room for experiment."""
+    for id_, url in enumerate([EXPERIMENT_TROUW_PATH]):
         prefix = 'trouw'
         day_file = FILE_KEEPER.numbered_webdata_file(prefix, id_)
-        url_file = UrlFile(day_url, day_file, ERROR_COLLECTOR, DEBUG_RECORDER, byte_count=200)
-        comment_at_download = f'Downloading {prefix} page: {day_url}, encoding: {url_file.encoding}'
+        url_file = UrlFile(url, day_file, ERROR_COLLECTOR, DEBUG_RECORDER, byte_count=200)
+        comment_at_download = f'Downloading {prefix} page: {url}, encoding: {url_file.encoding}'
         day_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=comment_at_download)
         if day_html:
-            comment(f'Analysing day page #{id_}, encoding={url_file.encoding}')
+            comment(f'Analysing experiment page #{id_}, encoding={url_file.encoding}')
 
 
 def get_films_by_url(festival_data, charset_by_film_url):
@@ -165,6 +165,13 @@ def get_film_from_url(festival_data, url, encoding):
             f.write(html_bytes)
 
 
+def append_to_dict_value(dict_, key, new_element):
+    try:
+        dict_[key].append(new_element)
+    except KeyError:
+        dict_[key] = [new_element]
+
+
 class FilmUrlFinder:
     re_segment_str = r'/[^/#"]*/'
     re_films = re.compile('href="(https://moviesthatmatter.nl/festival/film/[^/]*/)"')
@@ -213,7 +220,7 @@ class FilmUrlFinder:
         if section_html is not None:
             subsection_urls = self.re_by_section[section_name].findall(section_html)
             comment(f'{len(subsection_urls)} "{section_name}" subsection urls found.')
-            print(f'{"\n".join(subsection_urls)}')
+            print(f'{'\n'.join(subsection_urls)}')
             for i, subsection_url in enumerate(subsection_urls):
                 COUNTER.increase(self.main_sections[section_name]['plural'])
                 subsection = self.get_subsection(section, subsection_url)
@@ -376,9 +383,8 @@ class FilmPageParser(HtmlPageParser):
                 stack.change(state.IDLE)
             case state.IN_PARAGRAPH | state.IN_EMPHASIS:
                 self.article_paragraph += data.replace('\n', ' ')
-            case state.NEAR_COMBINATION:
-                if data.strip() == 'Onderdeel van dit programma':
-                    stack.change(state.IN_COMBINATION)
+            case state.NEAR_COMBINATION if data.strip() == 'Onderdeel van dit programma':
+                stack.change(state.IN_COMBINATION)
             case state.IN_LABEL:
                 self.label = data
                 stack.change(state.AWAITING_VALUE)
@@ -401,11 +407,7 @@ class FilmPageParser(HtmlPageParser):
         return datetime.timedelta(minutes=minutes)
 
     def get_subsection(self):
-        if self.applying_combination:
-            subsection = None
-        else:
-            subsection = FilmUrlFinder.subsection_by_film_url[self.url]
-        return subsection
+        return None if self.applying_combination else FilmUrlFinder.subsection_by_film_url[self.url]
 
     def get_medium_category(self):
         url_part_index = 4
@@ -450,9 +452,8 @@ class FilmPageParser(HtmlPageParser):
     def set_global_film_properties(self):
         # Store the combinations urls for the current film.
         combinations_count = len(self.combination_urls)
-        if combinations_count:
-            if ONLY_PARSE_SCREENED_FILMS:
-                self.combination_urls_by_film_id[self.film.film_id] = self.combination_urls
+        if combinations_count and ONLY_PARSE_SCREENED_FILMS:
+            self.combination_urls_by_film_id[self.film.film_id] = self.combination_urls
 
         # Set the subtitles for use in the Screenings parser.
         try:
@@ -503,10 +504,7 @@ class FilmPageParser(HtmlPageParser):
                         break
 
                 # Add combination program to the list.
-                try:
-                    screened_films_by_combination[combination_film].append(film)
-                except KeyError:
-                    screened_films_by_combination[combination_film] = [film]
+                append_to_dict_value(screened_films_by_combination, combination_film, film)
 
         # Link the combination programs to their screened films.
         for combi_film, screened_films in screened_films_by_combination.items():
@@ -541,6 +539,7 @@ class ScreeningsPageParser(HtmlPageParser):
         'in_past': True,
     }
     restore_props_by_film = {}
+    screen_id_by_film_start_dt = {}
 
     def __init__(self, festival_data, film, subtitles):
         super().__init__(festival_data, DEBUG_RECORDER, 'S')
@@ -735,10 +734,7 @@ class ScreeningsPageParser(HtmlPageParser):
                 'sold_out': self.sold_out,
                 'in_past': self.in_past,
             }
-            try:
-                self.restore_props_by_film[self.film].append(props)
-            except KeyError:
-                self.restore_props_by_film[self.film] = [props]
+            append_to_dict_value(self.restore_props_by_film, self.film, props)
         else:
             screen_name = self.screen_name if self.screen_name else theater
             if screen_name:
@@ -769,7 +765,10 @@ class ScreeningsPageParser(HtmlPageParser):
             else:
                 props_list_by_film[film] = props_list
 
-        # recover the screens.
+        # Get screening data from saved file.
+        cls.get_screens_from_file(festival_data, props_list_by_film)
+
+        # Recover the screens.
         for film, props_list in props_list_by_film.items():
             for props in props_list:
                 cls.recover_sold_out_screen(festival_data, film, props)
@@ -835,24 +834,37 @@ class ScreeningsPageParser(HtmlPageParser):
         return screen
 
     @classmethod
-    def get_screen_from_file(cls, festival_data, film, start_dt):
+    def get_screens_from_file(cls, festival_data, props_list_by_film):
+        """Build a dictionary from saved screenings to recovers screens."""
+        screenings_filename = os.path.basename(festival_data.screenings_file)
+        screenings_path = os.path.join(FILE_KEEPER.interface_dir, screenings_filename)
         film_id_csv_field = 0
         screen_id_csv_field = 1
         start_time_csv_field = 2
-        screenings_filename = os.path.basename(festival_data.screenings_file)
-        screenings_path = os.path.join(FILE_KEEPER.interface_dir, screenings_filename)
-        screen_id = None
+
+        # Fill the search keys from the screenings properties by film dict.
+        cls.screen_id_by_film_start_dt = {}
+        for film, props_list in props_list_by_film.items():
+            for props in props_list:
+                key = (film.film_id, props['start_dt'].isoformat(sep=' '))
+                cls.screen_id_by_film_start_dt[key] = None
+
+        # Read the saved screenings as to fill the values for the found keys.
         with open(screenings_path, newline='') as csvfile:
             screenings_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
             next(screenings_reader)     # Skip header.
             for row in screenings_reader:
                 film_id = int(row[film_id_csv_field])
                 start_date_str = row[start_time_csv_field]
-                if film_id == film.film_id and start_date_str == start_dt.isoformat(sep=' '):
+                if (film_id, start_date_str) in cls.screen_id_by_film_start_dt.keys():
                     screen_id = int(row[screen_id_csv_field])
-                    COUNTER.increase('screen reconstructed')
-                    break
+                    cls.screen_id_by_film_start_dt[(film_id, start_date_str)] = screen_id
+
+    @classmethod
+    def get_screen_from_file(cls, festival_data, film, start_dt):
+        screen_id = cls.screen_id_by_film_start_dt[(film.film_id, start_dt.isoformat(sep=' '))]
         screen = festival_data.get_screen_by_id(screen_id)
+        COUNTER.increase('screen reconstructed')
         return screen
 
     def read_screen_if_needed(self, url):
