@@ -9,7 +9,7 @@ from typing import Dict
 
 from Shared.application_tools import ErrorCollector, DebugRecorder, Counter, comment
 from Shared.parse_tools import HtmlPageParser, FileKeeper, try_parse_festival_sites
-from Shared.planner_interface import FilmInfo, ScreenedFilm, FestivalData
+from Shared.planner_interface import FilmInfo, FestivalData, link_screened_film, Screening
 from Shared.web_tools import UrlFile, UrlReader, iri_slug_to_url, get_netloc
 
 ALWAYS_DOWNLOAD = False
@@ -18,11 +18,8 @@ DISPLAY_ADDED_SCREENING = True
 ONLY_PARSE_SCREENED_FILMS = True
 
 FESTIVAL = 'MTMF'
-FESTIVAL_YEAR = 2025
+FESTIVAL_YEAR = 2026
 FESTIVAL_CITY = 'Den Haag'
-
-SHORT_COMBOS = 'Short combinations'
-SHORTS = 'Shorts'
 
 # Files.
 FILE_KEEPER = FileKeeper(FESTIVAL, FESTIVAL_YEAR)
@@ -35,6 +32,10 @@ MTMF_TICKETS_HOSTNAME = 'https://tickets.moviesthatmatter.nl'
 ERROR_COLLECTOR = ErrorCollector()
 DEBUG_RECORDER = DebugRecorder(FILE_KEEPER.debug_file, active=DEBUGGING)
 COUNTER = Counter()
+
+# Experiment.
+TRY_EXPERIMENT = False
+EXPERIMENT_TROUW_PATH = 'https://moviesthatmatter.nl/festival/specials/trouw/'
 
 
 def main():
@@ -54,42 +55,66 @@ def setup_counters():
     COUNTER.start('specials')
     COUNTER.start('films')
     COUNTER.start('duplicates')
+    COUNTER.start('metadata')
     COUNTER.start('screenings')
     COUNTER.start('not in dh')
+    COUNTER.start('in past')
     COUNTER.start('sold out')
+    COUNTER.start('no end time')
+    COUNTER.start('end time not reconstructed')
+    COUNTER.start('combi screening props fixed')
+    COUNTER.start('screen reconstructed')
     COUNTER.start('screen not recovered')
     COUNTER.start('no theater')
-    COUNTER.start('combination films')
-    COUNTER.start('combinations parsed')
-    COUNTER.start('combinations')
     COUNTER.start('screened films')
-    COUNTER.start('screen not found')
-    COUNTER.start('screen fixed')
+    COUNTER.start('combi url linked to film')
+    COUNTER.start('combination films')
+    COUNTER.start('no screened film')
     COUNTER.start('url fixed')
     COUNTER.start('EN url fixed')
-    COUNTER.start('metadata')
+    COUNTER.start('end time not reconstructed')
 
 
 def parse_mtmf_sites(festival_data):
     """
     Callback method to pass to try_parse_festival_sites().
-    :param festival_data: planner_interface.festival_data object.
+    :param festival_data: planner_interface.festival_data object
     :return: None
     """
-    # Set up a film url finder.
-    url_finder = FilmUrlFinder(festival_data)
+    if TRY_EXPERIMENT:
+        # Facilitate experiments.
+        experiment_get_trouw_films()
+    else:
+        # Set up a film url finder.
+        url_finder = FilmUrlFinder(festival_data)
 
-    # Read film urls from the section sites.
-    comment(f"Find film URL's from the festival section sites")
-    url_finder.read_sections()
+        # Read film urls from the section sites.
+        comment(f"Find film URL's from the festival section sites")
+        url_finder.read_sections()
 
-    # Get the films.
-    comment('Get films by URL.')
-    get_films_by_url(festival_data, url_finder.charset_by_film_url)
+        # Get the films.
+        comment('Get films by URL')
+        get_films_by_url(festival_data, url_finder.charset_by_film_url)
 
-    # Link combination programs and screened films.
-    comment('Apply combination data')
-    FilmPageParser.apply_combinations(festival_data)
+        # Link combination programs and screened films.
+        comment('Apply combination data')
+        FilmPageParser.apply_combinations(festival_data)
+
+        # Recover screens of sold-out screenings.
+        comment('Recover sold-out screenings')
+        ScreeningsPageParser.recover_sold_out_screens(festival_data)
+
+
+def experiment_get_trouw_films():
+    """Room for experiment."""
+    for id_, url in enumerate([EXPERIMENT_TROUW_PATH]):
+        prefix = 'trouw'
+        day_file = FILE_KEEPER.numbered_webdata_file(prefix, id_)
+        url_file = UrlFile(url, day_file, ERROR_COLLECTOR, DEBUG_RECORDER, byte_count=200)
+        comment_at_download = f'Downloading {prefix} page: {url}, encoding: {url_file.encoding}'
+        day_html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=comment_at_download)
+        if day_html:
+            comment(f'Analysing experiment page #{id_}, encoding={url_file.encoding}')
 
 
 def get_films_by_url(festival_data, charset_by_film_url):
@@ -140,6 +165,13 @@ def get_film_from_url(festival_data, url, encoding):
             f.write(html_bytes)
 
 
+def append_to_dict_value(dict_, key, new_element):
+    try:
+        dict_[key].append(new_element)
+    except KeyError:
+        dict_[key] = [new_element]
+
+
 class FilmUrlFinder:
     re_segment_str = r'/[^/#"]*/'
     re_films = re.compile('href="(https://moviesthatmatter.nl/festival/film/[^/]*/)"')
@@ -154,10 +186,6 @@ class FilmUrlFinder:
         'specials': 'LimeGreen',
     }
     correct_path_by_notfound_path = {
-        'there-will-be-no-end': 'there-will-be-no-other-end',
-        'flowers-standing-silently-witnessing-the': 'flowers-stand-silently-witnessing-the',
-        'in-the-traces-of-tilled-stones': 'in-the-trace-of-tilled-stones',
-        'there-is-another-way-2': 'there-is-another-way',
     }
     charset_by_film_url = {}
     subsection_by_film_url = {}
@@ -226,8 +254,6 @@ class FilmUrlFinder:
             ERROR_COLLECTOR.add(e, f'{url=}')
             subsection = None
         else:
-            if section.name == 'themas' and subsection_name == SHORTS:
-                subsection_name = SHORT_COMBOS
             subsection = self.festival_data.get_subsection(subsection_name, url, section)
         return subsection
 
@@ -265,8 +291,9 @@ class FilmPageParser(HtmlPageParser):
         IN_ARTICLE = auto()
         IN_PARAGRAPH = auto()
         IN_EMPHASIS = auto()
+        AWAITING_COMBINATION = auto()
+        NEAR_COMBINATION = auto()
         IN_COMBINATION = auto()
-        IN_SCREENED_FILMS = auto()
         IN_PROPERTIES = auto()
         IN_LABEL = auto()
         AWAITING_VALUE = auto()
@@ -275,10 +302,10 @@ class FilmPageParser(HtmlPageParser):
 
     category_by_branch = dict(film='films')
     combination_urls_by_film_id = {}
-    screened_film_urls_by_film_id = {}
+    applying_combination = False
 
     def __init__(self, festival_data, url):
-        HtmlPageParser.__init__(self, festival_data, DEBUG_RECORDER, 'F')
+        super().__init__(festival_data, DEBUG_RECORDER, 'F')
         self.url = url
         self.festival_data = festival_data
         self.print_debug(self.bar, f'Analysing film URL {url}')
@@ -286,18 +313,87 @@ class FilmPageParser(HtmlPageParser):
         self.title = None
         self.subtitles = None
         self.combination_urls = []
-        self.screened_film_urls = []
         self.film_info = None
         self.label = None
         self.state_stack = self.StateStack(self.print_debug, self.FilmsParseState.IDLE)
         self.film_property_by_label = {}
 
+    def handle_starttag(self, tag, attrs):
+        super().handle_starttag(tag, attrs)
+
+        stack = self.state_stack
+        state = self.FilmsParseState
+        match [stack.state(), tag, attrs]:
+            case [_, 'title', _]:
+                stack.change(state.IN_TITLE)
+            case [state.IDLE, 'div', a] if a and a[0][1] == 'film-detail__the-content the-content':
+                stack.push(state.IN_ARTICLE)
+            case [state.IDLE, 'section', a] if a[0][1] == 'film-detail__verzamel-parent':
+                stack.push(state.AWAITING_COMBINATION)
+            case [state.IDLE, 'dl', a] if a and a[0][1] == 'data-list data-list--details':
+                stack.change(state.IN_PROPERTIES)
+            case [state.IDLE, 'footer', _]:
+                stack.change(state.DONE)
+                self.finish_parsing()
+            case [state.IN_ARTICLE, 'p', _]:
+                stack.push(state.IN_PARAGRAPH)
+            case [state.IN_PARAGRAPH, 'em', _]:
+                stack.push(state.IN_EMPHASIS)
+            case [state.IN_PARAGRAPH, 'br', _]:
+                self.add_paragraph()
+            case [state.AWAITING_COMBINATION, 'h3', _]:
+                stack.change(state.NEAR_COMBINATION)
+            case [state.IN_COMBINATION, 'a', a] if a and a[1][0] == 'href':
+                self.add_combination_url(a[1][1])
+                stack.pop()
+            case [state.IN_PROPERTIES, 'dt', _]:
+                stack.push(state.IN_LABEL)
+            case [state.AWAITING_VALUE, 'dd', _]:
+                stack.change(state.IN_VALUE)
+
+    def handle_endtag(self, tag):
+        super().handle_endtag(tag)
+
+        stack = self.state_stack
+        state = self.FilmsParseState
+        match [stack.state(), tag]:
+            case [state.IN_PARAGRAPH, 'p']:
+                stack.pop()
+                self.add_paragraph()
+            case [state.IN_EMPHASIS, 'em']:
+                stack.pop()
+            case [state.IN_COMBINATION, 'em']:
+                stack.pop(depth=2)
+                stack.push(state.IN_COMBINATION)
+            case [state.IN_ARTICLE, 'div']:
+                stack.pop()
+                self.set_article()
+            case [state.IN_PROPERTIES, 'dl']:
+                stack.change(state.DONE)
+                self.finish_parsing()
+
+    def handle_data(self, data):
+        super().handle_data(data)
+
+        stack = self.state_stack
+        state = self.FilmsParseState
+        match stack.state():
+            case state.IN_TITLE:
+                self.title = self.set_title(data)
+                stack.change(state.IDLE)
+            case state.IN_PARAGRAPH | state.IN_EMPHASIS:
+                self.article_paragraph += data.replace('\n', ' ')
+            case state.NEAR_COMBINATION if data.strip() == 'Onderdeel van dit programma':
+                stack.change(state.IN_COMBINATION)
+            case state.IN_LABEL:
+                self.label = data
+                stack.change(state.AWAITING_VALUE)
+            case state.IN_VALUE:
+                self.film_property_by_label[self.label] = data
+                stack.pop()
+
     def add_combination_url(self, url):
         self.combination_urls.append(url)
-
-    def add_screened_film_url(self, url):
-        url = FilmUrlFinder.fix_misspelled_url(url)
-        self.screened_film_urls.append(url)
 
     def add_properties_to_article(self):
         properties_text = '\n'.join([f'{k}: {v}' for k, v in self.film_property_by_label.items()])
@@ -309,6 +405,9 @@ class FilmPageParser(HtmlPageParser):
         except KeyError:
             minutes = 0
         return datetime.timedelta(minutes=minutes)
+
+    def get_subsection(self):
+        return None if self.applying_combination else FilmUrlFinder.subsection_by_film_url[self.url]
 
     def get_medium_category(self):
         url_part_index = 4
@@ -333,7 +432,7 @@ class FilmPageParser(HtmlPageParser):
         else:
             self.film.medium_category = self.get_medium_category()
             self.film.duration = self.get_duration()
-            self.film.subsection = FilmUrlFinder.subsection_by_film_url[self.url]
+            self.film.subsection = self.get_subsection()
             print(f'Adding FILM: {self.title} ({self.film.duration_str()}) {self.film.medium_category}')
             self.festival_data.films.append(self.film)
             self.add_film_info()
@@ -353,22 +452,8 @@ class FilmPageParser(HtmlPageParser):
     def set_global_film_properties(self):
         # Store the combinations urls for the current film.
         combinations_count = len(self.combination_urls)
-        if combinations_count > 0:
-            if ONLY_PARSE_SCREENED_FILMS:
-                self.combination_urls_by_film_id[self.film.film_id] = self.combination_urls
-            COUNTER.increase('combination films', increment=combinations_count)
-
-        # Link the screened film urls to the current film.
-        screened_films_count = len(self.screened_film_urls)
-        if screened_films_count:
-            self.screened_film_urls_by_film_id[self.film.film_id] = self.screened_film_urls
-            for url in self.screened_film_urls:
-                subsection_name = SHORTS if self.film.subsection.name == SHORT_COMBOS else self.film.subsection.name
-                subsection = self.festival_data.subsection_by_name[subsection_name]
-                FilmUrlFinder.subsection_by_film_url[url] = subsection
-                get_film_by_url(self.festival_data, url, 'utf-8')
-            COUNTER.increase('combinations')
-            COUNTER.increase('screened films', increment=screened_films_count)
+        if combinations_count and ONLY_PARSE_SCREENED_FILMS:
+            self.combination_urls_by_film_id[self.film.film_id] = self.combination_urls
 
         # Set the subtitles for use in the Screenings parser.
         try:
@@ -382,151 +467,51 @@ class FilmPageParser(HtmlPageParser):
         self.add_properties_to_article()
         self.add_film()
 
-    def handle_starttag(self, tag, attrs):
-        HtmlPageParser.handle_starttag(self, tag, attrs)
+    @classmethod
+    def apply_combinations(cls, festival_data):
+        cls.applying_combination = True
+        screened_films_by_combination = {}
 
-        stack = self.state_stack
-        state = self.FilmsParseState
-        match [stack.state(), tag, attrs]:
-            case [_, 'title', _]:
-                stack.change(state.IN_TITLE)
-            case [state.IDLE, 'div', a] if a and a[0][1] == 'film-detail__the-content the-content':
-                stack.push(state.IN_ARTICLE)
-            case [state.IDLE, 'dl', a] if a and a[0][1] == 'data-list data-list--details':
-                stack.change(state.IN_PROPERTIES)
-            case [state.IDLE, 'footer', _]:
-                stack.change(state.DONE)
-                self.finish_parsing()
-            case [state.IN_ARTICLE, 'p', _]:
-                stack.push(state.IN_PARAGRAPH)
-            case [state.IN_PARAGRAPH, 'em', _]:
-                stack.push(state.IN_EMPHASIS)
-            case [state.IN_PARAGRAPH, 'br', _]:
-                self.add_paragraph()
-            case [state.IN_COMBINATION, 'a', a] if a and a[0][0] == 'href':
-                self.add_combination_url(a[0][1])
-                stack.pop()
-            case [state.IN_ARTICLE, 'ul', _]:
-                stack.push(state.IN_SCREENED_FILMS)
-            case [state.IN_SCREENED_FILMS, 'a', a] if a and a[0][0] == 'href':
-                self.add_screened_film_url(a[0][1])
-            case [state.IN_PROPERTIES, 'dt', _]:
-                stack.push(state.IN_LABEL)
-            case [state.AWAITING_VALUE, 'dd', _]:
-                stack.change(state.IN_VALUE)
-
-    def handle_endtag(self, tag):
-        HtmlPageParser.handle_endtag(self, tag)
-
-        stack = self.state_stack
-        state = self.FilmsParseState
-        match [stack.state(), tag]:
-            case [state.IN_PARAGRAPH, 'p']:
-                stack.pop()
-                self.add_paragraph()
-            case [state.IN_EMPHASIS, 'em']:
-                stack.pop()
-            case [state.IN_COMBINATION, 'em']:
-                stack.pop(depth=2)
-                stack.push(state.IN_COMBINATION)
-            case [state.IN_SCREENED_FILMS, 'ul']:
-                stack.pop()
-            case [state.IN_ARTICLE, 'div']:
-                stack.pop()
-                self.set_article()
-            case [state.IN_PROPERTIES, 'dl']:
-                stack.change(state.DONE)
-                self.finish_parsing()
-
-    def handle_data(self, data):
-        HtmlPageParser.handle_data(self, data)
-
-        stack = self.state_stack
-        state = self.FilmsParseState
-        match stack.state():
-            case state.IN_TITLE:
-                self.title = self.set_title(data)
-                stack.change(state.IDLE)
-            case state.IN_PARAGRAPH | state.IN_EMPHASIS:
-                self.article_paragraph += data.replace('\n', ' ')
-                if data.strip() == 'Deze korte film maakt deel uit van het programma':
-                    stack.push(state.IN_COMBINATION)
-            case state.IN_LABEL:
-                self.label = data
-                stack.change(state.AWAITING_VALUE)
-            case state.IN_VALUE:
-                self.film_property_by_label[self.label] = data
-                stack.pop()
-
-    @staticmethod
-    def apply_combinations(festival_data):
         # Link the screened films to their combination programs.
-        for (film_id, combination_urls) in FilmPageParser.combination_urls_by_film_id.items():
+        for (film_id, combination_urls) in cls.combination_urls_by_film_id.items():
             # Find the combination programs of the current film.
             film = festival_data.get_film_by_id(film_id)
-            screened_film_info = film.film_info(festival_data)
-            combination_films = []
+            if film:
+                COUNTER.increase('screened films')
+            else:
+                COUNTER.increase('no screened film')
+                continue
             for combination_url in combination_urls:
+                combination_film = None
                 try:
                     combination_film = festival_data.get_film_by_key(None, combination_url)
-                except KeyError as e:
-                    ERROR_COLLECTOR.add(f'Key error {e} for screened {film}', 'Unknown combination URL')
-                else:
-                    # Add combination program to the list.
-                    combination_films.append(combination_film)
+                except (KeyError, ValueError) as e:
+                    if combination_film:
+                        raise e
+                finally:
+                    if not combination_film:
+                        # Read film that has not been read yet.
+                        get_film_by_url(festival_data, combination_url, 'UTF-8')  # TODO: derive charset.
+                        combination_film = festival_data.get_film_by_key('', combination_url)
+                    if not combination_film:
+                        ERROR_COLLECTOR.add(f'Combination film not found', f'screened {film}')
+                        break
 
-                    # Add the current screened film to the combination.
-                    screened_film = ScreenedFilm(film.film_id, film.title, screened_film_info.description)
-                    combination_film_info = combination_film.film_info(festival_data)
-                    combination_film_info.screened_films.append(screened_film)
+                    if combination_film.title:
+                        COUNTER.increase('combi url linked to film')
+                    else:
+                        ERROR_COLLECTOR.add('combi film no title', f'{combination_url}')
+                        break
 
-            # Set the combination programs of the screened film.
-            unique_combinations = set(screened_film_info.combination_films) and set(combination_films)
-            screened_film_info.combination_films = list(unique_combinations)
+                # Add combination program to the list.
+                append_to_dict_value(screened_films_by_combination, combination_film, film)
 
         # Link the combination programs to their screened films.
-        for (film_id, screened_film_urls) in FilmPageParser.screened_film_urls_by_film_id.items():
-            combination_film = festival_data.get_film_by_id(film_id)
-
-            # Find screenings with theater instead of screen.
-            combination_film_screenings_no_screen = []
-            for s in combination_film.screenings(festival_data):
-                if s.screen.name == s.screen.theater.name:
-                    combination_film_screenings_no_screen.append(s)
-                    COUNTER.increase('screen not found')
-
-            # Find the screened films of the current combination.
-            screened_films = []
-            for screened_film_url in screened_film_urls:
-                try:
-                    film = festival_data.get_film_by_key(None, screened_film_url)
-                except KeyError as e:
-                    ERROR_COLLECTOR.add(f'Key error {e} for {combination_film}', 'Unknown screened film URL')
-                except ValueError as e:
-                    ERROR_COLLECTOR.add(f'Value error {e}', f'Combination film {combination_film}')
-                else:
-                    # Add screened film to the list.
-                    film_info = film.film_info(festival_data)
-                    screened_film = ScreenedFilm(film.film_id, film.title, film_info.description)
-                    screened_films.append(screened_film)
-
-                    # Add the current combination to screened film.
-                    film_info.combination_films.append(combination_film)
-
-                    # Fix missing screens in the current combination
-                    # from the screened film screenings.
-                    for cs in combination_film_screenings_no_screen:
-                        for s in film.screenings(festival_data):
-                            if cs.start_datetime == s.start_datetime:
-                                if cs.screen.name != s.screen.name:
-                                    if cs.screen.name == cs.screen.theater.name:
-                                        cs.screen = s.screen
-                                        COUNTER.increase('screen fixed')
-                                        DEBUG_RECORDER.add(f'FIXED SCREEN {cs.screen} from {s}')
-
-            # Set the screened films of the combination program.
-            combination_film_info = combination_film.film_info(festival_data)
-            combination_film_info.screened_films = screened_films
+        for combi_film, screened_films in screened_films_by_combination.items():
+            COUNTER.increase('combination films')
+            combi_film_info = combi_film.film_info(festival_data)
+            for screened_film in screened_films:
+                link_screened_film(festival_data, screened_film, combi_film, main_film_info=combi_film_info)
 
 
 class ScreeningsPageParser(HtmlPageParser):
@@ -534,6 +519,7 @@ class ScreeningsPageParser(HtmlPageParser):
         IDLE = auto()
         IN_SCREENINGS = auto()
         IN_DATE = auto()
+        IN_PAST = auto()
         AFTER_DATE = auto()
         IN_TIMES = auto()
         AFTER_TIMES = auto()
@@ -545,8 +531,18 @@ class ScreeningsPageParser(HtmlPageParser):
     nl_month_by_name: Dict[str, int] = {'mrt': 3, 'apr': 4}
     en_month_by_name: Dict[str, int] = {'Mar': 3, 'Apr': 4}
 
-    def __init__(self, iffr_data, film, subtitles):
-        HtmlPageParser.__init__(self, iffr_data, DEBUG_RECORDER, 'S')
+    default_by_prop = {
+        'qa': '',
+        'subtitles': '',
+        'extra': '',
+        'sold_out': True,
+        'in_past': True,
+    }
+    restore_props_by_film = {}
+    screen_id_by_film_start_dt = {}
+
+    def __init__(self, festival_data, film, subtitles):
+        super().__init__(festival_data, DEBUG_RECORDER, 'S')
         self.film = film
         self.subtitles = subtitles
         self.print_debug(self.bar, f"Analysing screenings of {film}, {film.url}")
@@ -560,9 +556,73 @@ class ScreeningsPageParser(HtmlPageParser):
         self.audience = None
         self.screen = None
         self.sold_out = None
+        self.in_past = None
 
         self.init_screening_data()
         self.state_stack = self.StateStack(self.print_debug, self.ScreeningsParseState.IDLE)
+
+    def feed(self, data):
+        if self.film is None:
+            ERROR_COLLECTOR.add('No film object when parsing screenings', "")
+        else:
+            super().feed(data)
+
+    def handle_starttag(self, tag, attrs):
+        super().handle_starttag(tag, attrs)
+
+        stack = self.state_stack
+        state = self.ScreeningsParseState
+        match [stack.state(), tag, attrs]:
+            case [state.IDLE, 'div', a] if a and a[0][1] == 'film-detail__viewings tile-side':
+                stack.change(state.IN_SCREENINGS)
+            case [state.IN_SCREENINGS, 'div', a] if a and a[0][1] == 'tile-date':
+                stack.push(state.IN_DATE)
+            case [state.IN_SCREENINGS, 'div', a] if a and a[0][1] == 'tile-day date-in-past':
+                self.in_past = True
+                stack.push(state.IN_PAST)
+            case [state.IN_SCREENINGS, 'div', a] if a and a[0][1].startswith('tile-time  '):
+                stack.push(state.AFTER_DATE)
+            case [state.AFTER_DATE, 'a', a] if a and a[0][1] == 'time':
+                self.read_screen_if_needed(attrs[1][1])
+                stack.change(state.IN_TIMES)
+            case [state.AFTER_TIMES, 'p', a] if a and a[0][1] == 'location':
+                stack.change(state.IN_LOCATION)
+            case [state.AFTER_TIMES, 'span', a] if a and a[0][1] == 'label uitverkocht':
+                self.sold_out = True
+            case [state.AFTER_LOCATION, 'span', a] if a and a[0][1] == 'label label__verdieping':
+                self.qa = 'met verdieping'
+            case [state.AFTER_LOCATION, 'span', a] if a and a[0][1] == 'label':
+                stack.push(state.IN_LABEL)
+            case [state.IN_SCREENINGS, 'script', a] if a and attrs[0][1] == 'application/json':
+                stack.change(state.DONE)
+
+    def handle_endtag(self, tag):
+        super().handle_endtag(tag)
+
+        if self.state_stack.state_is(self.ScreeningsParseState.AFTER_LOCATION) and tag == 'div':
+            self.add_screening_if_possible()
+            self.state_stack.pop()
+
+    def handle_data(self, data):
+        super().handle_data(data)
+
+        stack = self.state_stack
+        state = self.ScreeningsParseState
+        match stack.state():
+            case state.IN_DATE:
+                self.start_date = self.parse_date(data)
+                stack.change(state.AFTER_DATE)
+            case state.IN_PAST:
+                stack.change(state.IN_DATE)
+            case state.IN_TIMES:
+                self.set_screening_times(data)
+                stack.change(state.AFTER_TIMES)
+            case state.IN_LOCATION:
+                self.set_screen(data)
+                stack.change(state.AFTER_LOCATION)
+            case state.IN_LABEL:
+                self.parse_label(data)
+                stack.pop()
 
     def init_screening_data(self):
         self.audience = 'publiek'
@@ -573,28 +633,60 @@ class ScreeningsPageParser(HtmlPageParser):
         self.start_dt = None
         self.end_dt = None
         self.sold_out = False
+        self.in_past = False
 
     def add_screening_if_possible(self):
-        if self.screen is not None:
+        if self.screen:
             self.add_mtmf_screening()
         else:
-            print(f'No screening added.')
-            ERROR_COLLECTOR.add('Screening has no screen', f'Film {self.film}')
+            print(f'No screening added, screen must be recovered.')
+            if not self.sold_out and not self.in_past:
+                ERROR_COLLECTOR.add('Screening has no screen', f'Film {self.film}')
             self.init_screening_data()
 
     def add_mtmf_screening(self):
         # Maintain statistics.
-        COUNTER.increase('screenings')
-        if self.screen.theater.city.name != FESTIVAL_CITY:
-            COUNTER.increase('not in dh')
+        self.maintain_screening_stats(self.screen)
 
         # Add a screening based on the parsed data.
-        self.add_screening_from_fields(self.film, self.screen, self.start_dt, self.end_dt, self.qa,
-                                       self.subtitles, self.extra, self.audience,
-                                       sold_out=self.sold_out, display=DISPLAY_ADDED_SCREENING)
+        kwargs = {
+            'qa': self.qa,
+            'subtitles': self.subtitles,
+            'extra': self.extra,
+            'audience': self.audience,
+            'sold_out': self.sold_out,
+            'display': DISPLAY_ADDED_SCREENING,
+        }
+        self.add_screening_from_fields(self.film, self.screen, self.start_dt, self.end_dt, **kwargs)
 
         # Initialize the next round of parsing.
         self.init_screening_data()
+
+    @classmethod
+    def add_screening_from_props(cls, festival_data, film, screen, start_dt, end_dt,
+                                 qa='', extra='', subtitles='', audience=None, sold_out=None):
+        # Maintain statistics.
+        cls.maintain_screening_stats(screen)
+
+        # Create a screening based on the parsed data.
+        kwargs = {
+            'qa': qa,
+            'subtitles': subtitles,
+            'extra': extra,
+            'audience': audience,
+            'sold_out': sold_out,
+        }
+        screening = Screening(film, screen, start_dt, end_dt, **kwargs)
+        print(f'{"Sold out" if sold_out else "Past"} screening recovered: {str(screening)}.')
+
+        # Add the screening.
+        festival_data.screenings.append(screening)
+
+    @classmethod
+    def maintain_screening_stats(cls, screen):
+        COUNTER.increase('screenings')
+        if screen.theater.city.name != FESTIVAL_CITY:
+            COUNTER.increase('not in dh')
 
     def parse_date(self, data):
         items = data.split()  # zo 23 mrt
@@ -610,7 +702,16 @@ class ScreeningsPageParser(HtmlPageParser):
     def set_screening_times(self, data):
         items = data.split()  # 10:15  - 11:48
         start_time = datetime.time.fromisoformat(items[0])
-        end_time = datetime.time.fromisoformat(items[2])
+        try:
+            end_time = datetime.time.fromisoformat(items[2])
+        except IndexError:
+            try:
+                start_dt = datetime.datetime.combine(self.start_date, start_time, tzinfo=None)
+                end_time = datetime.datetime.time(start_dt + self.film.duration)
+            except TypeError:
+                COUNTER.increase('end time not reconstructed')
+                end_time = start_time
+            COUNTER.increase('no end time')
         self.start_dt = datetime.datetime.combine(self.start_date, start_time)
         end_date = self.start_date if end_time > start_time else self.start_date + datetime.timedelta(days=1)
         self.end_dt = datetime.datetime.combine(end_date, end_time)
@@ -619,18 +720,24 @@ class ScreeningsPageParser(HtmlPageParser):
         items = data.split(',')    # Den Haag, Filmhuis Den Haag
         city = items[0] or FESTIVAL_CITY
         theater = items[1].strip()
-        if self.sold_out:
-            COUNTER.increase('sold out')
-            try:
-                self.screen = self.get_screen_from_file()
-            except FileNotFoundError:
-                self.screen = None
-            if not self.screen:
-                ERROR_COLLECTOR.add('Screen not recovered', f'{city=}, {theater=}, {self.start_dt.isoformat(sep=" ")}')
-                COUNTER.increase('screen not recovered')
+        if self.sold_out or self.in_past:
+            COUNTER.increase('sold out' if self.sold_out else 'in past')
+            props = {
+                'city': city,
+                'theater': theater,
+                'start_dt': self.start_dt,
+                'end_dt': self.end_dt,
+                'qa': self.qa,
+                'subtitles': self.subtitles,
+                'extra': self.extra,
+                'audience': self.audience,
+                'sold_out': self.sold_out,
+                'in_past': self.in_past,
+            }
+            append_to_dict_value(self.restore_props_by_film, self.film, props)
         else:
             screen_name = self.screen_name if self.screen_name else theater
-            if screen_name is not None:
+            if screen_name:
                 self.screen = self.festival_data.get_screen(city, screen_name, theater)
             else:
                 self.print_debug('NO THEATER', f'city={city}, theater={theater}, screen={screen_name}')
@@ -638,23 +745,126 @@ class ScreeningsPageParser(HtmlPageParser):
         if city != FESTIVAL_CITY:
             self.print_debug('OTHER CITY', f'city={city}, theater={theater}, screen={self.screen}')
 
-    def get_screen_from_file(self):
-        film_id_field = 0
-        screen_id_field = 1
-        start_time_field = 2
-        screenings_filename = os.path.basename(self.festival_data.screenings_file)
+    @classmethod
+    def recover_sold_out_screens(cls, festival_data):
+        props_list_by_film = {}
+
+        for org_film, props_list in cls.restore_props_by_film.items():
+            # Use the combination film if the original film is part of a combination program.
+            film_info = org_film.film_info(festival_data)
+            combi_films = film_info.combination_films
+            film = combi_films[0] if combi_films else org_film  # No parts in multiple combi programs in MTMF.
+
+            # Set the screenings properties for the resulting film.
+            if film in props_list_by_film:
+                if props_list_by_film[film] != props_list:
+                    DEBUG_RECORDER.add(
+                        'Different screenings in combi parts\n'
+                        f'{film}, \n\tprops {props_list_by_film[film]}, \n\tnew   {props_list}')
+                    cls.keep_common_props(props_list_by_film[film], props_list, film)
+            else:
+                props_list_by_film[film] = props_list
+
+        # Get screening data from saved file.
+        cls.get_screens_from_file(festival_data, props_list_by_film)
+
+        # Recover the screens.
+        for film, props_list in props_list_by_film.items():
+            for props in props_list:
+                cls.recover_sold_out_screen(festival_data, film, props)
+
+    @classmethod
+    def recover_sold_out_screen(cls, festival_data, film, props):
+        city = props['city']
+        theater = props['theater']
+        start_dt = props['start_dt']
+        end_dt = props['end_dt']
+        qa = props['qa']
+        subtitles = props['subtitles']
+        extra = props['extra']
+        audience = props['audience']
+        sold_out = props['sold_out']
+        in_past = props['in_past']
+
+        # Get the screen from file.
+        screen = cls.try_get_screen_from_file(festival_data, film, start_dt)
+
+        # Recover the screening.
+        film_screenings = film.screenings(festival_data)
+        list_ = [s for s in film_screenings if s.start_datetime == start_dt]
+        if list_:
+            screening = list_[0]  # No combi parts in MTMF that are screened in multiple programs.
+            screening.sold_out = sold_out
+            print(f"screening {str(screening)} updated. {sold_out=}, {in_past=}")
+        elif screen:
+            args = [festival_data, film, screen, start_dt, end_dt]
+            kwargs = {'qa': qa, 'extra': extra, 'subtitles': subtitles, 'audience': audience, 'sold_out': sold_out}
+            cls.add_screening_from_props(*args, **kwargs)
+        else:
+            ERROR_COLLECTOR.add('Screen not recovered',
+                                f'{film}: {city=}, {theater=}, {start_dt.isoformat(sep=" ")}')
+            COUNTER.increase('screen not recovered')
+
+    @classmethod
+    def keep_common_props(cls, recovery_props_list, new_props_list, film):
+        """
+        Set screening properties of combi that differ from parts to predefined defaults.
+        TODO: Consider to display screening details of screened films individually in the planner.
+        :param recovery_props_list: List of property dicts of the combination screening
+        :param new_props_list: List of property dicts of the next combi screening part
+        :param film: Film of the mentioned screenings
+        :return: None
+        """
+        for i in range(len(recovery_props_list)):
+            for prop, default in cls.default_by_prop.items():
+                if new_props_list[i][prop] != recovery_props_list[i][prop]:
+                    props = recovery_props_list[i]
+                    COUNTER.increase('combi screening props fixed')
+                    DEBUG_RECORDER.add(
+                        f"\t{film}: {props['theater'], props['start_dt']}: Setting {prop} to '{default}'")
+                    recovery_props_list[i][prop] = default
+
+    @classmethod
+    def try_get_screen_from_file(cls, festival_data, film, start_dt):
+        try:
+            screen = cls.get_screen_from_file(festival_data, film, start_dt)
+        except FileNotFoundError:
+            screen = None
+
+        return screen
+
+    @classmethod
+    def get_screens_from_file(cls, festival_data, props_list_by_film):
+        """Build a dictionary from saved screenings to recovers screens."""
+        screenings_filename = os.path.basename(festival_data.screenings_file)
         screenings_path = os.path.join(FILE_KEEPER.interface_dir, screenings_filename)
-        screen_id = None
+        film_id_csv_field = 0
+        screen_id_csv_field = 1
+        start_time_csv_field = 2
+
+        # Fill the search keys from the screenings properties by film dict.
+        cls.screen_id_by_film_start_dt = {}
+        for film, props_list in props_list_by_film.items():
+            for props in props_list:
+                key = (film.film_id, props['start_dt'].isoformat(sep=' '))
+                cls.screen_id_by_film_start_dt[key] = None
+
+        # Read the saved screenings as to fill the values for the found keys.
         with open(screenings_path, newline='') as csvfile:
             screenings_reader = csv.reader(csvfile, delimiter=';', quotechar='"')
             next(screenings_reader)     # Skip header.
             for row in screenings_reader:
-                film_id = int(row[film_id_field])
-                start_date_str = row[start_time_field]
-                if film_id == self.film.film_id and start_date_str == self.start_dt.isoformat(sep=' '):
-                    screen_id = int(row[screen_id_field])
-                    break
-        screen = self.festival_data.get_screen_by_id(screen_id)
+                film_id = int(row[film_id_csv_field])
+                start_date_str = row[start_time_csv_field]
+                if (film_id, start_date_str) in cls.screen_id_by_film_start_dt.keys():
+                    screen_id = int(row[screen_id_csv_field])
+                    cls.screen_id_by_film_start_dt[(film_id, start_date_str)] = screen_id
+
+    @classmethod
+    def get_screen_from_file(cls, festival_data, film, start_dt):
+        screen_id = cls.screen_id_by_film_start_dt[(film.film_id, start_dt.isoformat(sep=' '))]
+        screen = festival_data.get_screen_by_id(screen_id)
+        COUNTER.increase('screen reconstructed')
         return screen
 
     def read_screen_if_needed(self, url):
@@ -678,62 +888,6 @@ class ScreeningsPageParser(HtmlPageParser):
                 shopping_cart_parser.feed(locations_html)
                 self.screen_name = shopping_cart_parser.current_screen
 
-    def feed(self, data):
-        if self.film is None:
-            ERROR_COLLECTOR.add('No film object when parsing screenings', "")
-        else:
-            super().feed(data)
-
-    def handle_starttag(self, tag, attrs):
-        HtmlPageParser.handle_starttag(self, tag, attrs)
-
-        stack = self.state_stack
-        state = self.ScreeningsParseState
-        match [stack.state(), tag, attrs]:
-            case [state.IDLE, 'div', a] if a and a[0][1] == 'film-detail__viewings tile-side':
-                stack.change(state.IN_SCREENINGS)
-            case [state.IN_SCREENINGS, 'div', a] if a and a[0][1] == 'tile-date':
-                stack.push(state.IN_DATE)
-            case [state.IN_SCREENINGS, 'div', a] if a and a[0][1].startswith('tile-time  '):
-                stack.push(state.AFTER_DATE)
-            case [state.AFTER_DATE, 'a', a] if a and a[0][1] == 'time':
-                self.read_screen_if_needed(attrs[1][1])
-                stack.change(state.IN_TIMES)
-            case [state.AFTER_TIMES, 'p', a] if a and a[0][1] == 'location':
-                stack.change(state.IN_LOCATION)
-            case [state.AFTER_TIMES, 'span', a] if a and a[0][1] == 'label uitverkocht':
-                self.sold_out = True
-            case [state.AFTER_LOCATION, 'span', a] if a and a[0][1] == 'label label__verdieping':
-                self.qa = 'met verdieping'
-            case [state.AFTER_LOCATION, 'span', a] if a and a[0][1] == 'label':
-                stack.push(state.IN_LABEL)
-            case [state.IN_SCREENINGS, 'script', a] if a and attrs[0][1] == 'application/json':
-                stack.change(state.DONE)
-
-    def handle_endtag(self, tag):
-        HtmlPageParser.handle_endtag(self, tag)
-
-        if self.state_stack.state_is(self.ScreeningsParseState.AFTER_LOCATION) and tag == 'div':
-            self.add_screening_if_possible()
-            self.state_stack.pop()
-
-    def handle_data(self, data):
-        HtmlPageParser.handle_data(self, data)
-
-        match self.state_stack.state():
-            case self.ScreeningsParseState.IN_DATE:
-                self.start_date = self.parse_date(data)
-                self.state_stack.change(self.ScreeningsParseState.AFTER_DATE)
-            case self.ScreeningsParseState.IN_TIMES:
-                self.set_screening_times(data)
-                self.state_stack.change(self.ScreeningsParseState.AFTER_TIMES)
-            case self.ScreeningsParseState.IN_LOCATION:
-                self.set_screen(data)
-                self.state_stack.change(self.ScreeningsParseState.AFTER_LOCATION)
-            case self.ScreeningsParseState.IN_LABEL:
-                self.parse_label(data)
-                self.state_stack.pop()
-
 
 class ShoppingCartPageParser(HtmlPageParser):
     class ShoppingCartState(Enum):
@@ -743,11 +897,31 @@ class ShoppingCartPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, film, sequence_nr):
-        HtmlPageParser.__init__(self, festival_data, DEBUG_RECORDER, 'SC')
+        super().__init__(festival_data, DEBUG_RECORDER, 'SC')
         self.film = film
         self.sequence_nr = sequence_nr
         self.state_stack = self.StateStack(self.print_debug, self.ShoppingCartState.IDLE)
         self.current_screen = None
+
+    def handle_starttag(self, tag, attrs):
+        super().handle_starttag(tag, attrs)
+
+        if self.state_stack.state_is(self.ShoppingCartState.IDLE):
+            match [tag, attrs]:
+                case ['div', a] if a and a[0][1] == 'at-show-property at-show-location':
+                    self.state_stack.change(self.ShoppingCartState.IN_SCREEN)
+                case ['iframe', a] if len(a) > 5 and a[1][1] == 'order__iframe order__iframe--crossmarx':
+                    self.state_stack.change(self.ShoppingCartState.IN_ORDER)
+                    details_url = attrs[5][1]
+                    self.get_theater_screen(details_url)
+                    self.state_stack.change(self.ShoppingCartState.DONE)
+
+    def handle_data(self, data):
+        super().handle_data(data)
+
+        if self.state_stack.state_is(self.ShoppingCartState.IN_SCREEN):
+            self.current_screen = data.strip()
+            self.state_stack.change(self.ShoppingCartState.DONE)
 
     def get_theater_screen(self, url):
         details_file_format = os.path.join(FILE_KEEPER.webdata_dir, "details_{:03d}_{:02d}.html")
@@ -764,24 +938,6 @@ class ShoppingCartPageParser(HtmlPageParser):
                 theater_screen_parser.feed(details_html)
                 self.current_screen = theater_screen_parser.current_screen
 
-    def handle_starttag(self, tag, attrs):
-        HtmlPageParser.handle_starttag(self, tag, attrs)
-
-        if self.state_stack.state_is(self.ShoppingCartState.IDLE):
-            match [tag, attrs]:
-                case ['div', a] if a and a[0][1] == 'at-show-property at-show-location':
-                    self.state_stack.change(self.ShoppingCartState.IN_SCREEN)
-                case ['iframe', a] if len(a) > 5 and a[1][1] == 'order__iframe order__iframe--crossmarx':
-                    self.state_stack.change(self.ShoppingCartState.IN_ORDER)
-                    details_url = attrs[5][1]
-                    self.get_theater_screen(details_url)
-                    self.state_stack.change(self.ShoppingCartState.DONE)
-
-    def handle_data(self, data):
-        if self.state_stack.state_is(self.ShoppingCartState.IN_SCREEN):
-            self.current_screen = data.strip()
-            self.state_stack.change(self.ShoppingCartState.DONE)
-
 
 class TheaterScreenPageParser(HtmlPageParser):
     class ScreensParseState(Enum):
@@ -790,20 +946,20 @@ class TheaterScreenPageParser(HtmlPageParser):
         DONE = auto()
 
     def __init__(self, festival_data, film, url):
-        HtmlPageParser.__init__(self, festival_data, DEBUG_RECORDER, 'TS')
+        super().__init__(festival_data, DEBUG_RECORDER, 'TS')
         self.print_debug(self.bar, f'Analysing screening location of FILM {film}, {url}')
         self.stateStack = self.StateStack(self.print_debug, self.ScreensParseState.IDLE)
         self.current_screen = None
 
     def handle_starttag(self, tag, attrs):
-        HtmlPageParser.handle_starttag(self, tag, attrs)
+        super().handle_starttag(tag, attrs)
 
         if self.stateStack.state_is(self.ScreensParseState.IDLE) and tag == 'div' and len(attrs) > 0:
             if attrs[0][1] == 'at-show-property at-show-location':
                 self.stateStack.change(self.ScreensParseState.IN_SCREENING_LOCATION)
 
     def handle_data(self, data):
-        HtmlPageParser.handle_data(self, data)
+        super().handle_data(data)
 
         if self.stateStack.state_is(self.ScreensParseState.IN_SCREENING_LOCATION):
             self.current_screen = data.strip()
@@ -815,14 +971,14 @@ class MtmfData(FestivalData):
     def __init__(self, planner_data_dir):
         super().__init__(FESTIVAL_CITY, planner_data_dir)
 
-    def film_key(self, film, url):
+    def film_key(self, title, url):
         return url
 
     def film_can_go_to_planner(self, film_id):
         return True
 
     def screening_can_go_to_planner(self, screening):
-        can_go = FestivalData.screening_can_go_to_planner(self, screening)
+        can_go = super().screening_can_go_to_planner(screening)
         return can_go and screening.screen.theater.city.name == FESTIVAL_CITY
 
 

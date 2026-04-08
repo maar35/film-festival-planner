@@ -29,6 +29,7 @@ class IndexView(generic.ListView):
     def _get_subsection_rows(self, subsection):
         return {
             'name': subsection.name,
+            'subsection': subsection,
             'url': subsection.url,
             'description': subsection.description,
             'section': subsection.section,

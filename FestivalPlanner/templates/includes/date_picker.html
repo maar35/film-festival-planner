@@ -5,7 +5,7 @@
             <span class="label-8rem">{{ label }}</span>
         {% endif %}
         {% include "../includes/choices_dropdown.html" with current_choice=day submit_name=name right_aligned=True %}
-        <span class="day-nav">
+        <span class="day-nav up">
             <span class="day-nav-element">{% if first_day %} <a class="link-black" href="{% url 'screenings:day_schema' %}?day={{ first_day }}">⇤</a> {% endif %}</span>
             <span class="day-nav-element">{% if prev_day %} <a class="link-black" href="{% url 'screenings:day_schema' %}?day={{ prev_day }}">←</a> {% elif first_day %} ← {% endif %}</span>
             <span class="day-nav-element">{% if next_day %} <a class="link-black" href="{% url 'screenings:day_schema' %}?day={{ next_day }}">→</a> {% elif last_day %} → {% endif %}</span>

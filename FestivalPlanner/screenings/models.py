@@ -102,6 +102,7 @@ class Screening(models.Model):
                                             related_name='combined_screening')
     subtitles = models.CharField(max_length=24, null=True)
     q_and_a = models.BooleanField()
+    sold_out = models.BooleanField(default=False)
     auto_planned = models.BooleanField(default=False)
 
     # Define a manager.

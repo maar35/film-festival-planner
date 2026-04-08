@@ -413,7 +413,8 @@ class Screening:
     def __str__(self):
         start_time = self.start_datetime.isoformat(sep=" ", timespec="minutes")
         end_time = self.end_datetime.time().isoformat()
-        return f'{start_time} - {end_time}, {self.screen.abbr}, {self.film.title}'
+        screen_abbr = f'{self.screen.theater.abbr}{self.screen.abbr}'
+        return f'{start_time} - {end_time}, {screen_abbr}, {self.film.title}'
 
     def __eq__(self, other):
         lhs = (self.film.film_id, self.screen.screen_id, self.start_datetime, self.end_datetime)
@@ -563,6 +564,8 @@ class FestivalData:
     def create_film(self, title, url, duration=None, medium_category=None):
         film_id = self.new_film_id(self.film_key(title, url))
         if film_id not in [f.film_id for f in self.films]:
+            if not title:
+                raise ValueError(film_id)
             self.film_seqnr += 1
             self.title_by_film_id[film_id] = title
             self.film_id_by_url[url] = film_id

@@ -716,7 +716,7 @@ class PlannerViewTests(ScreeningViewsTests):
 
 class WarningsViewTests(ScreeningViewsTests):
     re_warning_count = re.compile(
-        r'<div class="[^"]*\bfloating-warning-box\b[^"]*"[^>]*>\s*<a[^>]*>\s*(\d+)\s*warnings</a>'
+        r'<div class="[^"]*\bfixed-warning-box\b[^"]*"[^>]*>\s*<a[^>]*>\s*(\d+)\s*warnings</a>'
     )
     re_fan_warning = re.compile(r'<td>\s*(\w+)\s*</td>\s*<td[^>]*>([\w ]+)</td>')
     re_dropdown = re.compile(

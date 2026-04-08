@@ -1,53 +1,50 @@
 import unittest
 from unittest import TestCase
 
-from MTMF.parse_mtmf_html import FilmPageParser, MtmfData, FilmUrlFinder, COUNTER
+from MTMF.parse_mtmf_html import FilmPageParser, MtmfData, FilmUrlFinder, COUNTER, setup_counters
 from Tests.AuxiliaryClasses.test_film import BaseFilmTestCase
 
 
 class ApplyCombinationsTestCase(BaseFilmTestCase):
     film_id = 0
-    film_page_parser = None
 
     def setUp(self):
         super().setUp()
         self.festival_data = MtmfData(self.file_keeper.plandata_dir)
+        setup_counters()
+        FilmPageParser.combination_urls_by_film_id = {}
         self.film_property_by_label = {}
         self.add_test_films()
 
     def add_mtmf_test_film(self, title, minutes, url, description,
-                           subs='EN', combi_program_urls=None, combi_part_urls=None):
+                           subs='EN', combi_program_urls=None):
         combination_urls = combi_program_urls or []
-        screened_film_urls = combi_part_urls or []
         self.film_property_by_label['Ondertiteling'] = subs
 
         # Add the film to festival data.
         self.add_test_film(title, minutes, url, description)
         film = self.festival_data.films[-1]
 
-        # Set-up global data that apply_combinations() uses.
-        if self.film_page_parser is None:
-            self.film_page_parser = FilmPageParser(self.festival_data, url)
-        self.film_page_parser.combination_urls_by_film_id[film.film_id] = combination_urls
-        self.film_page_parser.screened_film_urls_by_film_id[film.film_id] = screened_film_urls
+        # Setup global data that apply_combinations() uses.
+        if combination_urls:
+            FilmPageParser.combination_urls_by_film_id[film.film_id] = combination_urls
 
         return film
 
     def add_test_films(self):
-        part_urls = ['https://moviesthatmatter.nl/film/over-mij/',
-                     'https://moviesthatmatter.nl/film/marko/']
         self.combi_film = self.add_mtmf_test_film(
             'The Combination', 45, 'https://moviesthatmatter.nl/film/under-the-lake/',
             'This unforgettable film combines several films in one program',
-            combi_part_urls=part_urls
         )
+
         self.combi_part_1 = self.add_mtmf_test_film(
-            'Parts Part 1', 20, part_urls[0],
+            'Parts Part 1', 20, 'https://moviesthatmatter.nl/film/over-mij/',
             'You will not find a better first part than this one',
             combi_program_urls=[self.combi_film.url]
         )
+
         self.combi_part_2 = self.add_mtmf_test_film(
-            'Parts Part 2', 18, part_urls[1],
+            'Parts Part 2', 18, 'https://moviesthatmatter.nl/film/marko/',
             'Parts Part 2 covers both zebras and aardvarks',
             combi_program_urls=[self.combi_film.url]
         )
@@ -60,7 +57,7 @@ class ApplyCombinationsTestCase(BaseFilmTestCase):
         FilmPageParser.apply_combinations(self.festival_data)
 
         # Assert.
-        self.assertEqual(len(combi_film_info.screened_films), 2)
+        self.assertEqual(len(combi_film_info.screened_films), 2, "Screened film count")
 
     def test_combination_linked_to_screened_films(self):
         # Arrange.
@@ -70,7 +67,7 @@ class ApplyCombinationsTestCase(BaseFilmTestCase):
         FilmPageParser.apply_combinations(self.festival_data)
 
         # Assert.
-        self.assertEqual(len(combi_part_info.combination_films), 1)
+        self.assertEqual(len(combi_part_info.combination_films), 1, "Combination count")
 
 
 class UrlHandlingTestCase(TestCase):

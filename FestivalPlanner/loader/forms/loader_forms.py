@@ -684,13 +684,11 @@ class ScreeningLoader(SimpleLoader):
         screen_id = int(row[1])
         start_dt = datetime.datetime.fromisoformat(row[2]).replace(tzinfo=None)
         end_dt = datetime.datetime.fromisoformat(row[3]).replace(tzinfo=None)
-        _ = row[4]      # Combination program.
+        _ = row[4]      # Combination program ID.
         subtitles = row[5] or None
         q_and_a = True if row[6] else False
         extra = row[7]
-        # TODO: Support screened films instead of combination program (#457).
-        if len(self.expected_header) == 7:
-            _ = row[8]  # sold_out
+        sold_out = True if row[8] else False
 
         film = self.get_foreign_key(Film, Film.films, **{'festival': self.festival, 'film_id': film_id})
         screen = self.get_foreign_key(Screen, Screen.screens, **{'screen_id': screen_id})
@@ -720,6 +718,7 @@ class ScreeningLoader(SimpleLoader):
             'subtitles': subtitles,
             'q_and_a': q_and_a,
             'auto_planned': auto_planned,
+            'sold_out': sold_out,
         }
         yield value_by_field
 
@@ -961,8 +960,10 @@ class ScreenDumper(BaseDumper):
 
 
 class CalendarDumper(BaseDumper):
+    FOR_AGENDA = True
+    TAIL_BY_AGENDA = {True: ['url', 'notes'], False: ['attendants', 'status', 'ratings', 'filmscreening_count']}
     manager = None
-    header = ['title', 'location', 'start_time', 'end_time', 'url', 'notes']
+    header = ['title', 'location', 'start_time', 'end_time'] + TAIL_BY_AGENDA[FOR_AGENDA]
 
     def __init__(self, session):
         super().__init__(session, 'calendar', self.manager, header=self.header)
@@ -975,9 +976,15 @@ class CalendarDumper(BaseDumper):
             screening.screen.theater.parse_name,
             screening.start_dt.strftime(dt_fmt),
             screening.end_dt.strftime(dt_fmt),
+        ] + ([
             screening.film.url,
             self._get_notes(obj),
-        ]
+        ] if self.FOR_AGENDA else [
+            obj['attendants'],
+            obj['status_label'],
+            obj['ratings'],
+            obj['filmscreening_count'],
+        ])
 
     @staticmethod
     def _get_notes(obj):
