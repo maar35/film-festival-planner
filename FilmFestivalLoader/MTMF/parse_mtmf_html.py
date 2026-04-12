@@ -106,7 +106,7 @@ def parse_mtmf_sites(festival_data):
 
 
 def experiment_get_trouw_films():
-    """Room for experiment."""
+    """Experiment with the Trouw page."""
     for id_, url in enumerate([EXPERIMENT_TROUW_PATH]):
         prefix = 'trouw'
         day_file = FILE_KEEPER.numbered_webdata_file(prefix, id_)
@@ -163,6 +163,19 @@ def get_film_from_url(festival_data, url, encoding):
         html_bytes = film_html.encode(encoding=encoding)
         with open(film_file, 'wb') as f:
             f.write(html_bytes)
+
+
+def set_subsection_description(festival_data, subsection):
+    prefix = subsection.url.split('/')[-2]
+    file_name = FILE_KEEPER.numbered_webdata_file('subsection', subsection.subsection_id)
+    url_file = UrlFile(subsection.url, file_name, ERROR_COLLECTOR, DEBUG_RECORDER, byte_count=200)
+    comment_at_download = f'Downloading subsection page: {subsection.url}, encoding: {url_file.encoding}'
+    html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=comment_at_download)
+    if html:
+        print(f'\nAnalysing subsection page #{subsection.subsection_id}, encoding={url_file.encoding}')
+        subsection_desc_parser = SubsectionDescriptionParser(festival_data, prefix)
+        subsection_desc_parser.feed(html)
+        subsection.description = subsection_desc_parser.subsection_description
 
 
 def append_to_dict_value(dict_, key, new_element):
@@ -224,6 +237,7 @@ class FilmUrlFinder:
             for i, subsection_url in enumerate(subsection_urls):
                 COUNTER.increase(self.main_sections[section_name]['plural'])
                 subsection = self.get_subsection(section, subsection_url)
+                set_subsection_description(self.festival_data, subsection)
                 self.get_film_urls(subsection, self.main_sections[section_name]['singular'], i)
 
     def get_film_urls(self, subsection, prefix, subsection_index):
@@ -964,6 +978,29 @@ class TheaterScreenPageParser(HtmlPageParser):
         if self.stateStack.state_is(self.ScreensParseState.IN_SCREENING_LOCATION):
             self.current_screen = data.strip()
             self.stateStack.change(self.ScreensParseState.DONE)
+
+
+class SubsectionDescriptionParser(HtmlPageParser):
+    class DescriptionParseState(Enum):
+        IDLE = auto()
+        DONE = auto()
+
+    def __init__(self, festival_data, subsection):
+        super().__init__(festival_data, DEBUG_RECORDER, 'SUD')
+        self.subsection = subsection
+        self.print_debug(self.bar, f'Finding description of subsection {subsection}')
+        self.state_stack = self.StateStack(self.print_debug, self.DescriptionParseState.IDLE)
+        self.subsection_description = None
+
+    def handle_starttag(self, tag, attrs):
+        super().handle_starttag(tag, attrs)
+
+        stack = self.state_stack
+        state = self.DescriptionParseState
+        match [stack.state(), tag, attrs]:
+            case [state.IDLE, 'meta', a] if a[0] == ('property', 'og:description'):
+                self.subsection_description = a[1][1]
+                stack.change(state.DONE)
 
 
 class MtmfData(FestivalData):
