@@ -553,7 +553,7 @@ class FilmPageParser(HtmlPageParser):
             combination_film_info.screened_films.append(screened_film)
             if not combination_film_info.film_id:
                 combination_film_info.film_id = self.film.film_id
-                self.festival_data.filminfos.append(combination_film_info)
+                self.festival_data.film_infos.append(combination_film_info)
 
     def _add_qa_record_from_ticket_label(self):
         if self.debug_prefix == 'F' and 'Q&A' in self.screening_ticket_label:
@@ -591,7 +591,7 @@ class FilmPageParser(HtmlPageParser):
             else:
                 film_info = FilmInfo(self.film.film_id, self.description, article,
                                      metadata=self.film_property_by_label)
-                self.festival_data.filminfos.append(film_info)
+                self.festival_data.film_infos.append(film_info)
 
     def _finish_film_info(self):
         self.set_article()

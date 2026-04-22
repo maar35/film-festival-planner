@@ -215,7 +215,7 @@ class Film:
         return [s for s in festival_data.screenings if s.film.film_id == self.film_id]
 
     def film_info(self, festival_data):
-        infos = [i for i in festival_data.filminfos if i.film_id == self.film_id]
+        infos = [i for i in festival_data.film_infos if i.film_id == self.film_id]
         try:
             return infos[0]
         except IndexError:
@@ -260,11 +260,13 @@ class ScreenedFilm:
 
 class FilmInfo:
 
-    def __init__(self, film_id, description, article, metadata=None, combination_films=None, screened_films=None):
+    def __init__(self, film_id, description, article_paragraphs,
+                 metadata=None, combination_films=None, screened_films=None):
         self.film_id = film_id
         self.description = description.strip()
+        self.article_paragraphs = article_paragraphs
         self.metadata = metadata or {}
-        self.article = article.strip()
+        self.article = self.get_article()
         self.combination_films = combination_films or []
         self.screened_films = screened_films or []
 
@@ -272,6 +274,9 @@ class FilmInfo:
         combinations_str = '\nCombinations:\n' + '\n'.join([str(cf) for cf in self.combination_films])
         screened_str = '\nScreened:\n' + '\n'.join([str(sf) for sf in self.screened_films])
         return '\n'.join([str(self.film_id), self.description, self.article, combinations_str, screened_str]) + '\n'
+
+    def get_article(self):
+        return '\n\n'.join(self.article_paragraphs)
 
     def format_metadata(self):
         properties = [f'{key}: {value}' for (key, value) in self.metadata.items()]
@@ -506,7 +511,7 @@ class FestivalData:
         self.default_city_name = default_city_name
         self.common_data_dir = common_data_dir or self.common_data_dir
         self.films = []
-        self.filminfos = []
+        self.film_infos = []
         self.screenings = []
         self.title_by_film_id = {}
         self.film_id_by_url = {}
@@ -867,7 +872,7 @@ class FestivalData:
 
         def get_info_dict(list_attr):
             info_dict = {}
-            list_by_id = {i.film_id: getattr(i, list_attr) for i in self.filminfos if can_go(i)}
+            list_by_id = {i.film_id: getattr(i, list_attr) for i in self.film_infos if can_go(i)}
             for film_id, listed_films in list_by_id.items():
                 info_dict_list = [{
                     'film_id': listed_film.film_id,
@@ -876,8 +881,12 @@ class FestivalData:
                 info_dict[film_id] = info_dict_list
             return info_dict
 
+        # Get film articles. TODO: Remove reference to "article" which is being deprecated.
+        article = {i.film_id: i.article for i in self.film_infos if can_go(i)}
+        articles = {i.film_id: i.article_paragraphs for i in self.film_infos if can_go(i)}
+
         # Get metadata per film id.
-        metadata_dict = {i.film_id: i.metadata for i in self.filminfos if can_go(i)}
+        metadata_dict = {i.film_id: i.metadata for i in self.film_infos if can_go(i)}
 
         # Get combination films per film id.
         combi_dict = get_info_dict('combination_films')
@@ -887,6 +896,8 @@ class FestivalData:
 
         # Create the YAML object.
         yaml_object = {
+            'article': article,
+            'articles': articles,
             'metadata': metadata_dict,
             'screened_films': screened_dict,
             'combinations': combi_dict,
@@ -935,7 +946,7 @@ class FestivalData:
         pr_info(f'Done writing {len(yaml_object)} objects to {self.filminfo_yaml_file}.')
 
     def write_csv_filminfo(self):
-        data = [i for i in self.filminfos if self.film_can_go_to_planner(i.film_id)]
+        data = [i for i in self.film_infos if self.film_can_go_to_planner(i.film_id)]
         rows = sorted([[
             i.film_id,
             i.description,
@@ -953,7 +964,7 @@ class FestivalData:
         """
         info_count = 0
         film_infos = Tree.Element('FilmInfos')
-        for filminfo in [i for i in self.filminfos if self.film_can_go_to_planner(i.film_id)]:
+        for filminfo in [i for i in self.film_infos if self.film_can_go_to_planner(i.film_id)]:
             info_count += 1
             id_ = str(filminfo.film_id)
             article = filminfo.article

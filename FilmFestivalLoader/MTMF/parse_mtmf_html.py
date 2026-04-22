@@ -168,7 +168,7 @@ def get_film_from_url(festival_data, url, encoding):
 def set_subsection_description(festival_data, subsection):
     prefix = subsection.url.split('/')[-2]
     file_name = FILE_KEEPER.numbered_webdata_file('subsection', subsection.subsection_id)
-    url_file = UrlFile(subsection.url, file_name, ERROR_COLLECTOR, DEBUG_RECORDER, byte_count=200)
+    url_file = UrlFile(subsection.url, file_name, ERROR_COLLECTOR, DEBUG_RECORDER)
     comment_at_download = f'Downloading subsection page: {subsection.url}, encoding: {url_file.encoding}'
     html = url_file.get_text(always_download=ALWAYS_DOWNLOAD, comment_at_download=comment_at_download)
     if html:
@@ -459,9 +459,9 @@ class FilmPageParser(HtmlPageParser):
         if metadata:
             COUNTER.increase('metadata')
 
-        self.film_info = FilmInfo(self.film.film_id, self.description, self.article,
+        self.film_info = FilmInfo(self.film.film_id, self.description, self.article_paragraphs,
                                   metadata=self.film_property_by_label)
-        self.festival_data.filminfos.append(self.film_info)
+        self.festival_data.film_infos.append(self.film_info)
 
     def set_global_film_properties(self):
         # Store the combinations urls for the current film.

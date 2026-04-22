@@ -105,7 +105,7 @@ class IffrCombinationProgramsTestCase(BaseIffrFilmTestCase):
     def test_combinations_correct_initialized(self):
         # Arrange.
         new_film = self.festival_data.films[0]
-        film_infos = self.festival_data.filminfos
+        film_infos = self.festival_data.film_infos
 
         # Act.
         film_infos[0].combination_films.append(new_film)
@@ -119,7 +119,7 @@ class IffrCombinationProgramsTestCase(BaseIffrFilmTestCase):
         first_film = self.festival_data.films[1]
         second_film = self.festival_data.films[2]
         third_film = self.festival_data.films[3]
-        film_infos = self.festival_data.filminfos
+        film_infos = self.festival_data.film_infos
 
         # Act.
         film_infos[1].combination_films.append(first_film)
