@@ -458,6 +458,8 @@ class ViewsTestCase(TestCase):
 
 
 class FilmDetailsViewTests(ViewsTestCase):
+    re_article_default = r'<li>Article:\s+-\s+</li>'
+
     def setUp(self):
         super().setUp()
         festivals.models.TEST_BASE_DIR = tempfile.TemporaryDirectory()
@@ -476,45 +478,28 @@ class FilmDetailsViewTests(ViewsTestCase):
         return festival, combi_film, screened_film_1, screened_film_2, screened_film_3
 
     @staticmethod
-    def arrange_write_film_info_yaml(festival, combi_film, screened_film_1, screened_film_2, screened_film_3):
+    def arrange_write_film_info_yaml(festival, combi_film, *screened_films, paragraphs=None):
         filminfo_yaml_file = festival.filminfo_yaml_file()
         os.makedirs(festival.planner_data_dir())
-        metadata_dict = {
-            combi_film.film_id: {'Film type': 'Combination'},
-            screened_film_1.film_id: {'Film type': 'Screened film'},
-            screened_film_2.film_id: {'Film type': 'Screened film'},
-            screened_film_3.film_id: {'Film type': 'Screened film'},
-        }
-        screened_dict = {
-            combi_film.film_id: [
-                {
-                    'film_id': screened_film_1.film_id,
-                    'title': screened_film_1.title,
-                },
-                {
-                    'film_id': screened_film_2.film_id,
-                    'title': screened_film_2.title,
-                },
-                {
-                    'film_id': screened_film_3.film_id,
-                    'title': screened_film_3.title,
-                },
-            ],
-            screened_film_1.film_id: [],
-            screened_film_2.film_id: [],
-            screened_film_3.film_id: [],
-        }
+
+        articles = {combi_film.film_id: paragraphs} if paragraphs else {}
+
+        metadata_dict = {sf.film_id: {'Film type': 'Screened film'} for sf in screened_films}
+        metadata_dict[combi_film.film_id] = {'Film type': 'Combination'}
+
+        screened_dict = {sf.film_id: [] for sf in screened_films}
+        screened_list = [{'film_id': sf.film_id, 'title': sf.title} for sf in screened_films]
+        screened_dict[combi_film.film_id] = screened_list
+
         combi_detail_dict = {
             'film_id': combi_film.film_id,
             'title': combi_film.title,
         }
-        combi_dict = {
-            combi_film.film_id: [],
-            screened_film_1.film_id: [combi_detail_dict],
-            screened_film_2.film_id: [combi_detail_dict],
-            screened_film_3.film_id: [combi_detail_dict],
-        }
+        combi_dict = {sf.film_id: [combi_detail_dict] for sf in screened_films}
+        combi_dict[combi_film.film_id] = []
+
         yaml_object = {
+            'articles': articles,
             'metadata': metadata_dict,
             'screened_films': screened_dict,
             'combinations': combi_dict,
@@ -732,6 +717,55 @@ class FilmDetailsViewTests(ViewsTestCase):
         self.assertContains(response, screened_film_2.title)
         self.assertContains(response, screened_film_3.title)
         self.assertRegex(get_decoded_content(response), f'({minutes_str(screened_film_1.duration)})')
+
+    def test_article_is_displayed(self):
+        """
+        The details view displays the film article as written in YAML by the loader.
+        """
+        # Arrange.
+        _ = self.get_regular_fan_request()
+
+        festival = new_std_festival()
+        film = create_film(14, 'The Philosopher', 104, festival=festival)
+        paragraphs = [
+            'This film covers the greatest Dutch football player of all times.',
+            'El Salvador, as he is still called in Barcelona, was not only an \
+incredibly gifted player, but also a brilliant, unconventional trainer.',
+            'Plus, to a most unbelievable level, his views on life as a whole, \
+always expressed by means of football metaphors, were inimitable and once heard would never be forgotten by anyone.',
+        ]
+        self.arrange_write_film_info_yaml(festival, film, paragraphs=paragraphs)
+
+        # Act.
+        response = self.client.get(reverse('films:details', args=[film.pk]))
+
+        # Assert.
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertContains(response, paragraphs[0])
+        self.assertContains(response, paragraphs[1])
+        self.assertContains(response, paragraphs[2])
+        self.assertContains(response, f'{"<br><br>".join(paragraphs)}')
+
+    def test_minus_is_displayed_in_absence_of_article(self):
+        """
+        If the film has no article, a minus (-) is displayed.
+        """
+        # Arrange.
+        _ = self.get_regular_fan_request()
+
+        festival = new_std_festival()
+        kwargs = {'festival': festival}
+        film = create_film(3, 'Permutations and Combinations', 187, **kwargs)
+        screened_film = create_film(128, 'Black and White', 22, **kwargs)
+        paragraphs = ['In a future edition, we will screen "White and Black"']
+        self.arrange_write_film_info_yaml(festival, film, screened_film, paragraphs=paragraphs)
+
+        # Act.
+        response = self.client.get(reverse('films:details', args=[screened_film.pk]))
+
+        # Assert.
+        self.assertEqual(response.status_code, HTTPStatus.OK)
+        self.assertRegex(get_decoded_content(response), self.re_article_default)
 
 
 class FilmListViewTests(ViewsTestCase):

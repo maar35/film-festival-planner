@@ -630,24 +630,25 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
 
     @staticmethod
     def _get_film_info(film):
-        article = ''
         articles = []
         combi_data = []
         screened_data = []
         film_metadata = {}
         filminfo_yaml_file = film.festival.filminfo_yaml_file()
         try:
+            """
+            TODO: Read this information for as much as reasonable festivals.
+            """
             with open(filminfo_yaml_file, 'r') as stream:
                 yaml_object = yaml.safe_load(stream)
         except FileNotFoundError:
             pass
         else:
             try:
-                """
-                TODO: Read this information for as much as reasonable festivals.
-                """
-                article = yaml_object['article'][film.film_id]
                 articles = yaml_object['articles'][film.film_id]
+            except KeyError:
+                pass
+            try:
                 combi_dict = yaml_object['combinations']
                 combination_films_by_film_id = {i: l for i, l in combi_dict.items()}
                 screened_dict = yaml_object['screened_films']

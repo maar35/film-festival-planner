@@ -63,7 +63,20 @@
 <ul>
     <li>Duration: {{ film.duration }}</li>
     <li>Description: {{ description | default:"-"}}</li>
-    <li>Article: {% if paragraphs %}<br>{% endif %} {{ paragraphs | default:"-" | join:"<p>" }}</li>
+    <li>Article:
+        {% if paragraphs %}
+        <span class="article-dropdown inline-dropdown-addition">
+            <span class="active-text">
+                {{ paragraphs.0 | default:"-" | truncatechars:36 }}
+            </span>
+            <span class="article-dropdown-content">
+                {{ paragraphs | join:"<br><br>" }}
+            </span>
+        </span>
+        {% else %}
+        {{ "-" }}
+        {% endif %}
+    </li>
     <li>Section: {{ film.subsection.section.name | default:"-" }}</li>
     <li>Subsection: {{ film.subsection.name | default:"-" }}</li>
     <li>Subsection description: {{ film.subsection.description | default:"-" }}</li>
