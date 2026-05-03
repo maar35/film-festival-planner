@@ -528,6 +528,8 @@ span.up {
 
 /* Definitions for dropdowns that display a single pane */
 .simple-dropdown,
+.wider-dropdown,
+.article-dropdown,
 .standout-dropdown,
 .in-screening-dropdown {
     position: relative;
@@ -537,6 +539,9 @@ span.up {
     margin: auto;
     width: auto;
     height: auto;
+}
+.article-dropdown {
+    padding: 0;
 }
 .in-screening-dropdown {
     background: var(--warningColorYellow);
@@ -549,8 +554,12 @@ span.up {
 }
 
 .simple-dropdown:hover,
+.wider-dropdown:hover,
 .standout-dropdown:hover {
     background: var(--hoverBackground);
+}
+.article-dropdown:hover {
+    background: var(--infoHoverBackground);
 }
 .in-screening-dropdown:hover {
     background: var(--warningBackground);
@@ -572,6 +581,8 @@ span.up {
 }
 
 .simple-dropdown-content,
+.wider-dropdown-content,
+.article-dropdown-content,
 .standout-dropdown-content,
 .in-screening-dropdown-content {
     display: none;
@@ -583,6 +594,20 @@ span.up {
     box-shadow: var(--modestBoxShadow);
     padding: 0.15rem;
     z-index: 4;
+}
+.wider-dropdown-content {
+    top: 1.8rem;
+    left: 2rem;
+    min-width: 20rem;
+}
+.article-dropdown-content {
+    top: -1rem;
+    left: -0.5rem;
+    border: 1px solid var(--infoColor);
+    box-shadow: var(--standoutBoxShadow);
+    min-width: 30rem;
+    margin-left: 0.5rem;
+    padding: 1rem;
 }
 .standout-dropdown-content {
     top: 90%;
@@ -602,12 +627,10 @@ span.up {
     animation: ticker 4s linear 800ms;
 }
 
-.simple-dropdown:hover .simple-dropdown-content {
-    display: block;
-}
-.standout-dropdown:hover .standout-dropdown-content {
-    display: block;
-}
+.simple-dropdown:hover .simple-dropdown-content,
+.wider-dropdown:hover .wider-dropdown-content,
+.article-dropdown:hover .article-dropdown-content,
+.standout-dropdown:hover .standout-dropdown-content,
 .in-screening-dropdown:hover .in-screening-dropdown-content {
     display: block;
 }

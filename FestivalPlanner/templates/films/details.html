@@ -62,9 +62,25 @@
 <h3>Film details</h3>
 <ul>
     <li>Duration: {{ film.duration }}</li>
-    <li>Subsection: {% if film.subsection %} {{ film.subsection.name }} {% else %} - {% endif %}</li>
-    <li>Description: {% if description %} {{ description }} {% else %} - {% endif %}</li>
-    <li>Reviewer: {% if film.reviewer %} {{ film.reviewer }} {% else %} - {% endif %}</li>
+    <li>Description: {{ description | default:"-"}}</li>
+    <li>Article:
+        {% if paragraphs %}
+        <span class="article-dropdown inline-dropdown-addition">
+            <span class="active-text">
+                {{ paragraphs.0 | truncatechars:36 }}
+            </span>
+            <span class="article-dropdown-content">
+                {{ paragraphs | join:"<br><br>" }}
+            </span>
+        </span>
+        {% else %}
+        {{ "-" }}
+        {% endif %}
+    </li>
+    <li>Section: {{ film.subsection.section.name | default:"-" }}</li>
+    <li>Subsection: {{ film.subsection.name | default:"-" }}</li>
+    <li>Subsection description: {{ film.subsection.description | default:"-" }}</li>
+    <li>Reviewer: {{ film.reviewer | default:"-" }}</li>
     <li>Medium category: {{ film.medium_category }}</li>
     <li>Sort title: {{ film.sort_title }}</li>
     <li>Title language: {{ film.title_language }}</li>

@@ -124,11 +124,11 @@
                     <td>{{ row.duration_str }}</td>
                 {% endif %}
                 {% if row.subsection %}
-                    <td class="simple-dropdown">
+                    <td class="wider-dropdown">
                         <span class="active-text" style="color:{{ row.subsection.section.color }};">
                             {{ row.subsection.name }}
                         </span>
-                        <div class="simple-dropdown-content" style="min-width: 350px">
+                        <div class="wider-dropdown-content">
                             <table style="width: 100%;"><tr><td>
                                 <a href="{% url 'films:films' %}{{ row.subsection_filter.href_filter }}">
                                     {{ row.subsection_filter.action }}

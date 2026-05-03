@@ -885,9 +885,9 @@ class NffData(FestivalData):
             f.write(text)
         print(f"\nDone writing {len(self.nff_films)} records to {filmdata_file}.\n")
 
-    def add_filminfo(self, filmid, description):
-        filminfo = FilmInfo(filmid, description, '')
-        self.filminfos.append(filminfo)
+    def add_filminfo(self, film_id, description):
+        filminfo = FilmInfo(film_id, description, '')
+        self.film_infos.append(filminfo)
 
 
 if __name__ == "__main__":

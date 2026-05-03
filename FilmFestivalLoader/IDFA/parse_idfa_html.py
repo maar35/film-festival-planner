@@ -198,9 +198,9 @@ def get_film_from_theme_part_page(festival_data, film_title, film_url, theme_par
     try:
         _ = festival_data.get_film_by_key(film_title, film_url)
     except KeyError:
-        DEBUG_RECORDER.add('New film.')
+        broadcast('New film.', DEBUG_RECORDER)
     except ValueError:
-        DEBUG_RECORDER.add('Known film not yet parsed.')
+        broadcast('Known film not yet parsed.', DEBUG_RECORDER)
     else:
         comment(f'Existing film {film_title} not parsed.')
         return
@@ -727,8 +727,8 @@ class FilmPageParser(HtmlPageParser):
 
         # Add film info.
         COUNTER.increase('meta dicts')
-        self.film_info = FilmInfo(self.film.film_id, self.description, self.article, metadata=metadata)
-        self.festival_data.filminfos.append(self.film_info)
+        self.film_info = FilmInfo(self.film.film_id, self.description, self.article_paragraphs, metadata=metadata)
+        self.festival_data.film_infos.append(self.film_info)
 
     def _add_screening(self):
         # Create an IDFA screening from the gathered data.

@@ -365,8 +365,9 @@ class AzPageParser(HtmlPageParser):
 
     def add_film_info(self):
         if len(self.description) > 0:
-            film_info = FilmInfo(self.film.film_id, self.description, self.article)
-            self.festival_data.filminfos.append(film_info)
+            article_paragraphs = FilmInfo.get_article_paragraphs(self.article)
+            film_info = FilmInfo(self.film.film_id, self.description, article_paragraphs)
+            self.festival_data.film_infos.append(film_info)
 
     def increase_per_duration_class_counter(self, film):
         key = 'feature films' if film.duration > self.max_short_duration else 'shorts'
@@ -519,8 +520,8 @@ class SubsectionPageParser(HtmlPageParser):
         self.film_count += 1
 
     def add_film_info(self):
-        film_info = FilmInfo(self.film.film_id, self.description, '')
-        self.festival_data.filminfos.append(film_info)
+        film_info = FilmInfo(self.film.film_id, self.description, [])
+        self.festival_data.film_infos.append(film_info)
 
 
 class FilmInfoPageParser(HtmlPageParser):
@@ -915,7 +916,7 @@ class FilmInfoPageParser(HtmlPageParser):
             COUNTER.increase('articles')
         if not self.description:
             self.set_description_from_article(self.film.title)
-        self.film_info.article = self.article
+        self.film_info.article_paragraphs = self.article_paragraphs
         self.film_info.metadata = self.film_property_by_label
         if self.film_info.metadata:
             COUNTER.increase('metadata')

@@ -579,7 +579,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         super_context = super().get_context_data(**kwargs)
         film = self.object
-        metadata, combi_data, screened_data = self._get_film_info(film)
+        paragraphs, metadata, combi_data, screened_data = self._get_film_info(film)
         session = self.request.session
         festival = current_festival(session)
         combi_films = [Film.films.get(film_id=d['film_id'], festival=festival) for d in combi_data]
@@ -594,6 +594,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
         new_context = {
             'title': 'Film Details',
             'description': self.get_description(film),
+            'paragraphs': paragraphs,
             'screened_films': screened_films,
             'combination_films': combi_films,
             'alt_films': alt_films,
@@ -629,20 +630,25 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
 
     @staticmethod
     def _get_film_info(film):
+        articles = []
         combi_data = []
         screened_data = []
         film_metadata = {}
         filminfo_yaml_file = film.festival.filminfo_yaml_file()
         try:
+            """
+            TODO: Read this information for as much as reasonable festivals.
+            """
             with open(filminfo_yaml_file, 'r') as stream:
                 yaml_object = yaml.safe_load(stream)
         except FileNotFoundError:
             pass
         else:
             try:
-                """
-                TODO: Read this information for as much as reasonable festivals.
-                """
+                articles = yaml_object['articles'][film.film_id]
+            except KeyError:
+                pass
+            try:
                 combi_dict = yaml_object['combinations']
                 combination_films_by_film_id = {i: l for i, l in combi_dict.items()}
                 screened_dict = yaml_object['screened_films']
@@ -657,7 +663,7 @@ class FilmDetailView(LoginRequiredMixin, DetailView):
                 screened_data = []
                 film_metadata = {}
         metadata = [{'key': k, 'value': v} for k, v in film_metadata.items()]
-        film_info = metadata, combi_data, screened_data
+        film_info = articles, metadata, combi_data, screened_data
         return film_info
 
     @staticmethod
