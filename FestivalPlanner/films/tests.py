@@ -732,7 +732,8 @@ class FilmDetailsViewTests(ViewsTestCase):
             'El Salvador, as he is still called in Barcelona, was not only an \
 incredibly gifted player, but also a brilliant, unconventional trainer.',
             'Plus, to a most unbelievable level, his views on life as a whole, \
-always expressed by means of football metaphors, were inimitable and once heard would never be forgotten by anyone.',
+always expressed by means of football metaphors, were inimitable and once heard \
+would never be forgotten by anyone.',
         ]
         self.arrange_write_film_info_yaml(festival, film, paragraphs=paragraphs)
 

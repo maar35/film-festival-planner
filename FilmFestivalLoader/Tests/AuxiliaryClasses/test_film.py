@@ -37,8 +37,8 @@ class BaseFilmTestCase(BaseTestCase):
         self.festival_data.films.append(film)
 
         # Add film info.
-        article = ''
-        film_info = FilmInfo(self.film_id, description, article)
+        articles = []
+        film_info = FilmInfo(self.film_id, description, articles)
         self.festival_data.film_infos.append(film_info)
 
 

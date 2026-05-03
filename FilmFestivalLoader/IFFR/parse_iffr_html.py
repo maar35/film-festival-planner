@@ -365,7 +365,8 @@ class AzPageParser(HtmlPageParser):
 
     def add_film_info(self):
         if len(self.description) > 0:
-            film_info = FilmInfo(self.film.film_id, self.description, self.article)
+            article_paragraphs = FilmInfo.get_article_paragraphs(self.article)
+            film_info = FilmInfo(self.film.film_id, self.description, article_paragraphs)
             self.festival_data.film_infos.append(film_info)
 
     def increase_per_duration_class_counter(self, film):

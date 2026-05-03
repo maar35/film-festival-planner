@@ -67,7 +67,7 @@
         {% if paragraphs %}
         <span class="article-dropdown inline-dropdown-addition">
             <span class="active-text">
-                {{ paragraphs.0 | default:"-" | truncatechars:36 }}
+                {{ paragraphs.0 | truncatechars:36 }}
             </span>
             <span class="article-dropdown-content">
                 {{ paragraphs | join:"<br><br>" }}

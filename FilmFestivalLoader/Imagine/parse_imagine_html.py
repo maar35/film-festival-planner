@@ -589,7 +589,7 @@ class FilmPageParser(HtmlPageParser):
                 film_info = self.film.film_info(self.festival_data)
                 film_info.article = article
             else:
-                film_info = FilmInfo(self.film.film_id, self.description, article,
+                film_info = FilmInfo(self.film.film_id, self.description, self.article_paragraphs,
                                      metadata=self.film_property_by_label)
                 self.festival_data.film_infos.append(film_info)
 

@@ -259,6 +259,7 @@ class ScreenedFilm:
 
 
 class FilmInfo:
+    PARAGRAPH_SEPARATOR = '\n\n'
 
     def __init__(self, film_id, description, article_paragraphs,
                  metadata=None, combination_films=None, screened_films=None):
@@ -276,7 +277,12 @@ class FilmInfo:
         return '\n'.join([str(self.film_id), self.description, self.article, combinations_str, screened_str]) + '\n'
 
     def get_article(self):
-        return '\n\n'.join(self.article_paragraphs)
+        return self.PARAGRAPH_SEPARATOR.join(self.article_paragraphs)
+
+    @classmethod
+    def get_article_paragraphs(cls, article):
+        paragraphs = article.split(cls.PARAGRAPH_SEPARATOR)
+        return paragraphs
 
     def format_metadata(self):
         properties = [f'{key}: {value}' for (key, value) in self.metadata.items()]
@@ -881,8 +887,7 @@ class FestivalData:
                 info_dict[film_id] = info_dict_list
             return info_dict
 
-        # Get film articles. TODO: Remove reference to "article" which is being deprecated.
-        article = {i.film_id: i.article for i in self.film_infos if can_go(i)}
+        # Get film articles.
         articles = {i.film_id: i.article_paragraphs for i in self.film_infos if can_go(i)}
 
         # Get metadata per film id.
@@ -896,7 +901,6 @@ class FestivalData:
 
         # Create the YAML object.
         yaml_object = {
-            'article': article,
             'articles': articles,
             'metadata': metadata_dict,
             'screened_films': screened_dict,
