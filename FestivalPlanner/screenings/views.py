@@ -30,6 +30,7 @@ from screenings.models import Screening, Attendance, COLOR_PAIR_SELECTED, filmsc
 from theaters.models import Theater
 
 AUTO_PLANNED_INDICATOR = '𝛑'
+THEATER_PRIO_DEFAULT = Filter.filtered_by_query['display']
 
 
 class DaySchemaView(SharedTemplateReferrerView):
@@ -38,6 +39,7 @@ class DaySchemaView(SharedTemplateReferrerView):
     """
     template_name = 'screenings/day_schema.html'
     current_day = FestivalDay('day')
+    filter_by_prio = {prio: Filter('priority', f'prio-{prio.label}') for prio in Theater.Priority}
 
     def __init__(self):
         super().__init__()
@@ -46,6 +48,8 @@ class DaySchemaView(SharedTemplateReferrerView):
 
     def dispatch(self, request, *args, **kwargs):
         self.current_day.day_cookie.handle_get_request(request)
+        for filter_ in self.filter_by_prio.values():
+            filter_.handle_get_request(request)
         ScreeningStatusGetter.handle_screening_get_request(request)
         return super().dispatch(request, *args, **kwargs)
 
@@ -54,6 +58,7 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
     template_name = DaySchemaView.template_name
     http_method_names = ['get']
     context_object_name = 'screen_rows'
+    filter_by_prio = DaySchemaView.filter_by_prio
     fans = FilmFan.film_fans.all()
     start_hour = datetime.time(hour=9)
     hour_count = 16
@@ -87,7 +92,7 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
         self.selected_screening = ScreeningStatusGetter.get_selected_screening(request)
         self.day_screenings = Screening.screenings.filter(film__festival=self.festival, start_dt__date=current_date)
         self.rating_by_fan_by_film = self._get_rating_by_fan_by_film()
-        self.status_getter = ScreeningStatusGetter(request.session, self.day_screenings)
+        self.status_getter = ScreeningStatusGetter(session, self.day_screenings)
         self.screen_fragment_keeper = ScreenFragmentKeeper()
         sorted_warning_rows = self._get_sorted_warning_rows()
         self._get_top_fragments_data(sorted_warning_rows)
@@ -96,6 +101,10 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
     def dispatch(self, request, *args, **kwargs):
         cookie = DaySchemaView.current_day.day_cookie
         DaySchemaView.current_day.set_str(request.session, cookie.get(request.session))
+
+        for filter_ in self.filter_by_prio.values():
+            filter_.handle_get_request(request)
+
         return super().dispatch(request, *args, **kwargs)
 
     @timed_method
@@ -113,6 +122,7 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
         current_day = DaySchemaView.current_day
         current_day_str = current_day.get_str(session)
         day_choices = DaySchemaView.current_day.get_festival_days()
+        theater_prio_choices = self._get_theater_prio_choices(session)
         availability_props = self._get_available_fan_props(session)
         selected_screening_props = self._get_selected_screening_props()
         new_context = {
@@ -127,8 +137,11 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
             'last_day': day_choices[-1].split()[1],
             'screening': self.selected_screening,
             'selected_screening_props': selected_screening_props,
+            'theater_prio_choices': theater_prio_choices,
+            'displayed_priorities': [prop['name'] for prop in theater_prio_choices if prop['checked']],
             'timescale': self._get_timescale(),
             'availability_props': availability_props,
+            'day_screening_count': len(self.day_screenings),
             'total_width': self.hour_count * self.pixels_per_hour,
             'stats': ScreeningWarning.get_warning_stats(self.festival, self.sorted_warnings),
             'form_errors': ERRORS.get(session),
@@ -161,7 +174,9 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
 
     def _get_screenings_by_screen(self):
         screenings_by_screen = {}
-        sorted_screenings = sorted(self.day_screenings, key=lambda s: str(s.screen))
+        filtered_priorities = [p for p, f in self.filter_by_prio.items() if f.off(self.request.session)]
+        eligible_screenings = [s for s in self.day_screenings if s.screen.theater.priority in filtered_priorities]
+        sorted_screenings = sorted(eligible_screenings, key=lambda s: str(s.screen))
         for screening in sorted(sorted_screenings, key=lambda s: s.screen.theater.priority, reverse=True):
             try:
                 screenings_by_screen[screening.screen].append(screening)
@@ -194,6 +209,18 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
             }
             hour_list.append(props_by_hour)
         return hour_list
+
+    @staticmethod
+    def _get_theater_prio_choices(session):
+        choice_props = []
+        for prio, filter_ in DaySchemaView.filter_by_prio.items():
+            choice_props.append({
+                'id': prio.label,
+                'checked': filter_.off(session),
+                'value': f'prio_picked_{prio.label}',
+                'name': prio.label,
+            })
+        return choice_props
 
     def _get_rating_by_fan_by_film(self):
         day_films = {screening.film for screening in self.day_screenings}
@@ -391,11 +418,29 @@ class DaySchemaListView(LoginRequiredMixin, ProfiledListView):
 class DaySchemaFormView(LoginRequiredMixin, FormView):
     template_name = DaySchemaView.template_name
     form_class = DummyForm
-    http_method_names = ['post']
+    http_method_names = ['get', 'post']
+    filter_by_prio = DaySchemaView.filter_by_prio
 
     def form_valid(self, form):
-        day_str = self.request.POST['day']
-        DaySchemaView.current_day.set_str(self.request.session, day_str, is_choice=True)
+        session = self.request.session
+        post = self.request.POST
+
+        if 'day' in post:
+            # Set new current day.
+            day_str = post['day']
+            DaySchemaView.current_day.set_str(session, day_str, is_choice=True)
+
+        elif self.filter_by_prio:
+            # Set new theater priority filters.
+            on_count = 0
+            for prio, filter_ in self.filter_by_prio.items():
+                on_count += prio.label in post
+            if on_count:
+                for prio, filter_ in self.filter_by_prio.items():
+                    filter_.set(session, prio.label not in post)
+            else:
+                ERRORS.add(session, 'Attempt to filter out all theaters.')
+
         return super().form_valid(form)
 
     def get_success_url(self):

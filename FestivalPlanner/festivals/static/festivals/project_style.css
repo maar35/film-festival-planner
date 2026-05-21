@@ -10,7 +10,7 @@
     --warningColorYellow: rgb(255 219 0);
     --inputBackground: forestGreen;
     --hoverBackground: darkGreen;
-    --focusBackgrond: yellowGreen;
+    --focusBackground: yellowGreen;
     --errorBlockColor: tomato;
     --errorBlockShadowColor: green;
     --warningBlockColor: var(--warningColor);
@@ -19,7 +19,7 @@
     --inputDisabledBackground: red;
     --inputDisabledText: grey;
     --errorBackground: red;
-    --navBackground: rgb(219 207 176 / 0.6);
+    --navBackground: rgb(219 207 176 / .6);
     --warningBackground: var(--warningColor);
     --infoHoverBackground: var(--infoColor);
     --warningHoverBackground: rgb(255 79 0);
@@ -28,6 +28,7 @@
     --tableBackground: rgb(0 0 0 / .6);
     --modestBackground: rgb(0 0 38 / .73);
     --screeningBackground: rgb(0 0 0 / .73);
+    --fieldsetBackground: rgb(119 176 119);
     --screeningBorderWidth: 3px;
     --screeningBorderColor: rgb(0 0 0 / .44);
     --boxShadowColor: rgb(0 0 0 / 1);
@@ -45,7 +46,7 @@ td a {
 }
 
 a:focus {
-    color: var(--focusBackgrond)
+    color: var(--focusBackground)
 }
 
 /* Style the h1 header as to stand out within the page.
@@ -135,7 +136,7 @@ select:hover {
     background: var(--hoverBackground);
 }
 select:focus {
-    background: var(--focusBackgrond);
+    background: var(--focusBackground);
 }
 
 /* Completely customize the submit widget, among other things make it
@@ -164,24 +165,29 @@ input[type=text] {
     border-radius: 4px;
 }
 
-/* Specifics for in-table input widgets */
+/* Specifics for specific input widgets */
+input[type=submit].field_list,
 input[type=submit].in-table {
     width: 100%;
     padding: 6px 15px;
     font-size: small;
     border-radius: 4px;
 }
+input[type=submit].field_list {
+    min-width: 8rem;
+}
 
 input[type=submit]:hover,
 input[type=password]:hover,
 input[type=text]:hover,
+input[type=submit].field_list:hover,
 input[type=submit].in-table:hover {
     background: var(--hoverBackground);
 }
 
 input[type=password]:focus,
 input[type=text]:focus {
-    background: var(--focusBackgrond);
+    background: var(--focusBackground);
 }
 
 input.warning {
@@ -211,6 +217,21 @@ input.disabled-error:hover {
 
 input.smaller {
     width: 25%;
+}
+
+/* Specifics for a field set of checkbox widgets */
+.checkbox,
+.checkbox-label {
+    cursor: pointer;
+    margin: auto;
+    padding: .1rem .3rem;
+}
+.checkbox-label {
+    margin-bottom: .3rem;
+    color: var(--modestStandoutColor);
+}
+.checkbox-label:hover {
+    background: var(--hoverBackground);
 }
 
 /* Include padding and border in the width and height of each element */
@@ -500,9 +521,7 @@ span.up {
 }
 
 /* Show the dropdown menu on hover */
-.choices-dropdown:hover .choices-dropdown-content {
-    display: inline-grid;
-}
+.choices-dropdown:hover .choices-dropdown-content,
 .cell-dropdown:hover .cell-dropdown-content {
     display: inline-grid;
 }
@@ -531,6 +550,7 @@ span.up {
 .wider-dropdown,
 .article-dropdown,
 .standout-dropdown,
+.fieldset-dropdown,
 .in-screening-dropdown {
     position: relative;
     display: table-cell;
@@ -555,7 +575,8 @@ span.up {
 
 .simple-dropdown:hover,
 .wider-dropdown:hover,
-.standout-dropdown:hover {
+.standout-dropdown:hover,
+.fieldset-dropdown:hover {
     background: var(--hoverBackground);
 }
 .article-dropdown:hover {
@@ -584,6 +605,7 @@ span.up {
 .wider-dropdown-content,
 .article-dropdown-content,
 .standout-dropdown-content,
+.fieldset-dropdown-content,
 .in-screening-dropdown-content {
     display: none;
     position: absolute;
@@ -616,6 +638,13 @@ span.up {
     min-width: 60rem;
     margin-left: 0.5rem;
 }
+.fieldset-dropdown-content {
+    top: 90%;
+    left: 0;
+    background: var(--fieldsetBackground);
+    box-shadow: var(--standoutBoxShadow);
+    margin-left: 0.5rem;
+}
 .in-screening-dropdown-content {
     top: .5rem;
     background: blue;
@@ -631,6 +660,7 @@ span.up {
 .wider-dropdown:hover .wider-dropdown-content,
 .article-dropdown:hover .article-dropdown-content,
 .standout-dropdown:hover .standout-dropdown-content,
+.fieldset-dropdown:hover .fieldset-dropdown-content,
 .in-screening-dropdown:hover .in-screening-dropdown-content {
     display: block;
 }
