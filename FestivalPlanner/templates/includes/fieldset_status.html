@@ -1,0 +1,8 @@
+<span class="{{ class_name }}">
+    {{ label }}
+    {% if displayed_fields|length == fieldset|length %}
+        all
+    {% else %}
+        {{ displayed_fields | join:", " | default:"none" }}
+    {% endif %}
+</span>

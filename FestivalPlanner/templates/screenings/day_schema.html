@@ -120,15 +120,10 @@
 
 <h3>
     <span class="label-8rem">Theater Filter:</span>
-    {% include "../includes/checkboxset_dropdown.html" with head="Priority" choices=theater_prio_choices submit_text="Submit" %}
-    <span class="inline-dropdown-addition;">
-        now displaying
-        {% if displayed_priorities|length == theater_prio_choices|length %}
-            all
-        {% else %}
-            {{ displayed_priorities | join:", " | default:"none" }}
-        {% endif %}
-    </span>
+    {% include "../includes/checkboxset_dropdown.html" with head="Priority" submit_text="Submit" %}
+    {% with class_name="inline-dropdown-addition" label="now displaying" fieldset=fieldset_props %}
+        {% include "../includes/fieldset_status.html" %}
+    {% endwith %}
 </h3>
 <br>
 
