@@ -197,7 +197,7 @@ class TicketModelTests(ScreeningModelTests):
 
 
 class ScreeningToolsTests(TestCase):
-    """ Other tests than model tets ot view tests."""
+    """ Other tests than model test or view tests."""
     def test_dict_of_dict_items(self):
         """
         Taking the items() of a dictionary of dictionaries as in ScreeningStatusGetter works.

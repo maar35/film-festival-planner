@@ -116,9 +116,16 @@
     </h3>
     {% endwith %}
 </div>
-<br>
 {% endif %}
 
+<h3>
+    <span class="label-8rem">Theater Filter:</span>
+    {% include "../includes/checkboxset_dropdown.html" with head="Priority" submit_text="Submit" %}
+    {% with class_name="inline-dropdown-addition" label="now displaying" fieldset=fieldset_props %}
+        {% include "../includes/fieldset_status.html" %}
+    {% endwith %}
+</h3>
+<br>
 
 {% if screen_rows or availability_props %}
     <table class="day-schema-border">
@@ -213,8 +220,15 @@
         {% endfor %}
         </tbody>
     </table>
-{% else %}
-    <p>No screenings available for this festival day.</p>
+{% endif %}
+{% if not screen_rows %}
+    <p>
+        {% if day_screening_count %}
+            All theaters hidden by filter.
+        {% else %}
+            No screenings available for this festival day.
+        {% endif %}
+    </p>
 {% endif %}
 </div>
 

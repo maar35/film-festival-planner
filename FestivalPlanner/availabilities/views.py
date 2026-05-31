@@ -207,7 +207,7 @@ class AvailabilityListView(LoginRequiredMixin, ProfiledListView):
             'fan': fan,
             'fan_choices': self.fan_list,
 
-            'start_day_label': 'Start date:',
+            'start_day_label': 'Start day:',
             'start_day': AvailabilityView.start_day.get_str(session),
             'start_day_choices': AvailabilityView.start_day.get_festival_days(),
             'start_time_label': 'Start time:',

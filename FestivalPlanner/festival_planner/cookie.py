@@ -62,6 +62,9 @@ class Alert:
     def __init__(self, alert_cookie):
         self.alert_cookie = alert_cookie
 
+    def str_(self, session):
+        return f'{self.alert_cookie.get_cookie_key()}: {self.alert_cookie.get(session)}'
+
     def set(self, session, messages):
         self.alert_cookie.set(session, messages)
 

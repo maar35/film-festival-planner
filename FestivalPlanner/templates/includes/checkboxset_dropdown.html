@@ -1,0 +1,20 @@
+<form method="post" class="fieldset-dropdown inline-dropdown-addition">
+{% csrf_token %}
+    <span class="header-active-text">
+        {{ head }}
+    </span>
+    <div class="fieldset-dropdown-content">
+        {% for prop in fieldset_props %}
+        <div class="with-submit-center">
+            <input
+                type="checkbox" switch
+                id="{{ prop.id }}"
+                {% if prop.checked %} checked="" {% endif %}
+                name="{{ prop.name }}"
+                class="checkbox">
+            <label for="{{ prop.id }}" class="checkbox-label">{{ prop.name }}</label>
+        </div>
+        {% endfor %}
+        <input type="submit" class="field_list" name="submit_prio" value="{{ submit_text }}">
+    </div>
+</form>
