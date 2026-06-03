@@ -25,7 +25,7 @@ def arrange_get_datetime(dt_string):
     return datetime.datetime.fromisoformat(dt_string).replace(tzinfo=None)
 
 
-def arrange_screening_attributes():
+def arrange_std_screening_attributes():
     film = create_film(1, 'The Houses Look All the Same', 55)
     city = film.festival.base.home_city
     theater_kwargs = {
@@ -47,10 +47,14 @@ def arrange_screening_attributes():
     return film, theater, screen
 
 
+def space_wrapped(pattern):
+    return r'\s+' + f'{pattern}' + r'\s+'
+
+
 class ScreeningModelTests(TestCase):
     def setUp(self):
         super().setUp()
-        self.film, self.theater, self.screen = arrange_screening_attributes()
+        self.film, self.theater, self.screen = arrange_std_screening_attributes()
 
     def _arrange_screening_kwargs(self, iso_dt=None, minutes=None):
         start_dt = arrange_get_datetime(iso_dt or '2024-02-10 23:14')
@@ -254,6 +258,54 @@ class ScreeningViewsTests(ViewsTestCase):
         }
         self.film = Film.films.create(**film_kwargs)
 
+        film_2_kwargs = {
+            'festival': self.festival,
+            'film_id': 8,
+            'seq_nr': 16,
+            'sort_title': 'portraits in life and death',
+            'title': 'Portraits in Life and Death',
+            'duration': datetime.timedelta(minutes=MAX_SHORT_MINUTES + 1),
+            'medium_category': 'events',
+            'url': 'https://edition.cnn.com/2024/04/18/style/venice-biennale-2024-what-to-see/index.html'
+        }
+        self.film_2 = Film.films.create(**film_2_kwargs)
+
+        film_3_kwargs = {
+            'festival': self.festival,
+            'film_id': 16,
+            'seq_nr': 32,
+            'sort_title': 'dark globe',
+            'title': 'Dark Globe',
+            'duration': datetime.timedelta(minutes=4),
+            'medium_category': 'events',
+            'url': 'https://www.sicvenezia.it/en/films/dark-globe/',
+        }
+        self.film_3 = Film.films.create(**film_3_kwargs)
+
+        film_4_kwargs = {
+            'festival': self.festival,
+            'film_id': 17,
+            'seq_nr': 37,
+            'sort_title': 'blood and sand',
+            'title': 'Blood and Sand',
+            'duration': datetime.timedelta(minutes=125),
+            'medium_category': 'films',
+            'url': 'https://www.labiennale.org/en/cinema/2024/venice-classics/blood-and-sand',
+        }
+        self.film_4 = Film.films.create(**film_4_kwargs)
+
+        film_5_kwargs = {
+            'festival': self.festival,
+            'film_id': 18,
+            'seq_nr': 36,
+            'sort_title': 'no sleep till',
+            'title': 'No Sleep Till',
+            'duration': datetime.timedelta(minutes=93),
+            'medium_category': 'films',
+            'url': 'https://www.sicvenezia.it/en/films/no-sleep-till/',
+        }
+        self.film_5 = Film.films.create(**film_5_kwargs)
+
         theater_kwargs = {
             'theater_id': 1,
             'city': city,
@@ -263,59 +315,77 @@ class ScreeningViewsTests(ViewsTestCase):
         }
         theater = Theater.theaters.create(**theater_kwargs)
 
-        theater_kwargs = {
+        theater_2_kwargs = {
             'theater_id': 2,
             'city': city,
             'parse_name': 'PalaBiennale',
             'abbreviation': 'palabi',
             'priority': Theater.Priority.HIGH,
         }
-        theater_2 = Theater.theaters.create(**theater_kwargs)
+        theater_2 = Theater.theaters.create(**theater_2_kwargs)
 
-        screen_kwargs = {
+        theater_3_kwargs = {
+            'theater_id': 3,
+            'city': city,
+            'parse_name': 'Arsenale di Venezia',
+            'abbreviation': 'arsenal',
+            'priority': Theater.Priority.LOW,
+        }
+        theater_3 = Theater.theaters.create(**theater_3_kwargs)
+
+        screen_sg_kwargs = {
             'screen_id': 1,
             'theater': theater,
             'parse_name': 'Sala Grande',
             'abbreviation': '-g',
             'address_type': Screen.ScreenAddressType.PHYSICAL,
         }
-        self.screen_sg = Screen.screens.create(**screen_kwargs)
+        self.screen_sg = Screen.screens.create(**screen_sg_kwargs)
 
-        screen_kwargs = {
+        screen_sz_kwargs = {
             'screen_id': 2,
             'theater': theater,
-            'parse_name': 'PalaBiennale',
-            'abbreviation': '-b',
+            'parse_name': 'Sala Zorzi',
+            'abbreviation': '-sz',
             'address_type': Screen.ScreenAddressType.PHYSICAL,
         }
-        self.screen_b = Screen.screens.create(**screen_kwargs)
+        self.screen_sz = Screen.screens.create(**screen_sz_kwargs)
 
-        screen_kwargs = {
+        screen_sp_kwargs = {
             'screen_id': 3,
             'theater': theater,
             'parse_name': 'Sala Perla',
             'abbreviation': '-sp',
             'address_type': Screen.ScreenAddressType.PHYSICAL,
         }
-        self.screen_sp = Screen.screens.create(**screen_kwargs)
+        self.screen_sp = Screen.screens.create(**screen_sp_kwargs)
 
-        screen_kwargs = {
+        screen_pb_kwargs = {
             'screen_id': 4,
             'theater': theater_2,
             'parse_name': 'PalaBiennale',
             'abbreviation': '-pb',
             'address_type': Screen.ScreenAddressType.PHYSICAL,
         }
-        self.screen_pb = Screen.screens.create(**screen_kwargs)
+        self.screen_pb = Screen.screens.create(**screen_pb_kwargs)
 
-        screen_kwargs = {
+        screen_sc_kwargs = {
             'screen_id': 5,
             'theater': theater_2,
             'parse_name': 'Sala Corinto',
             'abbreviation': '-sc',
             'address_type': Screen.ScreenAddressType.PHYSICAL,
         }
-        self.screen_sc = Screen.screens.create(**screen_kwargs)
+        self.screen_sc = Screen.screens.create(**screen_sc_kwargs)
+
+        screen_an_kwargs = {
+            'screen_id': 6,
+            'theater': theater_3,
+            'parse_name': "Sale d'Armi North",
+            'abbreviation': '-n',
+            'address_type': Screen.ScreenAddressType.PHYSICAL,
+        }
+        self.screen_an = Screen.screens.create(**screen_an_kwargs)
 
     def arrange_regular_user_props(self):
         self.fan = self.regular_fan
@@ -454,7 +524,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
         self.arrange_regular_user_props()
 
         start_dt = arrange_get_datetime('2024-08-31 11:30')
-        screening = self.arrange_create_screening(self.screen_b, start_dt)
+        screening = self.arrange_create_screening(self.screen_sz, start_dt)
 
         _ = Attendance.attendances.create(fan=self.fan, screening=screening)
         _ = Ticket.tickets.create(fan=self.fan, screening=screening)
@@ -477,7 +547,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
         self.arrange_regular_user_props()
 
         start_dt = arrange_get_datetime('2024-08-31 11:30')
-        screening = self.arrange_create_screening(self.screen_b, start_dt)
+        screening = self.arrange_create_screening(self.screen_sz, start_dt)
 
         _ = Attendance.attendances.create(fan=self.fan, screening=screening)
 
@@ -499,7 +569,7 @@ class DaySchemaViewTests(ScreeningViewsTests):
         self.arrange_regular_user_props()
 
         start_dt = arrange_get_datetime('2024-08-31 11:30')
-        screening = self.arrange_create_screening(self.screen_b, start_dt)
+        screening = self.arrange_create_screening(self.screen_sz, start_dt)
 
         _ = Ticket.tickets.create(fan=self.fan, screening=screening)
 
@@ -511,6 +581,133 @@ class DaySchemaViewTests(ScreeningViewsTests):
         self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(Screening.screenings.count(), 1)
         self.assertRegex(get_decoded_content(response), self.re_warning)
+
+    def test_filter_low_prio(self):
+        """
+        The day schema screens can be filtered on theater priority,
+        in this case as to display only low priority theaters.
+        """
+        def get_dt(time_str):
+            return arrange_get_datetime(f'2024-08-30 {time_str}')
+
+        # Arrange.
+        self.arrange_regular_user_props()
+        _ = self.arrange_create_screening(self.screen_sg, get_dt('14:00'), self.film)
+        _ = self.arrange_create_screening(self.screen_sg, get_dt('18:00'), self.film_2)
+        _ = self.arrange_create_screening(self.screen_sz, get_dt('14:30'), self.film_4)
+        _ = self.arrange_create_screening(self.screen_an, get_dt('09:00'), self.film_5)
+
+        get_response = self.client.get(reverse('screenings:day_schema'))
+        post_data = {'Low': ['on']}
+
+        # Act.
+        post_response = self.client.post(reverse('screenings:day_schema'), post_data)
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        prio = Theater.Priority
+        self.assertEqual(self.screen_sg.theater.priority, prio.HIGH)
+        self.assertEqual(self.screen_sz.theater.priority, prio.HIGH)
+        self.assertEqual(self.screen_an.theater.priority, prio.LOW)
+
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        content = get_decoded_content(get_response)
+        self.assertRegex(content, r'now displaying\s+all')
+        self.assertRegex(content, space_wrapped(self.screen_sg))
+        self.assertRegex(content, space_wrapped(self.screen_sz))
+        self.assertRegex(content, space_wrapped(self.screen_an))
+
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        redirect_content = get_decoded_content(redirect_response)
+        self.assertRegex(redirect_content, r'now displaying\s+Low\s+</')
+        self.assertRegex(redirect_content, space_wrapped(self.screen_an))
+        self.assertNotRegex(redirect_content, space_wrapped(self.screen_sg))
+        self.assertNotRegex(redirect_content, space_wrapped(self.screen_sz))
+
+    def test_try_filter_out_all_priorities(self):
+        """
+        The theater priority filter cannot filter out all priorities.
+        """
+        def _get_dt(time_str):
+            return arrange_get_datetime(f'2024-09-02 {time_str}')
+
+        # Arrange.
+        self.arrange_regular_user_props()
+        _ = self.arrange_create_screening(self.screen_sp, _get_dt('09:30'), self.film_3)
+        _ = self.arrange_create_screening(self.screen_sp, _get_dt('10:30'), self.film_5)
+        _ = self.arrange_create_screening(self.screen_sp, _get_dt('20:00'), self.film_2)
+        _ = self.arrange_create_screening(self.screen_sz, _get_dt('22:00'), self.film_4)
+        _ = self.arrange_create_screening(self.screen_an, _get_dt('14:00'), self.film)
+
+        get_response = self.client.get(reverse('screenings:day_schema'))
+        initial_post_data = {'No Go': ['on'], 'Low': ['on']}
+        initial_post_response = self.client.post(reverse('screenings:day_schema'), initial_post_data)
+        initial_redirect_response = self.client.get(initial_post_response.url)
+        post_data = {'submit_prio': ['Submit']}
+        error_html = '<h2 class="error">Form Error</h2>'
+        error_msg = 'Attempt to filter out all theaters.'
+        re_filter_status = r'now displaying\s+No Go, Low\s+</'
+
+        # Act.
+        post_response = self.client.post(reverse('screenings:day_schema'), post_data)
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        prio = Theater.Priority
+        self.assertEqual(self.screen_sp.theater.priority, prio.HIGH)
+        self.assertEqual(self.screen_sz.theater.priority, prio.HIGH)
+        self.assertEqual(self.screen_an.theater.priority, prio.LOW)
+
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertEqual(initial_post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(initial_redirect_response.status_code, HTTPStatus.OK)
+        self.assertNotContains(initial_redirect_response, error_html)
+        self.assertNotContains(initial_redirect_response, error_msg)
+        initial_redirect_content = get_decoded_content(initial_redirect_response)
+        self.assertRegex(initial_redirect_content, re_filter_status)
+
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+        self.assertContains(redirect_response, error_html, 1)
+        self.assertContains(redirect_response, error_msg, 1)
+        redirect_content = get_decoded_content(redirect_response)
+        self.assertRegex(redirect_content, re_filter_status)
+
+    def test_filter_out_all_screens(self):
+        """
+        It is possible to filter out all theaters when none fits the filter.
+        """
+        def _get_dt(time_str):
+            return arrange_get_datetime(f'2024-09-03 {time_str}')
+
+        # Arrange.
+        self.arrange_regular_user_props()
+        _ = self.arrange_create_screening(self.screen_an, _get_dt('11:30'), self.film_3)
+        _ = self.arrange_create_screening(self.screen_an, _get_dt('11:45'), self.film_3)
+        _ = self.arrange_create_screening(self.screen_an, _get_dt('12:00'), self.film_3)
+        _ = self.arrange_create_screening(self.screen_an, _get_dt('12:15'), self.film_3)
+        _ = self.arrange_create_screening(self.screen_sz, _get_dt('12:00'), self.film_5)
+
+        get_response = self.client.get(reverse('screenings:day_schema'))
+        post_data = {'No Go': ['on']}
+        explanation_msg = 'All theaters hidden by filter.'
+
+        # Act.
+        post_response = self.client.post(reverse('screenings:day_schema'), post_data)
+        redirect_response = self.client.get(post_response.url)
+
+        # Assert.
+        prio = Theater.Priority
+        self.assertEqual(self.screen_an.theater.priority, prio.LOW)
+        self.assertEqual(self.screen_sz.theater.priority, prio.HIGH)
+
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assertEqual(post_response.status_code, HTTPStatus.FOUND)
+        self.assertEqual(redirect_response.status_code, HTTPStatus.OK)
+
+        self.assertNotContains(get_response, explanation_msg)
+        self.assertContains(redirect_response, explanation_msg, 1)
 
 
 class DetailsViewTest(ScreeningViewsTests):
@@ -567,7 +764,7 @@ class DetailsViewTest(ScreeningViewsTests):
         start_dt_1 = arrange_get_datetime('2024-08-30 11:15')
         screening_1 = self.arrange_create_screening(self.screen_sg, start_dt_1)
         start_dt_2 = arrange_get_datetime('2024-08-31 11:30')
-        screening_2 = self.arrange_create_screening(self.screen_b, start_dt_2)
+        screening_2 = self.arrange_create_screening(self.screen_sz, start_dt_2)
 
         kwargs = {'fan': self.fan, 'start_dt': start_dt_1, 'end_dt': start_dt_2 + datetime.timedelta(hours=8)}
         Availabilities.availabilities.create(**kwargs)
@@ -591,7 +788,7 @@ class DetailsViewTest(ScreeningViewsTests):
         self.arrange_regular_user_props()
 
         start_dt = arrange_get_datetime('2024-08-31 11:30')
-        screening = self.arrange_create_screening(self.screen_b, start_dt)
+        screening = self.arrange_create_screening(self.screen_sz, start_dt)
         film = screening.film
 
         _ = Attendance.attendances.create(fan=self.fan, screening=screening)
@@ -612,21 +809,6 @@ class DetailsViewTest(ScreeningViewsTests):
 
 
 class PlannerViewTests(ScreeningViewsTests):
-    def setUp(self):
-        super().setUp()
-
-        film_kwargs = {
-            'festival': self.festival,
-            'film_id': 8,
-            'seq_nr': 16,
-            'sort_title': 'portraits in life and death',
-            'title': 'Portraits in Life and Death',
-            'duration': datetime.timedelta(minutes=MAX_SHORT_MINUTES + 1),
-            'medium_category': 'events',
-            'url': 'https://edition.cnn.com/2024/04/18/style/venice-biennale-2024-what-to-see/index.html'
-        }
-        self.film_2 = Film.films.create(**film_kwargs)
-
     @staticmethod
     def arrange_get_film_rating(film, fan, rating):
         kwargs = {
@@ -652,7 +834,7 @@ class PlannerViewTests(ScreeningViewsTests):
         start_dt_good = arrange_get_datetime('2024-02-08 11:30')
         self.good_film = self.film
         self.good_film_rating = self.arrange_get_film_rating(self.good_film, fan, good_rating)
-        self.good_screening_kwargs = self.arrange_get_screening_kwargs(self.good_film, self.screen_b, start_dt_good)
+        self.good_screening_kwargs = self.arrange_get_screening_kwargs(self.good_film, self.screen_sz, start_dt_good)
         self.good_screening = self.arrange_create_screening(**self.good_screening_kwargs)
 
         bad_rating = LOWEST_PLANNABLE_RATING - 1
@@ -725,44 +907,6 @@ class WarningsViewTests(ScreeningViewsTests):
     )
     re_enabled = re.compile(r'<a href="[^"]+">\s*([\w ]+)\s*</a>')
     re_disabled = re.compile(r'<td>\s*<span class="[^"]*\bno-select\b[^"]*"[^>]*>\s*([\w ]+)\s*</span>')
-
-    def setUp(self):
-        super().setUp()
-        film_kwargs = {
-            'festival': self.festival,
-            'film_id': 16,
-            'seq_nr': 32,
-            'sort_title': 'dark globe',
-            'title': 'Dark Globe',
-            'duration': datetime.timedelta(minutes=4),
-            'medium_category': 'events',
-            'url': 'https://www.sicvenezia.it/en/films/dark-globe/',
-        }
-        self.film_2 = Film.films.create(**film_kwargs)
-
-        film_kwargs = {
-            'festival': self.festival,
-            'film_id': 17,
-            'seq_nr': 37,
-            'sort_title': 'blood and sand',
-            'title': 'Blood and Sand',
-            'duration': datetime.timedelta(minutes=125),
-            'medium_category': 'films',
-            'url': 'https://www.labiennale.org/en/cinema/2024/venice-classics/blood-and-sand',
-        }
-        self.film_3 = Film.films.create(**film_kwargs)
-
-        film_kwargs = {
-            'festival': self.festival,
-            'film_id': 18,
-            'seq_nr': 16,
-            'sort_title': 'no sleep till',
-            'title': 'No Sleep Till',
-            'duration': datetime.timedelta(minutes=93),
-            'medium_category': 'films',
-            'url': 'https://www.sicvenezia.it/en/films/no-sleep-till/',
-        }
-        self.film_4 = Film.films.create(**film_kwargs)
 
     def _get_dropdown_content(self, _content, header):
         dropdown_groups = self.re_dropdown.findall(_content)
@@ -955,8 +1099,8 @@ class WarningsViewTests(ScreeningViewsTests):
         screening_1 = self.arrange_create_std_screening()
         start_dt_2 = arrange_get_datetime('2024-08-30 19:15')
         start_dt_3 = arrange_get_datetime('2024-09-02 14:15')
-        screening_2 = self.arrange_create_screening(self.screen_sc, start_dt_2, film=self.film_2)
-        screening_3 = self.arrange_create_screening(self.screen_sc, start_dt_3, film=self.film_3)
+        screening_2 = self.arrange_create_screening(self.screen_sc, start_dt_2, film=self.film_3)
+        screening_3 = self.arrange_create_screening(self.screen_sc, start_dt_3, film=self.film_4)
         screenings = [screening_1, screening_2, screening_3]
         eric = FilmFan.film_fans.create(name='Eric', seq_nr=4)
 
@@ -996,8 +1140,8 @@ class WarningsViewTests(ScreeningViewsTests):
         self.arrange_regular_user_props()
         start_dt_3 = arrange_get_datetime('2024-09-02 14:15')
         start_dt_4 = arrange_get_datetime('2024-09-02 14:00')
-        screening_3 = self.arrange_create_screening(self.screen_sc, start_dt_3, film=self.film_3)
-        screening_4 = self.arrange_create_screening(self.screen_sc, start_dt_4, film=self.film_4)
+        screening_3 = self.arrange_create_screening(self.screen_sc, start_dt_3, film=self.film_4)
+        screening_4 = self.arrange_create_screening(self.screen_sc, start_dt_4, film=self.film_5)
         screenings = [screening_3, screening_4]
 
         kwargs_list = [{'fan': self.fan, 'screening': screening} for screening in screenings]
