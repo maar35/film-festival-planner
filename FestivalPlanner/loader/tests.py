@@ -16,8 +16,9 @@ from festivals.tests import create_festival, mock_base_festival_mnemonic
 from films.models import FilmFanFilmRating, Film, FAN_NAMES_BY_FESTIVAL_BASE, UNRATED_RATING
 from films.tests import create_film, ViewsTestCase, get_request_with_session, new_film
 from films.views import FilmsView
+from loader.forms.backup_forms import get_subsection_id
 from loader.forms.loader_forms import FilmLoader, RatingLoader, CityDumper, TheaterDumper, ScreenDumper, \
-    get_subsection_id, ScreeningLoader
+    ScreeningLoader
 from loader.views import SectionsLoaderView, get_festival_row, RatingsLoaderView, NewTheaterDataView, \
     RatingDumperView
 from screenings.models import Screening

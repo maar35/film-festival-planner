@@ -4,7 +4,14 @@
 {% block header %}{{ title }}{% endblock %}
 
 {% block content %}
-<h2>Backup fans, films and ratings</h2>
+    <h2 class="row col-left-h2">Backup fans, films and ratings</h2>
+    <div class="row">
+        <span class="col-right">
+            <a href="{% url 'films:films' %}">Film ratings</a>
+            <br>
+            <a href="{% url 'loader:screening_backup' %}">Backup screening data</a>
+        </span>
+    </div>
     {% if user_is_admin %}
         <table>
             <thead>
@@ -15,12 +22,15 @@
                 </tr>
             </thead>
             <tbody>
-                <tr><th>Ratings</th><td>{{ rating_count }}</td><td>{{ ratings_file }}</td></tr>
-                <tr><th>Fans</th><td>{{ fan_count }}</td><td>{{ fans_file }}</td></tr>
-                <tr><th>Films</th><td>{{ film_count }}</td><td>{{ films_file }}</td></tr>
-                <tr><th>Festivals</th><td>{{ festival_count }}</td><td>{{ festivals_file }}</td></tr>
-                <tr><th>Festival bases</th><td>{{ festival_base_count }}</td><td>{{ festival_bases_file }}</td></tr>
-                <tr><th>Cities</th><td>{{ city_count }}</td><td>{{ cities_file }}</td></tr>
+                <tr><th>Ratings</th><td class="right">{{ rating_count }}</td><td>{{ ratings_file }}</td></tr>
+                <tr><th>Votes</th><td class="right">{{ vote_count }}</td><td>{{ votes_file }}</td></tr>
+                <tr><th>Fans</th><td class="right">{{ fan_count }}</td><td>{{ fans_file }}</td></tr>
+                <tr><th>Sections</th><td class="right">{{ section_count }}</td><td>{{ sections_file }}</td></tr>
+                <tr><th>Subsections</th><td class="right">{{ subsection_count }}</td><td>{{ subsections_file }}</td></tr>
+                <tr><th>Films</th><td class="right">{{ film_count }}</td><td>{{ films_file }}</td></tr>
+                <tr><th>Festivals</th><td class="right">{{ festival_count }}</td><td>{{ festivals_file }}</td></tr>
+                <tr><th>Festival bases</th><td class="right">{{ festival_base_count }}</td><td>{{ festival_bases_file }}</td></tr>
+                <tr><th>Cities</th><td class="right">{{ city_count }}</td><td>{{ cities_file }}</td></tr>
             </tbody>
         </table>
         <br>
