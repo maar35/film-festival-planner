@@ -142,6 +142,14 @@ class Screen(models.Model):
 
     class Meta:
         db_table = 'screen'
+        constraints = [
+            models.UniqueConstraint(fields=['theater', 'id'],
+                                    name='unique_theater_screen_id'),
+            models.UniqueConstraint(fields=['theater', 'parse_name'],
+                                    name='unique_theater_screen_parse_name'),
+            models.UniqueConstraint(fields=['theater', 'abbreviation'],
+                                    name='unique_theater_abbreviation')
+        ]
 
     def __str__(self):
         return f'{self.theater.abbreviation}{self.abbreviation}'

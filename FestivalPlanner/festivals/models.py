@@ -76,7 +76,9 @@ class Festival(models.Model):
 
     class Meta:
         db_table = 'film_festival'
-        unique_together = ('base', 'year', 'edition')
+        constraints = [
+            models.UniqueConstraint(fields=['base', 'year', 'edition'], name='unique_base_year_edition')
+        ]
 
     def __str__(self):
         edition_str = '' if self.edition is None else f' - {self.edition} edition'

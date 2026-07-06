@@ -44,7 +44,9 @@ class Film(models.Model):
 
     class Meta:
         db_table = 'film'
-        unique_together = ('festival', 'film_id')
+        constraints = [
+            models.UniqueConstraint(fields=['festival', 'film_id'], name='unique_festival_film_id')
+        ]
 
     def __str__(self):
         return f"{self.title} ({minutes_str(self.duration)})"
@@ -111,7 +113,9 @@ class FilmFanFilmRating(models.Model):
 
     class Meta:
         db_table = 'film_rating'
-        unique_together = ('film', 'film_fan')
+        constraints = [
+            models.UniqueConstraint(fields=['film', 'film_fan'], name='unique_film_fan')
+        ]
 
     def __str__(self):
         return f"{self.film} - {self.str_fan_rating()}"
@@ -156,7 +160,9 @@ class FilmFanFilmVote(models.Model):
 
     class Meta:
         db_table = 'film_vote'
-        unique_together = ('film', 'film_fan')
+        constraints = [
+            models.UniqueConstraint(fields=['film', 'film_fan'], name='unique_film_fan_vote')
+        ]
 
     def __str__(self):
         return f"{self.film} - {self.film_fan.initial()}{self.vote}"
