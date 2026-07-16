@@ -4,21 +4,25 @@ from django.forms import Form, CharField, BaseFormSet
 
 from festival_planner.tools import add_log
 from screenings.models import Screening
+from theaters.models import Theater
 
 TheaterAbbreviationValidator = RegexValidator(
     r'^[a-z]*[-]?$',
-    'Only lower case characters are allowed, optionally followed by "-".'
+    'In a theater abbreviation only lower case characters are allowed,'
+    ' optionally followed by "-".'
 )
 
 
 ScreenAbbreviationValidator = RegexValidator(
     r'^[a-z]*[0-9]*$',
-    'Only lower case characters and digits are allowed, both optional.'
-    ' When both are present, characters must precede digits.'
+    'In a screen abbreviation only lower case characters and digits are'
+    ' allowed, both optional. When both are present, characters must precede digits.'
 )
 
 
 class TheaterDetailsForm(Form):
+    theater_initial_data = None
+    theater = None
     abbreviation = CharField(
         empty_value='EMPTY',
         label='Theater abbreviation',
@@ -26,6 +30,28 @@ class TheaterDetailsForm(Form):
         required=False,
         max_length=24,
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.initial = self.initial or TheaterDetailsForm.theater_initial_data
+
+    def clean(self):
+        """Check that no two theaters in the same city have the same abbreviation."""
+        if any(self.errors):
+            # Don't bother validating the form unless it is valid.
+            return
+
+        if self.has_changed():
+            field = 'abbreviation'
+            try:
+                _ = Theater.theaters.get(abbreviation=self.data[field], city=self.theater.city)
+            except Theater.DoesNotExist:
+                pass    # Not duplicate.
+            else:
+                non_form_error = f'Theater abbreviation "{self.data[field]}" is duplicate.'
+                validator_output = 'Theater abbreviations are unique within a city'
+                exception = [non_form_error, validator_output]
+                raise ValidationError(exception)
 
     @staticmethod
     def delete_screen(session, screen):

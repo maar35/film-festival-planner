@@ -97,7 +97,6 @@ class TheatersFormView(LoginRequiredMixin, FormView):
 
 class TheaterView(SharedTemplateReferrerView):
     template_name = 'theaters/details.html'
-    theater_initial_data = None
     theater_changed = None
     screens_initial_data = None
     screens_changed = None
@@ -194,7 +193,7 @@ class TheaterDetailView(DetailView):
             'abbreviation': theater.abbreviation,
         }
         theater_form = TheaterDetailsForm(theater_data, initial=theater_data)
-        TheaterView.theater_initial_data = theater_data
+        TheaterDetailsForm.theater_initial_data = theater_data
         return theater_form
 
     @staticmethod
@@ -238,12 +237,14 @@ class TheaterDetailFormView(SingleObjectMixin, FormView):
         self.object = self.get_object()
         self.theater = self.object
         ERRORS_COOKIE.remove(self.session)
+
         form_errors = []
         validator_outputs = set()
         initialize_log(self.request.session, 'Manage abbreviations')
 
         # Redirect to form_valid() if confirmation to delete is decided.
         if 'delete_canceled' in request.POST or 'delete_confirmed' in request.POST:
+            add_log(self.session, f'Delete {'confirmed' if 'delete_confirmed' in request.POST else 'canceled'}')
             _ = super().post(request, *args, **kwargs)
             return self.clean_response()
 
@@ -256,7 +257,7 @@ class TheaterDetailFormView(SingleObjectMixin, FormView):
         # Store error messages if any.
         self._add_form_errors(form_errors, validator_outputs)
 
-        # Redirect to form_valid() if a delete button is hit.
+        # Redirect to form_valid() or form_invalid() if a delete button is hit.
         if self._set_screen_to_delete():
             _ = super().post(request, *args, **kwargs)
 
@@ -270,6 +271,7 @@ class TheaterDetailFormView(SingleObjectMixin, FormView):
             TheaterView.screen_to_delete = None
         else:
             _ = self._set_screen_to_delete()
+            # pr_debug(f'{TheaterView.screen_to_delete=}')
 
         match self.request.POST:
             case {'delete_confirmed': _} if TheaterView.screen_to_delete:
@@ -281,8 +283,11 @@ class TheaterDetailFormView(SingleObjectMixin, FormView):
         return super().form_valid(form)
 
     def form_invalid(self, form):
+        # pr_debug(f'{form.errors=}')
         if TheaterView.screen_to_delete:
-            raise ValueError(f'Screen to delete "{TheaterView.screen_to_delete}" not none while form invalid')
+            # raise ValueError(f'Screen to delete "{TheaterView.screen_to_delete}" not none while form invalid')
+            add_log(self.request.session, f'Invalid theater details, no screen will be deleted.')
+            TheaterView.screen_to_delete = None
         else:
             field = form['abbreviation']
             message = f'{field.label} "{self.new_abbreviation}" is invalid.'
@@ -316,61 +321,42 @@ class TheaterDetailFormView(SingleObjectMixin, FormView):
             add_log(session, f'Deleted {TheaterView.screen_to_delete.parse_name}.')
             TheaterView.screen_to_delete = None
 
-    def validate_theater_abbreviation_unique(self, request, form, form_errors, validator_outputs):
-        """Validate uniqueness of new theater abbreviation."""
-        self.theater_error = False
-        self.new_abbreviation = request.POST['abbreviation']
-        try:
-            _ = Theater.theaters.get(abbreviation=self.new_abbreviation, city=self.theater.city)
-        except Theater.DoesNotExist:
-            pass    # Not duplicate.
-        else:
-            form_errors += [f'Theater abbreviation "{self.new_abbreviation}" already exists.']
-            validator_outputs.add('Theater abbreviations are unique within a city')
-            self.theater_error = True
-
     def _process_theater_abbreviation(self, request, form_errors, validator_outputs):
         session = request.session
         field = 'abbreviation'
+        TheaterDetailsForm.theater = self.theater
+        details_form = self._get_theater_details_form(request, field)
 
-        if field in request.POST:
-            # Create a form based on the POST dictionary.
-            theater_data = {field: request.POST[field]}
-            theater_initial = TheaterView.theater_initial_data
-            details_form = TheaterDetailsForm(theater_data, initial=theater_initial)
-            TheaterView.theater_changed = details_form.has_changed()
+        # Validate the theater form.
+        if details_form.has_changed():
+            if details_form.is_valid():
+                self.new_abbreviation = details_form.cleaned_data[field]
+                add_log(session, f'Theater abbreviation "{self.new_abbreviation}" is valid.')
+            elif details_form.non_field_errors():
+                add_log(session, f'Non-field error in {self.theater.parse_name}.')
+                error, validator_output = details_form.non_field_errors()
+                form_errors += [error]
+                validator_outputs.add(validator_output)
+            else:
+                validator_output_list = details_form.errors[field]
+                validator_output = ', '.join(validator_output_list)
+                add_log(session, f'Error in {self.theater.parse_name}: {validator_output}')
+                error = details_form[field].data
+                form_errors.append(f'Invalid theater {field}: {error}.')
+                validator_outputs |= {validator_output}
 
-            # Validate the theater form.
-            if details_form.has_changed():
-                if details_form.is_valid():
-                    self.new_abbreviation = details_form.cleaned_data[field]
-                    add_log(session, f'Theater abbreviation "{self.new_abbreviation}" is valid.')
-                else:
-                    validator_output_list = details_form.errors[field]
-                    validator_output = ', '.join(validator_output_list)
-                    add_log(session, f'Error in {self.theater.parse_name}: {validator_output}')
-                    error = details_form[field].data
-                    form_errors.append(f'Invalid theater {field}: {error}.')
-                    validator_outputs |= {validator_output}
-
-            # Check for non-form errors.
-            if details_form.has_changed():
-                add_log(session, f'Checking for theater non-form errors.')
-                self.validate_theater_abbreviation_unique(request, details_form, form_errors, validator_outputs)
-
-            # Save the new abbreviation if no errors exit.
-            if details_form.has_changed() and not form_errors and not validator_outputs:
-                text = (f'Changing abbreviation of {self.theater.parse_name} from "{self.theater.abbreviation}"'
-                        f' into "{self.new_abbreviation}".')
-                add_log(request.session, text)
-                theater = Theater.theaters.get(id=self.theater.id)
-                theater.abbreviation = self.new_abbreviation
-                theater.save()
+        # Save the new abbreviation if no errors exist.
+        if details_form.has_changed() and not form_errors and not validator_outputs:
+            text = (f'Changing abbreviation of {self.theater.parse_name} from "{self.theater.abbreviation}"'
+                    f' into "{self.new_abbreviation}".')
+            add_log(request.session, text)
+            theater = Theater.theaters.get(id=self.theater.id)
+            theater.abbreviation = self.new_abbreviation
+            theater.save()
 
     def _process_screen_abbreviations(self, request, form_errors, validator_outputs):
         session = request.session
-        manager = Screen.screens
-        screens = manager.filter(theater=self.theater)
+        screens = Screen.screens.filter(theater=self.theater)
         updated_by_screen = {}
 
         # Create a formset based on the POST dictionary.
@@ -393,17 +379,19 @@ class TheaterDetailFormView(SingleObjectMixin, FormView):
                     validator_outputs |= set(form.errors[field])
 
             # Check for non-form errors.
-            add_log(session, f'Checking for screen non-form errors.')
-            if screens_formset.has_changed() and screens_formset.is_valid():
+            if screens_formset.is_valid():
                 error, validator_output = screens_formset.non_form_errors() or (None, None)
                 if (error, validator_output) != (None, None):
+                    add_log(session, f'Non-form error.')
                     form_errors += [error]
                     validator_outputs.add(validator_output)
 
         # Save the new abbreviations if no errors exist.
         formset_error_count = screens_formset.total_error_count()
         if formset_error_count:
-            add_log(session, f'{formset_error_count} screen error{'s' if formset_error_count > 1 else ''}')
+            updated_by_screen = {}
+            for error in screens_formset.non_form_errors():
+                add_log(session, f'{error}')
         if updated_by_screen:
             current_screen = None
             try:
@@ -416,7 +404,7 @@ class TheaterDetailFormView(SingleObjectMixin, FormView):
                         current_screen = screen
                         screen.save()
             except IntegrityError as e:
-                text = f'Temporary duplicate in {current_screen.parse_name} - {current_screen.abbreviation}.'
+                text = f'Duplicate abbreviation "{current_screen.abbreviation}" in {current_screen.parse_name}.'
                 add_log(session, text)
                 add_log(session, f'Exception: {e}.')
                 add_log(session, 'Database rolled back.')
@@ -425,6 +413,15 @@ class TheaterDetailFormView(SingleObjectMixin, FormView):
                                       "update one by one.")
 
         return
+
+    @staticmethod
+    def _get_theater_details_form(request, field):
+        """Return a form based on the POST dictionary"""
+        theater_data = {field: request.POST[field]}
+        theater_initial = TheaterDetailsForm.theater_initial_data
+        details_form = TheaterDetailsForm(theater_data, initial=theater_initial)
+        TheaterView.theater_changed = details_form.has_changed()
+        return details_form
 
     @staticmethod
     def _get_screens_formset(request, screens):
@@ -438,7 +435,6 @@ class TheaterDetailFormView(SingleObjectMixin, FormView):
                 data[field_id] = request.POST[field_id]
         screen_formset_class = formset_factory(TheaterScreenDetailsForm, formset=TheaterScreenFormSet)
         result_formset = screen_formset_class(data, initial=TheaterView.screens_initial_data)
-
         return result_formset
 
     def _add_form_errors(self, form_errors, validator_set):
