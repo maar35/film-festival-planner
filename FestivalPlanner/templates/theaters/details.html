@@ -15,10 +15,16 @@
                 <a href="{% url 'screenings:day_schema' %}">Day schema</a>
             </span>
         </span>
-        <br>
+
         {% block errors %}
             {{ block.super }}
         {% endblock %}
+
+        {% block log %}
+            {{ block.super }}
+        {% endblock log %}
+        <br>
+
         <form method="post">
         {% csrf_token %}
         <table>
@@ -37,27 +43,55 @@
             <thead>
             <tr>
                 <th class="sticky">Screen</th>
-                <th class="sticky">PK</th>
-                <th class="sticky">ID</th>
+                <th class="right">PK</th>
+                <th class="right">ID</th>
                 <th class="sticky">Type</th>
                 <th class="sticky">Base abbreviation</th>
                 <th class="sticky">Abbreviation</th>
+                <th class="right">#Screenings</th>
+                {% if can_delete %}
+                <th class="sticky">
+                    Action
+                    <br>
+                    <a href="{% url 'theaters:details' theater.pk %}{{ can_delete_href_filter }}">{{ can_delete_action }}</a>
+                </th>
+                {% endif %}
             </tr>
             </thead>
             <tbody>
-            {% for item in screen_items %}
+            {% for item in screen_items|dictsort:'sort_by' %}
                 <tr>
                     <td>{{ item.screen.parse_name }}</td>
-                    <td>{{ item.screen.pk }}</td>
-                    <td>{{ item.screen.screen_id }}</td>
+                    <td class="right">{{ item.screen.pk }}</td>
+                    <td class="right">{{ item.screen.screen_id }}</td>
                     <td>{{ item.address_type }}</td>
-                    <td>{{ item.form_field.screen_abbreviation }}</td>
+                    <td>{{ item.form_field.abbreviation }}</td>
                     <td>{{ theater.abbreviation }}{{ item.screen.abbreviation }}</td>
+                    <td class="right">{{ item.screening_count }}</td>
+                    {% if can_delete %}
+                        <td class="with-submit">
+                        {% if not item.screening_count %}
+                            {% if confirm_delete or not deleting %}
+                                <span class="in-table-warning-disabled">Not deleting</span>
+                            {% else %}
+                                <input type="submit" name="delete_{{ item.screen.id }}" value="Delete" class="in-table-warning">
+                            {% endif %}
+                        {% endif %}
+                        </td>
+                    {% endif %}
                 </tr>
             {% endfor %}
             </tbody>
         </table>
-        <input type="submit" value="Submit screen abbreviations" class="hidden-submit"/>
+        <input type="submit" name="hidden-button" value="Submit screen abbreviations" class="hidden-submit"/>
+        {% if confirm_delete %}
+            <br>
+            <br>
+            <h3 class="log-header">Sure to delete {{ screen_to_delete.parse_name }}?</h3>
+            <input class="smaller" type="submit" name="delete_canceled" value="No please cancel">
+            <input class="warning smaller" type="submit" name="delete_confirmed" value="Delete {{ screen_to_delete.parse_name }}">
+            <a name="ask_confirmation"></a>
+        {% endif %}
         </form>
     {% else %}
         <h2 class="error">Not allowed</h2>

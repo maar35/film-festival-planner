@@ -19,7 +19,10 @@ class Section(models.Model):
 
     class Meta:
         db_table = 'section'
-        unique_together = ('festival', 'section_id')
+        constraints = [
+            models.UniqueConstraint(fields=['festival', 'section_id'],
+                                    name='unique_festival_section_id')
+        ]
 
     def __str__(self):
         return f'{self.section_id} {self.name}'

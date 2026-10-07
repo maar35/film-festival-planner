@@ -10,16 +10,21 @@ from django.views import View
 from django.views.generic import FormView, ListView
 
 from authentication.models import FilmFan
+from availabilities.models import Availabilities
 from festival_planner.cookie import Cookie
 from festival_planner.shared_template_referrer_view import SharedTemplateReferrerView
 from festival_planner.tools import add_base_context, get_log, unset_log, initialize_log, wrap_up_form_errors
 from festivals.models import Festival, switch_festival, current_festival, FestivalBase
-from films.models import Film, FilmFanFilmRating
+from films.models import Film, FilmFanFilmRating, FilmFanFilmVote
+from loader.forms.backup_forms import RatingDataBackupForm, FILM_FANS_BACKUP_PATH, RATINGS_BACKUP_PATH, \
+    FILMS_BACKUP_PATH, FESTIVALS_BACKUP_PATH, FESTIVAL_BASES_BACKUP_PATH, BACKUP_DATA_DIR, CITIES_BACKUP_PATH, \
+    VOTES_BACKUP_PATH, SECTIONS_BACKUP_PATH, SUBSECTIONS_BACKUP_PATH, ScreeningDataBackupForm, \
+    AVAILABILITIES_BACKUP_PATH, THEATERS_BACKUP_PATH, SCREENS_BACKUP_PATH, SCREENINGS_BACKUP_PATH, \
+    ATTENDANCES_BACKUP_PATH, TICKETS_BACKUP_PATH
+from loader.forms.dumper_forms import TicketDumper
 from loader.forms.loader_forms import SectionLoader, SubsectionLoader, RatingLoaderForm, TheaterDataLoaderForm, \
-    TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm, RatingDataBackupForm, \
-    FILM_FANS_BACKUP_PATH, RATINGS_BACKUP_PATH, FILMS_BACKUP_PATH, \
-    FESTIVALS_BACKUP_PATH, FESTIVAL_BASES_BACKUP_PATH, BACKUP_DATA_DIR, CITIES_BACKUP_PATH, \
-    ScreeningLoader, AttendanceLoader, AttendanceDumper, RatingDumper, SingleTableDumperForm, TicketLoader, TicketDumper
+    TheaterDataDumperForm, CityLoader, TheaterLoader, ScreenLoader, TheaterDataUpdateForm, \
+    ScreeningLoader, AttendanceLoader, AttendanceDumper, RatingDumper, SingleTableDumperForm, TicketLoader
 from screenings.forms.screening_forms import DummyForm
 from screenings.models import Screening, Attendance, Ticket
 from sections.models import Section, Subsection
@@ -288,25 +293,42 @@ class SectionsLoaderView(LoginRequiredMixin, ListView):
         return render(request, 'loader/sections.html', self.get_context_data())
 
 
-class FilmDataBackupView(LoginRequiredMixin, FormView):
+class BaseBackupView(LoginRequiredMixin, FormView):
+    http_method_names = ['get', 'post']
+    unexpected_error = ''
+
+    def form_valid(self, form):
+        # Make sure that the backup directory exists.
+        backup_dir = BACKUP_DATA_DIR
+        if not os.path.isdir(backup_dir):
+            os.mkdir(backup_dir)
+
+        return super().form_valid(form)
+
+
+class FilmDataBackupView(BaseBackupView):
     """
-    Class-based view to back up the data associated with the film models.
+    Class-based view to back up the data associated with the film fan rating models.
     """
     template_name = 'loader/film_backup.html'
     form_class = RatingDataBackupForm
-    http_method_names = ['get', 'post']
-    success_url = '/films/films'
-    unexpected_error = ''
+    success_url = '/films/films/'
 
     def get_context_data(self, *args, **kwargs):
         super_context = super().get_context_data(**kwargs)
         new_context = {
-            'title': 'Back Up Rating Data',
+            'title': 'Backup Rating Data',
             'log': get_log(self.request.session),
             'fan_count': FilmFan.film_fans.count(),
             'fans_file': FILM_FANS_BACKUP_PATH,
             'rating_count': FilmFanFilmRating.film_ratings.count(),
             'ratings_file': RATINGS_BACKUP_PATH,
+            'vote_count': FilmFanFilmVote.film_votes.count(),
+            'votes_file': VOTES_BACKUP_PATH,
+            'section_count': Section.sections.count(),
+            'sections_file': SECTIONS_BACKUP_PATH,
+            'subsection_count': Subsection.subsections.count(),
+            'subsections_file': SUBSECTIONS_BACKUP_PATH,
             'film_count': Film.films.count(),
             'films_file': FILMS_BACKUP_PATH,
             'festival_count': Festival.festivals.count(),
@@ -320,17 +342,71 @@ class FilmDataBackupView(LoginRequiredMixin, FormView):
         return context
 
     def form_valid(self, form):
-        session = self.request.session
-
-        # Make sure that the backup directory exists.
-        backup_dir = BACKUP_DATA_DIR
-        if not os.path.isdir(backup_dir):
-            os.mkdir(backup_dir)
+        redirect = super().form_valid(form)
 
         # Make backups of all relevant tables.
-        form.backup_film_data(session)
+        form.backup_film_data(self.request.session)
 
-        return super().form_valid(form)
+        return redirect
+
+
+class ScreeningDataBackupView(BaseBackupView):
+    """
+    Class-based view to back up the data associated with the screening models.
+    """
+    template_name = 'loader/screening_backup.html'
+    form_class = ScreeningDataBackupForm
+    success_url = '/screenings/day_schema/'
+
+    def get_context_data(self, *args, **kwargs):
+        object_props_lines = [
+            {
+                'label': 'Availabilities',
+                'count': Availabilities.availabilities.count(),
+                'file': AVAILABILITIES_BACKUP_PATH,
+            },
+            {
+                'label': 'Theaters',
+                'count': Theater.theaters.count(),
+                'file': THEATERS_BACKUP_PATH
+            },
+            {
+                'label': 'Screens',
+                'count': Screen.screens.count(),
+                'file': SCREENS_BACKUP_PATH
+            },
+            {
+                'label': 'Screenings',
+                'count': Screening.screenings.count(),
+                'file': SCREENINGS_BACKUP_PATH
+            },
+            {
+                'label': 'Attendances',
+                'count': Attendance.attendances.count(),
+                'file': ATTENDANCES_BACKUP_PATH,
+            },
+            {
+                'label': 'Tickets',
+                'count': Ticket.tickets.count(),
+                'file': TICKETS_BACKUP_PATH,
+            },
+        ]
+        super_context = super().get_context_data(**kwargs)
+        new_context = {
+            'title': 'Backup Screening Data',
+            'log': get_log(self.request.session),
+            'object_props_lines': object_props_lines,
+        }
+        context = add_base_context(self.request, super_context | new_context)
+        return context
+
+    def form_valid(self, form):
+        redirect = super().form_valid(form)
+
+        # Make backups of all relevant tables.
+        form.backup_screening_data(self.request.session)
+
+        return redirect
 
 
 class RatingsLoaderView(LoginRequiredMixin, ListView):

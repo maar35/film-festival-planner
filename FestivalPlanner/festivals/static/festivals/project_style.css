@@ -165,9 +165,15 @@ input[type=text] {
     border-radius: 4px;
 }
 
+.in-table-warning-disabled {
+    cursor: default;
+}
+
 /* Specifics for specific input widgets */
+.in-table-warning-disabled,
 input[type=submit].field_list,
-input[type=submit].in-table {
+input[type=submit].in-table,
+input[type=submit].in-table-warning {
     width: 100%;
     padding: 6px 15px;
     font-size: small;
@@ -190,10 +196,15 @@ input[type=text]:focus {
     background: var(--focusBackground);
 }
 
-input.warning {
+.in-table-warning-disabled,
+input.warning,
+input.in-table-warning,
+input.in-table-warning:disabled,
+input.in-table-warning:disabled:hover {
     background: var(--warningBackground);
 }
-input.warning:hover {
+input.warning:hover,
+input.in-table-warning:hover {
     background: var(--warningHoverBackground);
 }
 

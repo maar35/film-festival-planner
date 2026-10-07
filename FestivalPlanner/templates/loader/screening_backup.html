@@ -1,0 +1,41 @@
+{% extends "base_template.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block header %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h2 class="row col-left-h2">Backup screenings, theaters, attendances and availabilities</h2>
+    <div class="row">
+        <span class="col-right">
+            <a href="{% url 'screenings:day_schema' %}">Day schema</a>
+            <br>
+            <a href="{% url 'films:films' %}">Film ratings</a>
+            <br>
+            <a href="{% url 'loader:film_backup' %}">Backup rating data</a>
+        </span>
+    </div>
+    {% if user_is_admin %}
+        <table>
+            <thead>
+                <tr>
+                    <th class="sticky"></th>
+                    <th class="sticky">#Rows</th>
+                    <th class="sticky">File</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for props in object_props_lines %}
+                <tr><th>{{ props.label }}</th><td class="right">{{ props.count }}</td><td>{{ props.file }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <br>
+        <form method="post">
+            {% csrf_token %}
+            <input type="submit" value="Save screening data">
+        </form>
+    {% else %}
+        <h2 class="error">Not allowed</h2>
+        <p>Only an admin fan can save screening data.</p><grep_></grep_>
+    {% endif %}
+{% endblock %}

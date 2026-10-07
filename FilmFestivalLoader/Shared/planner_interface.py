@@ -169,6 +169,12 @@ class Film:
         return FILMS_FILE_HEADER
 
     def row_repr(self):
+        try:
+            _ = self.category_by_string[self.medium_category]
+        except KeyError:
+            msg = f'Title: {self.title}, URL: {self.url}, category: {self.medium_category}'
+            raise KeyError(msg)
+
         row = [
             str(self.seq_nr),
             str(self.film_id),

@@ -18,14 +18,14 @@ from Shared.planner_interface import FilmInfo, FestivalData, Film, get_screen_fr
 from Shared.web_tools import UrlFile
 
 DOWNLOAD_WORKS = True       # Python html reader gets "certificate not found", used curl instead.
-TICKETS_AVAILABLE = True
+TICKETS_AVAILABLE = False
 FILE_BY_URL = {}
 ALWAYS_DOWNLOAD = False
 DISPLAY_ADDED_SCREENING = False
 SORTING_FROM_SITE = False
 
 FESTIVAL = 'Imagine'
-FESTIVAL_YEAR = 2025
+FESTIVAL_YEAR = 2026
 FESTIVAL_CITY = 'Amsterdam'
 
 # Files.
@@ -224,6 +224,7 @@ class AzPageParser(HtmlPageParser):
         Film.category_by_string['Talk'] = Film.category_events
         Film.category_by_string['Workshop'] = Film.category_events
         Film.category_by_string['vr/expanded'] = Film.category_events
+        Film.category_by_string['additional'] = Film.category_events
 
     def _init_screening_data(self):
         self.film = None
@@ -269,7 +270,8 @@ class AzPageParser(HtmlPageParser):
 
     def _add_film(self):
         # Create a new film.
-        self.film = self.festival_data.create_film(self.title, self.url)
+        self.film = self.festival_data.create_film(self.title, self.url,
+                                                   duration=self.duration, medium_category=self.medium_type)
         if self.film is None:
             ERROR_COLLECTOR.add(f'Could not create film:', '{self.title} ({self.url})')
         else:
@@ -622,6 +624,9 @@ class LocationSplitter:
             case ['LAB111' | 'Lab-1', number, '', '']:
                 theater_parse_name = 'LAB111'
                 screen_abbreviation = number
+            case ['LAB111', word0, word1, '']:
+                theater_parse_name = 'LAB111'
+                screen_abbreviation = ' '.join(location_words[1:])
             case ['OT', '301', '', '']:
                 theater_parse_name = 'OT 301'
             case ['SPUI', '25', '', '']:
@@ -630,6 +635,10 @@ class LocationSplitter:
             case ['OBA', 'Oosterdok', 'OBA', 'Theater']:
                 theater_parse_name = ' '.join(location_words[:2])
                 screen_abbreviation = ' '.join(location_words[2:])
+            case ['lab1', '4', city, '']:
+                city_name = city
+                theater_parse_name = location
+                screen_abbreviation = ' '.join(location_words[:1])
             case [_, _, _, _] if num_match:
                 theater_parse_name = num_match.group(1)
                 screen_abbreviation = num_match.group(2)

@@ -12,7 +12,7 @@ from festival_planner.screening_status_getter import ScreeningStatusGetter
 from festival_planner.tools import add_log, initialize_log
 from festivals.models import current_festival
 from films.models import FilmFanFilmRating, current_fan, get_rating_as_int
-from loader.forms.loader_forms import CalendarDumper
+from loader.forms.dumper_forms import CalendarDumper
 from screenings.models import Attendance, Screening, get_available_filmscreenings, Ticket
 from theaters.models import Theater
 

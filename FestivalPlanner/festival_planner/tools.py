@@ -31,9 +31,7 @@ def add_log(session, text, indent=0):
     Add text to the results of the log cookie.
     """
     if 'log' not in session:
-        initialize_log(session, 'Uninitialized log')
-    if 'results' not in session['log']:
-        initialize_log(session, 'Uninitialized log results')
+        initialize_log(session, action='Uninitialized log')
     session['log']['results'].append(f'{INDENT_STRING * indent}{text}')
 
 
@@ -55,7 +53,7 @@ def wrap_up_form_errors(form_errors):
     """
     Support printing form errors.
     """
-    messages = ['Form is invalid']
+    messages = ['Form is invalid.']
     for subject, errors in form_errors.items():
         messages.append(f'{subject}: {",".join([error for error in errors])}')
     return messages
