@@ -265,7 +265,7 @@ class VoteBackupDumper(BaseDumper):
 def get_attrs(class_, skip_fields=None):
     def _strip(attr):
         def _getmembers_predicate(a):
-            skip_classes = (ReverseManyToOneDescriptor, models.manager.Manager, models.enums.ChoicesMeta, type)
+            skip_classes = (ReverseManyToOneDescriptor, models.manager.Manager, models.enums.ChoicesType, type)
             return inspect.ismethod(a) or inspect.isfunction(a) or a.__class__ in skip_classes
 
         # Reject attribute based on the first letter of the name.

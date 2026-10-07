@@ -639,36 +639,40 @@ class FilmDetailsViewTests(ViewsTestCase):
         self.assertContains(get_response, f"{self.admin_credentials['username']} represents")
         self.assertContains(get_response, self.regular_fan.name)
 
-    @skip("Unexpected HTTP status 405 method not allowed, to be fixed")
     def test_logged_in_fan_can_remove_rating_in_detail_view(self):
-        """ TODO fix unexpected 405
+        """
         A logged in fan can remove a rating from the film detail view.
         """
         # Arrange.
-        does_not_exist_msg = 'FilmFanFilmRating matching query does not exist'
-        _ = self.get_regular_fan_request()
         fan = self.regular_fan
+        _ = self.get_regular_fan_request()
+        models.FANS_IN_RATINGS_TABLE.append(self.regular_fan.name)
+        models.FANS_IN_RATINGS_TABLE.append(self.admin_fan.name)
 
         film = create_film(film_id=1999, title='The Prince and the Price', minutes=98)
         rating_value = FilmFanFilmRating.Rating.MEDIOCRE
-        new_rating_value = 0
         _ = create_rating(film, fan, rating=rating_value)
         rating = FilmFanFilmRating.film_ratings.get(film=film, film_fan=fan)
         self.assertEqual(rating.rating, rating_value)
 
-        post_data = {'fan_rating': [f'{FilmDetailView.submit_name_prefix}{film.film_id}_{new_rating_value}']}
+        new_rating_value = FilmFanFilmRating.Rating.UNRATED
+        post_data = {f'{FilmDetailView.submit_name_prefix}{film.id}_{new_rating_value}': ['fan_rating']}
 
         # Act.
-        post_response = self.client.post(reverse('films:details', args=[film.pk]), data=post_data)
+        get_response = self.client.get(reverse('films:details', args=[film.id]))
+        post_response = self.client.post(reverse('films:details', args=[film.id]), data=post_data)
+        redirect_response = self.client.get(post_response.url)
 
         # Assert.
+        self.assertEqual(get_response.status_code, HTTPStatus.OK)
+        self.assert_fan_row(fan, str(rating_value), get_response)
         message = f'Unexpected POST response of {FilmDetailView.__name__}'
         self.assertEqual(post_response.status_code, HTTPStatus.FOUND, message)
         self.assertURLEqual(post_response.url, reverse('films:details', args=[film.id]))
-        self.assertContains(post_response, self.regular_fan.name)
-        self.assertContains(post_response, self.admin_fan.name)
-        self.assert_fan_row(fan, str(new_rating_value), post_response)
-        self.assert_fan_row(self.admin_fan, UNRATED_STR, post_response, fan_is_current=False)
+        self.assertContains(redirect_response, self.regular_fan.name)
+        self.assertContains(redirect_response, self.admin_fan.name)
+        self.assert_fan_row(fan, UNRATED_STR, redirect_response)
+        self.assert_fan_row(self.admin_fan, UNRATED_STR, redirect_response, fan_is_current=False)
 
     def test_details_of_screened_film_display_combination(self):
         """
