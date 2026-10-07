@@ -271,7 +271,6 @@ class TheaterDetailFormView(SingleObjectMixin, FormView):
             TheaterView.screen_to_delete = None
         else:
             _ = self._set_screen_to_delete()
-            # pr_debug(f'{TheaterView.screen_to_delete=}')
 
         match self.request.POST:
             case {'delete_confirmed': _} if TheaterView.screen_to_delete:
@@ -283,9 +282,7 @@ class TheaterDetailFormView(SingleObjectMixin, FormView):
         return super().form_valid(form)
 
     def form_invalid(self, form):
-        # pr_debug(f'{form.errors=}')
         if TheaterView.screen_to_delete:
-            # raise ValueError(f'Screen to delete "{TheaterView.screen_to_delete}" not none while form invalid')
             add_log(self.request.session, f'Invalid theater details, no screen will be deleted.')
             TheaterView.screen_to_delete = None
         else:
