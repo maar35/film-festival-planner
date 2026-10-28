@@ -171,11 +171,11 @@ class BaseHtmlPageParser(HTMLParser):
         return f'{40 * "-"} '
 
     @staticmethod
-    def headed_bar(header=''):
-        return f'{header:-^72}'
+    def headed_bar(header='', bar_base='-'):
+        return f'{header:{bar_base}^72}'
 
-    def draw_headed_bar(self, header_str):
-        header = self.headed_bar(header=header_str)
+    def draw_headed_bar(self, header_str, bar_base='-'):
+        header = self.headed_bar(header=header_str, bar_base=bar_base)
         broadcast(header, self.debug_recorder)
 
     def print_debug(self, str1, str2=''):
