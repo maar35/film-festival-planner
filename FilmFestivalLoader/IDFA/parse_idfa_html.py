@@ -839,6 +839,8 @@ class FilmPageParser(HtmlPageParser):
         SKIP_GRAPHICS = auto()
         IN_SCREENING_PROPS = auto()
         IN_TICKET_BUTTON = auto()
+        BETWEEN_BUTTONS = auto()
+        IN_CALENDAR_BUTTON = auto()
         IN_SUB_HEADER = auto()
         AWAITING_SECTION_URL = auto()
         IN_SECTION_URL = auto()
@@ -923,8 +925,12 @@ class FilmPageParser(HtmlPageParser):
             case [state.AFTER_LOCATION, 'svg', _]:
                 stack.change(state.SKIP_GRAPHICS)
             case [state.IN_SCREENING_PROPS, 'button', _]:
+                # self.print_debug('Found a button in screening props.', f'Stack is:\n{str(stack)}\n')
                 stack.change(state.IN_TICKET_BUTTON)
+            case [state.BETWEEN_BUTTONS, 'button', _]:
+                stack.change(state.IN_CALENDAR_BUTTON)
             case [state.IN_SCREENINGS, 'button', _]:
+                self.print_debug('Found a button.', f'Stack is:\n{str(stack)}\n')
                 stack.push(state.IN_TICKET_BUTTON)
 
             case [state.IN_SCREENINGS, 'a', a] if len(a) > 1 and a[1][0] == 'href' and a[1][1].startswith('/section/'):
@@ -970,10 +976,14 @@ class FilmPageParser(HtmlPageParser):
             case [state.IN_TIME, 'span']:
                 stack.change(state.IN_LOCATION)
             case [state.SKIP_GRAPHICS, 'svg']:
-                stack.pop()
-                stack.push(state.IN_SCREENING_PROPS)
+                # self.print_debug('Done skipping graphics.', f'Stack is:\n{str(stack)}\n')
+                stack.change(state.IN_SCREENING_PROPS)
             case [state.IN_TICKET_BUTTON, 'button']:
-                self.print_debug('Done parsing a screening.', f'Stack is:\n{str(stack)}\n')
+                # self.print_debug('Done parsing a screening.', f'Stack is:\n{str(stack)}\n')
+                stack.change(state.BETWEEN_BUTTONS)
+            case [state.IN_CALENDAR_BUTTON, 'button']:
+                self.print_debug('Passed calendar button.', f'Stack is:\n{str(stack)}\n')
+                self._add_screening()
                 stack.pop()
 
     def handle_data(self, data):
@@ -1003,13 +1013,16 @@ class FilmPageParser(HtmlPageParser):
             case state.IN_TIME:
                 self._set_screening_times(data)
             case state.IN_LOCATION:
-                if self._added_screening(data):
-                    self.print_debug('Done parsing a location', f'Stack is:\n{str(stack)}\n')
-                    stack.change(state.AFTER_LOCATION)
+                if not self._set_idfa_screen(data):
+                    raise ValueError(f'could not make a screen from "{data}"')
+                DEBUG_RECORDER.add(f'SCREEN: {data=}, {self.screen=}')
+                stack.change(state.AFTER_LOCATION)
             case state.IN_SCREENING_PROPS if 'Q&A' in data:
                 self.qa = 'Q&A'
+                self.print_debug('assigned Q&A', f'{self.qa=}')
             case state.IN_SCREENING_PROPS if 'subtitle' in data:
                 self.subtitles = data.strip()
+                self.print_debug('assigned subtitles', f'{self.subtitles=}')
 
     def add_article_text(self, data):
         if not data.startswith('.css'):
@@ -1122,6 +1135,7 @@ class FilmPageParser(HtmlPageParser):
         self.combi_program = None
         self.combi_props = None
         self.screening = None
+        self.print_debug('screening props initialized', f'stack is {str(self.state_stack)}')
 
     def _get_duration(self):
         return get_duration(self.film_property_by_label)
